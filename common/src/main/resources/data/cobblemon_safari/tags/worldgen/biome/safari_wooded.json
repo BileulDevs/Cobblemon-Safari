@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "cobblemon_safari:woodland",
+    "cobblemon_safari:deep_forest",
+    "cobblemon_safari:taiga",
+    "cobblemon_safari:jungle"
+  ]
+}

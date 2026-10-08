@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "cobblemon_safari:dunes",
+    "cobblemon_safari:savanna",
+    "cobblemon_safari:badlands",
+    "cobblemon_safari:volcanic"
+  ]
+}

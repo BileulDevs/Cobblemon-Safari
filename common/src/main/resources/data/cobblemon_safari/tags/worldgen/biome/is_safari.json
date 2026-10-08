@@ -1,0 +1,26 @@
+{
+  "replace": false,
+  "values": [
+    "cobblemon_safari:grassland",
+    "cobblemon_safari:savanna",
+    "cobblemon_safari:dunes",
+    "cobblemon_safari:badlands",
+    "cobblemon_safari:jungle",
+    "cobblemon_safari:marsh",
+    "cobblemon_safari:flower_meadow",
+    "cobblemon_safari:woodland",
+    "cobblemon_safari:deep_forest",
+    "cobblemon_safari:taiga",
+    "cobblemon_safari:snowfield",
+    "cobblemon_safari:glacier",
+    "cobblemon_safari:rocky_hills",
+    "cobblemon_safari:mushroom_grove",
+    "cobblemon_safari:peaks",
+    "cobblemon_safari:volcanic",
+    "cobblemon_safari:lake",
+    "cobblemon_safari:river",
+    "cobblemon_safari:shore",
+    "cobblemon_safari:cavern",
+    "cobblemon_safari:lush_grotto"
+  ]
+}

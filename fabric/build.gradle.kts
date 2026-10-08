@@ -1,0 +1,75 @@
+plugins {
+    id("dev.architectury.loom")
+    id("architectury-plugin")
+    id("com.github.johnrengelman.shadow") version "8.1.1"
+}
+
+architectury {
+    platformSetupLoomIde()
+    fabric()
+}
+
+loom {
+    silentMojangMappingsLicense()
+}
+
+val shadowCommon: Configuration by configurations.creating
+
+dependencies {
+    minecraft("com.mojang:minecraft:${property("minecraft_version")}")
+    mappings(loom.officialMojangMappings())
+
+    modImplementation("net.fabricmc:fabric-loader:${property("fabric_loader_version")}")
+    modImplementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_api_version")}")
+
+    // Cobblemon is written in Kotlin and needs the language adapter at runtime.
+    modImplementation("net.fabricmc:fabric-language-kotlin:${property("fabric_kotlin")}")
+    modImplementation("com.cobblemon:fabric:${property("cobblemon_version")}") { isTransitive = false }
+
+    // Showdown (Cobblemon's battle engine) runs on GraalJS; without these the dev client crashes on the first battle.
+    modRuntimeOnly("org.graalvm.js:js:22.3.0")
+    modRuntimeOnly("org.graalvm.sdk:graal-sdk:22.3.0")
+    modRuntimeOnly("org.graalvm.regex:regex:22.3.0")
+    modRuntimeOnly("org.graalvm.truffle:truffle-api:22.3.0")
+    modRuntimeOnly("com.ibm.icu:icu4j:71.1")
+
+    implementation(project(":common", configuration = "namedElements"))
+    "developmentFabric"(project(":common", configuration = "namedElements"))
+    shadowCommon(project(":common", configuration = "transformProductionFabric"))
+
+    testImplementation("org.junit.jupiter:junit-jupiter-api:${property("junit_version")}")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${property("junit_version")}")
+}
+
+tasks {
+    test {
+        useJUnitPlatform()
+    }
+
+    processResources {
+        inputs.property("version", project.version)
+
+        filesMatching("fabric.mod.json") {
+            expand(project.properties)
+        }
+    }
+
+    jar {
+        archiveBaseName.set("${rootProject.property("archives_base_name")}-${project.name}")
+        archiveClassifier.set("dev-slim")
+    }
+
+    shadowJar {
+        archiveClassifier.set("dev-shadow")
+        archiveBaseName.set("${rootProject.property("archives_base_name")}-${project.name}")
+        configurations = listOf(shadowCommon)
+        exclude("architectury.common.json")
+    }
+
+    remapJar {
+        dependsOn(shadowJar)
+        inputFile.set(shadowJar.flatMap { it.archiveFile })
+        archiveBaseName.set("${rootProject.property("archives_base_name")}-${project.name}")
+        archiveVersion.set("${rootProject.version}")
+    }
+}

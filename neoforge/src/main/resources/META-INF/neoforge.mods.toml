@@ -1,0 +1,36 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "MIT License"
+
+[[mods]]
+modId = "cobblemon_safari"
+version = "${version}"
+displayName = "Cobblemon Safari"
+authors = "Darcosse"
+description = '''
+A Safari Zone for Cobblemon: a procedural park dimension with timed hunts and restricted Poké Balls.
+'''
+
+[[mixins]]
+config = "cobblemon_safari.mixins.json"
+
+[[dependencies.cobblemon_safari]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.1]"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.cobblemon_safari]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1.182,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.cobblemon_safari]]
+modId = "cobblemon"
+type = "required"
+versionRange = "[1.8.0,)"
+ordering = "AFTER"
+side = "BOTH"

@@ -1,0 +1,1335 @@
+{
+  "type": "cobblemon_safari:safari",
+  "generator": {
+    "type": "minecraft:noise",
+    "settings": "cobblemon_safari:safari",
+    "biome_source": {
+      "type": "minecraft:multi_noise",
+      "biomes": [
+        {
+          "biome": "cobblemon_safari:lake",
+          "parameters": {
+            "temperature": [
+              -2.0,
+              2.0
+            ],
+            "humidity": [
+              -2.0,
+              2.0
+            ],
+            "continentalness": [
+              -1.2,
+              -0.19
+            ],
+            "erosion": [
+              -1.0,
+              1.0
+            ],
+            "weirdness": [
+              -1.0,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:shore",
+          "parameters": {
+            "temperature": [
+              -2.0,
+              2.0
+            ],
+            "humidity": [
+              -2.0,
+              2.0
+            ],
+            "continentalness": [
+              -0.19,
+              -0.11
+            ],
+            "erosion": [
+              -0.375,
+              1.0
+            ],
+            "weirdness": [
+              -1.0,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:peaks",
+          "parameters": {
+            "temperature": [
+              -2.0,
+              2.0
+            ],
+            "humidity": [
+              -2.0,
+              2.0
+            ],
+            "continentalness": [
+              -0.19,
+              1.0
+            ],
+            "erosion": [
+              -1.0,
+              -0.78
+            ],
+            "weirdness": [
+              -1.0,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:river",
+          "parameters": {
+            "temperature": [
+              -2.0,
+              2.0
+            ],
+            "humidity": [
+              -2.0,
+              2.0
+            ],
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              -0.375,
+              1.0
+            ],
+            "weirdness": [
+              -0.05,
+              0.05
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:cavern",
+          "parameters": {
+            "temperature": [
+              -2.0,
+              2.0
+            ],
+            "humidity": [
+              -2.0,
+              0.025
+            ],
+            "continentalness": [
+              -0.19,
+              1.0
+            ],
+            "erosion": [
+              -1.0,
+              1.0
+            ],
+            "weirdness": [
+              -1.0,
+              1.0
+            ],
+            "depth": [
+              0.2,
+              1.0
+            ],
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:lush_grotto",
+          "parameters": {
+            "temperature": [
+              -2.0,
+              2.0
+            ],
+            "humidity": [
+              0.025,
+              2.0
+            ],
+            "continentalness": [
+              -0.19,
+              1.0
+            ],
+            "erosion": [
+              -1.0,
+              1.0
+            ],
+            "weirdness": [
+              -1.0,
+              1.0
+            ],
+            "depth": [
+              0.2,
+              1.0
+            ],
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:volcanic",
+          "parameters": {
+            "temperature": 0.04924,
+            "humidity": -0.00868,
+            "continentalness": [
+              -0.19,
+              1.0
+            ],
+            "erosion": [
+              -0.78,
+              -0.375
+            ],
+            "weirdness": [
+              -1.0,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:rocky_hills",
+          "parameters": {
+            "temperature": -0.0171,
+            "humidity": 0.04698,
+            "continentalness": [
+              -0.19,
+              1.0
+            ],
+            "erosion": [
+              -0.78,
+              -0.375
+            ],
+            "weirdness": [
+              -1.0,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:rocky_hills",
+          "parameters": {
+            "temperature": -0.03214,
+            "humidity": -0.0383,
+            "continentalness": [
+              -0.19,
+              1.0
+            ],
+            "erosion": [
+              -0.78,
+              -0.375
+            ],
+            "weirdness": [
+              -1.0,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:grassland",
+          "parameters": {
+            "temperature": 0.0,
+            "humidity": -0.05,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              -0.375,
+              0.45
+            ],
+            "weirdness": [
+              -1.0,
+              -0.05
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:grassland",
+          "parameters": {
+            "temperature": 0.0,
+            "humidity": -0.05,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              0.45,
+              1.0
+            ],
+            "weirdness": [
+              -1.0,
+              -0.05
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:grassland",
+          "parameters": {
+            "temperature": 0.0,
+            "humidity": -0.05,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              -0.375,
+              0.45
+            ],
+            "weirdness": [
+              0.05,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:grassland",
+          "parameters": {
+            "temperature": 0.0,
+            "humidity": -0.05,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              0.45,
+              1.0
+            ],
+            "weirdness": [
+              0.05,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:savanna",
+          "parameters": {
+            "temperature": 0.02324,
+            "humidity": -0.04427,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              -0.375,
+              0.45
+            ],
+            "weirdness": [
+              -1.0,
+              -0.05
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:savanna",
+          "parameters": {
+            "temperature": 0.02324,
+            "humidity": -0.04427,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              0.45,
+              1.0
+            ],
+            "weirdness": [
+              -1.0,
+              -0.05
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:savanna",
+          "parameters": {
+            "temperature": 0.02324,
+            "humidity": -0.04427,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              -0.375,
+              0.45
+            ],
+            "weirdness": [
+              0.05,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:savanna",
+          "parameters": {
+            "temperature": 0.02324,
+            "humidity": -0.04427,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              0.45,
+              1.0
+            ],
+            "weirdness": [
+              0.05,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:dunes",
+          "parameters": {
+            "temperature": 0.04115,
+            "humidity": -0.0284,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              -0.375,
+              0.45
+            ],
+            "weirdness": [
+              -1.0,
+              -0.05
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:dunes",
+          "parameters": {
+            "temperature": 0.04115,
+            "humidity": -0.0284,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              0.45,
+              1.0
+            ],
+            "weirdness": [
+              -1.0,
+              -0.05
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:dunes",
+          "parameters": {
+            "temperature": 0.04115,
+            "humidity": -0.0284,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              -0.375,
+              0.45
+            ],
+            "weirdness": [
+              0.05,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:dunes",
+          "parameters": {
+            "temperature": 0.04115,
+            "humidity": -0.0284,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              0.45,
+              1.0
+            ],
+            "weirdness": [
+              0.05,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:badlands",
+          "parameters": {
+            "temperature": 0.04964,
+            "humidity": -0.00603,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              -0.375,
+              0.45
+            ],
+            "weirdness": [
+              -1.0,
+              -0.05
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:badlands",
+          "parameters": {
+            "temperature": 0.04964,
+            "humidity": -0.00603,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              0.45,
+              1.0
+            ],
+            "weirdness": [
+              -1.0,
+              -0.05
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:badlands",
+          "parameters": {
+            "temperature": 0.04964,
+            "humidity": -0.00603,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              -0.375,
+              0.45
+            ],
+            "weirdness": [
+              0.05,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:badlands",
+          "parameters": {
+            "temperature": 0.04964,
+            "humidity": -0.00603,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              0.45,
+              1.0
+            ],
+            "weirdness": [
+              0.05,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:jungle",
+          "parameters": {
+            "temperature": 0.04675,
+            "humidity": 0.01773,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              -0.375,
+              0.45
+            ],
+            "weirdness": [
+              -1.0,
+              -0.05
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:marsh",
+          "parameters": {
+            "temperature": 0.04675,
+            "humidity": 0.01773,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              0.45,
+              1.0
+            ],
+            "weirdness": [
+              -1.0,
+              -0.05
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:jungle",
+          "parameters": {
+            "temperature": 0.04675,
+            "humidity": 0.01773,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              -0.375,
+              0.45
+            ],
+            "weirdness": [
+              0.05,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:marsh",
+          "parameters": {
+            "temperature": 0.04675,
+            "humidity": 0.01773,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              0.45,
+              1.0
+            ],
+            "weirdness": [
+              0.05,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:marsh",
+          "parameters": {
+            "temperature": 0.03316,
+            "humidity": 0.03743,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              -0.375,
+              0.45
+            ],
+            "weirdness": [
+              -1.0,
+              -0.05
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:marsh",
+          "parameters": {
+            "temperature": 0.03316,
+            "humidity": 0.03743,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              0.45,
+              1.0
+            ],
+            "weirdness": [
+              -1.0,
+              -0.05
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:marsh",
+          "parameters": {
+            "temperature": 0.03316,
+            "humidity": 0.03743,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              -0.375,
+              0.45
+            ],
+            "weirdness": [
+              0.05,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:marsh",
+          "parameters": {
+            "temperature": 0.03316,
+            "humidity": 0.03743,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              0.45,
+              1.0
+            ],
+            "weirdness": [
+              0.05,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:flower_meadow",
+          "parameters": {
+            "temperature": 0.01197,
+            "humidity": 0.04855,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              -0.375,
+              0.45
+            ],
+            "weirdness": [
+              -1.0,
+              -0.05
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:mushroom_grove",
+          "parameters": {
+            "temperature": 0.01197,
+            "humidity": 0.04855,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              0.45,
+              1.0
+            ],
+            "weirdness": [
+              -1.0,
+              -0.05
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:flower_meadow",
+          "parameters": {
+            "temperature": 0.01197,
+            "humidity": 0.04855,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              -0.375,
+              0.45
+            ],
+            "weirdness": [
+              0.05,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:mushroom_grove",
+          "parameters": {
+            "temperature": 0.01197,
+            "humidity": 0.04855,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              0.45,
+              1.0
+            ],
+            "weirdness": [
+              0.05,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:woodland",
+          "parameters": {
+            "temperature": -0.01197,
+            "humidity": 0.04855,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              -0.375,
+              0.45
+            ],
+            "weirdness": [
+              -1.0,
+              -0.05
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:woodland",
+          "parameters": {
+            "temperature": -0.01197,
+            "humidity": 0.04855,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              0.45,
+              1.0
+            ],
+            "weirdness": [
+              -1.0,
+              -0.05
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:woodland",
+          "parameters": {
+            "temperature": -0.01197,
+            "humidity": 0.04855,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              -0.375,
+              0.45
+            ],
+            "weirdness": [
+              0.05,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:woodland",
+          "parameters": {
+            "temperature": -0.01197,
+            "humidity": 0.04855,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              0.45,
+              1.0
+            ],
+            "weirdness": [
+              0.05,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:deep_forest",
+          "parameters": {
+            "temperature": -0.03316,
+            "humidity": 0.03743,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              -0.375,
+              0.45
+            ],
+            "weirdness": [
+              -1.0,
+              -0.05
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:deep_forest",
+          "parameters": {
+            "temperature": -0.03316,
+            "humidity": 0.03743,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              0.45,
+              1.0
+            ],
+            "weirdness": [
+              -1.0,
+              -0.05
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:deep_forest",
+          "parameters": {
+            "temperature": -0.03316,
+            "humidity": 0.03743,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              -0.375,
+              0.45
+            ],
+            "weirdness": [
+              0.05,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:deep_forest",
+          "parameters": {
+            "temperature": -0.03316,
+            "humidity": 0.03743,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              0.45,
+              1.0
+            ],
+            "weirdness": [
+              0.05,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:taiga",
+          "parameters": {
+            "temperature": -0.04675,
+            "humidity": 0.01773,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              -0.375,
+              0.45
+            ],
+            "weirdness": [
+              -1.0,
+              -0.05
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:taiga",
+          "parameters": {
+            "temperature": -0.04675,
+            "humidity": 0.01773,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              0.45,
+              1.0
+            ],
+            "weirdness": [
+              -1.0,
+              -0.05
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:taiga",
+          "parameters": {
+            "temperature": -0.04675,
+            "humidity": 0.01773,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              -0.375,
+              0.45
+            ],
+            "weirdness": [
+              0.05,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:taiga",
+          "parameters": {
+            "temperature": -0.04675,
+            "humidity": 0.01773,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              0.45,
+              1.0
+            ],
+            "weirdness": [
+              0.05,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:snowfield",
+          "parameters": {
+            "temperature": -0.04964,
+            "humidity": -0.00603,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              -0.375,
+              0.45
+            ],
+            "weirdness": [
+              -1.0,
+              -0.05
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:snowfield",
+          "parameters": {
+            "temperature": -0.04964,
+            "humidity": -0.00603,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              0.45,
+              1.0
+            ],
+            "weirdness": [
+              -1.0,
+              -0.05
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:snowfield",
+          "parameters": {
+            "temperature": -0.04964,
+            "humidity": -0.00603,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              -0.375,
+              0.45
+            ],
+            "weirdness": [
+              0.05,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:snowfield",
+          "parameters": {
+            "temperature": -0.04964,
+            "humidity": -0.00603,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              0.45,
+              1.0
+            ],
+            "weirdness": [
+              0.05,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:glacier",
+          "parameters": {
+            "temperature": -0.04115,
+            "humidity": -0.0284,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              -0.375,
+              0.45
+            ],
+            "weirdness": [
+              -1.0,
+              -0.05
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:glacier",
+          "parameters": {
+            "temperature": -0.04115,
+            "humidity": -0.0284,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              0.45,
+              1.0
+            ],
+            "weirdness": [
+              -1.0,
+              -0.05
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:glacier",
+          "parameters": {
+            "temperature": -0.04115,
+            "humidity": -0.0284,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              -0.375,
+              0.45
+            ],
+            "weirdness": [
+              0.05,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:glacier",
+          "parameters": {
+            "temperature": -0.04115,
+            "humidity": -0.0284,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              0.45,
+              1.0
+            ],
+            "weirdness": [
+              0.05,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:rocky_hills",
+          "parameters": {
+            "temperature": -0.02324,
+            "humidity": -0.04427,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              -0.375,
+              0.45
+            ],
+            "weirdness": [
+              -1.0,
+              -0.05
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:rocky_hills",
+          "parameters": {
+            "temperature": -0.02324,
+            "humidity": -0.04427,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              0.45,
+              1.0
+            ],
+            "weirdness": [
+              -1.0,
+              -0.05
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:rocky_hills",
+          "parameters": {
+            "temperature": -0.02324,
+            "humidity": -0.04427,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              -0.375,
+              0.45
+            ],
+            "weirdness": [
+              0.05,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        },
+        {
+          "biome": "cobblemon_safari:rocky_hills",
+          "parameters": {
+            "temperature": -0.02324,
+            "humidity": -0.04427,
+            "continentalness": [
+              -0.11,
+              1.0
+            ],
+            "erosion": [
+              0.45,
+              1.0
+            ],
+            "weirdness": [
+              0.05,
+              1.0
+            ],
+            "depth": 0.0,
+            "offset": 0.0
+          }
+        }
+      ]
+    }
+  }
+}

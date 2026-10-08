@@ -1,0 +1,10 @@
+{
+  "replace": false,
+  "values": [
+    "cobblemon_safari:marsh",
+    "cobblemon_safari:river",
+    "cobblemon_safari:lake",
+    "cobblemon_safari:shore",
+    "cobblemon_safari:mushroom_grove"
+  ]
+}

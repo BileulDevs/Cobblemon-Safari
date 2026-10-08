@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "cobblemon_safari",
+  "version": "${version}",
+  "name": "Cobblemon Safari",
+  "description": "A Safari Zone for Cobblemon: a procedural park dimension with timed hunts and restricted Poké Balls.",
+  "authors": [
+    "Darcosse"
+  ],
+  "license": "MIT License",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "dev.darcosse.fabric.cobblemonsafari.CobblemonSafariFabric"
+    ],
+    "client": [
+      "dev.darcosse.fabric.cobblemonsafari.client.CobblemonSafariFabricClient"
+    ]
+  },
+  "mixins": [
+    "cobblemon_safari.mixins.json"
+  ],
+  "depends": {
+    "minecraft": "1.21.1",
+    "fabricloader": ">=0.17.2",
+    "fabric-api": "*",
+    "fabric-language-kotlin": "*",
+    "cobblemon": ">=1.8.0"
+  }
+}
