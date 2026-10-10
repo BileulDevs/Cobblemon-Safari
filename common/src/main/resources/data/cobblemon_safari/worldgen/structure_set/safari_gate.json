@@ -1,0 +1,14 @@
+{
+  "structures": [
+    {
+      "structure": "cobblemon_safari:safari_gate",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 48,
+    "separation": 20,
+    "salt": 1785326641
+  }
+}

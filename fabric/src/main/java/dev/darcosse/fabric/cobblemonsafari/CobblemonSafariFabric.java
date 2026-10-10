@@ -12,7 +12,6 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
@@ -46,17 +45,22 @@ public class CobblemonSafariFabric implements ModInitializer {
         // Blocks first: the board's block item wraps the block.
         SafariBlocks.register((id, block) -> Registry.register(BuiltInRegistries.BLOCK, id, block));
         // Built here, not in common: BlockEntitySupplier is only public through
-        // Fabric's transitive access widener (see SafariBlockEntities.BoardTypeFactory).
+        // Fabric's transitive access widener (see SafariBlockEntities.TypeFactory).
         SafariBlockEntities.register(
                 (constructor, block) -> BlockEntityType.Builder.of(constructor::apply, block).build(null),
                 (id, type) -> Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id, type));
         SafariItems.register((id, item) -> Registry.register(BuiltInRegistries.ITEM, id, item));
         ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.TOOLS_AND_UTILITIES).register(entries -> {
             entries.accept(SafariItems.safariTicket());
+            SafariItems.timedTickets().forEach(entries::accept);
             entries.accept(SafariItems.safariBoard());
+            entries.accept(SafariItems.safariBoardFrame());
+            entries.accept(SafariItems.safariGate());
         });
         FabricSafariNetworking.registerPayloadTypes();
 
+        // STARTING fires before the levels load, which the map reset needs.
+        ServerLifecycleEvents.SERVER_STARTING.register(SafariServerEvents::onServerStarting);
         ServerLifecycleEvents.SERVER_STARTED.register(SafariServerEvents::onServerStarted);
         ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resourceManager, success) ->
                 SafariServerEvents.onDataReload(server));
@@ -78,17 +82,18 @@ public class CobblemonSafariFabric implements ModInitializer {
         ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) ->
                 !SafariServerEvents.onIncomingDamage(entity, source));
 
-        // Server-side guarantee: a break that reached the server is refused here.
+        // Server side, when the block would actually break. Mining itself is not
+        // refused (no AttackBlockCallback): refusing every left click spammed
+        // the warning each time a player hit a block, e.g. to punch a Pokémon
+        // standing in front of it. The player sees the cracks, then the block
+        // stays and the warning shows once.
         PlayerBlockBreakEvents.BEFORE.register((level, player, pos, state, blockEntity) ->
-                !SafariServerEvents.onBlockBreak(player));
-        // Both sides, when mining STARTS: refusing it on the client too means no
-        // mining animation and no ghost block.
-        AttackBlockCallback.EVENT.register((player, level, hand, pos, direction) ->
-                SafariServerEvents.onBlockBreak(player) ? InteractionResult.FAIL : InteractionResult.PASS);
+                !SafariServerEvents.onBlockBreak(player, state));
         // Both sides; placement and block-transforming tools. Fabric has no
         // separate placement event, so this is also the server-side guarantee.
         UseBlockCallback.EVENT.register((player, level, hand, hitResult) ->
-                SafariServerEvents.onUseItemOnBlock(player, player.getItemInHand(hand))
+                SafariServerEvents.onUseItemOnBlock(player, player.getItemInHand(hand),
+                        level.getBlockState(hitResult.getBlockPos()))
                         ? InteractionResult.FAIL
                         : InteractionResult.PASS);
 

@@ -27,8 +27,39 @@ public final class SafariConfigManager {
 
     private static final String FILE_NAME = CobblemonSafari.MOD_ID + ".json";
 
+    private static final int MINUTES_PER_HOUR = 60;
+    /** Last valid hour of the day for reset.hour. */
+    private static final int LAST_HOUR = 23;
+
+    /**
+     * Range of the spawn multipliers. Below 0.1 the Safari is practically
+     * empty; above 10 each player triggers ten times Cobblemon's spawn scans,
+     * which a busy server feels.
+     */
+    private static final double MIN_SPAWN_MULTIPLIER = 0.1;
+    private static final double MAX_SPAWN_MULTIPLIER = 10.0;
+
+    /**
+     * Most roaming Pokémon per gate. Each one is an entity kept alive and
+     * checked every few seconds while a player is near the gate.
+     */
+    private static final int MAX_GATE_COMPANIONS = 8;
+
+    /**
+     * Range of gate.roamRadius. Below 3 the Pokémon crowd the gate's
+     * doorway; above 24 they wander out of the structure and out of sight.
+     */
+    private static final int MIN_GATE_ROAM_RADIUS = 3;
+    private static final int MAX_GATE_ROAM_RADIUS = 24;
+
+    /**
+     * Most missions per rotation. The board lists them on one page; past
+     * about eight lines they no longer fit a two-block-high screen.
+     */
+    private static final int MAX_BOUNTIES = 8;
+
     /** Version written by this build. Raise it together with a new step in {@link #migrate}. */
-    public static final int CURRENT_CONFIG_VERSION = 5;
+    public static final int CURRENT_CONFIG_VERSION = 12;
 
     /**
      * Upper bound on loaned balls. A full inventory holds 36 stacks; beyond a
@@ -62,6 +93,7 @@ public final class SafariConfigManager {
     private static Set<ResourceLocation> allowedBalls = Set.of();
     private static ResourceKey<Level> dimension = defaultDimension();
     private static Set<Integer> warningTicks = Set.of();
+    private static Set<ResourceLocation> placeableBlocks = Set.of();
     @Nullable
     private static ResourceLocation loanedBallItem;
 
@@ -77,6 +109,8 @@ public final class SafariConfigManager {
         }
         config = loaded;
         rebuildDerived();
+        // Same lifecycle: /safari reload re-reads the shop too.
+        SafariShopConfigManager.load();
     }
 
     /** Re-reads the file; callers are responsible for re-syncing clients afterwards. */
@@ -108,11 +142,6 @@ public final class SafariConfigManager {
     /** Remaining-tick values at which a warning is shown. */
     public static Set<Integer> warningTicks() {
         return warningTicks;
-    }
-
-    /** Default session length, in ticks. */
-    public static int defaultDurationTicks() {
-        return Ticks.fromSeconds(config.defaultDurationSeconds);
     }
 
     /** Maximum remaining time, in ticks. */
@@ -158,6 +187,20 @@ public final class SafariConfigManager {
             ticks.add(Ticks.fromSeconds(seconds));
         }
         warningTicks = Collections.unmodifiableSet(ticks);
+
+        Set<ResourceLocation> placeable = new LinkedHashSet<>();
+        for (String raw : config.protection.placeableBlocks) {
+            ResourceLocation id = ResourceLocation.tryParse(raw);
+            if (id != null) {
+                placeable.add(id);
+            }
+        }
+        placeableBlocks = Collections.unmodifiableSet(placeable);
+    }
+
+    /** Block ids players may place and break despite terrain protection. */
+    public static Set<ResourceLocation> placeableBlocks() {
+        return placeableBlocks;
     }
 
     /**
@@ -187,6 +230,39 @@ public final class SafariConfigManager {
             CobblemonSafari.LOGGER.info("Migrated {} to version 5: added the spawns, featured and restHouses sections",
                     FILE_NAME);
         }
+        if (c.configVersion < 6 && c.featured != null) {
+            if (c.featured.rotationHours != null) {
+                c.featured.rotationMinutes = c.featured.rotationHours * MINUTES_PER_HOUR;
+            }
+            CobblemonSafari.LOGGER.info("Migrated {} to version 6: featured.rotationHours is now "
+                    + "featured.rotationMinutes ({})", FILE_NAME, c.featured.rotationMinutes);
+        }
+        if (c.configVersion < 7) {
+            CobblemonSafari.LOGGER.info("Migrated {} to version 7: added ticket credit, capture and spawn rate "
+                    + "settings", FILE_NAME);
+        }
+        if (c.configVersion < 8) {
+            CobblemonSafari.LOGGER.info("Migrated {} to version 8: added the reset section", FILE_NAME);
+        }
+        if (c.configVersion < 12) {
+            CobblemonSafari.LOGGER.info("Migrated {} to version 12: added the bounties section", FILE_NAME);
+        }
+        if (c.configVersion < 11) {
+            CobblemonSafari.LOGGER.info("Migrated {} to version 11: added protection.placeableBlocks", FILE_NAME);
+        }
+        if (c.configVersion < 10) {
+            CobblemonSafari.LOGGER.info("Migrated {} to version 10: added the points and escapeRope sections",
+                    FILE_NAME);
+        }
+        if (c.configVersion < 9) {
+            // The old key is simply ignored by Gson and dropped on rewrite.
+            CobblemonSafari.LOGGER.info("Migrated {} to version 9: defaultDurationSeconds removed (entry now always "
+                    + "spends banked time), added the gate section", FILE_NAME);
+        }
+        if (c.featured != null) {
+            // Dropped in every case: Gson leaves null fields out of the rewritten file.
+            c.featured.rotationHours = null;
+        }
         c.configVersion = CURRENT_CONFIG_VERSION;
         return true;
     }
@@ -205,14 +281,9 @@ public final class SafariConfigManager {
             c.dimension = defaults.dimension;
             corrected = true;
         }
-        if (c.defaultDurationSeconds < MIN_DURATION_SECONDS) {
-            warn("defaultDurationSeconds", c.defaultDurationSeconds, defaults.defaultDurationSeconds);
-            c.defaultDurationSeconds = defaults.defaultDurationSeconds;
-            corrected = true;
-        }
-        if (c.maxDurationSeconds < c.defaultDurationSeconds) {
-            warn("maxDurationSeconds", c.maxDurationSeconds, c.defaultDurationSeconds);
-            c.maxDurationSeconds = c.defaultDurationSeconds;
+        if (c.maxDurationSeconds < MIN_DURATION_SECONDS) {
+            warn("maxDurationSeconds", c.maxDurationSeconds, defaults.maxDurationSeconds);
+            c.maxDurationSeconds = defaults.maxDurationSeconds;
             corrected = true;
         }
         if (c.battleGraceSeconds < 0) {
@@ -299,6 +370,21 @@ public final class SafariConfigManager {
             c.protection = new SafariConfig.Protection();
             corrected = true;
         }
+        if (c.protection.placeableBlocks == null) {
+            c.protection.placeableBlocks = new SafariConfig.Protection().placeableBlocks;
+            corrected = true;
+        } else {
+            List<String> kept = new ArrayList<>();
+            for (String raw : c.protection.placeableBlocks) {
+                if (raw != null && ResourceLocation.tryParse(raw) != null) {
+                    kept.add(raw);
+                } else {
+                    CobblemonSafari.LOGGER.warn("Ignoring invalid block id '{}' in protection.placeableBlocks", raw);
+                    corrected = true;
+                }
+            }
+            c.protection.placeableBlocks = kept;
+        }
         if (c.loan == null) {
             c.loan = new SafariConfig.Loan();
             corrected = true;
@@ -319,14 +405,162 @@ public final class SafariConfigManager {
             corrected = true;
         }
         if (c.ticket.defaultDurationSeconds < MIN_DURATION_SECONDS) {
-            warn("ticket.defaultDurationSeconds", c.ticket.defaultDurationSeconds, c.defaultDurationSeconds);
-            c.ticket.defaultDurationSeconds = c.defaultDurationSeconds;
+            int fixed = new SafariConfig.Ticket().defaultDurationSeconds;
+            warn("ticket.defaultDurationSeconds", c.ticket.defaultDurationSeconds, fixed);
+            c.ticket.defaultDurationSeconds = fixed;
+            corrected = true;
+        }
+        if (c.ticket.maxCreditSeconds < 0) {
+            warn("ticket.maxCreditSeconds", c.ticket.maxCreditSeconds, 0);
+            c.ticket.maxCreditSeconds = 0;
+            corrected = true;
+        }
+        if (c.reset == null) {
+            c.reset = new SafariConfig.Reset();
+            corrected = true;
+        }
+        if (c.reset.hour < 0 || c.reset.hour > LAST_HOUR) {
+            int fixed = Math.max(0, Math.min(LAST_HOUR, c.reset.hour));
+            warn("reset.hour", c.reset.hour, fixed);
+            c.reset.hour = fixed;
+            corrected = true;
+        }
+        if (c.reset.timeZone == null) {
+            c.reset.timeZone = "";
+            corrected = true;
+        }
+        if (c.capture == null) {
+            c.capture = new SafariConfig.Capture();
+            corrected = true;
+        }
+        // Below 1 the "bonus" would make the Safari Ball worse than outside.
+        if (!(c.capture.safariBallOutOfBattleMultiplier >= 1.0)) {
+            warn("capture.safariBallOutOfBattleMultiplier", c.capture.safariBallOutOfBattleMultiplier, 1.0);
+            c.capture.safariBallOutOfBattleMultiplier = 1.0;
+            corrected = true;
+        }
+        if (c.capture.safariBallItem == null || ResourceLocation.tryParse(c.capture.safariBallItem) == null) {
+            warn("capture.safariBallItem", c.capture.safariBallItem, new SafariConfig.Capture().safariBallItem);
+            c.capture.safariBallItem = new SafariConfig.Capture().safariBallItem;
+            corrected = true;
+        }
+        corrected |= validateGate(c);
+        corrected |= validatePoints(c);
+        corrected |= validateBounties(c);
+        if (c.escapeRope == null) {
+            c.escapeRope = new SafariConfig.EscapeRope();
+            corrected = true;
+        }
+        if (c.escapeRope.cooldownSeconds < 0) {
+            warn("escapeRope.cooldownSeconds", c.escapeRope.cooldownSeconds, 0);
+            c.escapeRope.cooldownSeconds = 0;
             corrected = true;
         }
         corrected |= validateSpawns(c);
         corrected |= validateFeatured(c);
         corrected |= validateRestHouses(c);
         return corrected;
+    }
+
+    /** Fixes the points section: no negative reward, a positive cap. Returns true if anything changed. */
+    private static boolean validatePoints(SafariConfig c) {
+        if (c.points == null) {
+            c.points = new SafariConfig.Points();
+            return true;
+        }
+        SafariConfig.Points p = c.points;
+        boolean corrected = false;
+        if (p.common < 0 || p.uncommon < 0 || p.rare < 0 || p.ultraRare < 0
+                || p.featuredBonus < 0 || p.shinyBonus < 0) {
+            warn("points rewards", "a negative value", "0");
+            p.common = Math.max(0, p.common);
+            p.uncommon = Math.max(0, p.uncommon);
+            p.rare = Math.max(0, p.rare);
+            p.ultraRare = Math.max(0, p.ultraRare);
+            p.featuredBonus = Math.max(0, p.featuredBonus);
+            p.shinyBonus = Math.max(0, p.shinyBonus);
+            corrected = true;
+        }
+        if (p.maxBalance <= 0) {
+            int fixed = new SafariConfig.Points().maxBalance;
+            warn("points.maxBalance", p.maxBalance, fixed);
+            p.maxBalance = fixed;
+            corrected = true;
+        }
+        return corrected;
+    }
+
+    /** Fixes the bounties section: sane counts, no negative reward. Returns true if anything changed. */
+    private static boolean validateBounties(SafariConfig c) {
+        if (c.bounties == null) {
+            c.bounties = new SafariConfig.Bounties();
+            return true;
+        }
+        SafariConfig.Bounties b = c.bounties;
+        boolean corrected = false;
+        if (b.count < 0 || b.count > MAX_BOUNTIES) {
+            int fixed = Math.max(0, Math.min(MAX_BOUNTIES, b.count));
+            warn("bounties.count", b.count, fixed);
+            b.count = fixed;
+            corrected = true;
+        }
+        if (b.typeMinCount < 1 || b.typeMaxCount < b.typeMinCount) {
+            SafariConfig.Bounties defaults = new SafariConfig.Bounties();
+            warn("bounties.typeMinCount/typeMaxCount", b.typeMinCount + ".." + b.typeMaxCount,
+                    defaults.typeMinCount + ".." + defaults.typeMaxCount);
+            b.typeMinCount = defaults.typeMinCount;
+            b.typeMaxCount = defaults.typeMaxCount;
+            corrected = true;
+        }
+        if (b.typeRewardPerCatch < 0 || b.speciesReward < 0 || b.featuredReward < 0 || b.allDoneBonus < 0) {
+            warn("bounties rewards", "a negative value", "0");
+            b.typeRewardPerCatch = Math.max(0, b.typeRewardPerCatch);
+            b.speciesReward = Math.max(0, b.speciesReward);
+            b.featuredReward = Math.max(0, b.featuredReward);
+            b.allDoneBonus = Math.max(0, b.allDoneBonus);
+            corrected = true;
+        }
+        return corrected;
+    }
+
+    /** Fixes the gate section; returns true if anything changed. */
+    private static boolean validateGate(SafariConfig c) {
+        boolean corrected = false;
+        if (c.gate == null) {
+            c.gate = new SafariConfig.Gate();
+            return true;
+        }
+        if (c.gate.companions == null) {
+            c.gate.companions = new SafariConfig.Gate().companions;
+            corrected = true;
+        } else {
+            List<String> kept = new ArrayList<>();
+            for (String raw : c.gate.companions) {
+                if (raw != null && !raw.isBlank() && kept.size() < MAX_GATE_COMPANIONS) {
+                    kept.add(raw.trim());
+                } else {
+                    CobblemonSafari.LOGGER.warn("Ignoring gate companion '{}' (blank or more than {})",
+                            raw, MAX_GATE_COMPANIONS);
+                    corrected = true;
+                }
+            }
+            c.gate.companions = kept;
+        }
+        if (c.gate.roamRadius < MIN_GATE_ROAM_RADIUS || c.gate.roamRadius > MAX_GATE_ROAM_RADIUS) {
+            int fixed = Math.max(MIN_GATE_ROAM_RADIUS, Math.min(MAX_GATE_ROAM_RADIUS, c.gate.roamRadius));
+            warn("gate.roamRadius", c.gate.roamRadius, fixed);
+            c.gate.roamRadius = fixed;
+            corrected = true;
+        }
+        return corrected;
+    }
+
+    /** Clamps a spawn multiplier into its valid range; NaN becomes 1, Cobblemon's normal pace. */
+    private static double clampMultiplier(double value) {
+        if (Double.isNaN(value)) {
+            return 1.0;
+        }
+        return Math.max(MIN_SPAWN_MULTIPLIER, Math.min(MAX_SPAWN_MULTIPLIER, value));
     }
 
     /** Fixes the spawns section; returns true if anything changed. */
@@ -338,6 +572,19 @@ public final class SafariConfigManager {
         }
         if (c.spawns.excludedSpecies == null) {
             c.spawns.excludedSpecies = new ArrayList<>();
+            corrected = true;
+        }
+        if (!(c.spawns.spawnRateMultiplier >= MIN_SPAWN_MULTIPLIER && c.spawns.spawnRateMultiplier <= MAX_SPAWN_MULTIPLIER)) {
+            double fixed = clampMultiplier(c.spawns.spawnRateMultiplier);
+            warn("spawns.spawnRateMultiplier", c.spawns.spawnRateMultiplier, fixed);
+            c.spawns.spawnRateMultiplier = fixed;
+            corrected = true;
+        }
+        if (!(c.spawns.pokemonPerChunkMultiplier >= MIN_SPAWN_MULTIPLIER
+                && c.spawns.pokemonPerChunkMultiplier <= MAX_SPAWN_MULTIPLIER)) {
+            double fixed = clampMultiplier(c.spawns.pokemonPerChunkMultiplier);
+            warn("spawns.pokemonPerChunkMultiplier", c.spawns.pokemonPerChunkMultiplier, fixed);
+            c.spawns.pokemonPerChunkMultiplier = fixed;
             corrected = true;
         }
         if (c.spawns.maxSameSpeciesNearby < 0) {
@@ -362,9 +609,9 @@ public final class SafariConfigManager {
         }
         SafariConfig.Featured f = c.featured;
         boolean corrected = false;
-        if (f.rotationHours < 1) {
-            warn("featured.rotationHours", f.rotationHours, 1);
-            f.rotationHours = 1;
+        if (f.rotationMinutes < 1) {
+            warn("featured.rotationMinutes", f.rotationMinutes, 1);
+            f.rotationMinutes = 1;
             corrected = true;
         }
         if (f.uncommonSlots < 0 || f.rareSlots < 0 || f.ultraRareSlots < 0) {

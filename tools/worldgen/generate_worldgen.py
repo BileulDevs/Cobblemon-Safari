@@ -97,11 +97,14 @@ EROSION_AT_CENTER = -1.1
 EROSION_SLOPE = 2.1
 EROSION_NOISE = 0.25
 
-# Noise added to the direction vector before the nearest-sector lookup. 0.3
-# swings sector borders by about 17 degrees each way (~90 blocks at mid-radius):
-# borders interlock without sectors breaking into islands. Above ~0.5 small
-# sectors start to vanish in places.
-CLIMATE_NOISE = 0.3
+# Noise added to the direction vector before the nearest-sector lookup. 0.15
+# swings sector borders by about 9 degrees each way (~45 blocks at mid-radius):
+# borders still interlock, and the smallest sector of a map keeps about three
+# quarters of its nominal size whatever the seed. At 0.3 (before 0.6.1) the
+# smallest sector of some maps shrank to half its size, and the daily map
+# reset made that visible: some days one habitat was a thin strip. Above ~0.5
+# small sectors start to vanish in places.
+CLIMATE_NOISE = 0.15
 
 # Radius of the climate circle in parameter space. multi_noise ranks candidates
 # by the SUM of squared distances over all parameters, so the sector lookup
@@ -184,8 +187,9 @@ BIOMES = {
     "snowfield":      {"models": ["snowy_plains"], "base": "snowy_plains"},
     "glacier":        {"models": ["ice_spikes"], "base": "ice_spikes"},
     "rocky_hills":    {"models": ["windswept_gravelly_hills"], "base": "windswept_gravelly_hills"},
-    # Coastal-lowland variant of the flower meadow sector: mushroom islands are
-    # coastal lowlands in vanilla too.
+    # A sector of its own between the marsh and the flower meadow. It used to
+    # be only the coastal lowland of the flower meadow sector, which left it a
+    # thin strip on the coast and the meadow half its share.
     "mushroom_grove": {"models": ["mushroom_fields"], "base": "mushroom_fields"},
     # Rings around the central summit.
     "peaks":          {"models": ["jagged_peaks"], "base": "jagged_peaks"},
@@ -202,6 +206,96 @@ BIOMES = {
     "cavern":         {"models": ["dripstone_caves"], "base": "dripstone_caves"},
     "lush_grotto":    {"models": ["lush_caves"], "base": "lush_caves"},
 }
+
+# ---------------------------------------------------------------------------
+# Sound: music and wild Pokemon calls of each habitat
+# ---------------------------------------------------------------------------
+
+# Music zone of each habitat: the Safari's own tracks, composed by
+# tools/music/compose_safari_music.py into sounds/music/<zone>.ogg. They
+# replace vanilla music inside the Safari. The rest houses play the "center"
+# zone (client mixin, not a biome). Delays are in ticks between two tracks;
+# vanilla overworld biomes wait 10 to 20 minutes, the Safari 1 to 3 so a hunt
+# hears its music. Shorter delays make it more present and more repetitive.
+MUSIC_MIN_DELAY = 1200
+MUSIC_MAX_DELAY = 3600
+MUSIC_ZONES = ["plains", "forest", "arid", "snow", "caves", "center"]
+MUSIC_DIR = os.path.join(ROOT, "common", "src", "main", "resources", "assets", MOD_ID, "sounds", "music")
+
+# Calls of wild Pokemon heard now and then (the biome's "additions" sound):
+# chance per tick, so 0.004 is one call every ~12 seconds on average. Played
+# at this volume, not positional, like vanilla cave additions.
+CRY_TICK_CHANCE = 0.004
+CRY_VOLUME = 0.3
+
+# Cobblemon cry files are assets/cobblemon/sounds/pokemon/<species>/<species>_cry.ogg.
+HABITAT_SOUNDS = {
+    "grassland":      ("plains", ["pidgey", "rattata", "doduo", "nidoranm", "nidoranf", "tauros"]),
+    "savanna":        ("plains", ["tauros", "girafarig", "ponyta", "doduo", "kangaskhan"]),
+    "dunes":          ("arid",   ["sandshrew", "trapinch", "cacnea", "hippopotas"]),
+    "badlands":       ("arid",   ["diglett", "geodude", "rhyhorn", "cubone"]),
+    "jungle":         ("forest", ["aipom", "tropius", "yanma", "paras", "exeggcute"]),
+    "marsh":          ("forest", ["psyduck", "wooper", "poliwag", "croagunk", "lotad"]),
+    "mushroom_grove": ("forest", ["shroomish", "paras", "foongus", "morelull"]),
+    "flower_meadow":  ("plains", ["oddish", "skiploom", "combee", "cherubi", "flabebe"]),
+    "woodland":       ("forest", ["caterpie", "weedle", "pidgey", "hoothoot", "pikachu"]),
+    "deep_forest":    ("forest", ["hoothoot", "gastly", "murkrow", "venonat"]),
+    "taiga":          ("forest", ["teddiursa", "hoothoot", "sneasel"]),
+    "snowfield":      ("snow",   ["swinub", "snorunt", "delibird", "snover"]),
+    "glacier":        ("snow",   ["spheal", "snorunt", "sneasel", "swinub"]),
+    "rocky_hills":    ("arid",   ["geodude", "onix", "machop", "rhyhorn"]),
+    "peaks":          ("snow",   ["skarmory", "onix", "geodude"]),
+    "volcanic":       ("arid",   ["numel", "slugma", "ponyta", "growlithe"]),
+    "lake":           ("plains", ["magikarp", "psyduck", "goldeen", "wingull"]),
+    "river":          ("plains", ["magikarp", "poliwag", "goldeen", "psyduck"]),
+    "shore":          ("plains", ["wingull", "krabby", "shellder", "slowpoke"]),
+    "cavern":         ("caves",  ["zubat", "geodude", "onix"]),
+    "lush_grotto":    ("caves",  ["zubat", "paras", "oddish"]),
+}
+
+SOUNDS_OUT = os.path.join(ROOT, "common", "src", "main", "resources", "assets", MOD_ID, "sounds.json")
+
+
+def ambient_event(biome):
+    """Id of the sound event holding a habitat's Pokemon calls."""
+    return f"ambient.{biome}"
+
+
+def music_event(zone):
+    """Id of the sound event playing a music zone. Mirrored by SafariMusic.CENTER_EVENT for "center"."""
+    return f"music.{zone}"
+
+
+def write_sounds():
+    """
+    Writes assets/<mod>/sounds.json: one event per habitat, picking one of
+    its Pokemon cries at random, and one streamed event per music zone. The
+    file is owned by this script.
+    """
+    missing = set(HABITAT_SOUNDS) ^ set(BIOMES)
+    if missing:
+        sys.exit(f"HABITAT_SOUNDS and BIOMES disagree on: {sorted(missing)}")
+    unknown_zones = {zone for zone, _ in HABITAT_SOUNDS.values()} - set(MUSIC_ZONES)
+    if unknown_zones:
+        sys.exit(f"HABITAT_SOUNDS uses music zones missing from MUSIC_ZONES: {sorted(unknown_zones)}")
+    missing_tracks = [z for z in MUSIC_ZONES if not os.path.exists(os.path.join(MUSIC_DIR, f"{z}.ogg"))]
+    if missing_tracks:
+        sys.exit(f"Missing music tracks {missing_tracks}: run tools/music/compose_safari_music.py first")
+    events = {}
+    for zone in MUSIC_ZONES:
+        # stream: music is read from disk while it plays instead of being
+        # decoded whole into memory, as vanilla does for its own music.
+        events[music_event(zone)] = {"sounds": [{"name": f"{MOD_ID}:music/{zone}", "stream": True}]}
+    for biome, (_, cries) in sorted(HABITAT_SOUNDS.items()):
+        events[ambient_event(biome)] = {
+            "subtitle": f"subtitles.{MOD_ID}.ambient.pokemon",
+            "sounds": [{"name": f"cobblemon:pokemon/{c}/{c}_cry", "volume": CRY_VOLUME} for c in cries],
+        }
+    with open(SOUNDS_OUT, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(events, f, indent=2)
+        f.write("\n")
+    return len(events)
+
 
 # Vanilla biomes only used to compute the global feature order. The more of
 # them, the more constraints are known; they must all be overworld biomes.
@@ -323,9 +417,10 @@ SECTORS = [
     ("savanna", "savanna"),
     ("dunes", "dunes"),
     ("badlands", "badlands"),
-    ("jungle", "marsh"),
+    ("jungle", "jungle"),
     ("marsh", "marsh"),
-    ("flower_meadow", "mushroom_grove"),
+    ("mushroom_grove", "mushroom_grove"),
+    ("flower_meadow", "flower_meadow"),
     ("woodland", "woodland"),
     ("deep_forest", "deep_forest"),
     ("taiga", "taiga"),
@@ -504,6 +599,17 @@ def build_biome(name, spec, orders):
     if missing:
         sys.exit(f"extra_features {missing} of {name} are not in the global order of any step")
     effects = dict(base["effects"])
+    zone, cries = HABITAT_SOUNDS[name]
+    # Inline sound event, like the cries below. replace_current_music stays
+    # false: crossing into another zone lets the current track finish
+    # instead of cutting it mid-phrase.
+    effects["music"] = {"sound": {"sound_id": f"{MOD_ID}:{music_event(zone)}"}, "min_delay": MUSIC_MIN_DELAY,
+                        "max_delay": MUSIC_MAX_DELAY, "replace_current_music": False}
+    if cries:
+        # Inline sound event: the id only has to exist in sounds.json (client),
+        # not in the sound event registry.
+        effects["additions_sound"] = {"sound": {"sound_id": f"{MOD_ID}:{ambient_event(name)}"},
+                                      "tick_chance": CRY_TICK_CHANCE}
     effects["sky_color"] = SKY_COLOR
     effects["fog_color"] = FOG_COLOR
     if name not in KEEP_MODEL_WATER:
@@ -737,7 +843,7 @@ def surface_rule(vanilla_rule):
 # ---------------------------------------------------------------------------
 
 # Keys whose string values are free-form seeds or labels, not registry ids.
-NON_REGISTRY_KEYS = {"random_name", "mode"}
+NON_REGISTRY_KEYS = {"random_name", "mode", "sound_id"}
 
 
 def collect_refs(node, out):
@@ -819,8 +925,19 @@ def write_cobblemon_bridge():
 
 
 def main():
-    for sub in ["worldgen", "dimension", "dimension_type", os.path.join("tags", "worldgen", "biome")]:
+    # Only the folders this script owns. worldgen/structure*, worldgen/template_pool
+    # and tags/worldgen/biome/has_structure hold the Safari Gate, written by
+    # hand and by safari_gate_assets.py: wiping all of worldgen deleted them.
+    for sub in [os.path.join("worldgen", d) for d in ("biome", "density_function", "noise", "noise_settings")] \
+            + ["dimension", "dimension_type"]:
         shutil.rmtree(os.path.join(OUT, sub), ignore_errors=True)
+    # Biome tags: only the files directly in the folder, never its subfolders.
+    tag_dir = os.path.join(OUT, "tags", "worldgen", "biome")
+    if os.path.isdir(tag_dir):
+        for name in os.listdir(tag_dir):
+            path = os.path.join(tag_dir, name)
+            if os.path.isfile(path):
+                os.remove(path)
     written = []
 
     for noise, octave in NOISE_FIRST_OCTAVE.items():
@@ -870,6 +987,8 @@ def main():
 
     validate(written)
     bridge_count = write_cobblemon_bridge()
+    sound_count = write_sounds()
+    print(f"Generated {sound_count} sound events (ambience and music) in {os.path.relpath(SOUNDS_OUT, ROOT)}")
     print(f"Generated {len(written)} files under {os.path.relpath(OUT, ROOT)}")
     print(f"Generated {bridge_count} Cobblemon bridge tags under {os.path.relpath(COBBLEMON_TAG_OUT, ROOT)}")
     print(f"Matching server config: park.centerX={ISLAND_CENTER_X}, park.centerZ={ISLAND_CENTER_Z}, "

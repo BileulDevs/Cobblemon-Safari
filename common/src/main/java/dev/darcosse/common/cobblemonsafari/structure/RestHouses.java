@@ -23,8 +23,20 @@ import java.util.List;
  */
 public final class RestHouses {
 
-    /** Half the footprint side: houses are 9x9, centred on their configured column. */
-    public static final int HALF_SIZE = 4;
+    /**
+     * Half the side of the building: houses are 11x11, centred on their
+     * configured column. Changing it resizes the whole layout of
+     * {@link RestHouseBuilder}, which is written relative to it.
+     */
+    public static final int HALF_SIZE = 5;
+
+    /**
+     * Distance from the centre to the farthest block a house touches: the
+     * front plaza and the cleared ring around it. Everything that must keep
+     * away from a house (arrivals, specials) measures from this, not from the
+     * walls, or a special could pop up on the plaza in front of the board.
+     */
+    public static final int FOOTPRINT_REACH = HALF_SIZE + 5;
 
     private RestHouses() {
     }
@@ -58,7 +70,7 @@ public final class RestHouses {
     }
 
     /**
-     * Whether a column lies on a rest house or within {@code margin} blocks of it.
+     * Whether a column lies on a rest house (plaza included) or within {@code margin} blocks of it.
      * Cheap (a few comparisons per house), safe to call per spawn attempt.
      */
     public static boolean isNear(int x, int z, int margin) {
@@ -66,7 +78,7 @@ public final class RestHouses {
         if (!config.enabled) {
             return false;
         }
-        int reach = HALF_SIZE + margin;
+        int reach = FOOTPRINT_REACH + margin;
         for (SafariConfig.Position position : config.positions) {
             if (Math.abs(x - position.x) <= reach && Math.abs(z - position.z) <= reach) {
                 return true;

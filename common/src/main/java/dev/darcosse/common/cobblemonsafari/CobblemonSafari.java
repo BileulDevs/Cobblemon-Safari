@@ -2,6 +2,11 @@ package dev.darcosse.common.cobblemonsafari;
 
 import dev.darcosse.common.cobblemonsafari.battle.BattleGuard;
 import dev.darcosse.common.cobblemonsafari.capture.CaptureGuard;
+import dev.darcosse.common.cobblemonsafari.capture.SafariBallBonus;
+import dev.darcosse.common.cobblemonsafari.credit.SafariCredit;
+import dev.darcosse.common.cobblemonsafari.gate.SafariGate;
+import dev.darcosse.common.cobblemonsafari.points.SafariPoints;
+import dev.darcosse.common.cobblemonsafari.bounty.SafariBounties;
 import dev.darcosse.common.cobblemonsafari.capture.CatchTracker;
 import dev.darcosse.common.cobblemonsafari.session.SafariSessionManager;
 import dev.darcosse.common.cobblemonsafari.spawn.NativeSpawnRules;
@@ -43,6 +48,11 @@ public final class CobblemonSafari {
         CatchTracker.register();
         BattleGuard.register();
         NativeSpawnRules.register();
+        SafariBallBonus.register();
+        SafariCredit.register();
+        SafariGate.register();
+        SafariPoints.register();
+        SafariBounties.register();
         SafariSessionManager.addListener(new SafariStatsListener());
         LOGGER.info("Cobblemon Safari initialised");
     }

@@ -28,6 +28,7 @@ public class CobblemonSafariNeoForge {
         modEventBus.addListener(NeoForgeItemRegistration::onRegister);
         modEventBus.addListener(NeoForgeItemRegistration::onBuildCreativeTab);
 
+        NeoForge.EVENT_BUS.addListener(NeoForgeServerEvents::onServerAboutToStart);
         NeoForge.EVENT_BUS.addListener(NeoForgeServerEvents::onServerStarted);
         NeoForge.EVENT_BUS.addListener(NeoForgeServerEvents::onDatapackSync);
         NeoForge.EVENT_BUS.addListener(NeoForgeServerEvents::onServerTick);
@@ -40,7 +41,6 @@ public class CobblemonSafariNeoForge {
         NeoForge.EVENT_BUS.addListener(NeoForgeServerEvents::onIncomingDamage);
         NeoForge.EVENT_BUS.addListener(NeoForgeServerEvents::onBlockBreak);
         NeoForge.EVENT_BUS.addListener(NeoForgeServerEvents::onBlockPlace);
-        NeoForge.EVENT_BUS.addListener(NeoForgeServerEvents::onLeftClickBlock);
         NeoForge.EVENT_BUS.addListener(NeoForgeServerEvents::onRightClickBlock);
 
         // The client class is only touched inside this branch, so a dedicated

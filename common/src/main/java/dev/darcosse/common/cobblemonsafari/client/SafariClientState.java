@@ -2,9 +2,11 @@ package dev.darcosse.common.cobblemonsafari.client;
 
 import dev.darcosse.common.cobblemonsafari.network.SafariRulesPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariTimerPayload;
+import dev.darcosse.common.cobblemonsafari.structure.RestHouses;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -38,6 +40,8 @@ public final class SafariClientState {
     private static Set<ResourceLocation> allowedBalls;
     private static boolean protectBlocks;
     private static boolean exemptCreativeAndSpectator;
+    private static Set<ResourceLocation> placeableBlocks = Set.of();
+    private static List<SafariRulesPayload.HouseColumn> restHouses = List.of();
 
     private SafariClientState() {
     }
@@ -59,6 +63,8 @@ public final class SafariClientState {
         allowedBalls = Set.copyOf(payload.allowedBalls());
         protectBlocks = payload.protectBlocks();
         exemptCreativeAndSpectator = payload.exemptCreativeAndSpectator();
+        placeableBlocks = Set.copyOf(payload.placeableBlocks());
+        restHouses = payload.restHouses();
     }
 
     /** Forgets everything; called on disconnect so nothing leaks into the next server. */
@@ -74,6 +80,22 @@ public final class SafariClientState {
         allowedBalls = null;
         protectBlocks = false;
         exemptCreativeAndSpectator = false;
+        placeableBlocks = Set.of();
+        restHouses = List.of();
+    }
+
+    /**
+     * Whether a column lies inside the walls of a rest house (its plaza is
+     * outside). A few comparisons per house: cheap enough for the per-tick
+     * music check. Does not look at the dimension; callers do.
+     */
+    public static boolean isInRestHouse(int x, int z) {
+        for (SafariRulesPayload.HouseColumn house : restHouses) {
+            if (Math.abs(x - house.x()) <= RestHouses.HALF_SIZE && Math.abs(z - house.z()) <= RestHouses.HALF_SIZE) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Pokémon caught this session, as last reported by the server. */
@@ -127,6 +149,11 @@ public final class SafariClientState {
     /** Whether the server protects the terrain; false before the rules arrive (meaning: do not pre-check). */
     public static boolean protectBlocks() {
         return protectBlocks;
+    }
+
+    /** Block ids the server lets players place and break despite the protection; empty before the rules arrive. */
+    public static Set<ResourceLocation> placeableBlocks() {
+        return placeableBlocks;
     }
 
     /** Whether creative/spectator players are exempt from terrain protection. */

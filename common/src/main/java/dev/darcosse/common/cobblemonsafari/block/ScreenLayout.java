@@ -18,22 +18,29 @@ import net.minecraft.world.level.block.state.BlockState;
  * <p>Only rectangles merge. Boards sticking out of an irregular shape stay
  * blank rather than guessing which screen they belong to.
  *
- * @param anchor whether this block is the bottom-left corner and draws the screen
- * @param width  screen width in blocks, 1 when not an anchor
- * @param height screen height in blocks, 1 when not an anchor
+ * @param anchor      whether this block is the bottom-left corner and draws the screen
+ * @param width       screen width in blocks, 1 when not an anchor
+ * @param height      screen height in blocks, 1 when not an anchor
+ * @param framedLeft  whether a full column of frames runs along the left side;
+ *                    the picture then grows over the frame's planks up to its beam
+ * @param framedRight same for the right side
+ * @param framedTop   same for the row above
+ * @param framedBottom same for the row below
  */
-public record ScreenLayout(boolean anchor, int width, int height) {
+public record ScreenLayout(boolean anchor, int width, int height,
+                           boolean framedLeft, boolean framedRight, boolean framedTop, boolean framedBottom) {
 
     /**
      * Largest screen, in blocks. Bounds the scan and the render bounding box.
      * Raising it allows bigger walls at the cost of a longer scan (width ×
-     * height block reads per refresh, see {@code SafariBoardBlockEntity}).
+     * height block reads per refresh, plus the perimeter for the frame check,
+     * see {@code SafariBoardBlockEntity}).
      */
     public static final int MAX_WIDTH = 16;
     public static final int MAX_HEIGHT = 9;
 
     /** Layout of a block that belongs to another block's screen. */
-    public static final ScreenLayout COVERED = new ScreenLayout(false, 1, 1);
+    public static final ScreenLayout COVERED = new ScreenLayout(false, 1, 1, false, false, false, false);
 
     /**
      * Works out the screen the given board belongs to.
@@ -60,7 +67,40 @@ public record ScreenLayout(boolean anchor, int width, int height) {
         while (height < MAX_HEIGHT && rowComplete(level, pos.above(height), right, width, facing)) {
             height++;
         }
-        return new ScreenLayout(true, width, height);
+        BlockPos topLeft = pos.above(height);
+        return new ScreenLayout(true, width, height,
+                columnFramed(level, pos.relative(left), height, facing),
+                columnFramed(level, pos.relative(right, width), height, facing),
+                rowFramed(level, topLeft, right, width, facing),
+                rowFramed(level, pos.below(), right, width, facing));
+    }
+
+    /** Whether every block of a column, from {@code bottom} upward, is a frame of this wall. */
+    private static boolean columnFramed(BlockGetter level, BlockPos bottom, int height, Direction facing) {
+        for (int i = 0; i < height; i++) {
+            if (!isFrame(level, bottom.above(i), facing)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** Whether every block of a row, from {@code start} rightward, is a frame of this wall. */
+    private static boolean rowFramed(BlockGetter level, BlockPos start, Direction right, int width,
+                                     Direction facing) {
+        for (int i = 0; i < width; i++) {
+            if (!isFrame(level, start.relative(right, i), facing)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** Whether the block at a position is a frame facing the same way. */
+    private static boolean isFrame(BlockGetter level, BlockPos pos, Direction facing) {
+        BlockState state = level.getBlockState(pos);
+        return state.getBlock() instanceof SafariBoardFrameBlock
+                && state.getValue(HorizontalDirectionalBlock.FACING) == facing;
     }
 
     /**

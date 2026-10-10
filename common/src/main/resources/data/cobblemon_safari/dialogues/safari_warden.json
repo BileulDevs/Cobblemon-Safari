@@ -1,0 +1,79 @@
+{
+  "initializationAction": "c.npc.set_chatting();",
+  "speakers": {
+    "npc": {
+      "name": {
+        "type": "expression",
+        "expression": "q.npc.name"
+      },
+      "face": "q.npc.face();",
+      "gibber": {}
+    },
+    "player": {
+      "face": "q.player.face();",
+      "name": {
+        "type": "expression",
+        "expression": "q.player.username"
+      }
+    }
+  },
+  "pages": [
+    {
+      "id": "greeting",
+      "speaker": "npc",
+      "lines": [
+        "cobblemon_safari.dialogue.safari_warden.greeting.1",
+        "cobblemon_safari.dialogue.safari_warden.greeting.2"
+      ],
+      "input": {
+        "type": "option",
+        "vertical": true,
+        "options": [
+          {
+            "text": "cobblemon_safari.dialogue.safari_warden.option.enter",
+            "value": "enter",
+            "action": [
+              "q.player.run_command('safari gate');",
+              "q.dialogue.close();"
+            ]
+          },
+          {
+            "text": "cobblemon_safari.dialogue.safari_warden.option.shop",
+            "value": "shop",
+            "action": [
+              "q.dialogue.close();",
+              "q.player.run_command('safari shop');"
+            ]
+          },
+          {
+            "text": "cobblemon_safari.dialogue.safari_warden.option.tickets",
+            "value": "tickets",
+            "action": "q.dialogue.set_page('tickets');"
+          },
+          {
+            "text": "cobblemon_safari.dialogue.safari_warden.option.bye",
+            "value": "bye",
+            "action": "q.dialogue.set_page('bye');"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tickets",
+      "speaker": "npc",
+      "lines": [
+        "cobblemon_safari.dialogue.safari_warden.tickets.1",
+        "cobblemon_safari.dialogue.safari_warden.tickets.2"
+      ],
+      "input": "q.dialogue.set_page('greeting');"
+    },
+    {
+      "id": "bye",
+      "speaker": "npc",
+      "lines": [
+        "cobblemon_safari.dialogue.safari_warden.bye"
+      ],
+      "input": "q.dialogue.close();"
+    }
+  ]
+}

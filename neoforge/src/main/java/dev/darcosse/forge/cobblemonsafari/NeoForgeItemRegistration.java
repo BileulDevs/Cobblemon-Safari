@@ -30,7 +30,7 @@ public final class NeoForgeItemRegistration {
         event.register(Registries.ITEM, helper -> SafariItems.register(helper::register));
         // Vanilla's registration order puts block entity types after blocks.
         // Built here, not in common: BlockEntitySupplier is only public through
-        // NeoForge's access transformer (see SafariBlockEntities.BoardTypeFactory).
+        // NeoForge's access transformer (see SafariBlockEntities.TypeFactory).
         event.register(Registries.BLOCK_ENTITY_TYPE, helper -> SafariBlockEntities.register(
                 (constructor, block) -> BlockEntityType.Builder.of(constructor::apply, block).build(null),
                 helper::register));
@@ -40,7 +40,10 @@ public final class NeoForgeItemRegistration {
     static void onBuildCreativeTab(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
             event.accept(SafariItems.safariTicket());
+            SafariItems.timedTickets().forEach(event::accept);
             event.accept(SafariItems.safariBoard());
+            event.accept(SafariItems.safariBoardFrame());
+            event.accept(SafariItems.safariGate());
         }
     }
 }

@@ -2,15 +2,19 @@ package dev.darcosse.forge.cobblemonsafari.client;
 
 import dev.darcosse.common.cobblemonsafari.block.SafariBlockEntities;
 import dev.darcosse.common.cobblemonsafari.client.SafariClient;
+import dev.darcosse.common.cobblemonsafari.client.gate.RecolouredSpriteSource;
 import dev.darcosse.common.cobblemonsafari.client.hud.SafariTimerHud;
 import dev.darcosse.common.cobblemonsafari.client.sky.SafariSkyEffects;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
+import dev.darcosse.common.cobblemonsafari.network.SafariClientNetwork;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterDimensionSpecialEffectsEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
+import net.neoforged.neoforge.client.event.RegisterSpriteSourceTypesEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * NeoForge client wiring. CLIENT ONLY: only reached through the dist check in
@@ -24,9 +28,11 @@ public final class NeoForgeClientSetup {
     /** Loads client preferences and registers client listeners. */
     public static void init(IEventBus modEventBus) {
         SafariClient.init();
+        SafariClientNetwork.setSender(payload -> PacketDistributor.sendToServer(payload));
         modEventBus.addListener(NeoForgeClientSetup::onRegisterGuiLayers);
         modEventBus.addListener(NeoForgeClientSetup::onRegisterDimensionEffects);
         modEventBus.addListener(NeoForgeClientSetup::onRegisterRenderers);
+        modEventBus.addListener(NeoForgeClientSetup::onRegisterSpriteSources);
         NeoForge.EVENT_BUS.addListener(NeoForgeClientSetup::onLoggingOut);
     }
 
@@ -43,6 +49,14 @@ public final class NeoForgeClientSetup {
     /** Mod-bus handler: the board screen renderer, with NeoForge's culling box. */
     private static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(SafariBlockEntities.safariBoard(), NeoForgeSafariBoardRenderer::new);
+    }
+
+    /**
+     * Mod-bus handler: the atlas source that draws the gate's pane from the
+     * nether portal texture (see {@code assets/minecraft/atlases/blocks.json}).
+     */
+    private static void onRegisterSpriteSources(RegisterSpriteSourceTypesEvent event) {
+        event.register(RecolouredSpriteSource.ID, RecolouredSpriteSource.TYPE);
     }
 
     /** Game-bus handler: forgets server state when leaving a world or server. */

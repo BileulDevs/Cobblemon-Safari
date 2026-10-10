@@ -6,8 +6,11 @@ import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.block.SafariBoardBlock;
 import dev.darcosse.common.cobblemonsafari.block.SafariBoardBlockEntity;
 import dev.darcosse.common.cobblemonsafari.block.ScreenLayout;
+import dev.darcosse.common.cobblemonsafari.bounty.Bounty;
+import dev.darcosse.common.cobblemonsafari.client.BountyClientState;
 import dev.darcosse.common.cobblemonsafari.client.FeaturedClientState;
 import dev.darcosse.common.cobblemonsafari.client.SafariClientState;
+import dev.darcosse.common.cobblemonsafari.config.BoardPalette;
 import dev.darcosse.common.cobblemonsafari.config.SafariClientConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariClientConfigManager;
 import dev.darcosse.common.cobblemonsafari.network.SafariFeaturedPayload;
@@ -32,7 +35,7 @@ import java.util.Locale;
 
 /**
  * Draws the Safari Board screen: a station-style display of the special
- * Pokémon of the day with their animated models, a scrolling news ticker,
+ * Pokémon of the day with their animated models
  * and a progress bar for the time that matters to the viewer (their own
  * hunt if they have a session, otherwise the time until the next rotation).
  *
@@ -67,6 +70,15 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
     /** Draw distance in blocks; vanilla's default (64) cuts big station walls too early. */
     private static final int VIEW_DISTANCE = 96;
 
+    /**
+     * How far the picture spreads over a frame on each framed side, in blocks.
+     * The frame has 6 px of planks between screen and beam (beam from 6 to
+     * 10 px in {@code SafariBoardFrameBlock}); spreading 4 px leaves a 2 px
+     * band of wood around the picture. 6 would hide the planks entirely, more
+     * would draw over the beam.
+     */
+    private static final float FRAME_OVERLAP = 4.0F / 16.0F;
+
     /** Blocks added around a screen's bounds for models popping out of it. */
     private static final double BOUNDS_MARGIN = 1.0D;
 
@@ -81,9 +93,6 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
     private static final float LIVE_DOT_SIZE = 4.0F;
     private static final float FOOTER_HEIGHT = 20.0F;
     private static final float BAR_HEIGHT = 6.0F;
-    private static final float TICKER_HEIGHT = 10.0F;
-    /** Body height below which the ticker is dropped to leave room for the cells. */
-    private static final float MIN_BODY_WITH_TICKER = 56.0F;
     private static final float LINE_HEIGHT = 9.0F;
     private static final float RARITY_STRIP = 2.0F;
 
@@ -96,6 +105,11 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
     private static final float CELL_TEXT_REFERENCE_WIDTH = 64.0F;
     private static final float MIN_CELL_TEXT_SCALE = 0.5F;
     /**
+     * Size of the rarity and habitat lines relative to the name. Smaller
+     * fits longer biome names; below ~0.6 the font turns to mush on small screens.
+     */
+    private static final float SUBTEXT_SCALE = 0.72F;
+    /**
      * Share of the cell height kept for the model when deciding whether the
      * habitat line fits. Lower favours text, higher favours the model.
      */
@@ -103,7 +117,7 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
     /** Share of the model area the model's height fills. Above ~0.9 tall models touch the cell edge. */
     private static final float MODEL_FILL = 0.85F;
     /** How far models stand out of the screen, relative to their height. 0 keeps them flat on the glass. */
-    private static final float MODEL_POP_OUT = 0.15F;
+    private static final float MODEL_POP_OUT = 0.35F;
 
     // ---- Depth layers (canvas pixels toward the viewer) --------------------
 
@@ -116,6 +130,8 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
      * in front of it.
      */
     private static final float Z_SCANLINE = 0.6F;
+    /** Detail drawn over another detail (a ticked box, a bar's filled part); below the scanline. */
+    private static final float Z_DETAIL_TOP = 0.55F;
     private static final float Z_TEXT = 0.75F;
     private static final float Z_OVERLAY = 1.0F;
 
@@ -127,8 +143,27 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
     private static final float SPIN_PHASE_DEGREES = 47.0F;
     /** Time each page stays up when the specials do not fit on one. */
     private static final long PAGE_DURATION_MS = 7_000L;
-    /** Ticker scroll speed, in canvas pixels per second. */
-    private static final float TICKER_SPEED = 18.0F;
+    /**
+     * How long the specials and the missions each stay on screen before the
+     * board switches to the other, in ms. Two pages of specials fit in one
+     * turn; a longer value favours the specials.
+     */
+    private static final long VIEW_DURATION_MS = 14_000L;
+    /** Mission rows: tallest row, and the row height at which text is drawn at full size. */
+    private static final float MAX_BOUNTY_ROW_HEIGHT = 26.0F;
+    private static final float BOUNTY_ROW_REFERENCE = 24.0F;
+    private static final float BOUNTY_BOX_SIZE = 8.0F;
+    private static final float BOUNTY_BAR_HEIGHT = 2.0F;
+    private static final float ROW_PADDING = 2.0F;
+    /**
+     * Scroll speed of cell lines too long for their cell, in canvas pixels per
+     * second, and the pause at each end before turning back. Faster is harder
+     * to read; a shorter pause hides the start and end of the text.
+     */
+    private static final float MARQUEE_SPEED = 12.0F;
+    private static final long MARQUEE_PAUSE_MS = 1_500L;
+    /** Rounding slack when deciding whether a glyph lies inside a scrolling line. */
+    private static final float CLIP_TOLERANCE = 0.01F;
     private static final long SCANLINE_PERIOD_MS = 3_500L;
     private static final float SCANLINE_HEIGHT = 6.0F;
     private static final long LIVE_BLINK_PERIOD_MS = 1_000L;
@@ -146,31 +181,20 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
     private static final String FLAP_GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final long CONNECTING_DOT_MS = 400L;
 
-    // ---- Colours (ARGB) -----------------------------------------------------
+    // ---- Colours ------------------------------------------------------------
 
-    private static final int COLOR_BEZEL = 0xFF1A1C22;
-    private static final int COLOR_BACKGROUND = 0xFF0A1220;
-    private static final int COLOR_HEADER = 0xFF13213B;
-    private static final int COLOR_CELL = 0xFF111D33;
-    private static final int COLOR_TICKER = 0xFF060B14;
-    private static final int COLOR_AMBER = 0xFFFFB000;
-    private static final int COLOR_TEXT = 0xFFFFFFFF;
-    private static final int COLOR_MUTED = 0xFF8C9BB5;
-    private static final int COLOR_LIVE_ON = 0xFFFF3B3B;
-    private static final int COLOR_LIVE_OFF = 0xFF5A1A1A;
-    private static final int COLOR_BAR_BACK = 0xFF1E2B45;
-    private static final int COLOR_BAR_ROTATION = 0xFF35C8E8;
-    private static final int COLOR_BAR_OK = 0xFF4CD964;
-    private static final int COLOR_BAR_LOW = 0xFFFFC04D;
-    private static final int COLOR_BAR_CRITICAL = 0xFFFF5555;
-    private static final int COLOR_STAR = 0xFFFFD700;
-    private static final int SHIMMER_ALPHA = 0x50;
-    private static final int SCANLINE_ARGB = 0x12FFFFFF;
-    private static final int FLASH_MAX_ALPHA = 0x90;
+    /** Alpha range of the pulsing outline of the rarest cells; the colour itself is the rarity's. */
     private static final int GLOW_MIN_ALPHA = 0x30;
     private static final int GLOW_ALPHA_RANGE = 0x90;
+    private static final int ALPHA_SHIFT = 24;
+    private static final int RGB_MASK = 0xFFFFFF;
 
     private final Font font;
+    /**
+     * Colours of the frame being drawn, read from the client config once per
+     * screen. Render thread only, like everything in a block entity renderer.
+     */
+    private BoardPalette pal = SafariClientConfigManager.palette();
 
     /** Created by the loader's renderer registry. */
     public SafariBoardRenderer(BlockEntityRendererProvider.Context context) {
@@ -225,7 +249,15 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
             return;
         }
         Direction facing = state.getValue(HorizontalDirectionalBlock.FACING);
-        float pixelsPerBlock = CANVAS_SHORT_SIDE / Math.min(layout.width(), layout.height());
+        pal = SafariClientConfigManager.palette();
+        // Framed sides: the picture covers the frame's planks up to its beam.
+        float growLeft = layout.framedLeft() ? FRAME_OVERLAP : 0.0F;
+        float growRight = layout.framedRight() ? FRAME_OVERLAP : 0.0F;
+        float growTop = layout.framedTop() ? FRAME_OVERLAP : 0.0F;
+        float growBottom = layout.framedBottom() ? FRAME_OVERLAP : 0.0F;
+        float widthBlocks = layout.width() + growLeft + growRight;
+        float heightBlocks = layout.height() + growTop + growBottom;
+        float pixelsPerBlock = CANVAS_SHORT_SIDE / Math.min(widthBlocks, heightBlocks);
         float unit = 1.0F / pixelsPerBlock;
 
         poseStack.pushPose();
@@ -234,23 +266,23 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
         poseStack.translate(0.5F, 0.5F, 0.5F);
         poseStack.mulPose(Axis.YP.rotationDegrees(-facing.toYRot()));
         // Top-left corner of the whole screen, just in front of the panel.
-        poseStack.translate(-0.5F, -0.5F + layout.height(), PANEL_FRONT_Z + SURFACE_GAP);
+        poseStack.translate(-0.5F - growLeft, -0.5F + layout.height() + growTop, PANEL_FRONT_Z + SURFACE_GAP);
         poseStack.scale(unit, -unit, unit);
 
         BoardPainter painter = new BoardPainter(poseStack, buffers, font);
-        drawScreen(painter, layout.width() * pixelsPerBlock, layout.height() * pixelsPerBlock,
+        drawScreen(painter, widthBlocks * pixelsPerBlock, heightBlocks * pixelsPerBlock,
                 System.currentTimeMillis(), level.getGameTime());
         poseStack.popPose();
     }
 
     /** Lays out and draws every part of the screen. */
     private void drawScreen(BoardPainter p, float width, float height, long now, long gameTime) {
-        p.fill(0.0F, 0.0F, width, height, Z_BACKGROUND, COLOR_BEZEL);
+        p.fill(0.0F, 0.0F, width, height, Z_BACKGROUND, pal.bezel());
         float left = BEZEL;
         float top = BEZEL;
         float right = width - BEZEL;
         float bottom = height - BEZEL;
-        p.fill(left, top, right, bottom, Z_BACKGROUND + Z_PANEL / 2.0F, COLOR_BACKGROUND);
+        p.fill(left, top, right, bottom, Z_BACKGROUND + Z_PANEL / 2.0F, pal.background());
 
         float x0 = left + PADDING;
         float x1 = right - PADDING;
@@ -260,21 +292,25 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
         float bodyBottom = footerTop - GAP;
 
         List<SafariFeaturedPayload.Entry> entries = FeaturedClientState.entries();
-        if (bodyBottom - bodyTop >= MIN_BODY_WITH_TICKER + TICKER_HEIGHT + GAP && !entries.isEmpty()) {
-            float tickerTop = bodyBottom - TICKER_HEIGHT;
-            drawTicker(p, x0, tickerTop, x1, tickerTop + TICKER_HEIGHT, entries, now);
-            bodyBottom = tickerTop - GAP;
-        }
 
-        Page page = drawBody(p, x0, bodyTop, x1, bodyBottom, entries, now);
-        drawHeader(p, x0, headerTop, x1, page, now);
+        // Specials and missions take turns; without missions the specials stay.
+        boolean missions = BountyClientState.hasBounties() && (now / VIEW_DURATION_MS) % 2 == 1;
+        Page page;
+        if (missions) {
+            drawBounties(p, x0, bodyTop, x1, bodyBottom, now);
+            page = Page.SINGLE;
+        } else {
+            page = drawBody(p, x0, bodyTop, x1, bodyBottom, entries, now);
+        }
+        drawHeader(p, x0, headerTop, x1, page, now, missions);
         drawFooter(p, x0, footerTop, x1, now, gameTime);
 
         drawScanline(p, left, top, right, bottom, now);
         long sinceChange = now - FeaturedClientState.changedAtMillis();
         if (FeaturedClientState.received() && sinceChange >= 0 && sinceChange < FLASH_MS) {
-            int alpha = (int) (FLASH_MAX_ALPHA * (1.0F - sinceChange / (float) FLASH_MS));
-            p.fill(left, top, right, bottom, Z_OVERLAY, (alpha << 24) | 0xFFFFFF);
+            int peak = pal.flash() >>> ALPHA_SHIFT;
+            int alpha = (int) (peak * (1.0F - sinceChange / (float) FLASH_MS));
+            p.fill(left, top, right, bottom, Z_OVERLAY, (alpha << ALPHA_SHIFT) | (pal.flash() & RGB_MASK));
         }
     }
 
@@ -285,8 +321,8 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
      * screens the title shortens first, then the LIVE label goes and only its
      * light stays.
      */
-    private void drawHeader(BoardPainter p, float x0, float y, float x1, Page page, long now) {
-        p.fill(x0, y, x1, y + HEADER_HEIGHT, Z_PANEL, COLOR_HEADER);
+    private void drawHeader(BoardPainter p, float x0, float y, float x1, Page page, long now, boolean missions) {
+        p.fill(x0, y, x1, y + HEADER_HEIGHT, Z_PANEL, pal.header());
         float textY = y + (HEADER_HEIGHT - LINE_HEIGHT) / 2.0F + 1.0F;
         float left = x0 + HEADER_MARGIN;
         float right = x1 - HEADER_MARGIN;
@@ -295,11 +331,12 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
         String counter = page.count() > 1 ? (page.index() + 1) + "/" + page.count() : "";
         float counterBlock = counter.isEmpty() ? 0.0F : p.width(counter) + HEADER_SPACING;
         float dotBlock = LIVE_DOT_SIZE + HEADER_SPACING;
-        String title = tr("screen.title").toUpperCase(Locale.ROOT);
+        String titleKey = missions ? "screen.bounties_title" : "screen.title";
+        String title = tr(titleKey).toUpperCase(Locale.ROOT);
         boolean liveLabel = true;
         float rightBlock = p.width(live) + dotBlock + counterBlock;
         if (p.width(title) > right - left - rightBlock) {
-            title = tr("screen.title_short").toUpperCase(Locale.ROOT);
+            title = tr(titleKey + "_short").toUpperCase(Locale.ROOT);
         }
         if (p.width(title) > right - left - rightBlock) {
             liveLabel = false;
@@ -309,20 +346,20 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
         float cursor = right;
         if (liveLabel) {
             cursor -= p.width(live);
-            p.text(live, cursor, textY, Z_TEXT, 1.0F, COLOR_MUTED);
+            p.text(live, cursor, textY, Z_TEXT, 1.0F, pal.muted());
             cursor -= HEADER_SPACING / 2.0F;
         }
         boolean lit = (now / (LIVE_BLINK_PERIOD_MS / 2)) % 2 == 0;
         float dotY = y + (HEADER_HEIGHT - LIVE_DOT_SIZE) / 2.0F;
         p.fill(cursor - LIVE_DOT_SIZE, dotY, cursor, dotY + LIVE_DOT_SIZE, Z_DETAIL,
-                lit ? COLOR_LIVE_ON : COLOR_LIVE_OFF);
+                lit ? pal.liveOn() : pal.liveOff());
         cursor -= LIVE_DOT_SIZE + HEADER_SPACING;
         if (!counter.isEmpty()) {
             cursor -= p.width(counter);
-            p.text(counter, cursor, textY, Z_TEXT, 1.0F, COLOR_MUTED);
+            p.text(counter, cursor, textY, Z_TEXT, 1.0F, pal.muted());
             cursor -= HEADER_SPACING;
         }
-        p.text(p.fit(title, cursor - left), left, textY, Z_TEXT, 1.0F, COLOR_AMBER);
+        p.text(p.fit(title, cursor - left), left, textY, Z_TEXT, 1.0F, pal.title());
     }
 
     // ---- Body ---------------------------------------------------------------
@@ -347,15 +384,15 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
         if (!FeaturedClientState.received()) {
             int dots = (int) ((now / CONNECTING_DOT_MS) % 4);
             String message = tr("screen.connecting") + ".".repeat(dots);
-            drawCentered(p, message, x0, x1, centerY, COLOR_MUTED);
+            drawCentered(p, message, x0, x1, centerY, pal.muted());
             return Page.SINGLE;
         }
         if (!FeaturedClientState.enabled()) {
-            drawCentered(p, tr("screen.featured_off"), x0, x1, centerY, COLOR_MUTED);
+            drawCentered(p, tr("screen.featured_off"), x0, x1, centerY, pal.muted());
             return Page.SINGLE;
         }
         if (entries.isEmpty()) {
-            drawCentered(p, tr("board.empty"), x0, x1, centerY, COLOR_MUTED);
+            drawCentered(p, tr("board.empty"), x0, x1, centerY, pal.muted());
             return Page.SINGLE;
         }
 
@@ -388,6 +425,59 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
     }
 
     /**
+     * Today's missions, one row each: a box ticked when done, what to catch,
+     * the reward and the local player's progress with a thin bar. Below them,
+     * when there is room, the bonus for finishing them all.
+     */
+    private void drawBounties(BoardPainter p, float x0, float y0, float x1, float y1, long now) {
+        List<Bounty> bounties = BountyClientState.bounties();
+        int count = bounties.size();
+        float rowHeight = Math.min(MAX_BOUNTY_ROW_HEIGHT, (y1 - y0 - (count - 1) * GAP) / count);
+        float scale = Math.max(MIN_CELL_TEXT_SCALE, Math.min(1.0F, rowHeight / BOUNTY_ROW_REFERENCE));
+        float subScale = scale * SUBTEXT_SCALE;
+        boolean allDone = true;
+        for (int i = 0; i < count; i++) {
+            Bounty bounty = bounties.get(i);
+            int progress = BountyClientState.progress(i);
+            boolean done = progress >= bounty.count();
+            allDone &= done;
+            float top = y0 + i * (rowHeight + GAP);
+            float bottom = top + rowHeight;
+            p.fill(x0, top, x1, bottom, Z_PANEL, pal.cell());
+
+            float box = Math.min(rowHeight - 2.0F * ROW_PADDING, BOUNTY_BOX_SIZE * scale);
+            float boxLeft = x0 + ROW_PADDING;
+            float boxTop = top + (rowHeight - box) / 2.0F;
+            p.fill(boxLeft, boxTop, boxLeft + box, boxTop + box, Z_DETAIL, pal.muted());
+            p.fill(boxLeft + 1.0F, boxTop + 1.0F, boxLeft + box - 1.0F, boxTop + box - 1.0F, Z_DETAIL_TOP,
+                    done ? pal.barSessionOk() : pal.cell());
+
+            float textLeft = boxLeft + box + ROW_PADDING * 2.0F;
+            float textRight = x1 - ROW_PADDING;
+            drawMarquee(p, bounty.describe().getString(), textLeft, textRight, top + ROW_PADDING, scale,
+                    done ? pal.barSessionOk() : pal.text(), now);
+
+            float subTop = top + ROW_PADDING + LINE_HEIGHT * scale;
+            String reward = tr("board.bounty_reward", bounty.reward());
+            p.text(reward, textLeft, subTop, Z_TEXT, subScale, pal.star());
+            String counter = progress + "/" + bounty.count();
+            p.text(counter, textRight - p.width(counter) * subScale, subTop, Z_TEXT, subScale, pal.muted());
+
+            float barTop = bottom - ROW_PADDING - BOUNTY_BAR_HEIGHT;
+            p.fill(textLeft, barTop, textRight, barTop + BOUNTY_BAR_HEIGHT, Z_DETAIL, pal.barBackground());
+            float fraction = Math.min(1.0F, progress / (float) bounty.count());
+            p.fill(textLeft, barTop, textLeft + (textRight - textLeft) * fraction, barTop + BOUNTY_BAR_HEIGHT,
+                    Z_DETAIL_TOP, done ? pal.barSessionOk() : pal.barRotation());
+        }
+        float footerY = y0 + count * (rowHeight + GAP);
+        int bonus = BountyClientState.allDoneBonus();
+        if (bonus > 0 && footerY + LINE_HEIGHT <= y1) {
+            String line = allDone ? tr("board.bounty_all_done") : tr("board.bounty_bonus", bonus);
+            drawCentered(p, line, x0, x1, footerY, allDone ? pal.barSessionOk() : pal.muted());
+        }
+    }
+
+    /**
      * The grid shape that gives the largest cells for {@code count} specials,
      * judging a cell by its width and by its height scaled to the preferred
      * aspect, whichever is the limiting one.
@@ -412,17 +502,19 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
     private void drawCell(BoardPainter p, float x, float y, float w, float h, SafariFeaturedPayload.Entry entry,
                           int slot, long revealStart, long now) {
         int rarityColor = rarityColor(entry);
-        p.fill(x, y, x + w, y + h, Z_PANEL, COLOR_CELL);
+        p.fill(x, y, x + w, y + h, Z_PANEL, pal.cell());
         p.fill(x, y, x + w, y + RARITY_STRIP, Z_DETAIL, rarityColor);
         if (entry.special() || entry.rarity() == Rarity.ULTRA_RARE) {
             drawGlow(p, x, y, w, h, rarityColor, now);
         }
 
         float textScale = Math.max(MIN_CELL_TEXT_SCALE, Math.min(1.0F, w / CELL_TEXT_REFERENCE_WIDTH));
+        float subScale = textScale * SUBTEXT_SCALE;
         float line = LINE_HEIGHT * textScale;
-        boolean showHabitat = h - RARITY_STRIP - 3.0F * line - 4.0F >= h * MIN_MODEL_SHARE;
-        int lines = showHabitat ? 3 : 2;
-        float textTop = y + h - 2.0F - lines * line;
+        float subLine = LINE_HEIGHT * subScale;
+        boolean showHabitat = h - RARITY_STRIP - line - 2.0F * subLine - 4.0F >= h * MIN_MODEL_SHARE;
+        float textHeight = line + (showHabitat ? 2.0F : 1.0F) * subLine;
+        float textTop = y + h - 2.0F - textHeight;
         float modelTop = y + RARITY_STRIP + 2.0F;
         float modelBottom = textTop - 1.0F;
         float maxTextWidth = (w - 4.0F) / textScale;
@@ -444,7 +536,7 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
             float size = Math.max(1.0F, (modelBottom - modelTop) / LINE_HEIGHT * 0.6F);
             float qx = x + (w - p.width("?") * size) / 2.0F;
             float qy = (modelTop + modelBottom) / 2.0F - LINE_HEIGHT * size / 2.0F;
-            p.text("?", qx, qy, Z_TEXT, size, COLOR_MUTED);
+            p.text("?", qx, qy, Z_TEXT, size, pal.muted());
         }
 
         // Name, revealed letter by letter like a split-flap display.
@@ -457,84 +549,83 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
         float nameWidth = (p.width(prefix) + p.width(name)) * textScale;
         float nameX = x + (w - nameWidth) / 2.0F;
         if (!prefix.isEmpty()) {
-            p.text(prefix, nameX, textTop, Z_TEXT, textScale, COLOR_STAR);
+            p.text(prefix, nameX, textTop, Z_TEXT, textScale, pal.star());
             nameX += p.width(prefix) * textScale;
         }
-        p.text(shown, nameX, textTop, Z_TEXT, textScale, COLOR_TEXT);
+        p.text(shown, nameX, textTop, Z_TEXT, textScale, pal.text());
 
+        // Rarity and habitat in smaller type; a line still too long scrolls.
+        float lineLeft = x + 2.0F;
+        float lineRight = x + w - 2.0F;
         String rarity = entry.rarity().displayName().getString();
-        drawCenteredScaled(p, p.fit(rarity, maxTextWidth), x, x + w, textTop + line, textScale, rarityColor);
-
+        drawMarquee(p, rarity, lineLeft, lineRight, textTop + line, subScale, rarityColor, now);
         if (showHabitat) {
-            String habitat = p.fit(habitatName(entry.habitat()), maxTextWidth);
-            drawCenteredScaled(p, habitat, x, x + w, textTop + 2.0F * line, textScale, COLOR_MUTED);
+            drawMarquee(p, habitatName(entry.habitat()), lineLeft, lineRight, textTop + line + subLine, subScale,
+                    pal.muted(), now);
+        }
+    }
+
+    /**
+     * One line of text kept inside {@code [x0, x1]}: centred when it fits,
+     * otherwise scrolling back and forth with a pause at each end, so the
+     * whole text can be read without shrinking it further.
+     *
+     * <p>Glyphs are clipped one by one at the edges because world rendering
+     * has no scissor test: a glyph is drawn only if it lies entirely inside.
+     */
+    private void drawMarquee(BoardPainter p, String text, float x0, float x1, float y, float scale, int color,
+                             long now) {
+        float room = x1 - x0;
+        float width = p.width(text) * scale;
+        if (width <= room) {
+            p.text(text, x0 + (room - width) / 2.0F, y, Z_TEXT, scale, color);
+            return;
+        }
+        float overflow = width - room;
+        long travel = (long) (overflow / MARQUEE_SPEED * 1000.0F);
+        long cycle = 2L * (travel + MARQUEE_PAUSE_MS);
+        long t = Math.floorMod(now, cycle);
+        float offset;
+        if (t < MARQUEE_PAUSE_MS) {
+            offset = 0.0F;
+        } else if (t < MARQUEE_PAUSE_MS + travel) {
+            offset = overflow * (t - MARQUEE_PAUSE_MS) / (float) travel;
+        } else if (t < 2L * MARQUEE_PAUSE_MS + travel) {
+            offset = overflow;
+        } else {
+            offset = overflow * (1.0F - (t - 2L * MARQUEE_PAUSE_MS - travel) / (float) travel);
+        }
+        // The visible glyphs form one contiguous run: collect it, then draw it once.
+        StringBuilder visible = new StringBuilder();
+        float runStart = -1.0F;
+        float cursor = x0 - offset;
+        for (int i = 0; i < text.length(); ) {
+            int codePoint = text.codePointAt(i);
+            float glyphWidth = p.width(new String(Character.toChars(codePoint))) * scale;
+            if (cursor >= x0 - CLIP_TOLERANCE && cursor + glyphWidth <= x1 + CLIP_TOLERANCE) {
+                if (runStart < 0.0F) {
+                    runStart = cursor;
+                }
+                visible.appendCodePoint(codePoint);
+            }
+            cursor += glyphWidth;
+            i += Character.charCount(codePoint);
+        }
+        if (runStart >= 0.0F) {
+            p.text(visible.toString(), runStart, y, Z_TEXT, scale, color);
         }
     }
 
     /** Pulsing outline around the rarest specials. */
-    private static void drawGlow(BoardPainter p, float x, float y, float w, float h, int color, long now) {
+    private void drawGlow(BoardPainter p, float x, float y, float w, float h, int color, long now) {
         double phase = (now % GLOW_PERIOD_MS) / (double) GLOW_PERIOD_MS * Math.PI * 2.0;
         int alpha = GLOW_MIN_ALPHA + (int) (GLOW_ALPHA_RANGE * (0.5 + 0.5 * Math.sin(phase)));
-        int argb = (alpha << 24) | (color & 0xFFFFFF);
+        int argb = (alpha << ALPHA_SHIFT) | (color & RGB_MASK);
         float t = 1.0F;
         p.fill(x, y, x + w, y + t, Z_DETAIL, argb);
         p.fill(x, y + h - t, x + w, y + h, Z_DETAIL, argb);
         p.fill(x, y + t, x + t, y + h - t, Z_DETAIL, argb);
         p.fill(x + w - t, y + t, x + w, y + h - t, Z_DETAIL, argb);
-    }
-
-    // ---- Ticker -------------------------------------------------------------
-
-    /**
-     * News strip scrolling every special with its habitat and levels. Glyphs
-     * are clipped one by one at the edges: the world has no scissor test, and
-     * a letter popping in at the edge is what LED tickers do anyway.
-     */
-    private void drawTicker(BoardPainter p, float x0, float y0, float x1, float y1,
-                            List<SafariFeaturedPayload.Entry> entries, long now) {
-        p.fill(x0, y0, x1, y1, Z_PANEL, COLOR_TICKER);
-        String separator = "   •   ";
-        StringBuilder builder = new StringBuilder();
-        for (SafariFeaturedPayload.Entry entry : entries) {
-            builder.append(entry.special() ? "★ " : "")
-                    .append(BoardPokemonModels.displayName(entry.species()).toUpperCase(Locale.ROOT))
-                    .append(" — ").append(entry.rarity().displayName().getString())
-                    .append(" — ").append(habitatName(entry.habitat()));
-            if (entry.maxLevel() > 0) {
-                builder.append(" — ").append(tr("screen.levels", entry.minLevel(), entry.maxLevel()));
-            }
-            builder.append(separator);
-        }
-        builder.append(tr("screen.ticker_tip")).append(separator);
-        String text = builder.toString();
-        int textWidth = p.width(text);
-        if (textWidth <= 0) {
-            return;
-        }
-        float offset = (now * TICKER_SPEED / 1000.0F) % textWidth;
-        float textY = y0 + (y1 - y0 - LINE_HEIGHT) / 2.0F + 1.0F;
-        float x = x0 - offset;
-        // The glyphs that fit form one contiguous run: collect it over as many
-        // copies of the text as the strip needs, then draw it in one call.
-        StringBuilder visible = new StringBuilder();
-        float runStart = -1.0F;
-        while (x < x1) {
-            for (int i = 0; i < text.length() && x < x1; ) {
-                int codePoint = text.codePointAt(i);
-                int glyphWidth = p.width(new String(Character.toChars(codePoint)));
-                if (x >= x0 && x + glyphWidth <= x1) {
-                    if (runStart < 0.0F) {
-                        runStart = x;
-                    }
-                    visible.appendCodePoint(codePoint);
-                }
-                x += glyphWidth;
-                i += Character.charCount(codePoint);
-            }
-        }
-        if (runStart >= 0.0F) {
-            p.text(visible.toString(), runStart, textY, Z_TEXT, 1.0F, COLOR_AMBER);
-        }
     }
 
     // ---- Footer -------------------------------------------------------------
@@ -564,7 +655,7 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
             labelKey = "screen.next_rotation";
             // Rounded up, like the session timer: "0:00" only once it is really over.
             time = Ticks.format(Ticks.fromSeconds((left + 999L) / 1000L));
-            color = COLOR_BAR_ROTATION;
+            color = pal.barRotation();
         } else {
             return;
         }
@@ -577,11 +668,11 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
         if (p.width(label) > labelRoom) {
             label = tr(labelKey + "_short");
         }
-        p.text(p.fit(label, labelRoom), x0, y + 1.0F, Z_TEXT, 1.0F, COLOR_MUTED);
+        p.text(p.fit(label, labelRoom), x0, y + 1.0F, Z_TEXT, 1.0F, pal.muted());
 
         float barTop = y + FOOTER_HEIGHT - BAR_HEIGHT;
         float barBottom = barTop + BAR_HEIGHT;
-        p.fill(x0, barTop, x1, barBottom, Z_PANEL, COLOR_BAR_BACK);
+        p.fill(x0, barTop, x1, barBottom, Z_PANEL, pal.barBackground());
         float clamped = Math.max(0.0F, Math.min(1.0F, fraction));
         float fillRight = x0 + (x1 - x0) * clamped;
         p.fill(x0, barTop, fillRight, barBottom, Z_DETAIL, color);
@@ -592,29 +683,29 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
             float progress = (now % SHIMMER_PERIOD_MS) / (float) SHIMMER_PERIOD_MS;
             float shimmerX = x0 + (span + SHIMMER_WIDTH) * progress - SHIMMER_WIDTH;
             p.fill(Math.max(x0, shimmerX), barTop, Math.min(fillRight, shimmerX + SHIMMER_WIDTH), barBottom,
-                    Z_TEXT, (SHIMMER_ALPHA << 24) | 0xFFFFFF);
+                    Z_TEXT, pal.shimmer());
         }
     }
 
     /** Bar colour for the hunt, with the same thresholds as the HUD timer. */
-    private static int sessionColor(int remainingTicks, SafariClientConfig config) {
+    private int sessionColor(int remainingTicks, SafariClientConfig config) {
         int seconds = Ticks.toSecondsCeil(remainingTicks);
         if (seconds <= config.criticalTimeSeconds) {
-            return COLOR_BAR_CRITICAL;
+            return pal.barSessionCritical();
         }
         if (seconds <= config.lowTimeSeconds) {
-            return COLOR_BAR_LOW;
+            return pal.barSessionLow();
         }
-        return COLOR_BAR_OK;
+        return pal.barSessionOk();
     }
 
     // ---- Effects and helpers ---------------------------------------------
 
     /** A faint bright band rolling down the screen, the cue that this is a live feed. */
-    private static void drawScanline(BoardPainter p, float left, float top, float right, float bottom, long now) {
+    private void drawScanline(BoardPainter p, float left, float top, float right, float bottom, long now) {
         float progress = (now % SCANLINE_PERIOD_MS) / (float) SCANLINE_PERIOD_MS;
         float y = top + (bottom - top + SCANLINE_HEIGHT) * progress - SCANLINE_HEIGHT;
-        p.fill(left, Math.max(top, y), right, Math.min(bottom, y + SCANLINE_HEIGHT), Z_SCANLINE, SCANLINE_ARGB);
+        p.fill(left, Math.max(top, y), right, Math.min(bottom, y + SCANLINE_HEIGHT), Z_SCANLINE, pal.scanline());
     }
 
     /**
@@ -642,21 +733,14 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
     }
 
     /** Text centred between two x positions at scale 1. */
-    private static void drawCentered(BoardPainter p, String text, float x0, float x1, float y, int color) {
+    private void drawCentered(BoardPainter p, String text, float x0, float x1, float y, int color) {
         String fitted = p.fit(text, x1 - x0);
         p.text(fitted, x0 + (x1 - x0 - p.width(fitted)) / 2.0F, y, Z_TEXT, 1.0F, color);
     }
 
-    /** Text centred between two x positions at the given scale. */
-    private static void drawCenteredScaled(BoardPainter p, String text, float x0, float x1, float y, float scale,
-                                           int color) {
-        p.text(text, x0 + (x1 - x0 - p.width(text) * scale) / 2.0F, y, Z_TEXT, scale, color);
-    }
-
-    /** Rarity colour of an entry, opaque. */
-    private static int rarityColor(SafariFeaturedPayload.Entry entry) {
-        Integer rgb = entry.rarity().color.getColor();
-        return 0xFF000000 | (rgb == null ? 0xFFFFFF : rgb);
+    /** Rarity colour of an entry, from the client config. */
+    private int rarityColor(SafariFeaturedPayload.Entry entry) {
+        return pal.rarity(entry.rarity());
     }
 
     /** Biome name in the player's language. */

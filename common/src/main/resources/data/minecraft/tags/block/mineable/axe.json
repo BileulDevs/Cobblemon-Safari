@@ -1,6 +1,7 @@
 {
   "replace": false,
   "values": [
-    "cobblemon_safari:safari_board"
+    "cobblemon_safari:safari_board",
+    "cobblemon_safari:safari_board_frame"
   ]
 }

@@ -40,7 +40,7 @@ public final class FeaturedRotation {
     /** Mixed into the seed so the rotation never correlates with other uses of the salt. */
     private static final long ROTATION_SEED_MIX = 0x9E3779B97F4A7C15L;
 
-    private static final long MILLIS_PER_HOUR = 3_600_000L;
+    private static final long MILLIS_PER_MINUTE = 60_000L;
 
     /**
      * Minimum delay between two index builds while the index comes out empty.
@@ -128,6 +128,14 @@ public final class FeaturedRotation {
         return current;
     }
 
+    /**
+     * Index of the rotation running now. Bounties are drawn per rotation, so
+     * they change together with the specials.
+     */
+    public static long period() {
+        return currentPeriod();
+    }
+
     /** Milliseconds until the list changes. */
     public static long millisUntilNextRotation() {
         long length = rotationLengthMillis();
@@ -141,7 +149,7 @@ public final class FeaturedRotation {
 
     /** Length of one rotation in milliseconds, from the config. */
     public static long rotationLengthMillis() {
-        return SafariConfigManager.get().featured.rotationHours * MILLIS_PER_HOUR;
+        return SafariConfigManager.get().featured.rotationMinutes * MILLIS_PER_MINUTE;
     }
 
     /**

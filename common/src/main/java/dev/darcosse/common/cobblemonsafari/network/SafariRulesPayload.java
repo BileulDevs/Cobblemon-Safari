@@ -22,22 +22,42 @@ import java.util.List;
  * @param allowedBalls               Poké Ball ids usable inside
  * @param protectBlocks              whether the terrain cannot be changed
  * @param exemptCreativeAndSpectator whether creative/spectator players ignore terrain protection
+ * @param placeableBlocks            block ids that may be placed and broken despite the protection
+ * @param restHouses                 centre columns of the rest houses, for their music; empty when disabled
  */
 public record SafariRulesPayload(ResourceLocation dimension, List<ResourceLocation> allowedBalls,
-                                 boolean protectBlocks, boolean exemptCreativeAndSpectator)
+                                 boolean protectBlocks, boolean exemptCreativeAndSpectator,
+                                 List<ResourceLocation> placeableBlocks, List<HouseColumn> restHouses)
         implements CustomPacketPayload {
+
+    /**
+     * Centre column of one rest house.
+     *
+     * @param x block x of the centre
+     * @param z block z of the centre
+     */
+    public record HouseColumn(int x, int z) {
+    }
 
     /**
      * Wire format version. Bump on EVERY change to write/read.
      * v2: added protectBlocks and exemptCreativeAndSpectator.
+     * v3: added placeableBlocks, at the end.
+     * v4: added restHouses, at the end.
      */
-    public static final int WIRE_VERSION = 2;
+    public static final int WIRE_VERSION = 4;
 
     /**
      * Upper bound on the list size accepted when reading. A corrupted or hostile
      * packet could otherwise announce billions of entries and allocate them.
      */
     private static final int MAX_BALLS = 1024;
+
+    /** Same guard for the placeable block list. */
+    private static final int MAX_PLACEABLE = 1024;
+
+    /** Same guard for the rest house list. Far above any sensible config. */
+    private static final int MAX_HOUSES = 256;
 
     public static final CustomPacketPayload.Type<SafariRulesPayload> TYPE =
             new CustomPacketPayload.Type<>(CobblemonSafari.id("rules"));
@@ -56,6 +76,15 @@ public record SafariRulesPayload(ResourceLocation dimension, List<ResourceLocati
         }
         buf.writeBoolean(protectBlocks);
         buf.writeBoolean(exemptCreativeAndSpectator);
+        buf.writeVarInt(placeableBlocks.size());
+        for (ResourceLocation block : placeableBlocks) {
+            buf.writeResourceLocation(block);
+        }
+        buf.writeVarInt(restHouses.size());
+        for (HouseColumn house : restHouses) {
+            buf.writeVarInt(house.x());
+            buf.writeVarInt(house.z());
+        }
     }
 
     /** MUST list the same fields in the same order as {@link #write}. */
@@ -76,7 +105,24 @@ public record SafariRulesPayload(ResourceLocation dimension, List<ResourceLocati
         }
         boolean protectBlocks = buf.readBoolean();
         boolean exemptCreativeAndSpectator = buf.readBoolean();
-        return new SafariRulesPayload(dimension, List.copyOf(balls), protectBlocks, exemptCreativeAndSpectator);
+        int placeableCount = buf.readVarInt();
+        if (placeableCount < 0 || placeableCount > MAX_PLACEABLE) {
+            throw new IllegalStateException("Cobblemon Safari: invalid placeable block count " + placeableCount);
+        }
+        List<ResourceLocation> placeable = new ArrayList<>(placeableCount);
+        for (int i = 0; i < placeableCount; i++) {
+            placeable.add(buf.readResourceLocation());
+        }
+        int houseCount = buf.readVarInt();
+        if (houseCount < 0 || houseCount > MAX_HOUSES) {
+            throw new IllegalStateException("Cobblemon Safari: invalid rest house count " + houseCount);
+        }
+        List<HouseColumn> houses = new ArrayList<>(houseCount);
+        for (int i = 0; i < houseCount; i++) {
+            houses.add(new HouseColumn(buf.readVarInt(), buf.readVarInt()));
+        }
+        return new SafariRulesPayload(dimension, List.copyOf(balls), protectBlocks, exemptCreativeAndSpectator,
+                List.copyOf(placeable), List.copyOf(houses));
     }
 
     @Override

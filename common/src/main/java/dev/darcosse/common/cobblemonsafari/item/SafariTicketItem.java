@@ -3,10 +3,9 @@ package dev.darcosse.common.cobblemonsafari.item;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
-import dev.darcosse.common.cobblemonsafari.access.EntryResult;
-import dev.darcosse.common.cobblemonsafari.access.SafariAccess;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
+import dev.darcosse.common.cobblemonsafari.credit.SafariCredit;
 import dev.darcosse.common.cobblemonsafari.session.SafariSession;
 import dev.darcosse.common.cobblemonsafari.session.SafariSessionManager;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
@@ -27,17 +26,16 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * The Safari Ticket: the built-in item way into the Safari.
+ * A Safari Ticket: Safari time in item form.
  *
- * <p>Used outside, it starts a session through {@link SafariAccess}, so any
- * registered entry requirement (fee, cooldown...) still applies, and it is
- * consumed only once the player is actually inside. Used inside, it extends the
- * running session when the config allows it: one item covers both "ticket"
- * and "time extension" from the design brief.
+ * <p>Used outside the Safari, it banks its time ({@link SafariCredit}); the
+ * player then spends the bank to enter. Used inside, it extends the running
+ * session when the config allows it.
  *
- * <p>A ticket may carry its own duration in its custom data, e.g.
+ * <p>The 15 min, 30 min and 1 h tickets carry a fixed duration. The plain
+ * ticket uses the configured default, or its own custom data, e.g.
  * {@code /give @p cobblemon_safari:safari_ticket[custom_data={duration_seconds:600}]},
- * so a shop can sell short and long hunts without new items.
+ * so a shop can still sell any length.
  */
 public class SafariTicketItem extends Item {
 
@@ -49,9 +47,17 @@ public class SafariTicketItem extends Item {
 
     private static final MapCodec<Integer> DURATION_FIELD = Codec.INT.fieldOf(DURATION_KEY);
 
-    /** Plain item; properties come from {@link SafariItems}. */
-    public SafariTicketItem(Properties properties) {
+    /** Duration printed on the item, in seconds; 0 for the plain ticket (default or custom data). */
+    private final int fixedDurationSeconds;
+
+    /**
+     * Ticket item; properties come from {@link SafariItems}.
+     *
+     * @param fixedDurationSeconds duration of every ticket of this item, or 0 for the plain ticket
+     */
+    public SafariTicketItem(Properties properties, int fixedDurationSeconds) {
         super(properties);
+        this.fixedDurationSeconds = fixedDurationSeconds;
     }
 
     /**
@@ -80,7 +86,7 @@ public class SafariTicketItem extends Item {
                                 TooltipFlag flag) {
         // The client does not know the server's default, so only an explicit
         // duration can be shown as a number.
-        Component duration = customDuration(stack)
+        Component duration = fixedOrCustomDuration(stack)
                 .<Component>map(seconds -> Component.literal(Ticks.format(Ticks.fromSeconds(seconds))))
                 .orElseGet(() -> Component.translatable(CobblemonSafari.MOD_ID + ".item.safari_ticket.standard"));
         tooltip.add(Component.translatable(CobblemonSafari.MOD_ID + ".item.safari_ticket.duration", duration)
@@ -90,20 +96,17 @@ public class SafariTicketItem extends Item {
     }
 
     /**
-     * Starts or extends a session.
+     * Banks the ticket's time, or adds it to the running session when used
+     * inside and the config allows it.
      *
      * @return true when the ticket was used and must be consumed
      */
-    private static boolean redeem(ServerPlayer player, ItemStack stack) {
+    private boolean redeem(ServerPlayer player, ItemStack stack) {
         SafariConfig.Ticket config = SafariConfigManager.get().ticket;
-        int ticks = Ticks.fromSeconds(customDuration(stack).orElse(config.defaultDurationSeconds));
+        int ticks = Ticks.fromSeconds(fixedOrCustomDuration(stack).orElse(config.defaultDurationSeconds));
         SafariSession session = SafariSessionManager.getSession(player);
 
-        if (session != null) {
-            if (!config.extendsActiveSession) {
-                player.displayClientMessage(Component.translatable(key("message.already_inside")), true);
-                return false;
-            }
+        if (session != null && config.extendsActiveSession) {
             int before = session.remainingTicks();
             int after = SafariSessionManager.addTime(player, ticks);
             // Already at the cap: consuming the ticket would take it for nothing.
@@ -116,11 +119,19 @@ public class SafariTicketItem extends Item {
             return true;
         }
 
-        EntryResult result = SafariAccess.requestEntry(player, ticks, SOURCE, false);
-        if (!result.success() && result.reason() != null) {
-            player.displayClientMessage(result.reason(), true);
+        int added = SafariCredit.add(player, ticks);
+        if (added <= 0) {
+            player.displayClientMessage(Component.translatable(key("message.credit_full")), true);
+            return false;
         }
-        return result.success();
+        player.displayClientMessage(Component.translatable(key("message.credit_added"),
+                Ticks.format(added), Ticks.format(SafariCredit.balance(player))), true);
+        return true;
+    }
+
+    /** The item's fixed duration, or else the one written in its custom data. */
+    private Optional<Integer> fixedOrCustomDuration(ItemStack stack) {
+        return fixedDurationSeconds > 0 ? Optional.of(fixedDurationSeconds) : customDuration(stack);
     }
 
     /** The duration written on the ticket, if any and positive. */

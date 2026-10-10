@@ -5,10 +5,15 @@
   "refmap": "cobblemon_safari-refmap.json",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "ChunkMapMixin",
     "ExplosionMixin",
     "FireBlockMixin"
   ],
   "injectors": {
     "defaultRequire": 1
-  }
+  },
+  "client": [
+    "client.GuiPortalOverlayMixin",
+    "client.MinecraftMusicMixin"
+  ]
 }

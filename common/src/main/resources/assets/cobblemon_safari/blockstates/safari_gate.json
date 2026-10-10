@@ -1,0 +1,11 @@
+{
+  "variants": {
+    "axis=x": {
+      "model": "cobblemon_safari:block/safari_gate"
+    },
+    "axis=z": {
+      "model": "cobblemon_safari:block/safari_gate",
+      "y": 90
+    }
+  }
+}

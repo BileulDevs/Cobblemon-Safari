@@ -13,16 +13,17 @@ public final class SafariClientConfigManager {
     private static final String FILE_NAME = CobblemonSafari.MOD_ID + "-client.json";
 
     /**
-     * Version written by this build. Version 2 added showBalls and showCatches;
-     * Gson fills them with their defaults, the bump only forces a rewrite so
-     * they appear in existing files.
+     * Version written by this build. Version 2 added showBalls and showCatches,
+     * version 3 the board colours; Gson fills new fields with their defaults,
+     * the bump only forces a rewrite so they appear in existing files.
      */
-    public static final int CURRENT_CONFIG_VERSION = 2;
+    public static final int CURRENT_CONFIG_VERSION = 3;
 
     private static final JsonConfigFile<SafariClientConfig> FILE =
             new JsonConfigFile<>(FILE_NAME, SafariClientConfig.class, SafariClientConfig::new);
 
     private static SafariClientConfig config = new SafariClientConfig();
+    private static BoardPalette palette = BoardPalette.from(new SafariClientConfig.Board());
 
     private SafariClientConfigManager() {
     }
@@ -48,10 +49,21 @@ public final class SafariClientConfigManager {
             loaded.lowTimeSeconds = loaded.criticalTimeSeconds;
             corrected = true;
         }
+        if (loaded.board == null) {
+            loaded.board = new SafariClientConfig.Board();
+            corrected = true;
+        }
+        corrected |= BoardPalette.repair(loaded.board, FILE_NAME);
         if (corrected) {
             FILE.write(loaded);
         }
         config = loaded;
+        palette = BoardPalette.from(loaded.board);
+    }
+
+    /** Board colours parsed from the current preferences. */
+    public static BoardPalette palette() {
+        return palette;
     }
 
     /** Current preferences. */

@@ -18,16 +18,26 @@ public class SafariConfig {
      * square world border, so older park sections no longer match the terrain.
      * Version 4: added the loan and ticket sections (no existing value changes).
      * Version 5: added the spawns, featured and restHouses sections (no existing value changes).
+     * Version 6: featured.rotationHours became featured.rotationMinutes.
+     * Version 7: added ticket credit settings, the capture section and spawn
+     * rate multipliers (no existing value changes).
+     * Version 8: added the reset section (no existing value changes).
+     * Version 9: removed the top-level defaultDurationSeconds (no entry path
+     * grants free time any more) and added the gate section.
+     * Version 10: added the points and escapeRope sections (no existing value
+     * changes). The shop itself lives in cobblemon_safari_shop.json.
+     * Version 11: added protection.placeableBlocks (no existing value changes).
+     * Version 12: added the bounties section (no existing value changes).
      */
     public int configVersion = SafariConfigManager.CURRENT_CONFIG_VERSION;
 
     /** Dimension treated as the Safari. Point it to another dimension to use a hand-built park. */
     public String dimension = "cobblemon_safari:safari";
 
-    /** Duration granted when an entry method does not specify one. */
-    public int defaultDurationSeconds = 30 * 60;
-
-    /** Hard cap on the remaining time; adding time never goes above it. */
+    /**
+     * Hard cap on the remaining time; adding time never goes above it. Also
+     * the most banked time one entry spends, the rest staying in the bank.
+     */
     public int maxDurationSeconds = 2 * 60 * 60;
 
     /** Poké Ball ids (as in Cobblemon, e.g. {@code cobblemon:safari_ball}) usable inside the Safari. */
@@ -70,8 +80,26 @@ public class SafariConfig {
     /** Safari Balls lent at the entrance, as in the games. */
     public Loan loan = new Loan();
 
+    /** Catch rate adjustments inside the Safari. */
+    public Capture capture = new Capture();
+
+    /** Daily regeneration of the Safari map. */
+    public Reset reset = new Reset();
+
     /** Behaviour of the Safari Ticket item. */
     public Ticket ticket = new Ticket();
+
+    /** The Safari Gates found in the overworld: entry, warden and roaming Pokémon. */
+    public Gate gate = new Gate();
+
+    /** Safari points earned by catching Pokémon, spent at the warden's shop. */
+    public Points points = new Points();
+
+    /** The Escape Rope lent at the entrance, to get out of caves. */
+    public EscapeRope escapeRope = new EscapeRope();
+
+    /** Daily missions shown on the Safari Board, paid in Safari points. */
+    public Bounties bounties = new Bounties();
 
     /** Which Pokémon may appear in the Safari, whoever spawns them. */
     public Spawns spawns = new Spawns();
@@ -118,6 +146,156 @@ public class SafariConfig {
 
         /** Radius of the same-species check, in blocks. */
         public int sameSpeciesRadius = 48;
+
+        /**
+         * How much faster Cobblemon's spawner ticks for players in the Safari.
+         * 2 makes a spawn attempt twice as often; 1 is Cobblemon's normal pace.
+         * Cost grows with it: each attempt scans a zone of blocks.
+         */
+        public double spawnRateMultiplier = 2.0;
+
+        /**
+         * Multiplies Cobblemon's Pokémon-per-chunk cap for players in the
+         * Safari, so faster spawning is not wasted on a full cap. 1 keeps
+         * Cobblemon's value.
+         */
+        public double pokemonPerChunkMultiplier = 2.0;
+    }
+
+    /**
+     * Daily regeneration of the Safari map. At the first server start of a new
+     * day the Safari dimension is deleted and regenerated with a new layout.
+     * Everything built or dropped inside is lost; sessions, statistics and
+     * banked time are kept (they live with the overworld).
+     */
+    public static class Reset {
+        /** Master switch. When false, the map is kept forever. */
+        public boolean enabled = true;
+
+        /**
+         * Hour (0 to 23) at which a new map day starts. A server restarted at
+         * 3:00 with hour 4 still belongs to the previous day and keeps its map.
+         */
+        public int hour = 4;
+
+        /** Time zone of {@link #hour}, e.g. "Europe/Paris"; empty for the server's own. */
+        public String timeZone = "";
+    }
+
+    /**
+     * Safari Gates: rare structures of the overworld, where players enter the
+     * Safari with their banked time. How often they generate is set by the
+     * datapack ({@code data/cobblemon_safari/worldgen/structure_set/safari_gate.json}),
+     * not here: worldgen is fixed once the chunks exist.
+     */
+    public static class Gate {
+        /**
+         * Standing in a gate (like a nether portal), or asking its warden,
+         * starts a hunt paid with banked time. When false, gates are
+         * decoration only.
+         */
+        public boolean allowEntry = true;
+
+        /** Keeps a Safari Warden standing next to each gate, who explains how entry works. */
+        public boolean spawnWarden = true;
+
+        /**
+         * The warden's Pokémon roaming around each gate, as Cobblemon
+         * properties (one entry per Pokémon). They cannot be caught, battled
+         * or hurt. Empty for none.
+         */
+        public List<String> companions = new ArrayList<>(List.of(
+                "kangaskhan level=30",
+                "tauros level=30",
+                "chansey level=30"
+        ));
+
+        /**
+         * How far, in blocks, the warden and his Pokémon may wander from the
+         * gate before being walked back (teleported beyond twice this).
+         */
+        public int roamRadius = 8;
+    }
+
+    /**
+     * Safari points: a currency separate from Safari time, earned with every
+     * capture inside the Safari and spent at the warden's shop
+     * ({@code config/cobblemon_safari_shop.json}).
+     */
+    public static class Points {
+        /** Master switch: when false, captures earn nothing (the shop still sells for points already earned). */
+        public boolean enabled = true;
+
+        /** Points for a capture, by the species' rarity in the Safari (its Cobblemon spawn bucket). */
+        public int common = 2;
+        public int uncommon = 5;
+        public int rare = 12;
+        public int ultraRare = 30;
+
+        /** Extra points when the species is one of today's specials on the Safari Board. */
+        public int featuredBonus = 10;
+
+        /** Extra points for a shiny. */
+        public int shinyBonus = 50;
+
+        /** Most points a player can hold; captures beyond it earn nothing. */
+        public int maxBalance = 1_000_000;
+    }
+
+    /**
+     * Bounties: a few missions drawn with each rotation of the specials, the
+     * same for every player, each paid once per player in Safari points.
+     * They make variety pay more than catching the same Pokémon over and over.
+     */
+    public static class Bounties {
+        /** Master switch for the missions, their rewards and their page on the board. */
+        public boolean enabled = true;
+
+        /** Missions per rotation. More missions mean more points per day; the board shows them all. */
+        public int count = 3;
+
+        /** Catch N Pokémon of a type. N is drawn between these bounds. */
+        public int typeMinCount = 3;
+        public int typeMaxCount = 5;
+        /** Points for a type mission, per Pokémon asked: 3 Pokémon at 12 = 36 points. */
+        public int typeRewardPerCatch = 12;
+
+        /** Points for catching a given species (two of a common one, one of an uncommon one). */
+        public int speciesReward = 40;
+
+        /** Points for catching any of today's specials. Off when the specials are switched off. */
+        public int featuredReward = 80;
+
+        /** Extra points once every mission of the rotation is done. */
+        public int allDoneBonus = 50;
+    }
+
+    /**
+     * The Escape Rope: lent on entry, taken back on exit. Used in a cave of
+     * the Safari, it brings the player back to the open air right above.
+     * It never wears out.
+     */
+    public static class EscapeRope {
+        /** Lends one rope to every player entering. */
+        public boolean enabled = true;
+
+        /** Seconds before the same player can use a rope again. */
+        public int cooldownSeconds = 5;
+    }
+
+    /** Catch rate adjustments inside the Safari. */
+    public static class Capture {
+        /**
+         * Multiplies the species catch rate when a Safari Ball hits a wild
+         * Pokémon that is NOT in a battle, inside the Safari only. Cobblemon
+         * halves every capture made outside a battle, so 3 means the Safari
+         * Ball out of battle works 1.5 times as well as a normal throw in
+         * battle (before Cobblemon's own 1.5 Safari Ball bonus). 1 disables it.
+         */
+        public double safariBallOutOfBattleMultiplier = 3.0;
+
+        /** Id of the ball the bonus applies to. */
+        public String safariBallItem = "cobblemon:safari_ball";
     }
 
     /**
@@ -129,8 +307,19 @@ public class SafariConfig {
         /** Master switch for the rotation, the board content and the special spawner. */
         public boolean enabled = true;
 
-        /** Length of one rotation, in real hours, aligned on midnight UTC when it divides 24. */
-        public int rotationHours = 24;
+        /**
+         * Length of one rotation, in real minutes (1440 = one day). Rotations
+         * are aligned on midnight UTC when the length divides a day, so 60
+         * changes the specials on the hour and 720 at midnight and noon UTC.
+         * Changing it starts a new draw right away.
+         */
+        public int rotationMinutes = 1440;
+
+        /**
+         * Version 5 setting, read only to migrate it into {@link #rotationMinutes}.
+         * Null once migrated, which keeps it out of the rewritten file.
+         */
+        public Integer rotationHours = null;
 
         /** Uncommon species featured per rotation. */
         public int uncommonSlots = 3;
@@ -252,6 +441,26 @@ public class SafariConfig {
          * session (capped by {@code maxDurationSeconds}) instead of being refused.
          */
         public boolean extendsActiveSession = true;
+
+        /**
+         * Most Safari time a player can bank with tickets, in seconds. Tickets
+         * used outside the Safari add to this bank; entering spends it.
+         */
+        public int maxCreditSeconds = 4 * 60 * 60;
+
+        /**
+         * Gives the unused time of a hunt paid with banked time back to the bank
+         * when the player leaves on purpose (/safari leave). Time running out,
+         * death or an operator ending the hunt never refund.
+         */
+        public boolean refundUnusedTimeOnLeave = true;
+
+        /**
+         * Lets players enter with /safari start, spending their banked time.
+         * Meant to be turned off once entry goes through the overworld
+         * Safari gate; operators keep /safari enter.
+         */
+        public boolean allowStartCommand = true;
     }
 
     /**
@@ -306,6 +515,17 @@ public class SafariConfig {
          * leaves TNT and lava buckets as a way to wreck the terrain.
          */
         public boolean protectBlocks = true;
+
+        /**
+         * Blocks players may still place, and break again, while
+         * {@link #protectBlocks} is on. Default: Cobblemon's Poké Cake and
+         * Poké Snack, the baits that attract wild Pokémon. Anything placed
+         * is lost at the daily map reset.
+         */
+        public List<String> placeableBlocks = new ArrayList<>(List.of(
+                "cobblemon:poke_cake",
+                "cobblemon:poke_snack"
+        ));
 
         /** Fire never spreads or burns blocks inside the Safari; fire blocks go out on their first tick. */
         public boolean preventFireSpread = true;

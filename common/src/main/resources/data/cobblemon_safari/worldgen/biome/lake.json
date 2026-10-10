@@ -12,7 +12,21 @@
     },
     "sky_color": 6211813,
     "water_color": 3129289,
-    "water_fog_color": 936535
+    "water_fog_color": 936535,
+    "music": {
+      "sound": {
+        "sound_id": "cobblemon_safari:music.plains"
+      },
+      "min_delay": 1200,
+      "max_delay": 3600,
+      "replace_current_music": false
+    },
+    "additions_sound": {
+      "sound": {
+        "sound_id": "cobblemon_safari:ambient.lake"
+      },
+      "tick_chance": 0.004
+    }
   },
   "carvers": {
     "air": [

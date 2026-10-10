@@ -1,11 +1,13 @@
 package dev.darcosse.common.cobblemonsafari.network;
 
+import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.platform.Platform;
 import dev.darcosse.common.cobblemonsafari.session.SafariSession;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -22,8 +24,12 @@ public final class SafariNetwork {
      * of another build is refused at login with a clear message instead of
      * failing on the first packet.
      * 2: featured payload added, timer payload v3.
+     * 3: rules payload v3 (placeable blocks).
+     * 4: shop and shop purchase payloads added.
+     * 5: bounties payload added.
+     * 6: rules payload v4 (rest house columns).
      */
-    public static final String PROTOCOL_VERSION = "2";
+    public static final String PROTOCOL_VERSION = "6";
 
     private SafariNetwork() {
     }
@@ -64,11 +70,31 @@ public final class SafariNetwork {
         }
     }
 
+    /** Sends the shop contents to one player, opening or refreshing their shop screen. */
+    public static void sendShop(ServerPlayer player, SafariShopPayload payload) {
+        Platform.get().sendToPlayer(player, payload);
+    }
+
     /** Snapshot of the rules the client needs, from the current config. */
     private static SafariRulesPayload buildRules() {
         return new SafariRulesPayload(SafariConfigManager.dimension().location(),
                 List.copyOf(SafariConfigManager.allowedBalls()),
                 SafariConfigManager.get().protection.protectBlocks,
-                SafariConfigManager.get().exemptCreativeAndSpectator);
+                SafariConfigManager.get().exemptCreativeAndSpectator,
+                List.copyOf(SafariConfigManager.placeableBlocks()),
+                restHouseColumns());
+    }
+
+    /** Centre columns of the configured rest houses; none when rest houses are disabled. */
+    private static List<SafariRulesPayload.HouseColumn> restHouseColumns() {
+        SafariConfig.RestHouses config = SafariConfigManager.get().restHouses;
+        if (!config.enabled) {
+            return List.of();
+        }
+        List<SafariRulesPayload.HouseColumn> columns = new ArrayList<>();
+        for (SafariConfig.Position position : config.positions) {
+            columns.add(new SafariRulesPayload.HouseColumn(position.x, position.z));
+        }
+        return List.copyOf(columns);
     }
 }

@@ -32,6 +32,8 @@ public final class SafariWorldState extends SavedData {
      */
     private long rotationSalt;
     private final Set<String> builtHouses = new HashSet<>();
+    /** Map salt the built houses belong to; a reset map has none of them. */
+    private long housesMapSalt;
 
     /** Fresh state for a world that never had one; draws the salt and asks to be saved. */
     private SafariWorldState() {
@@ -47,6 +49,18 @@ public final class SafariWorldState extends SavedData {
     /** Salt of this world's rotation. */
     public long rotationSalt() {
         return rotationSalt;
+    }
+
+    /**
+     * Forgets the built houses when the Safari map was reset since they were
+     * built, so they are built again on the new terrain.
+     */
+    public void forgetHousesIfMapChanged(long mapSalt) {
+        if (housesMapSalt != mapSalt) {
+            builtHouses.clear();
+            housesMapSalt = mapSalt;
+            setDirty();
+        }
     }
 
     /** Whether a rest house was already built at the given column. */
@@ -70,6 +84,7 @@ public final class SafariWorldState extends SavedData {
             houses.add(StringTag.valueOf(key));
         }
         nbt.put("built_houses", houses);
+        nbt.putLong("houses_map_salt", housesMapSalt);
         return nbt;
     }
 
@@ -77,6 +92,8 @@ public final class SafariWorldState extends SavedData {
     private static SafariWorldState load(CompoundTag nbt, HolderLookup.Provider registries) {
         SafariWorldState state = new SafariWorldState();
         state.rotationSalt = nbt.getLong("rotation_salt");
+        // Absent in older saves: 0, the salt of the original map, which is right.
+        state.housesMapSalt = nbt.getLong("houses_map_salt");
         for (Tag house : nbt.getList("built_houses", Tag.TAG_STRING)) {
             state.builtHouses.add(house.getAsString());
         }

@@ -1,0 +1,13 @@
+{
+  "name": "cobblemon_safari:safari_warden",
+  "order": 0,
+  "variations": [
+    {
+      "aspects": [],
+      "poser": "cobblemon:standard",
+      "model": "cobblemon:steve.geo",
+      "texture": "cobblemon_safari:textures/npcs/safari_warden.png",
+      "layers": []
+    }
+  ]
+}

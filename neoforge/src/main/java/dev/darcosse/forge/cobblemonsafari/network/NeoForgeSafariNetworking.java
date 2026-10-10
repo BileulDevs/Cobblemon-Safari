@@ -1,10 +1,17 @@
 package dev.darcosse.forge.cobblemonsafari.network;
 
+import dev.darcosse.common.cobblemonsafari.client.BountyClientState;
 import dev.darcosse.common.cobblemonsafari.client.FeaturedClientState;
 import dev.darcosse.common.cobblemonsafari.client.SafariClientState;
+import dev.darcosse.common.cobblemonsafari.network.SafariBountiesPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariFeaturedPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariNetwork;
 import dev.darcosse.common.cobblemonsafari.network.SafariRulesPayload;
+import dev.darcosse.common.cobblemonsafari.network.SafariShopBuyPayload;
+import dev.darcosse.common.cobblemonsafari.network.SafariShopPayload;
+import dev.darcosse.common.cobblemonsafari.network.ShopClientBridge;
+import dev.darcosse.common.cobblemonsafari.shop.SafariShop;
+import net.minecraft.server.level.ServerPlayer;
 import dev.darcosse.common.cobblemonsafari.network.SafariTimerPayload;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
@@ -34,5 +41,16 @@ public final class NeoForgeSafariNetworking {
                 (payload, context) -> context.enqueueWork(() -> SafariClientState.onRules(payload)));
         registrar.playToClient(SafariFeaturedPayload.TYPE, SafariFeaturedPayload.CODEC,
                 (payload, context) -> context.enqueueWork(() -> FeaturedClientState.onFeatured(payload)));
+        registrar.playToClient(SafariBountiesPayload.TYPE, SafariBountiesPayload.CODEC,
+                (payload, context) -> context.enqueueWork(() -> BountyClientState.onBounties(payload)));
+        // Through the bridge: the screen is client-only and this handler exists on both dists.
+        registrar.playToClient(SafariShopPayload.TYPE, SafariShopPayload.CODEC,
+                (payload, context) -> context.enqueueWork(() -> ShopClientBridge.onShop(payload)));
+        registrar.playToServer(SafariShopBuyPayload.TYPE, SafariShopBuyPayload.CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (context.player() instanceof ServerPlayer player) {
+                        SafariShop.handleBuy(player, payload);
+                    }
+                }));
     }
 }

@@ -1,0 +1,48 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "particle": "minecraft:block/stripped_dark_oak_log",
+    "beam": "minecraft:block/stripped_dark_oak_log"
+  },
+  "elements": [
+    {
+      "name": "left",
+      "from": [
+        10,
+        6,
+        10
+      ],
+      "to": [
+        16,
+        10,
+        16
+      ],
+      "faces": {
+        "north": {
+          "texture": "#beam",
+          "rotation": 90
+        },
+        "south": {
+          "texture": "#beam",
+          "cullface": "south",
+          "rotation": 90
+        },
+        "east": {
+          "texture": "#beam",
+          "cullface": "east"
+        },
+        "west": {
+          "texture": "#beam"
+        },
+        "up": {
+          "texture": "#beam",
+          "rotation": 90
+        },
+        "down": {
+          "texture": "#beam",
+          "rotation": 90
+        }
+      }
+    }
+  ]
+}

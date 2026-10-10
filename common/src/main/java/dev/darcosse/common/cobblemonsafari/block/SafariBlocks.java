@@ -6,6 +6,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
+import net.minecraft.world.level.material.PushReaction;
 
 import java.util.function.BiConsumer;
 
@@ -22,10 +23,33 @@ public final class SafariBlocks {
     /** Id of the Safari Board; also its model, loot table and translation path. */
     public static final ResourceLocation SAFARI_BOARD_ID = CobblemonSafari.id("safari_board");
 
+    /** Id of the Safari Board Frame; also its models, loot table and translation path. */
+    public static final ResourceLocation SAFARI_BOARD_FRAME_ID = CobblemonSafari.id("safari_board_frame");
+
+    /** Id of the Safari Gate pane; also its model and translation path. */
+    public static final ResourceLocation SAFARI_GATE_ID = CobblemonSafari.id("safari_gate");
+
+    /**
+     * Light given off by a gate pane, like a nether portal. Higher values
+     * light the plaza at night; 15 would also melt nearby snow and ice.
+     */
+    private static final int GATE_LIGHT = 11;
+
+    /** Vanilla's value for unbreakable blocks (bedrock, portals): survival players cannot mine gates. */
+    private static final float UNBREAKABLE = -1.0F;
+
+    /** Explosion resistance of bedrock, so no blast opens a gate's pane. */
+    private static final float BLAST_PROOF = 3_600_000.0F;
+
     /** Mining time like a wooden sign: easy to move, not broken by a stray punch. */
     private static final float BOARD_STRENGTH = 1.0F;
 
+    /** Like a fence: sturdy enough not to break by accident, quick with an axe. */
+    private static final float FRAME_STRENGTH = 2.0F;
+
     private static Block safariBoard;
+    private static Block safariBoardFrame;
+    private static Block safariGate;
 
     private SafariBlocks() {
     }
@@ -38,6 +62,46 @@ public final class SafariBlocks {
                 .strength(BOARD_STRENGTH)
                 .noOcclusion());
         registrar.accept(SAFARI_BOARD_ID, safariBoard);
+        safariBoardFrame = new SafariBoardFrameBlock(BlockBehaviour.Properties.of()
+                .mapColor(MapColor.PODZOL)
+                .sound(SoundType.WOOD)
+                .strength(FRAME_STRENGTH)
+                .noOcclusion());
+        registrar.accept(SAFARI_BOARD_FRAME_ID, safariBoardFrame);
+        safariGate = new SafariGateBlock(BlockBehaviour.Properties.of()
+                .mapColor(MapColor.EMERALD)
+                .sound(SoundType.GLASS)
+                .strength(UNBREAKABLE, BLAST_PROOF)
+                .lightLevel(state -> GATE_LIGHT)
+                .noCollission()
+                .noOcclusion()
+                .noLootTable()
+                .pushReaction(PushReaction.BLOCK));
+        registrar.accept(SAFARI_GATE_ID, safariGate);
+    }
+
+    /**
+     * The Safari Gate pane.
+     *
+     * @throws IllegalStateException before registration, which means a loader entry point is wired wrong
+     */
+    public static Block safariGate() {
+        if (safariGate == null) {
+            throw new IllegalStateException("SafariBlocks.register was never called");
+        }
+        return safariGate;
+    }
+
+    /**
+     * The Safari Board Frame.
+     *
+     * @throws IllegalStateException before registration, which means a loader entry point is wired wrong
+     */
+    public static Block safariBoardFrame() {
+        if (safariBoardFrame == null) {
+            throw new IllegalStateException("SafariBlocks.register was never called");
+        }
+        return safariBoardFrame;
     }
 
     /**

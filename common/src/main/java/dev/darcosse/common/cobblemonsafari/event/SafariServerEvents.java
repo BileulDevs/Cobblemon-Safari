@@ -4,11 +4,16 @@ import com.mojang.brigadier.CommandDispatcher;
 import dev.darcosse.common.cobblemonsafari.capture.CaptureGuard;
 import dev.darcosse.common.cobblemonsafari.command.SafariCommands;
 import dev.darcosse.common.cobblemonsafari.park.SafariBorder;
+import dev.darcosse.common.cobblemonsafari.bounty.SafariBounties;
+import dev.darcosse.common.cobblemonsafari.gate.GateResidents;
 import dev.darcosse.common.cobblemonsafari.protection.SafariProtection;
+import dev.darcosse.common.cobblemonsafari.reset.SafariMapReset;
+import dev.darcosse.common.cobblemonsafari.world.SafariWorldState;
 import dev.darcosse.common.cobblemonsafari.session.SafariSessionManager;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedRotation;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedSpawner;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedSync;
+import dev.darcosse.common.cobblemonsafari.spawn.SafariSpawnBoost;
 import dev.darcosse.common.cobblemonsafari.structure.RestHouses;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.MinecraftServer;
@@ -17,6 +22,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * The only surface loaders talk to. Each loader module translates its own
@@ -28,13 +34,22 @@ public final class SafariServerEvents {
     private SafariServerEvents() {
     }
 
+    /** Before any level loads: the only moment the Safari map can be reset safely. */
+    public static void onServerStarting(MinecraftServer server) {
+        SafariMapReset.onServerStarting(server);
+    }
+
     /** All levels are loaded; the Safari border can be applied. */
     public static void onServerStarted(MinecraftServer server) {
         // Single player keeps these classes loaded from one world to the next:
         // without this, a second world would show the first world's specials.
         FeaturedRotation.invalidate();
         FeaturedSync.reset();
+        SafariBounties.reset();
+        SafariSpawnBoost.reset();
         SafariBorder.apply(server);
+        // A reset map has no rest houses yet, whatever the save says.
+        SafariWorldState.get(server).forgetHousesIfMapChanged(SafariMapReset.salt());
         RestHouses.ensureBuilt(server);
     }
 
@@ -51,12 +66,16 @@ public final class SafariServerEvents {
         SafariSessionManager.tick(server);
         FeaturedSpawner.tick(server);
         FeaturedSync.tick(server);
+        SafariBounties.tick(server);
+        SafariSpawnBoost.tick(server);
     }
 
     /** A player finished joining and can receive custom payloads. */
     public static void onPlayerJoin(ServerPlayer player) {
+        SafariMapReset.onPlayerJoin(player);
         SafariSessionManager.onPlayerJoin(player);
         FeaturedSync.sendTo(player);
+        SafariBounties.sendTo(player);
     }
 
     /** A player died (not cancelled). */
@@ -79,12 +98,14 @@ public final class SafariServerEvents {
     }
 
     /**
-     * A player is about to break a block, or to start mining it (both sides).
+     * A player is about to break a block: mining is complete, the block would
+     * go now. Server side. Mining itself is allowed, so the warning shows once
+     * per block rather than on every left click.
      *
      * @return true when the loader must cancel it
      */
-    public static boolean onBlockBreak(Player player) {
-        return SafariProtection.shouldBlockBreak(player);
+    public static boolean onBlockBreak(Player player, BlockState state) {
+        return SafariProtection.shouldBlockBreak(player, state);
     }
 
     /**
@@ -92,17 +113,18 @@ public final class SafariServerEvents {
      *
      * @return true when the loader must cancel the placement
      */
-    public static boolean onBlockPlace(Player player) {
-        return SafariProtection.shouldBlockPlace(player);
+    public static boolean onBlockPlace(Player player, BlockState placed) {
+        return SafariProtection.shouldBlockPlace(player, placed);
     }
 
     /**
-     * A player right-clicks a block with an item, on EITHER logical side.
+     * A player right-clicks a block, with or without an item, on EITHER logical side.
      *
+     * @param clicked the block right-clicked
      * @return true when the loader must cancel the interaction
      */
-    public static boolean onUseItemOnBlock(Player player, ItemStack stack) {
-        return SafariProtection.shouldBlockUseOn(player, stack);
+    public static boolean onUseItemOnBlock(Player player, ItemStack stack, BlockState clicked) {
+        return SafariProtection.shouldBlockUseOn(player, stack, clicked);
     }
 
     /**
@@ -111,6 +133,6 @@ public final class SafariServerEvents {
      * @return true when the loader must cancel the damage
      */
     public static boolean onIncomingDamage(LivingEntity entity, DamageSource source) {
-        return SafariProtection.shouldCancelDamage(entity, source);
+        return SafariProtection.shouldCancelDamage(entity, source) || GateResidents.shouldCancelDamage(entity, source);
     }
 }

@@ -11,6 +11,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
@@ -90,6 +91,27 @@ public class SafariBoardBlock extends HorizontalDirectionalBlock implements Enti
             case WEST -> SHAPE_WEST;
             default -> SHAPE_NORTH;
         };
+    }
+
+    /**
+     * Frames diagonal to a screen fill their planks toward it; vanilla only
+     * notifies direct neighbours, so diagonal frames are refreshed here.
+     */
+    @Override
+    protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean movedByPiston) {
+        super.onPlace(state, level, pos, oldState, movedByPiston);
+        if (!oldState.is(this)) {
+            SafariBoardFrameBlock.refreshDiagonals(level, pos, state.getValue(FACING));
+        }
+    }
+
+    /** Same as {@link #onPlace}, for removal. */
+    @Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+        super.onRemove(state, level, pos, newState, movedByPiston);
+        if (!newState.is(this)) {
+            SafariBoardFrameBlock.refreshDiagonals(level, pos, state.getValue(FACING));
+        }
     }
 
     /** Every board has a block entity; only the bottom-left one of a screen draws it. */

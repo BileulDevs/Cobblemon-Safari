@@ -11,6 +11,7 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
@@ -20,6 +21,11 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 public final class NeoForgeServerEvents {
 
     private NeoForgeServerEvents() {
+    }
+
+    /** Fired before the levels load, which the map reset needs. */
+    static void onServerAboutToStart(ServerAboutToStartEvent event) {
+        SafariServerEvents.onServerStarting(event.getServer());
     }
 
     static void onServerStarted(ServerStartedEvent event) {
@@ -63,30 +69,30 @@ public final class NeoForgeServerEvents {
         }
     }
 
-    /** Server side; the server-side guarantee for breaking. */
+    /**
+     * Server side, when the block would actually break. Mining itself is not
+     * refused (no LeftClickBlock listener): refusing every left click spammed
+     * the warning each time a player hit a block. The player sees the cracks,
+     * then the block stays and the warning shows once.
+     */
     static void onBlockBreak(BlockEvent.BreakEvent event) {
-        if (SafariServerEvents.onBlockBreak(event.getPlayer())) {
+        if (SafariServerEvents.onBlockBreak(event.getPlayer(), event.getState())) {
             event.setCanceled(true);
         }
     }
 
     /** Server side; backstop for any placement the click check missed. */
     static void onBlockPlace(BlockEvent.EntityPlaceEvent event) {
-        if (event.getEntity() instanceof Player player && SafariServerEvents.onBlockPlace(player)) {
-            event.setCanceled(true);
-        }
-    }
-
-    /** Both sides, when mining starts: no animation, no ghost block. */
-    static void onLeftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
-        if (SafariServerEvents.onBlockBreak(event.getEntity())) {
+        if (event.getEntity() instanceof Player player
+                && SafariServerEvents.onBlockPlace(player, event.getPlacedBlock())) {
             event.setCanceled(true);
         }
     }
 
     /** Both sides; placement and block-transforming tools. */
     static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
-        if (SafariServerEvents.onUseItemOnBlock(event.getEntity(), event.getItemStack())) {
+        if (SafariServerEvents.onUseItemOnBlock(event.getEntity(), event.getItemStack(),
+                event.getLevel().getBlockState(event.getPos()))) {
             event.setCanceled(true);
             event.setCancellationResult(InteractionResult.FAIL);
         }

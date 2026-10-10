@@ -6,6 +6,7 @@ import dev.darcosse.common.cobblemonsafari.access.EntryResult;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
+import dev.darcosse.common.cobblemonsafari.loan.EscapeRopes;
 import dev.darcosse.common.cobblemonsafari.loan.LoanedBalls;
 import dev.darcosse.common.cobblemonsafari.network.SafariNetwork;
 import dev.darcosse.common.cobblemonsafari.park.ParkBoundary;
@@ -103,10 +104,14 @@ public final class SafariSessionManager {
         // Lent after the teleport: anything that does not fit is dropped at the
         // arrival point, inside the Safari, where the reclaim rules still apply.
         int lent = LoanedBalls.lend(player, ballsLoaned);
+        boolean ropeLent = EscapeRopes.lend(player);
         SafariNetwork.sendTimer(player, session, true);
         player.sendSystemMessage(Component.translatable(key("message.entered"), Ticks.format(ticks)));
         if (lent > 0) {
             player.sendSystemMessage(Component.translatable(key("message.balls_lent"), lent));
+        }
+        if (ropeLent) {
+            player.sendSystemMessage(Component.translatable(key("message.rope_lent")));
         }
         if (SafariConfigManager.get().featured.announceOnEntry) {
             Component specials = FeaturedBoard.summary(player.getServer());
@@ -175,6 +180,7 @@ public final class SafariSessionManager {
         // and the balls usually dropped with the inventory: they stay on the
         // ground in the Safari, which is harmless.
         int returned = LoanedBalls.reclaim(player);
+        EscapeRopes.reclaim(player);
         player.sendSystemMessage(Component.translatable(reason.translationKey()));
         player.sendSystemMessage(SafariRecap.build(session, returned));
         for (SafariSessionListener listener : LISTENERS) {
@@ -318,6 +324,7 @@ public final class SafariSessionManager {
             // a friend at the border...).
             if (!inside) {
                 LoanedBalls.reclaim(player);
+                EscapeRopes.reclaim(player);
             }
             if (inside && !hasSession && !exempt) {
                 SafariTeleporter.sendToWorldSpawn(player);
