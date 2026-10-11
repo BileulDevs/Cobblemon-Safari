@@ -1,0 +1,42 @@
+{
+  "structures": [
+    {
+      "structure": "cobblemon_safari:safari_ruins/ruin_stone_henge",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/ruin_moon_henge",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/ruin_sun_henge",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/ruin_toppled_pillars",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/ruin_shaded",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/ruin_town_center",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/ruin_frozen_altar",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/ruin_overgrown_trial",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 14,
+    "separation": 6,
+    "salt": 1729384751
+  }
+}

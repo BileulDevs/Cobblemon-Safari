@@ -1,0 +1,12 @@
+{
+  "replace": false,
+  "values": [
+    "cobblemon_safari:grassland",
+    "cobblemon_safari:savanna",
+    "cobblemon_safari:woodland",
+    "cobblemon_safari:flower_meadow",
+    "cobblemon_safari:taiga",
+    "cobblemon_safari:deep_forest",
+    "cobblemon_safari:rocky_hills"
+  ]
+}

@@ -7,6 +7,7 @@ import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import org.joml.Matrix4f;
 
 /**
@@ -23,6 +24,7 @@ final class BoardPainter {
 
     /** Light value for everything on the screen: it emits its own light. */
     static final int LIGHT = LightTexture.FULL_BRIGHT;
+
 
     private final PoseStack poseStack;
     private final MultiBufferSource buffers;
@@ -86,6 +88,29 @@ final class BoardPainter {
         buffer.addVertex(matrix, x0, y1, z).setColor(argb).setLight(LIGHT);
         buffer.addVertex(matrix, x1, y1, z).setColor(argb).setLight(LIGHT);
         buffer.addVertex(matrix, x1, y0, z).setColor(argb).setLight(LIGHT);
+    }
+
+    /**
+     * Draws a texture region on a rectangle, full-bright, multiplied by a
+     * colour (white leaves it as it is).
+     *
+     * <p>Uses the text render type (textured, lightmap, no normal-based
+     * shading). It is not one of the game's fixed buffers, so it is drawn in
+     * the order it is submitted relative to the fills: draw a background
+     * image before the translucent fills meant to blend over it.
+     *
+     * @param u0   texture coordinates, 0..1
+     * @param tint ARGB colour multiplying the texture
+     */
+    void image(ResourceLocation texture, float x0, float y0, float x1, float y1, float z,
+               float u0, float v0, float u1, float v1, int tint) {
+        Matrix4f matrix = poseStack.last().pose();
+        VertexConsumer buffer = buffers.getBuffer(RenderType.text(texture));
+        // Same winding as fill(): counter-clockwise as the viewer sees it.
+        buffer.addVertex(matrix, x0, y0, z).setColor(tint).setUv(u0, v0).setLight(LIGHT);
+        buffer.addVertex(matrix, x0, y1, z).setColor(tint).setUv(u0, v1).setLight(LIGHT);
+        buffer.addVertex(matrix, x1, y1, z).setColor(tint).setUv(u1, v1).setLight(LIGHT);
+        buffer.addVertex(matrix, x1, y0, z).setColor(tint).setUv(u1, v0).setLight(LIGHT);
     }
 
     /**

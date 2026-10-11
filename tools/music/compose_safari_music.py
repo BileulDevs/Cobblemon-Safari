@@ -11,6 +11,7 @@ Why code instead of audio files made by hand:
 Usage (from the repository root; needs numpy, scipy and ffmpeg with libvorbis):
     python3 tools/music/compose_safari_music.py            # every track
     python3 tools/music/compose_safari_music.py plains     # one track
+    python3 tools/music/compose_safari_music.py gate       # the Safari Gate's tune and chime
 
 Output: common/src/main/resources/assets/cobblemon_safari/sounds/music/<zone>.ogg
 The sound events pointing at these files are written by
@@ -812,12 +813,18 @@ def master(mix):
 
 
 def write_ogg(audio, path):
-    """Encodes a stereo float array to Ogg Vorbis with ffmpeg, reproducibly."""
-    pcm = (np.clip(audio, -1, 1) * 32767).astype("<i2").T.copy()
+    """
+    Encodes a float array to Ogg Vorbis with ffmpeg, reproducibly: stereo
+    (2 x n) for music, mono (n) for sounds played at a position, which
+    Minecraft only attenuates with distance when they are mono.
+    """
+    channels = 1 if audio.ndim == 1 else 2
+    pcm = (np.clip(audio, -1, 1) * 32767).astype("<i2")
+    pcm = pcm.copy() if channels == 1 else pcm.T.copy()
     with tempfile.TemporaryDirectory() as tmp:
         wav_path = os.path.join(tmp, "track.wav")
         with wave.open(wav_path, "wb") as w:
-            w.setnchannels(2)
+            w.setnchannels(channels)
             w.setsampwidth(2)
             w.setframerate(SAMPLE_RATE)
             w.writeframes(pcm.tobytes())
@@ -829,11 +836,115 @@ def write_ogg(audio, path):
                         path], check=True)
 
 
+
+# ---------------------------------------------------------------------------
+# Safari Gate sounds
+# ---------------------------------------------------------------------------
+# The gate's pane plays a relaxed tune instead of the nether portal's hum,
+# and a soft chime instead of the portal's whoosh when a player steps in.
+# Both are mono: the client plays them at the gate, fading with distance.
+
+GATE_DIR = os.path.join(os.path.dirname(OUT_DIR), "gate")
+GATE_SEED = 7701
+# The loop: C major pentatonic (no semitones, nothing can clash), slow.
+GATE_TONIC = 60
+GATE_BPM = 76
+GATE_PENTATONIC = [0, 2, 4, 7, 9]
+# One chord per two bars: C, A minor, F, G. Eight bars, about 25 seconds.
+GATE_CHORDS = [[48, 55, 64, 67], [45, 52, 60, 64], [41, 53, 57, 60], [43, 50, 59, 62]]
+GATE_BARS_PER_CHORD = 2
+# Reverb tail rendered past the loop's end and folded back onto its start,
+# so the loop restarts without a gap or a click.
+GATE_LOOP_TAIL_SECONDS = 4.0
+GATE_RMS_DB = -21.0
+
+
+def gate_loop():
+    """The pane's tune: pad chords, a kalimba arpeggio and a few bell notes, seamlessly looping."""
+    rng = np.random.default_rng(GATE_SEED)
+    beat_s = 60.0 / GATE_BPM
+    bar_s = beat_s * 4
+    loop_s = bar_s * GATE_BARS_PER_CHORD * len(GATE_CHORDS)
+    n_loop = int(loop_s * SAMPLE_RATE)
+    n_total = n_loop + int(GATE_LOOP_TAIL_SECONDS * SAMPLE_RATE)
+    dry = np.zeros(n_total)
+    send = np.zeros(n_total)
+
+    def add(sound, start_s, gain, wet):
+        start = int(start_s * SAMPLE_RATE)
+        end = min(n_total, start + len(sound))
+        dry[start:end] += sound[:end - start] * gain
+        send[start:end] += sound[:end - start] * gain * wet
+
+    for c, chord in enumerate(GATE_CHORDS):
+        t0 = c * GATE_BARS_PER_CHORD * bar_s
+        span = GATE_BARS_PER_CHORD * bar_s
+        for midi in chord:
+            add(pad_note(midi_to_hz(midi), span, 0.7, rng), t0, 0.55, 0.5)
+        # Kalimba: chord tones up and down in eighths, an octave up.
+        arp = [chord[0] + 12, chord[1] + 12, chord[2] + 12, chord[3] + 12, chord[2] + 12, chord[1] + 12]
+        for k in range(int(span / (beat_s / 2))):
+            midi = arp[k % len(arp)]
+            add(kalimba(midi_to_hz(midi), beat_s, 0.45 + 0.1 * (k % 2 == 0), rng), t0 + k * beat_s / 2, 0.5, 0.35)
+        # A bell note or two per chord, from the pentatonic scale above it.
+        for b in range(2):
+            if rng.random() < 0.8:
+                degree = int(rng.integers(0, len(GATE_PENTATONIC)))
+                midi = GATE_TONIC + 12 + GATE_PENTATONIC[degree]
+                add(bell(midi_to_hz(midi), beat_s * 2, 0.5, rng), t0 + (b * 4 + int(rng.integers(0, 3))) * beat_s,
+                    0.35, 0.6)
+
+    ir = reverb_ir(3.0, np.random.default_rng(GATE_SEED + 1))
+    wet = signal.fftconvolve(send, ir[0])[:n_total]
+    mix = highpass(dry + 0.35 * wet, 40)
+    # Fold everything past the loop's end back onto its beginning: the tail
+    # of the last bars rings over the first ones, as it would in a real loop.
+    looped = mix[:n_loop].copy()
+    tail = mix[n_loop:]
+    looped[:len(tail)] += tail
+    return master_mono(looped, GATE_RMS_DB)
+
+
+def gate_chime():
+    """The step-in chime: a rising kalimba and bell arpeggio, then its ring."""
+    rng = np.random.default_rng(GATE_SEED + 2)
+    n_total = int(3.0 * SAMPLE_RATE)
+    dry = np.zeros(n_total)
+    for k, midi in enumerate([GATE_TONIC, GATE_TONIC + 4, GATE_TONIC + 7, GATE_TONIC + 12, GATE_TONIC + 16]):
+        start = int(k * 0.11 * SAMPLE_RATE)
+        for sound, gain in ((kalimba(midi_to_hz(midi + 12), 0.4, 0.6, rng), 0.6),
+                            (bell(midi_to_hz(midi + 12), 0.4, 0.4, rng), 0.3)):
+            end = min(n_total, start + len(sound))
+            dry[start:end] += sound[:end - start] * gain
+    ir = reverb_ir(2.0, np.random.default_rng(GATE_SEED + 3))
+    mix = highpass(dry + 0.3 * signal.fftconvolve(dry, ir[0])[:n_total], 60)
+    fade = int(0.8 * SAMPLE_RATE)
+    mix[-fade:] *= np.linspace(1, 0, fade) ** 2
+    return master_mono(mix, GATE_RMS_DB + 3)
+
+
+def master_mono(mix, rms_db):
+    """Loudness and soft limit for a mono sound, as master() does for music."""
+    rms = np.sqrt(np.mean(mix ** 2))
+    mix = mix * (10 ** (rms_db / 20) / max(rms, 1e-9))
+    return PEAK_CEILING * np.tanh(mix / PEAK_CEILING)
+
+
+GATE_SOUNDS = {"ambience": gate_loop, "chime": gate_chime}
+
 def main():
-    names = sys.argv[1:] or list(THEMES)
-    unknown = [n for n in names if n not in THEMES]
+    names = sys.argv[1:] or list(THEMES) + ["gate"]
+    unknown = [n for n in names if n not in THEMES and n != "gate"]
     if unknown:
-        sys.exit(f"Unknown theme(s): {unknown}. Known: {list(THEMES)}")
+        sys.exit(f"Unknown theme(s): {unknown}. Known: {list(THEMES)} and gate")
+    if "gate" in names:
+        names.remove("gate")
+        os.makedirs(GATE_DIR, exist_ok=True)
+        for sound, make in GATE_SOUNDS.items():
+            audio = make()
+            path = os.path.join(GATE_DIR, f"{sound}.ogg")
+            write_ogg(audio, path)
+            print(f"gate/{sound}: {len(audio) / SAMPLE_RATE:.1f} s, {os.path.getsize(path) / 1024:.0f} KiB")
     os.makedirs(OUT_DIR, exist_ok=True)
     for name in names:
         audio = render(name, THEMES[name])

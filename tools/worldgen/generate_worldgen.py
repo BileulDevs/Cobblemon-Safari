@@ -88,6 +88,15 @@ COAST_STEEPEN_FACTOR = 3.5
 # Above ~0.25 the island breaks into an archipelago.
 COAST_NOISE = 0.12
 
+# Lowest continentalness, reached in the open sea around the island.
+# Vanilla's terrain spline RAISES the sea floor again below -1.02 (that is
+# where mushroom islands come from): clamping at -1.1, as this script once
+# did, grew sand and clay mounds up to the surface all around the island, in
+# the sea inside the border. -1.0 stays in vanilla's deep-ocean band
+# (-1.05 to -0.455), whose floor is flat and deep. Lower brings the mounds
+# back; higher makes the open sea shallower.
+CONTINENT_FLOOR = -1.0
+
 # Erosion goes from sharp relief at the centre (a central mountain) to flat
 # lowlands on the coast. With these values: peaks within ~15% of the radius,
 # rocky ring to ~35%, rolling hills to ~74%, flat lowlands beyond. The centre
@@ -129,6 +138,8 @@ NOISE_FIRST_OCTAVE = {
 
 # Density function types provided by the mod (registered in Java).
 CUSTOM_DENSITY_FUNCTION_TYPES = {f"{MOD_ID}:island_coordinate"}
+# Java structure types of the mod (SafariWorldgen.registerStructureTypes).
+CUSTOM_STRUCTURE_TYPES = {f"{MOD_ID}:dry_jigsaw"}
 
 # ---------------------------------------------------------------------------
 # Atmosphere
@@ -221,6 +232,13 @@ MUSIC_MIN_DELAY = 1200
 MUSIC_MAX_DELAY = 3600
 MUSIC_ZONES = ["plains", "forest", "arid", "snow", "caves", "center"]
 MUSIC_DIR = os.path.join(ROOT, "common", "src", "main", "resources", "assets", MOD_ID, "sounds", "music")
+GATE_SOUND_DIR = os.path.join(ROOT, "common", "src", "main", "resources", "assets", MOD_ID, "sounds", "gate")
+# event id: (file under sounds/gate, subtitle key suffix, streamed). The
+# 25-second loop is streamed like music; the short chime is loaded whole.
+GATE_SOUNDS = {
+    "block.safari_gate.ambient": ("ambience", "block.safari_gate.ambient", True),
+    "block.safari_gate.chime": ("chime", "block.safari_gate.chime", False),
+}
 
 # Calls of wild Pokemon heard now and then (the biome's "additions" sound):
 # chance per tick, so 0.004 is one call every ~12 seconds on average. Played
@@ -282,6 +300,16 @@ def write_sounds():
     if missing_tracks:
         sys.exit(f"Missing music tracks {missing_tracks}: run tools/music/compose_safari_music.py first")
     events = {}
+    # The Safari Gate's own sounds (tools/music/compose_safari_music.py, "gate"):
+    # its relaxed tune, looped by the client near a gate (GateAmbience), and the
+    # chime played when a player steps into the pane. Mirrored by GateSounds.
+    for event, (file, subtitle, stream) in GATE_SOUNDS.items():
+        if not os.path.exists(os.path.join(GATE_SOUND_DIR, f"{file}.ogg")):
+            sys.exit(f"Missing gate sound {file}.ogg: run tools/music/compose_safari_music.py gate first")
+        entry = {"name": f"{MOD_ID}:gate/{file}"}
+        if stream:
+            entry["stream"] = True
+        events[event] = {"subtitle": f"subtitles.{MOD_ID}.{subtitle}", "sounds": [entry]}
     for zone in MUSIC_ZONES:
         # stream: music is read from disk while it plays instead of being
         # decoded whole into memory, as vanilla does for its own music.
@@ -670,7 +698,8 @@ def continents_df():
     beyond = {"type": "minecraft:max", "argument1": df_add(radial, -COAST_STEEPEN_FROM), "argument2": 0.0}
     extra_slope = CONTINENT_SLOPE * (COAST_STEEPEN_FACTOR - 1.0)
     shape = df_add(df_add(CONTINENT_AT_CENTER, df_mul(-CONTINENT_SLOPE, radial)), df_mul(-extra_slope, beyond))
-    return flat_cache(df_clamp(df_add(shape, df_mul(COAST_NOISE, noise_df("continentalness"))), -1.1, 1.0))
+    return flat_cache(df_clamp(df_add(shape, df_mul(COAST_NOISE, noise_df("continentalness"))),
+                               CONTINENT_FLOOR, 1.0))
 
 
 def erosion_df():
@@ -839,6 +868,128 @@ def surface_rule(vanilla_rule):
 
 
 # ---------------------------------------------------------------------------
+# Cobblemon ruins and towers in the Safari
+# ---------------------------------------------------------------------------
+# Cobblemon's own structures (Gimmighoul towers and ruins) are restricted to
+# overworld biome tags, and their structure sets are spaced for a whole
+# overworld: on a 900-block island they would rarely appear. The Safari gets
+# its own structures reusing Cobblemon's template pools (the buildings are
+# Cobblemon's, nothing is copied), each variant limited to the Safari
+# habitats it suits, in two structure sets spaced so that every map has
+# several candidate spots: at least one tower and one ruin in practice.
+#
+# Each variant: Cobblemon start pool, Safari habitats, and the jigsaw
+# settings copied from the matching Cobblemon structure (start height,
+# terrain adaptation...) so the building sits in the ground as it does in
+# the overworld. If Cobblemon renames a pool, the world refuses to load
+# with an unbound-value error naming it: update the pool here.
+SAFARI_STRUCTURE_SETS = {
+    # spacing/separation in chunks. Towers: one candidate per 320 blocks,
+    # about seven on the island. Ruins: one per 224 blocks, about fifteen.
+    # Larger spacing means fewer structures and a real chance of none.
+    # dry: ground check of DryJigsawStructure around the structure's centre,
+    # radius and relief in blocks. Towers are tall and narrow-based; ruins
+    # spread wider but bear more relief, their beard filling the gaps.
+    "towers": {"spacing": 20, "separation": 8, "salt": 1650283461,
+               "dry": {"footprint_radius": 8, "max_relief": 4}},
+    "ruins": {"spacing": 14, "separation": 6, "salt": 1729384751,
+              "dry": {"footprint_radius": 10, "max_relief": 6}},
+}
+SURFACE_JIGSAW = {"step": "surface_structures", "start_height": {"absolute": 0}, "size": 7,
+                  "terrain_adaptation": "beard_thin"}
+SAFARI_STRUCTURES = {
+    # Gimmighoul towers, one look per climate.
+    "tower_temperate": ("towers", "cobblemon:ruins/temperate_gimmi_tower",
+                        ["grassland", "savanna", "woodland", "flower_meadow", "taiga", "deep_forest", "rocky_hills"],
+                        SURFACE_JIGSAW),
+    "tower_lush": ("towers", "cobblemon:ruins/lush_gimmi_tower", ["jungle", "mushroom_grove"],
+                   dict(SURFACE_JIGSAW, start_height={"absolute": -1})),
+    "tower_rooted": ("towers", "cobblemon:ruins/rooted_gimmi_tower", ["marsh"],
+                     dict(SURFACE_JIGSAW, terrain_adaptation="beard_box")),
+    "tower_deserted": ("towers", "cobblemon:ruins/deserted_gimmi_tower", ["dunes"], SURFACE_JIGSAW),
+    "tower_sunscorched": ("towers", "cobblemon:ruins/sunscorched_gimmi_tower", ["badlands", "volcanic"],
+                          SURFACE_JIGSAW),
+    "tower_frozen": ("towers", "cobblemon:ruins/frozen_gimmi_tower", ["snowfield", "glacier"], SURFACE_JIGSAW),
+    # Ruins standing out of the ground (the buried ones would go unseen).
+    "ruin_stone_henge": ("ruins", "cobblemon:ruins/stonjourner_henge_ruins", ["grassland", "rocky_hills"],
+                         dict(SURFACE_JIGSAW, step="underground_structures", start_height={"absolute": -1})),
+    "ruin_moon_henge": ("ruins", "cobblemon:ruins/lunatone_henge_ruins", ["savanna"],
+                        dict(SURFACE_JIGSAW, step="underground_structures", start_height={"absolute": -1})),
+    "ruin_sun_henge": ("ruins", "cobblemon:ruins/solrock_henge_ruins", ["taiga", "deep_forest"],
+                       dict(SURFACE_JIGSAW, step="underground_structures", start_height={"absolute": -1})),
+    "ruin_toppled_pillars": ("ruins", "cobblemon:ruins/toppled_pillars_ruins",
+                             ["woodland", "flower_meadow", "marsh"],
+                             dict(SURFACE_JIGSAW, step="underground_structures", start_height={"absolute": -1},
+                                  terrain_adaptation="beard_box")),
+    "ruin_shaded": ("ruins", "cobblemon:ruins/sunscorched_shaded_ruins", ["badlands", "volcanic"],
+                    dict(SURFACE_JIGSAW, step="underground_structures")),
+    "ruin_town_center": ("ruins", "cobblemon:ruins/deserted_town_center_ruins", ["dunes"],
+                         dict(SURFACE_JIGSAW, step="underground_structures", start_height={"absolute": -1},
+                              terrain_adaptation="beard_box")),
+    "ruin_frozen_altar": ("ruins", "cobblemon:ruins/frozen_altar_ruins", ["snowfield", "glacier"],
+                          dict(SURFACE_JIGSAW, step="underground_structures", terrain_adaptation="beard_box")),
+    "ruin_overgrown_trial": ("ruins", "cobblemon:ruins/overgrown_trial_ruins", ["jungle", "mushroom_grove"],
+                             dict(SURFACE_JIGSAW, step="underground_structures")),
+}
+# Folders owned by write_safari_structures, rebuilt from scratch on each run.
+SAFARI_STRUCTURE_DIR = "safari_ruins"
+SAFARI_STRUCTURE_TAG_DIR = "safari_structures"
+
+
+def write_safari_structures(written):
+    """Writes the Safari's ruin and tower structures, their biome tags and the two structure sets."""
+    for name, (set_name, pool, habitats, settings) in SAFARI_STRUCTURES.items():
+        unknown = set(habitats) - set(BIOMES)
+        if unknown:
+            sys.exit(f"Structure {name} names unknown habitats {sorted(unknown)}")
+        if set_name not in SAFARI_STRUCTURE_SETS:
+            sys.exit(f"Structure {name} names unknown structure set {set_name}")
+        tag = f"{SAFARI_STRUCTURE_TAG_DIR}/{name}"
+        write(f"tags/worldgen/biome/{tag}.json",
+              {"replace": False, "values": [f"{MOD_ID}:{h}" for h in habitats]}, written)
+        jigsaw = {
+            "type": "minecraft:jigsaw",
+            "biomes": f"#{MOD_ID}:{tag}",
+            "spawn_overrides": {},
+            "start_pool": pool,
+            "size": settings["size"],
+            "step": settings["step"],
+            "start_height": settings["start_height"],
+            "project_start_to_heightmap": "WORLD_SURFACE_WG",
+            "max_distance_from_center": 100,
+            "terrain_adaptation": settings["terrain_adaptation"],
+            "use_expansion_hack": False,
+        }
+        # Wrapped in the mod's dry_jigsaw type (DryJigsawStructure): a land
+        # biome still has ponds and flooded hollows, and a structure projected
+        # onto water would float in them.
+        dry = SAFARI_STRUCTURE_SETS[set_name]["dry"]
+        write(f"worldgen/structure/{SAFARI_STRUCTURE_DIR}/{name}.json", {
+            "type": f"{MOD_ID}:dry_jigsaw",
+            "biomes": jigsaw["biomes"],
+            "spawn_overrides": {},
+            "step": jigsaw["step"],
+            "terrain_adaptation": jigsaw["terrain_adaptation"],
+            "footprint_radius": dry["footprint_radius"],
+            "max_relief": dry["max_relief"],
+            "jigsaw": jigsaw,
+        }, written)
+    for set_name, placement in SAFARI_STRUCTURE_SETS.items():
+        members = [n for n, v in SAFARI_STRUCTURES.items() if v[0] == set_name]
+        # Several variants per set: at a candidate spot, Minecraft tries them in
+        # turn until one suits the biome there.
+        write(f"worldgen/structure_set/{SAFARI_STRUCTURE_DIR}/{set_name}.json", {
+            "structures": [{"structure": f"{MOD_ID}:{SAFARI_STRUCTURE_DIR}/{m}", "weight": 1} for m in members],
+            "placement": {
+                "type": "minecraft:random_spread",
+                "spacing": placement["spacing"],
+                "separation": placement["separation"],
+                "salt": placement["salt"],
+            },
+        }, written)
+
+
+# ---------------------------------------------------------------------------
 # Validation
 # ---------------------------------------------------------------------------
 
@@ -864,7 +1015,8 @@ def validate(files):
                 "worldgen/noise", "worldgen/configured_carver", "block", "sound_event",
                 "worldgen/density_function_type", "worldgen/material_rule", "worldgen/material_condition",
                 "worldgen/biome_source", "worldgen/chunk_generator", "worldgen/biome",
-                "int_provider_type", "dimension_type", "worldgen/carver"]:
+                "int_provider_type", "dimension_type", "worldgen/carver",
+                "worldgen/structure_placement", "worldgen/structure_type"]:
         known |= {f"minecraft:{x}" for x in registry(reg)}
     for path in files:
         parts = os.path.relpath(path, OUT).split(os.sep)
@@ -874,6 +1026,7 @@ def validate(files):
         known.add(f"{MOD_ID}:" + os.path.splitext("/".join(name_parts))[0])
     known.add(f"{MOD_ID}:safari")
     known |= CUSTOM_DENSITY_FUNCTION_TYPES
+    known |= CUSTOM_STRUCTURE_TYPES
     missing = set()
     for path in files:
         refs = set()
@@ -929,6 +1082,9 @@ def main():
     # and tags/worldgen/biome/has_structure hold the Safari Gate, written by
     # hand and by safari_gate_assets.py: wiping all of worldgen deleted them.
     for sub in [os.path.join("worldgen", d) for d in ("biome", "density_function", "noise", "noise_settings")] \
+            + [os.path.join("worldgen", "structure", SAFARI_STRUCTURE_DIR),
+               os.path.join("worldgen", "structure_set", SAFARI_STRUCTURE_DIR),
+               os.path.join("tags", "worldgen", "biome", SAFARI_STRUCTURE_TAG_DIR)] \
             + ["dimension", "dimension_type"]:
         shutil.rmtree(os.path.join(OUT, sub), ignore_errors=True)
     # Biome tags: only the files directly in the folder, never its subfolders.
@@ -984,6 +1140,8 @@ def main():
     for tag, members in TAGS.items():
         write(f"tags/worldgen/biome/{tag}.json",
               {"replace": False, "values": [f"{MOD_ID}:{m}" for m in members]}, written)
+
+    write_safari_structures(written)
 
     validate(written)
     bridge_count = write_cobblemon_bridge()

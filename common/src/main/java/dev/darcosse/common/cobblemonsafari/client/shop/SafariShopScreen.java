@@ -1,10 +1,8 @@
 package dev.darcosse.common.cobblemonsafari.client.shop;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
-import dev.darcosse.common.cobblemonsafari.client.FeaturedClientState;
+import dev.darcosse.common.cobblemonsafari.client.SafariLandscapes;
 import dev.darcosse.common.cobblemonsafari.network.SafariClientNetwork;
-import dev.darcosse.common.cobblemonsafari.network.SafariFeaturedPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariShopBuyPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariShopPayload;
 import dev.darcosse.common.cobblemonsafari.points.SafariPointsIcon;
@@ -41,9 +39,6 @@ public class SafariShopScreen extends Screen {
      */
     private static final int PANEL_WIDTH = 300;
     private static final int PANEL_HEIGHT = 232;
-
-    /** Landscape drawn behind the panel, 1:1. */
-    private static final ResourceLocation BACKGROUND = CobblemonSafari.id("textures/gui/shop_background.png");
 
     private static final int COLUMNS = 4;
     private static final int ROWS = 2;
@@ -120,24 +115,6 @@ public class SafariShopScreen extends Screen {
     private static final int PRICE_COLOR = 0xFFFFD86B;
     private static final int PRICE_TOO_HIGH = 0xFFFF6B6B;
     private static final int MUTED_COLOR = 0xFFB5C9BA;
-
-    /**
-     * Where the scene's Pokémon stand, in panel pixels: x, y of the model
-     * area's top-left corner, its size, and the facing the model sways
-     * around (degrees). Matches the landscape of tools/gui_assets.py: the
-     * first is the trainer's companion, at his side, turned toward the
-     * plain; the others are wild, smaller with distance, turned toward him.
-     * If the models face the wrong way in game, flip the sign of the facings.
-     */
-    private static final int[][] SCENE_SPOTS = {
-            {200, 166, 30, -55},
-            {136, 148, 20, 55},
-            {98, 144, 15, 55},
-    };
-    /** OpenGL's depth buffer bit, the value vanilla passes to RenderSystem.clear for the same purpose. */
-    private static final int GL_DEPTH_BUFFER_BIT = 0x100;
-    /** Animation state keys of the scene models, apart from the cards' (which use entry indices). */
-    private static final String SCENE_KEY_PREFIX = "scene";
 
     private SafariShopPayload data;
     /** Index in {@code data.tabs()} of the open tab. */
@@ -295,8 +272,10 @@ public class SafariShopScreen extends Screen {
     public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.renderBackground(graphics, mouseX, mouseY, partialTick);
         graphics.fill(left - 1, top - 1, left + PANEL_WIDTH + 1, top + PANEL_HEIGHT + 1, PANEL_BORDER);
-        graphics.blit(BACKGROUND, left, top, 0.0F, 0.0F, PANEL_WIDTH, PANEL_HEIGHT, PANEL_WIDTH, PANEL_HEIGHT);
-        drawScenePokemon(graphics, partialTick);
+        // The landscape of the time of day, 1:1: the panel has the texture's exact size.
+        SafariLandscapes.Scene scene = SafariLandscapes.SHOP;
+        graphics.blit(scene.forTime(minecraft == null ? null : minecraft.level), left, top, 0.0F, 0.0F,
+                PANEL_WIDTH, PANEL_HEIGHT, scene.width(), scene.height());
         // Header and footer bars, each with a thin gold rule toward the content.
         graphics.fill(left, top, left + PANEL_WIDTH, top + HEADER_HEIGHT, BAR_COLOR);
         graphics.hLine(left, left + PANEL_WIDTH - 1, top + HEADER_HEIGHT - 1, BAR_LINE);
@@ -338,42 +317,6 @@ public class SafariShopScreen extends Screen {
         int labelCenter = left + MARGIN + PAGE_BUTTON_WIDTH + 22;
         graphics.drawString(font, pageLabel, labelCenter - font.width(pageLabel) / 2,
                 top + PANEL_HEIGHT - FOOTER_HEIGHT / 2 - font.lineHeight / 2, MUTED_COLOR);
-    }
-
-    /**
-     * Pokémon living in the landscape: a companion beside the trainer drawn
-     * in the background, and wild ones on the plain he points at. Real
-     * Cobblemon models, today's specials first (the shop's own Pokémon when
-     * the specials are not known yet), so the scene changes with the day.
-     * They are part of the background: everything else is drawn over them.
-     */
-    private void drawScenePokemon(GuiGraphics graphics, float partialTick) {
-        List<ResourceLocation> species = new ArrayList<>();
-        List<List<String>> aspects = new ArrayList<>();
-        for (SafariFeaturedPayload.Entry special : FeaturedClientState.entries()) {
-            species.add(special.species());
-            aspects.add(special.aspects());
-        }
-        for (SafariShopPayload.Entry entry : data.entries()) {
-            if (entry.kind() == SafariShopPayload.KIND_POKEMON) {
-                species.add(entry.species());
-                aspects.add(entry.aspects());
-            }
-        }
-        if (species.isEmpty()) {
-            return;
-        }
-        graphics.flush();
-        graphics.enableScissor(left, top, left + PANEL_WIDTH, top + PANEL_HEIGHT);
-        for (int i = 0; i < SCENE_SPOTS.length && i < species.size(); i++) {
-            int[] spot = SCENE_SPOTS[i];
-            ShopPokemonModels.draw(graphics, SCENE_KEY_PREFIX + i, species.get(i), aspects.get(i),
-                    left + spot[0], top + spot[1], spot[2], partialTick, spot[3]);
-        }
-        graphics.disableScissor();
-        // Models write depth; cleared so the boxes and cards drawn next cover
-        // them instead of being hidden behind their front half.
-        RenderSystem.clear(GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
     }
 
     /** The box holding the cards: translucent, framed with wood, the tabs sitting on its top edge. */

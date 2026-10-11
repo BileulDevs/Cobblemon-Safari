@@ -189,13 +189,27 @@ public final class SafariSessionManager {
         return true;
     }
 
-    /** Sends a joining player the rules, the Safari border if inside, and the state of their clock. */
+    /**
+     * Sends a joining player the rules, the Safari border if inside, and the
+     * state of their clock; a player logging in inside the Safari without a
+     * session is sent out first.
+     */
     public static void onPlayerJoin(ServerPlayer player) {
         SafariNetwork.sendRules(player);
+        SafariSession session = getSession(player);
+        // Unlike the sweep, no creative/spectator exemption here: the
+        // exemption is for builders who chose to go in, and logging in is not
+        // a choice. Without this, a creative player whose session ended while
+        // offline (or a single-player world opened with another account,
+        // which inherits the host's position) stayed inside with no clock.
+        // A builder who relogs simply teleports back in.
+        if (session == null && SafariDimensions.isSafari(player.level())) {
+            SafariTeleporter.sendToWorldSpawn(player);
+            player.sendSystemMessage(Component.translatable(key("message.no_session")));
+        }
         if (SafariDimensions.isSafari(player.level())) {
             SafariBorder.sendTo(player);
         }
-        SafariSession session = getSession(player);
         if (session != null) {
             SafariNetwork.sendTimer(player, session, SafariDimensions.isSafari(player.level()));
         } else {

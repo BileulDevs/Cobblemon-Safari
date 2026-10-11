@@ -1,9 +1,9 @@
 package dev.darcosse.common.cobblemonsafari.network;
 
-import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.platform.Platform;
 import dev.darcosse.common.cobblemonsafari.session.SafariSession;
+import dev.darcosse.common.cobblemonsafari.structure.RestHouses;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -86,15 +86,15 @@ public final class SafariNetwork {
                 restHouseColumns());
     }
 
-    /** Centre columns of the configured rest houses; none when rest houses are disabled. */
+    /**
+     * Centre columns of the rest houses where they were actually built (the
+     * site search may move them from their configured positions); none when
+     * rest houses are disabled.
+     */
     private static List<SafariRulesPayload.HouseColumn> restHouseColumns() {
-        SafariConfig.RestHouses config = SafariConfigManager.get().restHouses;
-        if (!config.enabled) {
-            return List.of();
-        }
         List<SafariRulesPayload.HouseColumn> columns = new ArrayList<>();
-        for (SafariConfig.Position position : config.positions) {
-            columns.add(new SafariRulesPayload.HouseColumn(position.x, position.z));
+        for (RestHouses.HouseSite site : RestHouses.sites()) {
+            columns.add(new SafariRulesPayload.HouseColumn(site.x(), site.z()));
         }
         return List.copyOf(columns);
     }

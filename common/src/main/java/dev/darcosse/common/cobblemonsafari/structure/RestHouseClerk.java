@@ -4,10 +4,8 @@ import com.cobblemon.mod.common.api.npc.NPCClass;
 import com.cobblemon.mod.common.api.npc.NPCClasses;
 import com.cobblemon.mod.common.entity.npc.NPCEntity;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
-import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
-import dev.darcosse.common.cobblemonsafari.world.SafariWorldState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
@@ -69,31 +67,27 @@ public final class RestHouseClerk {
             return;
         }
         ticks = 0;
-        SafariConfig.RestHouses config = SafariConfigManager.get().restHouses;
         ServerLevel safari = SafariDimensions.level(server);
-        if (!config.enabled || safari == null) {
+        if (!SafariConfigManager.get().restHouses.enabled || safari == null) {
             return;
         }
-        SafariWorldState state = SafariWorldState.get(server);
-        for (SafariConfig.Position position : config.positions) {
-            if (state.isHouseBuilt(position.x, position.z)) {
-                maintain(safari, position);
-            }
+        for (RestHouses.HouseSite site : RestHouses.sites()) {
+            maintain(safari, site.x(), site.z());
         }
     }
 
     /** Spawns the clerk of one house if it is loaded and has none; removes extra ones. */
-    private static void maintain(ServerLevel level, SafariConfig.Position position) {
-        Direction facing = RestHouses.doorFacing(position);
-        BlockPos column = RestHouseBuilder.clerkColumn(position.x, position.z, facing);
+    private static void maintain(ServerLevel level, int centerX, int centerZ) {
+        Direction facing = RestHouses.doorFacing(centerX, centerZ);
+        BlockPos column = RestHouseBuilder.clerkColumn(centerX, centerZ, facing);
         // Entity ticking: the chunk AND its entities are loaded, so a clerk
         // already there is seen and a new one is saved with the chunk.
         if (!level.isPositionEntityTicking(column)) {
             return;
         }
         int half = RestHouses.HALF_SIZE;
-        AABB house = new AABB(position.x - half, level.getMinBuildHeight(), position.z - half,
-                position.x + half + 1, level.getMaxBuildHeight(), position.z + half + 1);
+        AABB house = new AABB(centerX - half, level.getMinBuildHeight(), centerZ - half,
+                centerX + half + 1, level.getMaxBuildHeight(), centerZ + half + 1);
         List<NPCEntity> clerks = level.getEntitiesOfClass(NPCEntity.class, house,
                 entity -> entity.getTags().contains(CLERK_TAG));
         for (int i = 1; i < clerks.size(); i++) {

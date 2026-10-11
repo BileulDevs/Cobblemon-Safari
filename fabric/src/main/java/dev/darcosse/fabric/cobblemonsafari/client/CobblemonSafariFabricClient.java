@@ -6,7 +6,6 @@ import dev.darcosse.common.cobblemonsafari.client.BountyClientState;
 import dev.darcosse.common.cobblemonsafari.client.FeaturedClientState;
 import dev.darcosse.common.cobblemonsafari.client.SafariClient;
 import dev.darcosse.common.cobblemonsafari.client.SafariClientState;
-import dev.darcosse.common.cobblemonsafari.client.gate.RecolouredSpriteSource;
 import dev.darcosse.common.cobblemonsafari.client.board.SafariBoardRenderer;
 import dev.darcosse.common.cobblemonsafari.client.hud.SafariTimerHud;
 import dev.darcosse.common.cobblemonsafari.client.sky.SafariSkyEffects;
@@ -22,7 +21,6 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.client.rendering.v1.AtlasSourceTypeRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.DimensionRenderingRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.renderer.RenderType;
@@ -63,8 +61,5 @@ public class CobblemonSafariFabricClient implements ClientModInitializer {
         // The gate pane is see-through like a nether portal. NeoForge reads
         // "render_type" from the block model; Fabric ignores that key.
         BlockRenderLayerMap.INSTANCE.putBlock(SafariBlocks.safariGate(), RenderType.translucent());
-        // The pane's texture is drawn from the nether portal's at atlas load
-        // (see assets/minecraft/atlases/blocks.json); the type must exist first.
-        AtlasSourceTypeRegistry.register(RecolouredSpriteSource.ID, RecolouredSpriteSource.TYPE);
     }
 }

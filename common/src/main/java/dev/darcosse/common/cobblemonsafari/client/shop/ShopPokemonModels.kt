@@ -74,19 +74,17 @@ object ShopPokemonModels {
      * The caller clips with a scissor: a large model may overflow the area.
      *
      * @param key one state per key; use the entry index so identical species keep separate animations
-     * @param frontYaw facing the model sways around, in degrees; the cards use the PC's three-quarter view
      */
     @JvmStatic
-    @JvmOverloads
     fun draw(graphics: GuiGraphics, key: String, species: ResourceLocation, aspects: Collection<String>,
-             x: Int, y: Int, size: Int, partialTicks: Float, frontYaw: Float = FRONT_YAW_DEGREES) {
+             x: Int, y: Int, size: Int, partialTicks: Float) {
         if (species in failed || PokemonSpecies.getByIdentifier(species) == null) {
             return
         }
         val state = states.getOrPut(key) { FloatingState() }
         state.currentAspects = aspects.toSet()
         val phase = System.currentTimeMillis() % SWAY_PERIOD_MILLIS.toLong() / SWAY_PERIOD_MILLIS * 2 * Math.PI
-        val yaw = frontYaw + SWAY_DEGREES * Math.sin(phase + key.hashCode() * SWAY_PHASE_STEP).toFloat()
+        val yaw = FRONT_YAW_DEGREES + SWAY_DEGREES * Math.sin(phase + key.hashCode() * SWAY_PHASE_STEP).toFloat()
         val factor = size / PC_SLOT_SIZE
         val pose = graphics.pose()
         pose.pushPose()

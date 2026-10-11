@@ -1,0 +1,34 @@
+{
+  "structures": [
+    {
+      "structure": "cobblemon_safari:safari_ruins/tower_temperate",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/tower_lush",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/tower_rooted",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/tower_deserted",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/tower_sunscorched",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/tower_frozen",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 20,
+    "separation": 8,
+    "salt": 1650283461
+  }
+}

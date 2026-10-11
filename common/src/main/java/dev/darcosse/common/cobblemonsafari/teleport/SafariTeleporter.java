@@ -129,7 +129,10 @@ public final class SafariTeleporter {
                 continue;
             }
             BlockPos candidate = surface(level, x, z);
-            if (isSafe(level, candidate)) {
+            // A chunk touched by a ruin or tower: the "ground" may be a roof
+            // or the inside of a wall. Coarse (the whole chunk) but cheap,
+            // the chunk being loaded already.
+            if (isSafe(level, candidate) && !level.structureManager().hasAnyStructureAt(candidate)) {
                 return candidate;
             }
         }

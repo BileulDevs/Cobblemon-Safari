@@ -28,6 +28,8 @@ public class SafariConfig {
      * changes). The shop itself lives in cobblemon_safari_shop.json.
      * Version 11: added protection.placeableBlocks (no existing value changes).
      * Version 12: added the bounties section (no existing value changes).
+     * Version 13: the default rotation went from 1440 to 240 minutes; files
+     * still on the old default follow it.
      */
     public int configVersion = SafariConfigManager.CURRENT_CONFIG_VERSION;
 
@@ -65,7 +67,11 @@ public class SafariConfig {
     /** Where players go when their session ends. */
     public ExitDestination exitDestination = ExitDestination.RETURN_POINT;
 
-    /** Creative and spectator players may enter and roam without a session (building, moderation). */
+    /**
+     * Creative and spectator players may enter and roam without a session
+     * (building, moderation). Not on login: a player who logs in inside
+     * without a session is sent out whatever their game mode.
+     */
     public boolean exemptCreativeAndSpectator = true;
 
     /** Remaining times, in seconds, at which the player gets a warning. */
@@ -308,12 +314,14 @@ public class SafariConfig {
         public boolean enabled = true;
 
         /**
-         * Length of one rotation, in real minutes (1440 = one day). Rotations
-         * are aligned on midnight UTC when the length divides a day, so 60
-         * changes the specials on the hour and 720 at midnight and noon UTC.
+         * Length of one rotation, in real minutes (240 = four hours, 1440 =
+         * one day). Rotations are aligned on midnight UTC when the length
+         * divides a day, so 240 changes the specials at 0, 4, 8, 12, 16 and
+         * 20 h UTC. The bounties are redrawn with each rotation, so a shorter
+         * rotation also means more bounty sets (and bonuses) per day.
          * Changing it starts a new draw right away.
          */
-        public int rotationMinutes = 1440;
+        public int rotationMinutes = SafariConfigManager.DEFAULT_ROTATION_MINUTES;
 
         /**
          * Version 5 setting, read only to migrate it into {@link #rotationMinutes}.
@@ -381,9 +389,13 @@ public class SafariConfig {
         public boolean enabled = true;
 
         /**
-         * Centre of each house. Default: the entrance just north of the arrival
-         * point, then one house east, south and west, halfway to the coast.
-         * A position added later is built at the next server start or reload.
+         * Where each house goes, roughly: on each new map the house is built
+         * at the best spot within 64 blocks (32 for the first one, the
+         * entrance, which stays by the arrival point): dry, fairly flat, away
+         * from the other houses and from ruins. Default: the entrance just
+         * north of the arrival point, then one house east, south and west,
+         * halfway to the coast. A position added later is built at the next
+         * server start or reload.
          */
         public List<Position> positions = new ArrayList<>(List.of(
                 new Position(0, -296),

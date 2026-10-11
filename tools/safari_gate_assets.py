@@ -9,14 +9,16 @@ Generates the Safari Gate assets:
 Run from the repository root:  python3 tools/safari_gate_assets.py
 Requires Pillow. Re-running overwrites both files.
 
-The gate's pane has no texture file: it is the nether portal's texture,
-recoloured in game by the atlas source in assets/minecraft/atlases/blocks.json
-(RecolouredSpriteSource).
+The gate's pane texture is drawn by tools/portal_textures.py.
 
-The structure is written as a plain block list (no jigsaw blocks): the
-worldgen JSON uses it as the single piece of a jigsaw structure. Its layout
-must keep the four warden spots clear (see GateResidents.WARDEN_ALONG and
-WARDEN_ACROSS): centre +-3 along the gate, +-2 across it.
+The structure is a savanna lodge: the gate between two acacia and mud-brick
+towers under a thatched roof, a palisade along its plane, an avenue with
+lantern posts and flower beds, and around the plaza the warden's ticket
+hut, a campfire, a water trough and an acacia. It is written as a plain
+block list (no jigsaw blocks): the worldgen JSON uses it as the single piece
+of a jigsaw structure. Its layout must keep the four warden spots clear (see
+GateResidents.WARDEN_ALONG and WARDEN_ACROSS): centre +-3 along the gate,
++-2 across it, two blocks high.
 """
 
 import gzip
@@ -81,13 +83,43 @@ def warden_skin():
 # Structure
 # --------------------------------------------------------------------------
 
-# Template footprint and height. The gate stands in the middle, along X,
-# with the plaza a disc of this radius around it.
-SIZE_X, SIZE_Y, SIZE_Z = 15, 9, 15
-CENTRE = 7
-PLAZA_RADIUS = 7.2
-INNER_RADIUS = 4.6
+# Warden spots, mirrored from GateResidents: checked to be clear after building.
+WARDEN_ALONG, WARDEN_ACROSS = 3, 2
 
+# Template footprint and height. The gate stands in the middle, along X
+# (the template's "along" axis), its doorway facing Z ("across"); the jigsaw
+# rotates the whole thing at random. CENTRE is the middle column.
+SIZE_X, SIZE_Y, SIZE_Z = 27, 12, 27
+CENTRE = 13
+
+# Radii from the middle column, in blocks.
+# PLAZA_RADIUS: the paved plaza; BORDER_RADIUS: its ring of mud bricks;
+# CLEAR_RADIUS: up to here the template clears the ground above (trees,
+# grass) and lays its own grass, so the outbuildings stand in a tidy clearing.
+# Beyond it the terrain is left as generated. Growing CLEAR_RADIUS past the
+# template's half-width does nothing; the dry-ground check of
+# worldgen/structure/safari_gate.json (footprint_radius) should cover it.
+PLAZA_RADIUS = 9.5
+BORDER_RADIUS = 10.5
+CLEAR_RADIUS = 13.5
+
+# The warden's Pokémon roam within gate.roamRadius (8 by default), at least
+# 2 blocks across from the gate's plane, on the standable spot nearest the
+# gate's floor level (GateResidents.standingSpot, 6 blocks up or down). The
+# outbuildings still sit beyond ROAM_RADIUS and the roof fringe is leaves,
+# so the plaza stays open for them to wander and nothing low enough to be
+# reached stands on a roof.
+ROAM_RADIUS = 8
+
+# Palette: savanna lodge. Acacia wood, mud bricks, terracotta, hay thatch.
+LOG = "minecraft:acacia_log"
+STRIPPED = "minecraft:stripped_acacia_log"
+PLANKS = "minecraft:acacia_planks"
+FENCE = "minecraft:acacia_fence"
+THATCH = "minecraft:hay_block"
+LEAVES = "minecraft:acacia_leaves"
+MUD = "minecraft:mud_bricks"
+CLAY = "minecraft:orange_terracotta"
 
 class Nbt:
     """Minimal big-endian NBT writer: just the tag types a structure file needs."""
@@ -140,72 +172,263 @@ class Nbt:
 
 
 def gate_blocks():
-    """Every block of the template as {(x, y, z): (name, properties)}."""
+    """Every block of the template as {(x, y, z): (name, properties)}, built on top of each other in order."""
     blocks = {}
 
-    def put(x, y, z, name, **props):
-        blocks[(x, y, z)] = (name, {k: str(v).lower() for k, v in props.items()})
+    def put(dx, y, dz, name, **props):
+        """Places a block relative to the middle column (dx along the gate, dz across it)."""
+        x, z = CENTRE + dx, CENTRE + dz
+        if 0 <= x < SIZE_X and 0 <= y < SIZE_Y and 0 <= z < SIZE_Z:
+            blocks[(x, y, z)] = (name, {k: str(v).lower() for k, v in props.items()})
 
-    # Air everywhere above the plaza clears grass and saplings; columns
-    # outside the disc are left out, so the terrain there stays as it was.
-    for x in range(SIZE_X):
-        for z in range(SIZE_Z):
-            r = math.hypot(x - CENTRE, z - CENTRE)
-            if r > PLAZA_RADIUS:
+    def leaves(dx, y, dz):
+        # persistent: placed leaves far from a log would otherwise decay.
+        put(dx, y, dz, LEAVES, distance=1, persistent=True, waterlogged=False)
+
+    def lantern(dx, y, dz, hanging=False):
+        put(dx, y, dz, "minecraft:lantern", hanging=hanging, waterlogged=False)
+
+    def fence(dx, y, dz, along=False, across=False):
+        # Connections set by hand: a template keeps the states it is given.
+        put(dx, y, dz, FENCE, east=along, west=along, north=across, south=across, waterlogged=False)
+
+    ground(put)
+    gatehouse(put, leaves, lantern)
+    palisade(put, lantern, fence)
+    avenue(put, leaves, lantern, fence)
+    warden_hut(put, lantern)
+    campsite(put)
+    trough(put)
+    acacia_tree(put, leaves)
+    return blocks
+
+
+def ground(put):
+    """
+    The clearing: air above, a paved plaza with a mud-brick ring, grass and
+    tufts beyond it, and the avenue through the gate from edge to edge.
+    """
+    half = CENTRE
+    for dx in range(-half, half + 1):
+        for dz in range(-half, half + 1):
+            r = math.hypot(dx, dz)
+            avenue = abs(dx) <= 1
+            if r > CLEAR_RADIUS and not avenue:
                 continue
             for y in range(1, SIZE_Y):
-                put(x, y, z, "minecraft:air")
-            # Paths do not count as dirt: no tree or flower grows on the plaza.
-            if r <= INNER_RADIUS or abs(x - CENTRE) <= 1:
-                put(x, 0, z, "minecraft:dirt_path")
-            elif r > PLAZA_RADIUS - 1.0:
-                put(x, 0, z, "minecraft:mossy_cobblestone")
+                put(dx, y, dz, "minecraft:air")
+            if avenue:
+                put(dx, 0, dz, "minecraft:dirt_path")
+            elif r <= PLAZA_RADIUS:
+                # Paths do not count as dirt: no tree or flower grows on the plaza.
+                speck = (dx * 7 + dz * 13) % 9
+                put(dx, 0, dz, "minecraft:packed_mud" if speck == 0 else
+                    "minecraft:coarse_dirt" if speck == 4 else "minecraft:dirt_path")
+            elif r <= BORDER_RADIUS:
+                put(dx, 0, dz, MUD)
             else:
-                put(x, 0, z, "minecraft:coarse_dirt" if (x * 7 + z * 3) % 5 == 0 else "minecraft:dirt_path")
+                put(dx, 0, dz, "minecraft:grass_block", snowy=False)
+                tuft = (dx * 5 + dz * 3) % 7
+                if tuft == 0:
+                    put(dx, 1, dz, "minecraft:short_grass")
+                elif tuft == 3 and (dx + dz) % 2 == 0:
+                    put(dx, 1, dz, "minecraft:dandelion")
+            # Coarse verges beyond the plaza, so the avenue reads as a road.
+            if abs(dx) == 2 and r > BORDER_RADIUS:
+                put(dx, 0, dz, "minecraft:coarse_dirt")
 
-    # Posts and portal: a three-wide, four-high doorway along X.
+
+def gatehouse(put, leaves, lantern):
+    """
+    The gate itself: the pane between two square towers of acacia and mud
+    brick, a three-deep lintel, a 3 x 2 Safari Board on each face, and a
+    thatched roof over the whole span with a leafy fringe.
+    """
+    # The pane: three wide, four high, along X. The towers are its frame.
     for y in range(1, 5):
-        put(CENTRE - 2, y, CENTRE, "minecraft:stripped_jungle_log", axis="y")
-        put(CENTRE + 2, y, CENTRE, "minecraft:stripped_jungle_log", axis="y")
-        for x in range(CENTRE - 1, CENTRE + 2):
-            put(x, y, CENTRE, "cobblemon_safari:safari_gate", axis="x")
-    put(CENTRE - 2, 0, CENTRE, "minecraft:mossy_stone_bricks")
-    put(CENTRE + 2, 0, CENTRE, "minecraft:mossy_stone_bricks")
+        for dx in range(-1, 2):
+            put(dx, y, 0, "cobblemon_safari:safari_gate", axis="x")
 
-    # Lintel, thatch roof, and a screen of the day on each face.
-    for x in range(CENTRE - 3, CENTRE + 4):
-        put(x, 5, CENTRE, "minecraft:jungle_log", axis="x")
-    for x in range(CENTRE - 2, CENTRE + 3):
-        for z in range(CENTRE - 1, CENTRE + 2):
-            put(x, 6, z, "minecraft:hay_block", axis="y")
-    for x in range(CENTRE - 1, CENTRE + 2):
-        put(x, 7, CENTRE, "minecraft:hay_block", axis="x")
-        put(x, 5, CENTRE + 1, "cobblemon_safari:safari_board", facing="south")
-        put(x, 5, CENTRE - 1, "cobblemon_safari:safari_board", facing="north")
+    for side in (-1, 1):
+        for dx in (2 * side, 3 * side):
+            for dz in (-1, 0, 1):
+                put(dx, 0, dz, MUD)
+                put(dx, 1, dz, MUD)
+                corner = dz != 0
+                for y in range(2, 8):
+                    if corner:
+                        put(dx, y, dz, LOG, axis="y")
+                    elif abs(dx) == 2:
+                        # The pane's edge: a smooth stripped log.
+                        put(dx, y, dz, STRIPPED, axis="y")
+                    else:
+                        put(dx, y, dz, CLAY if y < 7 else PLANKS)
+            # Banners on both faces of each tower, above the warden's spots
+            # (they have no collision, the warden stands under them).
+            for dz, facing in ((2, "south"), (-2, "north")):
+                put(dx, 5, dz, "minecraft:orange_wall_banner" if abs(dx) == 3 else "minecraft:yellow_wall_banner",
+                    facing=facing)
 
-    # Stone pillars with lanterns at the ends of the lintel.
-    for x in (CENTRE - 3, CENTRE + 3):
-        put(x, 1, CENTRE, "minecraft:mossy_cobblestone")
-        put(x, 2, CENTRE, "minecraft:lantern", hanging=False, waterlogged=False)
+    # Lintel over the doorway, then the boards' backing and the boards.
+    for dx in range(-1, 2):
+        for dz in (-1, 0, 1):
+            put(dx, 5, dz, LOG, axis="x")
+        for y in (6, 7):
+            put(dx, y, 0, PLANKS)
+            put(dx, y, 1, "cobblemon_safari:safari_board", facing="south")
+            put(dx, y, -1, "cobblemon_safari:safari_board", facing="north")
 
-    # Lantern posts on the diagonals, clear of the warden spots (+-3, +-2).
-    for dx, dz in ((-4, -4), (4, -4), (-4, 4), (4, 4)):
-        x, z = CENTRE + dx, CENTRE + dz
-        put(x, 1, z, "minecraft:jungle_fence")
-        put(x, 2, z, "minecraft:jungle_fence")
-        put(x, 3, z, "minecraft:lantern", hanging=False, waterlogged=False)
+    # Thatch: three courses stepping in, a leafy fringe across the faces
+    # (leaves, not thatch, so no Pokémon can be placed up there).
+    for dx in range(-4, 5):
+        for dz in (-1, 0, 1):
+            put(dx, 8, dz, THATCH, axis="y")
+        leaves(dx, 8, 2)
+        leaves(dx, 8, -2)
+    for dx in range(-3, 4):
+        for dz in (-1, 0, 1):
+            put(dx, 9, dz, THATCH, axis="y")
+    for dx in range(-2, 3):
+        put(dx, 10, 0, THATCH, axis="x")
+    for side in (-1, 1):
+        for dz in (-1, 1):
+            lantern(4 * side, 7, dz, hanging=True)
 
-    # Bushes at the edge of the plaza, on the axis of the gate.
-    for x in (CENTRE - 6, CENTRE + 6):
-        put(x, 1, CENTRE, "minecraft:flowering_azalea")
-        put(x, 0, CENTRE, "minecraft:moss_block")
 
-    return blocks
+def palisade(put, lantern, fence):
+    """A low acacia palisade running from each tower along the gate's plane, posts topped with lanterns."""
+    for side in (-1, 1):
+        for step in range(4, 10):
+            dx = step * side
+            if step in (6, 9):
+                for y in (1, 2, 3):
+                    put(dx, y, 0, LOG, axis="y")
+                lantern(dx, 4, 0)
+                put(dx, 0, 0, MUD)
+            else:
+                fence(dx, 1, 0, along=True)
+                fence(dx, 2, 0, along=True)
+
+
+def avenue(put, leaves, lantern, fence):
+    """Lantern posts and flower beds lining the avenue on both sides of the gate, clear of the warden's spots."""
+    flowers = ["minecraft:orange_tulip", "minecraft:dandelion", "minecraft:allium", "minecraft:poppy"]
+    for side in (-1, 1):
+        for dz in (5 * side, 9 * side):
+            for dx in (-2, 2):
+                fence(dx, 1, dz)
+                fence(dx, 2, dz)
+                lantern(dx, 3, dz)
+        # Beds from 4 to 8 blocks out; the warden's spots are 2 out.
+        for step in range(4, 9):
+            dz = step * side
+            for dx in (-4, -3, 3, 4):
+                put(dx, 0, dz, "minecraft:grass_block", snowy=False)
+                pick = (step + dx) % 5
+                if pick == 4:
+                    leaves(dx, 1, dz)
+                else:
+                    put(dx, 1, dz, flowers[pick % len(flowers)])
+            for dx in (-5, 5):
+                put(dx, 0, dz, MUD)
+
+
+def warden_hut(put, lantern):
+    """
+    The warden's ticket hut, on a diagonal beyond the Pokémon's roaming
+    radius: an open-fronted acacia stall with a counter, crates and a
+    thatched roof.
+    """
+    x0, x1, z0, z1 = 8, 12, 7, 11
+    # Its roof overhang must stay out of the roaming circle.
+    assert (x0 - 1) ** 2 + (z0 - 1) ** 2 > ROAM_RADIUS ** 2
+    for dx in range(x0, x1 + 1):
+        for dz in range(z0, z1 + 1):
+            put(dx, 0, dz, PLANKS)
+            for y in range(1, 4):
+                put(dx, y, dz, "minecraft:air")
+    for dx in (x0, x1):
+        for dz in (z0, z1):
+            for y in (1, 2, 3):
+                put(dx, y, dz, LOG, axis="y")
+    # Back and far side walls; the plaza side (z0) and the near side (x0) stay open.
+    for y in (1, 2, 3):
+        for dx in range(x0 + 1, x1):
+            put(dx, y, z1, PLANKS)
+        for dz in range(z0 + 1, z1):
+            put(x1, y, dz, PLANKS)
+    # Counter along the open front.
+    put(x0 + 1, 1, z0, "minecraft:barrel", facing="up", open=False)
+    put(x0 + 2, 1, z0, STRIPPED, axis="x")
+    put(x0 + 3, 1, z0, "minecraft:barrel", facing="up", open=False)
+    lantern(x0 + 1, 2, z0)
+    put(x0 + 3, 2, z0, "minecraft:potted_dead_bush")
+    # Inside: crates and a map table.
+    put(x1 - 1, 1, z1 - 1, "minecraft:barrel", facing="north", open=False)
+    put(x1 - 1, 2, z1 - 1, "minecraft:barrel", facing="up", open=False)
+    put(x1 - 1, 1, z1 - 2, THATCH, axis="y")
+    put(x0 + 1, 1, z1 - 1, "minecraft:cartography_table")
+    # Thatch roof, stepping in.
+    for layer, inset in ((4, -1), (5, 0), (6, 1), (7, 2)):
+        for dx in range(x0 + inset, x1 - inset + 1):
+            for dz in range(z0 + inset, z1 - inset + 1):
+                put(dx, layer, dz, THATCH, axis="y")
+    lantern((x0 + x1) // 2, 3, (z0 + z1) // 2, hanging=True)
+
+
+def campsite(put):
+    """A rangers' campfire with log benches, on the opposite diagonal."""
+    cx, cz = -10, -9
+    for dx in range(-2, 3):
+        for dz in range(-2, 3):
+            put(cx + dx, 0, cz + dz, "minecraft:coarse_dirt")
+    put(cx, 0, cz, "minecraft:packed_mud")
+    put(cx, 1, cz, "minecraft:campfire", lit=True, signal_fire=False, facing="north", waterlogged=False)
+    put(cx, 1, cz + 2, STRIPPED, axis="x")
+    put(cx + 1, 1, cz + 2, STRIPPED, axis="x")
+    put(cx, 1, cz - 2, STRIPPED, axis="x")
+    put(cx - 1, 1, cz - 2, STRIPPED, axis="x")
+    put(cx + 2, 1, cz, STRIPPED, axis="z")
+    put(cx - 2, 1, cz, STRIPPED, axis="z")
+    put(cx - 2, 1, cz + 1, STRIPPED, axis="z")
+    put(cx + 2, 1, cz - 2, "minecraft:barrel", facing="up", open=False)
+
+
+def trough(put):
+    """A water trough and a stack of hay for the warden's Pokémon."""
+    put(9, 1, -9, "minecraft:water_cauldron", level=3)
+    put(10, 1, -9, "minecraft:water_cauldron", level=3)
+    put(9, 0, -9, MUD)
+    put(10, 0, -9, MUD)
+    for dx, y, dz in ((11, 1, -10), (11, 1, -9), (12, 1, -10), (11, 2, -10), (10, 1, -11)):
+        put(dx, y, dz, THATCH, axis="y")
+
+
+def acacia_tree(put, leaves):
+    """A small leaning acacia on the last diagonal, with a flat two-tier crown."""
+    x, z = -9, 10
+    for y in range(1, 5):
+        put(x + (1 if y >= 3 else 0), y, z, LOG, axis="y")
+    top = (x + 1, 5, z)
+    for dx in range(-2, 3):
+        for dz in range(-2, 3):
+            if abs(dx) + abs(dz) <= 3:
+                leaves(top[0] + dx, 5, top[2] + dz)
+    for dx in range(-1, 2):
+        for dz in range(-1, 2):
+            leaves(top[0] + dx, 6, top[2] + dz)
+    put(top[0], 5, top[2], LOG, axis="y")
 
 
 def structure():
     """Writes the gate template."""
     blocks = gate_blocks()
+    for sx in (-1, 1):
+        for sz in (-1, 1):
+            for y in (1, 2):
+                spot = (CENTRE + sx * WARDEN_ALONG, y, CENTRE + sz * WARDEN_ACROSS)
+                if blocks.get(spot, ("minecraft:air",))[0] != "minecraft:air":
+                    raise ValueError("warden spot %s is blocked by %s" % (spot, blocks[spot][0]))
     palette, index = [], {}
     entries = []
     for (x, y, z), (name, props) in sorted(blocks.items(), key=lambda item: (item[0][1], item[0][2], item[0][0])):

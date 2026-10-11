@@ -9,14 +9,16 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.saveddata.SavedData;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
 /**
  * Per-world facts the Safari must remember across restarts: which rest houses
- * are already built, and the salt that makes this world's daily specials
- * differ from another world's.
+ * are already built and where each one actually stands, and the salt that
+ * makes this world's daily specials differ from another world's.
  */
 public final class SafariWorldState extends SavedData {
 
@@ -31,7 +33,14 @@ public final class SafariWorldState extends SavedData {
      * servers do not show the same specials on the same day.
      */
     private long rotationSalt;
+    /** Configured positions (anchors) whose house is built. */
     private final Set<String> builtHouses = new HashSet<>();
+    /**
+     * Where the house of each anchor was built: the site search may move it
+     * away from the configured position to fit the terrain. Anchors missing
+     * here (saves from before the search) were built on the anchor itself.
+     */
+    private final Map<String, String> houseSites = new HashMap<>();
     /** Map salt the built houses belong to; a reset map has none of them. */
     private long housesMapSalt;
 
@@ -58,6 +67,7 @@ public final class SafariWorldState extends SavedData {
     public void forgetHousesIfMapChanged(long mapSalt) {
         if (housesMapSalt != mapSalt) {
             builtHouses.clear();
+            houseSites.clear();
             housesMapSalt = mapSalt;
             setDirty();
         }
@@ -68,14 +78,37 @@ public final class SafariWorldState extends SavedData {
         return builtHouses.contains(houseKey(x, z));
     }
 
-    /** Remembers that a rest house now stands at the given column. */
-    public void markHouseBuilt(int x, int z) {
-        if (builtHouses.add(houseKey(x, z))) {
-            setDirty();
-        }
+    /**
+     * Remembers that the house of an anchor is built, and where.
+     *
+     * @param anchorX configured position
+     * @param siteX   centre column of the house actually built
+     */
+    public void markHouseBuilt(int anchorX, int anchorZ, int siteX, int siteZ) {
+        String anchor = houseKey(anchorX, anchorZ);
+        builtHouses.add(anchor);
+        houseSites.put(anchor, houseKey(siteX, siteZ));
+        setDirty();
     }
 
-    /** Writes the salt and the built houses. Keys are the save format. */
+    /**
+     * Centre column {x, z} of the house built for an anchor, or null when
+     * that house is not built.
+     */
+    public int[] houseSite(int anchorX, int anchorZ) {
+        String anchor = houseKey(anchorX, anchorZ);
+        if (!builtHouses.contains(anchor)) {
+            return null;
+        }
+        String site = houseSites.get(anchor);
+        if (site == null) {
+            return new int[]{anchorX, anchorZ};
+        }
+        String[] parts = site.split(",");
+        return new int[]{Integer.parseInt(parts[0]), Integer.parseInt(parts[1])};
+    }
+
+    /** Writes the salt, the built houses and their sites. Keys are the save format. */
     @Override
     public CompoundTag save(CompoundTag nbt, HolderLookup.Provider registries) {
         nbt.putLong("rotation_salt", rotationSalt);
@@ -84,6 +117,9 @@ public final class SafariWorldState extends SavedData {
             houses.add(StringTag.valueOf(key));
         }
         nbt.put("built_houses", houses);
+        CompoundTag sites = new CompoundTag();
+        houseSites.forEach(sites::putString);
+        nbt.put("house_sites", sites);
         nbt.putLong("houses_map_salt", housesMapSalt);
         return nbt;
     }
@@ -96,6 +132,11 @@ public final class SafariWorldState extends SavedData {
         state.housesMapSalt = nbt.getLong("houses_map_salt");
         for (Tag house : nbt.getList("built_houses", Tag.TAG_STRING)) {
             state.builtHouses.add(house.getAsString());
+        }
+        // Absent in older saves: their houses stand on their anchors.
+        CompoundTag sites = nbt.getCompound("house_sites");
+        for (String anchor : sites.getAllKeys()) {
+            state.houseSites.put(anchor, sites.getString(anchor));
         }
         // Loading is not a change: undo the dirty flag the constructor set.
         state.setDirty(false);

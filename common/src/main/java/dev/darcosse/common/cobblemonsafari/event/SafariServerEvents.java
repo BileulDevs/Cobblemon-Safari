@@ -74,8 +74,10 @@ public final class SafariServerEvents {
 
     /** A player finished joining and can receive custom payloads. */
     public static void onPlayerJoin(ServerPlayer player) {
-        SafariMapReset.onPlayerJoin(player);
+        // Sessions first: a player without one is sent out, and the map
+        // reset's relocation then has nothing to do.
         SafariSessionManager.onPlayerJoin(player);
+        SafariMapReset.onPlayerJoin(player);
         FeaturedSync.sendTo(player);
         SafariBounties.sendTo(player);
     }

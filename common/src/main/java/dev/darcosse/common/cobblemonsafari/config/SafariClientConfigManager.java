@@ -14,10 +14,11 @@ public final class SafariClientConfigManager {
 
     /**
      * Version written by this build. Version 2 added showBalls and showCatches,
-     * version 3 the board colours; Gson fills new fields with their defaults,
-     * the bump only forces a rewrite so they appear in existing files.
+     * version 3 the board colours, version 4 the board's landscape and panel
+     * opacity; Gson fills new fields with their defaults, the bump only
+     * forces a rewrite so they appear in existing files.
      */
-    public static final int CURRENT_CONFIG_VERSION = 3;
+    public static final int CURRENT_CONFIG_VERSION = 4;
 
     private static final JsonConfigFile<SafariClientConfig> FILE =
             new JsonConfigFile<>(FILE_NAME, SafariClientConfig.class, SafariClientConfig::new);
@@ -54,6 +55,11 @@ public final class SafariClientConfigManager {
             corrected = true;
         }
         corrected |= BoardPalette.repair(loaded.board, FILE_NAME);
+        if (!(loaded.board.panelOpacity >= 0.0D && loaded.board.panelOpacity <= 1.0D)) {
+            // Also catches NaN, which fails both comparisons.
+            loaded.board.panelOpacity = new SafariClientConfig.Board().panelOpacity;
+            corrected = true;
+        }
         if (corrected) {
             FILE.write(loaded);
         }

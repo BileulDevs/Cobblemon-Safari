@@ -20,5 +20,7 @@ public final class NeoForgeWorldgenRegistration {
     static void onRegister(RegisterEvent event) {
         SafariWorldgen.registerDensityFunctionTypes((id, codec) ->
                 event.register(Registries.DENSITY_FUNCTION_TYPE, id, () -> codec));
+        SafariWorldgen.registerStructureTypes((id, type) ->
+                event.register(Registries.STRUCTURE_TYPE, id, () -> type));
     }
 }

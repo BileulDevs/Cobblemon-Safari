@@ -2,6 +2,7 @@ package dev.darcosse.common.cobblemonsafari.block;
 
 import com.mojang.serialization.MapCodec;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
+import dev.darcosse.common.cobblemonsafari.gate.GateClientHooks;
 import dev.darcosse.common.cobblemonsafari.gate.SafariGate;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -10,8 +11,6 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -76,16 +75,6 @@ public class SafariGateBlock extends Block implements EntityBlock, Portal {
      * a whole gate of twelve blocks gives a few sparkles a second.
      */
     private static final int PARTICLE_ONE_IN = 6;
-
-    /**
-     * Hum of the pane: same odds, volume and pitch range as the nether
-     * portal, so a gate sounds like one. Lower odds make it rarer per block;
-     * a twelve-block gate already hums every few seconds.
-     */
-    private static final int AMBIENT_SOUND_ONE_IN = 100;
-    private static final float AMBIENT_VOLUME = 0.5F;
-    private static final float AMBIENT_PITCH_MIN = 0.6F;
-    private static final float AMBIENT_PITCH_SPREAD = 0.4F;
 
     /**
      * Extra ticks the client keeps spinning after the countdown, so the swirl
@@ -231,14 +220,14 @@ public class SafariGateBlock extends Block implements EntityBlock, Portal {
         return Portal.Transition.CONFUSION;
     }
 
-    /** Green sparkles and the nether portal's hum, so the gate reads as active from a distance. */
+    /**
+     * Sparkles, and the gate's relaxed tune (in place of the nether portal's
+     * hum), so the gate reads as active from a distance. The tune is a loop
+     * the client keeps once per gate; this only makes sure it is playing.
+     */
     @Override
     public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
-        if (random.nextInt(AMBIENT_SOUND_ONE_IN) == 0) {
-            level.playLocalSound(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D, SoundEvents.PORTAL_AMBIENT,
-                    SoundSource.BLOCKS, AMBIENT_VOLUME, random.nextFloat() * AMBIENT_PITCH_SPREAD + AMBIENT_PITCH_MIN,
-                    false);
-        }
+        GateClientHooks.onPaneAnimated(level, pos);
         if (random.nextInt(PARTICLE_ONE_IN) != 0) {
             return;
         }

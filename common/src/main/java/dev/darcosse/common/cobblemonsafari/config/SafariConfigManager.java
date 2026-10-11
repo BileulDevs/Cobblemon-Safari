@@ -59,7 +59,20 @@ public final class SafariConfigManager {
     private static final int MAX_BOUNTIES = 8;
 
     /** Version written by this build. Raise it together with a new step in {@link #migrate}. */
-    public static final int CURRENT_CONFIG_VERSION = 12;
+    public static final int CURRENT_CONFIG_VERSION = 13;
+
+    /**
+     * Default length of a featured rotation, in minutes: four hours, so the
+     * specials and bounties change several times in a play day.
+     */
+    public static final int DEFAULT_ROTATION_MINUTES = 240;
+
+    /**
+     * The default before version 13 (one day). A file holding exactly this
+     * value is taken as never customised and moved to the new default; any
+     * other value was chosen by the admin and is kept.
+     */
+    private static final int LEGACY_DEFAULT_ROTATION_MINUTES = 1440;
 
     /**
      * Upper bound on loaned balls. A full inventory holds 36 stacks; beyond a
@@ -253,6 +266,13 @@ public final class SafariConfigManager {
         if (c.configVersion < 10) {
             CobblemonSafari.LOGGER.info("Migrated {} to version 10: added the points and escapeRope sections",
                     FILE_NAME);
+        }
+        if (c.configVersion < 13 && c.featured != null
+                && c.featured.rotationMinutes == LEGACY_DEFAULT_ROTATION_MINUTES) {
+            c.featured.rotationMinutes = DEFAULT_ROTATION_MINUTES;
+            CobblemonSafari.LOGGER.info("Migrated {} to version 13: featured.rotationMinutes moved from the old "
+                    + "default {} to the new default {}", FILE_NAME, LEGACY_DEFAULT_ROTATION_MINUTES,
+                    DEFAULT_ROTATION_MINUTES);
         }
         if (c.configVersion < 9) {
             // The old key is simply ignored by Gson and dropped on rewrite.

@@ -26,7 +26,6 @@ import net.minecraft.world.entity.ai.memory.WalkTarget;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -116,6 +115,15 @@ public final class GateResidents {
      * layers and pressure plates, on which a mob would sink into the block.
      */
     private static final double MIN_GROUND_TOP = 0.5D;
+
+    /**
+     * How far above or below the gate's floor a resident's spot is searched,
+     * in blocks. Covers the slopes around a generated gate (relief at most 5,
+     * smoothed by the terrain adaptation) and a hand-built gate on a hill;
+     * larger reaches the tops of trees and buildings again, and costs up to
+     * twice this many block reads per tried column.
+     */
+    private static final int SPOT_SEARCH_HEIGHT = 6;
 
     /** Random spots tried before giving up on spawning a Pokémon until the next check. */
     private static final int SPAWN_ATTEMPTS = 8;
@@ -238,8 +246,8 @@ public final class GateResidents {
         int[][] signs = {{1, 1}, {-1, 1}, {1, -1}, {-1, -1}};
         for (int[] sign : signs) {
             BlockPos column = middle.relative(along, WARDEN_ALONG * sign[0]).relative(across, WARDEN_ACROSS * sign[1]);
-            BlockPos spot = surface(level, column);
-            if (canStand(level, spot)) {
+            BlockPos spot = standingSpot(level, column, middle.getY());
+            if (spot != null) {
                 return spot;
             }
         }
@@ -356,19 +364,44 @@ public final class GateResidents {
             if (dx * dx + dz * dz > radius * radius || Math.abs(acrossOffset) < DOORWAY_CLEARANCE) {
                 continue;
             }
-            BlockPos spot = surface(level, middle.offset(dx, 0, dz));
-            if (canStand(level, spot)) {
+            BlockPos spot = standingSpot(level, middle.offset(dx, 0, dz), middle.getY());
+            if (spot != null) {
                 return spot;
             }
         }
         return null;
     }
 
-    /** First free block above the ground of a column, leaves ignored so nobody spawns on a tree. */
-    private static BlockPos surface(ServerLevel level, BlockPos column) {
-        return new BlockPos(column.getX(),
-                level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, column.getX(), column.getZ()),
-                column.getZ());
+    /**
+     * The spot of a column where a mob can stand closest to the gate's floor
+     * level, within {@link #SPOT_SEARCH_HEIGHT} above or below it; null when
+     * there is none.
+     *
+     * <p>Not the column's surface from a heightmap: anything "motion
+     * blocking" above the ground hides the ground. Banners and signs count
+     * (vanilla forces them solid although they have no collision), so a
+     * banner over the warden's spot gave a "surface" on top of the banner,
+     * where nobody can stand, and the warden never spawned. Roofs, awnings
+     * and tree trunks did the same, or put a Pokémon on a roof. Searching
+     * around the floor level finds the plaza under all of them.
+     */
+    @Nullable
+    private static BlockPos standingSpot(ServerLevel level, BlockPos column, int floorY) {
+        // Outward from the floor level, alternating up and down: on even
+        // ground the first try succeeds.
+        for (int offset = 0; offset <= SPOT_SEARCH_HEIGHT; offset++) {
+            BlockPos up = new BlockPos(column.getX(), floorY + offset, column.getZ());
+            if (canStand(level, up)) {
+                return up;
+            }
+            if (offset > 0) {
+                BlockPos down = new BlockPos(column.getX(), floorY - offset, column.getZ());
+                if (canStand(level, down)) {
+                    return down;
+                }
+            }
+        }
+        return null;
     }
 
     /**

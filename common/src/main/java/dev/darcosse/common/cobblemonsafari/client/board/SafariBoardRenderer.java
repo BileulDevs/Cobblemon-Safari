@@ -4,6 +4,8 @@ import dev.darcosse.common.cobblemonsafari.points.SafariPointsIcon;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
+import dev.darcosse.common.cobblemonsafari.client.SafariLandscapes;
+import dev.darcosse.common.cobblemonsafari.config.SafariClientConfig;
 import dev.darcosse.common.cobblemonsafari.block.SafariBoardBlock;
 import dev.darcosse.common.cobblemonsafari.block.SafariBoardBlockEntity;
 import dev.darcosse.common.cobblemonsafari.block.ScreenLayout;
@@ -17,6 +19,7 @@ import dev.darcosse.common.cobblemonsafari.config.SafariClientConfigManager;
 import dev.darcosse.common.cobblemonsafari.network.SafariFeaturedPayload;
 import dev.darcosse.common.cobblemonsafari.spawn.Rarity;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
@@ -213,6 +216,13 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
     private static final int GLOW_MIN_ALPHA = 0x30;
     private static final int GLOW_ALPHA_RANGE = 0x90;
     private static final int ALPHA_SHIFT = 24;
+    private static final int ALPHA_MAX = 0xFF;
+
+    /**
+     * Vertex colour of the landscape: multiplies the picture, here to about
+     * 70%. Brighter makes the scenery livelier and white text harder to read.
+     */
+    private static final int LANDSCAPE_TINT = 0xFFB4B4B4;
     private static final int RGB_MASK = 0xFFFFFF;
 
     private final Font font;
@@ -221,6 +231,9 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
      * screen. Render thread only, like everything in a block entity renderer.
      */
     private BoardPalette pal = SafariClientConfigManager.palette();
+    /** Whether this frame draws the landscape, and the panels' alpha over it (from the client config). */
+    private boolean landscape;
+    private int panelAlpha = ALPHA_MAX;
 
     /** Created by the loader's renderer registry. */
     public SafariBoardRenderer(BlockEntityRendererProvider.Context context) {
@@ -308,7 +321,14 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
         float top = BEZEL;
         float right = width - BEZEL;
         float bottom = height - BEZEL;
-        p.fill(left, top, right, bottom, Z_BACKGROUND + Z_PANEL / 2.0F, pal.background());
+        SafariClientConfig.Board board = SafariClientConfigManager.get().board;
+        landscape = board.backgroundImage;
+        panelAlpha = (int) Math.round(board.panelOpacity * ALPHA_MAX);
+        if (landscape) {
+            drawLandscape(p, left, top, right, bottom);
+        } else {
+            p.fill(left, top, right, bottom, Z_BACKGROUND + Z_PANEL / 2.0F, pal.background());
+        }
 
         float x0 = left + PADDING;
         float x1 = right - PADDING;
@@ -348,7 +368,7 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
      * light stays.
      */
     private void drawHeader(BoardPainter p, float x0, float y, float x1, Page page, long now, boolean missions) {
-        p.fill(x0, y, x1, y + HEADER_HEIGHT, Z_PANEL, pal.header());
+        p.fill(x0, y, x1, y + HEADER_HEIGHT, Z_PANEL, panel(pal.header()));
         float textY = y + (HEADER_HEIGHT - LINE_HEIGHT) / 2.0F + 1.0F;
         float left = x0 + HEADER_MARGIN;
         float right = x1 - HEADER_MARGIN;
@@ -469,7 +489,7 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
             allDone &= done;
             float top = y0 + i * (rowHeight + GAP);
             float bottom = top + rowHeight;
-            p.fill(x0, top, x1, bottom, Z_PANEL, pal.cell());
+            p.fill(x0, top, x1, bottom, Z_PANEL, panel(pal.cell()));
 
             float box = Math.min(rowHeight - 2.0F * ROW_PADDING, BOUNTY_BOX_SIZE * scale);
             float boxLeft = x0 + ROW_PADDING;
@@ -491,7 +511,7 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
             p.text(counter, textRight - p.width(counter) * subScale, subTop, Z_TEXT, subScale, pal.muted());
 
             float barTop = bottom - ROW_PADDING - BOUNTY_BAR_HEIGHT;
-            p.fill(textLeft, barTop, textRight, barTop + BOUNTY_BAR_HEIGHT, Z_DETAIL, pal.barBackground());
+            p.fill(textLeft, barTop, textRight, barTop + BOUNTY_BAR_HEIGHT, Z_DETAIL, panel(pal.barBackground()));
             float fraction = Math.min(1.0F, progress / (float) bounty.count());
             p.fill(textLeft, barTop, textLeft + (textRight - textLeft) * fraction, barTop + BOUNTY_BAR_HEIGHT,
                     Z_DETAIL_TOP, done ? pal.barSessionOk() : pal.barRotation());
@@ -534,7 +554,7 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
     private void drawCell(BoardPainter p, float x, float y, float w, float h, SafariFeaturedPayload.Entry entry,
                           int slot, long revealStart, long now) {
         int rarityColor = rarityColor(entry);
-        p.fill(x, y, x + w, y + h, Z_PANEL, pal.cell());
+        p.fill(x, y, x + w, y + h, Z_PANEL, panel(pal.cell()));
         p.fill(x, y, x + w, y + RARITY_STRIP, Z_DETAIL, rarityColor);
         if (entry.special() || entry.rarity() == Rarity.ULTRA_RARE) {
             drawGlow(p, x, y, w, h, rarityColor, now);
@@ -707,7 +727,7 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
 
         float barTop = y + FOOTER_HEIGHT - BAR_HEIGHT;
         float barBottom = barTop + BAR_HEIGHT;
-        p.fill(x0, barTop, x1, barBottom, Z_PANEL, pal.barBackground());
+        p.fill(x0, barTop, x1, barBottom, Z_PANEL, panel(pal.barBackground()));
         float clamped = Math.max(0.0F, Math.min(1.0F, fraction));
         float fillRight = x0 + (x1 - x0) * clamped;
         p.fill(x0, barTop, fillRight, barBottom, Z_DETAIL, color);
@@ -768,6 +788,47 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
     }
 
     /** Text centred between two x positions at scale 1. */
+    /**
+     * The board's safari landscape, in the light of the time of day, behind the whole screen,
+     * cropped to the screen's shape (centred on the horizon, so a long flat
+     * board shows the horizon line) and dimmed so text stays readable.
+     * Drawn before every fill: the translucent panels blend over it.
+     */
+    private void drawLandscape(BoardPainter p, float left, float top, float right, float bottom) {
+        float width = right - left;
+        float height = bottom - top;
+        float screenAspect = width / height;
+        SafariLandscapes.Scene scene = SafariLandscapes.BOARD;
+        float textureAspect = scene.width() / (float) scene.height();
+        float u0 = 0.0F;
+        float u1 = 1.0F;
+        float v0 = 0.0F;
+        float v1 = 1.0F;
+        if (screenAspect > textureAspect) {
+            float span = textureAspect / screenAspect;
+            v0 = Math.max(0.0F, Math.min(1.0F - span, scene.horizon() - span / 2.0F));
+            v1 = v0 + span;
+        } else {
+            float span = screenAspect / textureAspect;
+            u0 = (1.0F - span) / 2.0F;
+            u1 = u0 + span;
+        }
+        p.image(scene.forTime(Minecraft.getInstance().level), left, top, right, bottom,
+                Z_BACKGROUND + Z_PANEL / 2.0F, u0, v0, u1, v1, LANDSCAPE_TINT);
+    }
+
+    /**
+     * A panel colour made translucent over the landscape, unless the colour
+     * already sets its own alpha in the client config. Unchanged without the
+     * landscape.
+     */
+    private int panel(int colour) {
+        if (!landscape || (colour >>> ALPHA_SHIFT) != ALPHA_MAX) {
+            return colour;
+        }
+        return (panelAlpha << ALPHA_SHIFT) | (colour & RGB_MASK);
+    }
+
     private void drawCentered(BoardPainter p, String text, float x0, float x1, float y, int color) {
         String fitted = p.fit(text, x1 - x0);
         p.text(fitted, x0 + (x1 - x0 - p.width(fitted)) / 2.0F, y, Z_TEXT, 1.0F, color);

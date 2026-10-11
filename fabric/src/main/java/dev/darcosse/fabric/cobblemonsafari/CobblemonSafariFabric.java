@@ -42,6 +42,9 @@ public class CobblemonSafariFabric implements ModInitializer {
         // and the world refuses to open if it is missing.
         SafariWorldgen.registerDensityFunctionTypes((id, codec) ->
                 Registry.register(BuiltInRegistries.DENSITY_FUNCTION_TYPE, id, codec));
+        // Same constraint: the gate, ruin and tower structures use this type.
+        SafariWorldgen.registerStructureTypes((id, type) ->
+                Registry.register(BuiltInRegistries.STRUCTURE_TYPE, id, type));
         // Blocks first: the board's block item wraps the block.
         SafariBlocks.register((id, block) -> Registry.register(BuiltInRegistries.BLOCK, id, block));
         // Built here, not in common: BlockEntitySupplier is only public through

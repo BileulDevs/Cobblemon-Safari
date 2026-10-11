@@ -87,5 +87,18 @@ public class SafariClientConfig {
         public String shimmer = "#50FFFFFF";
         /** Flash when the list changes; its alpha is the flash's peak. */
         public String flash = "#90FFFFFF";
+
+        /**
+         * Shows the safari landscape of the time of day behind the screen
+         * (the shop's pictures) instead of the plain background colour.
+         */
+        public boolean backgroundImage = true;
+
+        /**
+         * Opacity of the title band, cells and bars over the landscape, from
+         * 0 (invisible) to 1 (opaque, the landscape only shows between them).
+         * A colour given with its own alpha ({@code #AARRGGBB}) keeps it.
+         */
+        public double panelOpacity = 0.72;
     }
 }
