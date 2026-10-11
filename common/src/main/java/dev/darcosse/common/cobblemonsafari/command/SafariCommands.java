@@ -1,5 +1,6 @@
 package dev.darcosse.common.cobblemonsafari.command;
 
+import dev.darcosse.common.cobblemonsafari.points.SafariPointsIcon;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
@@ -265,12 +266,13 @@ public final class SafariCommands {
     }
 
     /**
-     * Opens the warden's shop. Only next to a Safari Gate, where the warden
-     * stands; operators can open it anywhere, to check the configuration.
+     * Opens the shop. Only where a shopkeeper stands (the warden at a Safari
+     * Gate, the clerk in a rest house); operators can open it anywhere, to
+     * check the configuration. See {@link SafariShop#canShopHere}.
      */
     private static int openShop(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
-        if (!ctx.getSource().hasPermission(OP_LEVEL) && !SafariGate.isNearGate(player)) {
+        if (!SafariShop.canShopHere(player)) {
             ctx.getSource().sendFailure(Component.translatable(key("command.shop.too_far")));
             return 0;
         }
@@ -291,7 +293,7 @@ public final class SafariCommands {
     private static int queryOwnPoints(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         int points = SafariPoints.balance(player);
-        ctx.getSource().sendSuccess(() -> Component.translatable(key("command.points.query"), points), false);
+        ctx.getSource().sendSuccess(() -> Component.translatable(key("command.points.query"), SafariPointsIcon.amount(points)), false);
         return points;
     }
 
@@ -304,7 +306,7 @@ public final class SafariCommands {
             int balance = SafariPoints.balance(target);
             changed++;
             ctx.getSource().sendSuccess(() -> Component.translatable(key("command.points.changed"),
-                    target.getDisplayName(), balance), true);
+                    target.getDisplayName(), SafariPointsIcon.amount(balance)), true);
         }
         return changed;
     }

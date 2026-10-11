@@ -6,6 +6,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.network.chat.Component;
 import org.joml.Matrix4f;
 
 /**
@@ -46,6 +47,11 @@ final class BoardPainter {
 
     /** Width of a string in canvas pixels at scale 1. */
     int width(String text) {
+        return font.width(text);
+    }
+
+    /** Width of styled text (custom-font glyphs such as the points icon included), in canvas pixels. */
+    int width(Component text) {
         return font.width(text);
     }
 
@@ -93,6 +99,20 @@ final class BoardPainter {
         poseStack.scale(scale, scale, 1.0F);
         // POLYGON_OFFSET: same choice as signs, keeps glyphs from flickering
         // against the panel they sit on.
+        font.drawInBatch(text, 0.0F, 0.0F, argb, false, poseStack.last().pose(), buffers,
+                Font.DisplayMode.POLYGON_OFFSET, 0, LIGHT);
+        poseStack.popPose();
+    }
+
+    /**
+     * Draws styled text with its top-left corner at (x, y). For text holding
+     * glyphs of another font (the points icon); plain strings use the other
+     * overload. Parts with their own colour keep it; the rest takes argb.
+     */
+    void text(Component text, float x, float y, float z, float scale, int argb) {
+        poseStack.pushPose();
+        poseStack.translate(x, y, z);
+        poseStack.scale(scale, scale, 1.0F);
         font.drawInBatch(text, 0.0F, 0.0F, argb, false, poseStack.last().pose(), buffers,
                 Font.DisplayMode.POLYGON_OFFSET, 0, LIGHT);
         poseStack.popPose();

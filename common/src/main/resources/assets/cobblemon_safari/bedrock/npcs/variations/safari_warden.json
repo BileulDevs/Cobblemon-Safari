@@ -5,7 +5,7 @@
     {
       "aspects": [],
       "poser": "cobblemon:standard",
-      "model": "cobblemon:steve.geo",
+      "model": "cobblemon_safari:safari_warden.geo",
       "texture": "cobblemon_safari:textures/npcs/safari_warden.png",
       "layers": []
     }

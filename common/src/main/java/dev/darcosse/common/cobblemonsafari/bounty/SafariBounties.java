@@ -1,5 +1,6 @@
 package dev.darcosse.common.cobblemonsafari.bounty;
 
+import dev.darcosse.common.cobblemonsafari.points.SafariPointsIcon;
 import com.cobblemon.mod.common.api.Priority;
 import com.cobblemon.mod.common.api.events.CobblemonEvents;
 import com.cobblemon.mod.common.api.events.pokemon.PokemonCapturedEvent;
@@ -161,12 +162,12 @@ public final class SafariBounties {
             lines.add(Component.literal(done ? "✔ " : "• ")
                     .append(bounty.describe())
                     .append(Component.literal(" " + Math.min(progress.counts[i], bounty.count()) + "/" + bounty.count()))
-                    .append(Component.translatable(key("bounty.reward"), bounty.reward()).withStyle(ChatFormatting.GOLD))
+                    .append(Component.translatable(key("bounty.reward"), SafariPointsIcon.amount(bounty.reward())).withStyle(ChatFormatting.GOLD))
                     .withStyle(done ? ChatFormatting.GREEN : ChatFormatting.WHITE));
         }
         int bonus = SafariConfigManager.get().bounties.allDoneBonus;
         if (bonus > 0) {
-            lines.add(Component.translatable(key("bounty.all_done_hint"), bonus).withStyle(ChatFormatting.GRAY));
+            lines.add(Component.translatable(key("bounty.all_done_hint"), SafariPointsIcon.amount(bonus)).withStyle(ChatFormatting.GRAY));
         }
         return lines;
     }
@@ -205,7 +206,7 @@ public final class SafariBounties {
             int bonus = SafariConfigManager.get().bounties.allDoneBonus;
             if (bonus > 0) {
                 int added = SafariPoints.add(player, bonus);
-                player.sendSystemMessage(Component.translatable(key("bounty.all_done"), added)
+                player.sendSystemMessage(Component.translatable(key("bounty.all_done"), SafariPointsIcon.amount(added))
                         .withStyle(ChatFormatting.GOLD));
             }
         }
@@ -216,7 +217,7 @@ public final class SafariBounties {
     /** Pays a completed mission and celebrates it. */
     private static void complete(ServerPlayer player, Bounty bounty) {
         int added = SafariPoints.add(player, bounty.reward());
-        player.sendSystemMessage(Component.translatable(key("bounty.completed"), bounty.describe(), added)
+        player.sendSystemMessage(Component.translatable(key("bounty.completed"), bounty.describe(), SafariPointsIcon.amount(added))
                 .withStyle(ChatFormatting.GREEN));
         player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                 SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.6F, 1.2F);

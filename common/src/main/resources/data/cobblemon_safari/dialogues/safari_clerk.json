@@ -1,0 +1,67 @@
+{
+  "initializationAction": "c.npc.set_chatting();",
+  "speakers": {
+    "npc": {
+      "name": {
+        "type": "expression",
+        "expression": "q.npc.name"
+      },
+      "face": "q.npc.face();",
+      "gibber": {
+        "step": 6,
+        "interval": 0.04
+      }
+    },
+    "player": {
+      "face": "q.player.face();",
+      "name": {
+        "type": "expression",
+        "expression": "q.player.username"
+      }
+    }
+  },
+  "pages": [
+    {
+      "id": "greeting",
+      "speaker": "npc",
+      "lines": [
+        "cobblemon_safari.dialogue.safari_clerk.greeting"
+      ],
+      "input": {
+        "type": "option",
+        "vertical": true,
+        "options": [
+          {
+            "text": "cobblemon_safari.dialogue.safari_clerk.option.shop",
+            "value": "shop",
+            "action": [
+              "q.dialogue.close();",
+              "q.player.run_command('safari shop');"
+            ]
+          },
+          {
+            "text": "cobblemon_safari.dialogue.safari_clerk.option.bounties",
+            "value": "bounties",
+            "action": [
+              "q.dialogue.close();",
+              "q.player.run_command('safari bounties');"
+            ]
+          },
+          {
+            "text": "cobblemon_safari.dialogue.safari_clerk.option.bye",
+            "value": "bye",
+            "action": "q.dialogue.set_page('bye');"
+          }
+        ]
+      }
+    },
+    {
+      "id": "bye",
+      "speaker": "npc",
+      "lines": [
+        "cobblemon_safari.dialogue.safari_clerk.bye"
+      ],
+      "input": "q.dialogue.close();"
+    }
+  ]
+}

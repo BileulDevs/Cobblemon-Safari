@@ -91,7 +91,7 @@ public final class RestHouses {
      * The door faces the centre of the park, so every house opens toward the
      * heart of the island and the entrance opens toward the arrival point.
      */
-    private static Direction doorFacing(SafariConfig.Position position) {
+    static Direction doorFacing(SafariConfig.Position position) {
         SafariConfig.Park park = SafariConfigManager.get().park;
         int dx = park.centerX - position.x;
         int dz = park.centerZ - position.z;

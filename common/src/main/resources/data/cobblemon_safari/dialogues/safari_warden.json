@@ -7,7 +7,10 @@
         "expression": "q.npc.name"
       },
       "face": "q.npc.face();",
-      "gibber": {}
+      "gibber": {
+        "step": 6,
+        "interval": 0.04
+      }
     },
     "player": {
       "face": "q.player.face();",

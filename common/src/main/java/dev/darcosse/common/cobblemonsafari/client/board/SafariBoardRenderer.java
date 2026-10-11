@@ -1,5 +1,6 @@
 package dev.darcosse.common.cobblemonsafari.client.board;
 
+import dev.darcosse.common.cobblemonsafari.points.SafariPointsIcon;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
@@ -64,8 +65,14 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
     /** Depth of the panel's front face from the block centre, in blocks: see {@link SafariBoardBlock#PANEL_THICKNESS_PIXELS}. */
     private static final float PANEL_FRONT_Z = -0.5F + SafariBoardBlock.PANEL_THICKNESS_PIXELS / 16.0F;
 
-    /** Gap between the panel and the picture, in blocks. Too small flickers against the block face, too large floats visibly. */
-    private static final float SURFACE_GAP = 0.002F;
+    /**
+     * Gap between the panel and the picture, in blocks. Too small would
+     * z-fight with the block face, too large floats visibly. 0.008 (an
+     * eighth of a texture pixel) is a comfortable margin; the border flicker
+     * once blamed on this gap came from two layers of the picture itself,
+     * see the depth layers below.
+     */
+    private static final float SURFACE_GAP = 0.008F;
 
     /** Draw distance in blocks; vanilla's default (64) cuts big station walls too early. */
     private static final int VIEW_DISTANCE = 96;
@@ -114,26 +121,45 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
      * habitat line fits. Lower favours text, higher favours the model.
      */
     private static final float MIN_MODEL_SHARE = 0.45F;
-    /** Share of the model area the model's height fills. Above ~0.9 tall models touch the cell edge. */
-    private static final float MODEL_FILL = 0.85F;
+    /**
+     * Share of the model area the model's height fills. Cobblemon's profile
+     * sizes are only roughly uniform, so this leaves room: at 0.85 many
+     * models overflowed their cell.
+     */
+    private static final float MODEL_FILL = 0.62F;
+    /**
+     * Largest model height as a share of the cell width. A model turning on
+     * itself is as wide as it is long, so wide cells must not let a long
+     * model (a snake, a whale) grow past the sides.
+     */
+    private static final float MODEL_WIDTH_FILL = 0.55F;
     /** How far models stand out of the screen, relative to their height. 0 keeps them flat on the glass. */
     private static final float MODEL_POP_OUT = 0.35F;
 
     // ---- Depth layers (canvas pixels toward the viewer) --------------------
 
+    // Every pair of fills that can overlap must sit on different layers: two
+    // overlapping quads at the same depth z-fight, flickering as the camera
+    // turns. The rarity strip and the glowing frame of special cells shared
+    // Z_DETAIL, which made the top border of those cells flicker. Layers are
+    // at least 0.1 canvas pixel apart (about 0.0017 block on a 3x2 screen),
+    // far above depth buffer precision at reading distance.
+
     private static final float Z_BACKGROUND = 0.0F;
     private static final float Z_PANEL = 0.25F;
     private static final float Z_DETAIL = 0.5F;
+    /** The pulsing frame of special cells, over the rarity strip it crosses. */
+    private static final float Z_GLOW = 0.6F;
+    /** Detail drawn over another detail (a ticked box, a bar's filled part); below the scanline. */
+    private static final float Z_DETAIL_TOP = 0.7F;
     /**
      * Below the text on purpose: translucent quads still write depth, and
      * depending on batch order the text could be hidden behind a band drawn
      * in front of it.
      */
-    private static final float Z_SCANLINE = 0.6F;
-    /** Detail drawn over another detail (a ticked box, a bar's filled part); below the scanline. */
-    private static final float Z_DETAIL_TOP = 0.55F;
-    private static final float Z_TEXT = 0.75F;
-    private static final float Z_OVERLAY = 1.0F;
+    private static final float Z_SCANLINE = 0.8F;
+    private static final float Z_TEXT = 0.9F;
+    private static final float Z_OVERLAY = 1.2F;
 
     // ---- Animation ----------------------------------------------------------
 
@@ -458,7 +484,8 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
                     done ? pal.barSessionOk() : pal.text(), now);
 
             float subTop = top + ROW_PADDING + LINE_HEIGHT * scale;
-            String reward = tr("board.bounty_reward", bounty.reward());
+            Component reward = Component.translatable(CobblemonSafari.MOD_ID + ".board.bounty_reward",
+                    SafariPointsIcon.amount(bounty.reward()));
             p.text(reward, textLeft, subTop, Z_TEXT, subScale, pal.star());
             String counter = progress + "/" + bounty.count();
             p.text(counter, textRight - p.width(counter) * subScale, subTop, Z_TEXT, subScale, pal.muted());
@@ -472,8 +499,13 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
         float footerY = y0 + count * (rowHeight + GAP);
         int bonus = BountyClientState.allDoneBonus();
         if (bonus > 0 && footerY + LINE_HEIGHT <= y1) {
-            String line = allDone ? tr("board.bounty_all_done") : tr("board.bounty_bonus", bonus);
-            drawCentered(p, line, x0, x1, footerY, allDone ? pal.barSessionOk() : pal.muted());
+            Component line = allDone
+                    ? Component.translatable(CobblemonSafari.MOD_ID + ".board.bounty_all_done")
+                    : Component.translatable(CobblemonSafari.MOD_ID + ".board.bounty_bonus", SafariPointsIcon.amount(bonus));
+            // Not fitted with an ellipsis like other lines: the icon glyph
+            // cannot be cut, and the line is short in every language.
+            p.text(line, x0 + (x1 - x0 - p.width(line)) / 2.0F, footerY, Z_TEXT, 1.0F,
+                    allDone ? pal.barSessionOk() : pal.muted());
         }
     }
 
@@ -519,13 +551,16 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
         float modelBottom = textTop - 1.0F;
         float maxTextWidth = (w - 4.0F) / textScale;
 
-        // Model, feet on the bottom of its area, centred, standing out of the glass.
-        float modelHeight = Math.max(0.0F, (modelBottom - modelTop) * MODEL_FILL);
+        // Model centred in its area (both ways), standing out of the glass.
+        // Feet on the bottom of the area would leave the empty room above it,
+        // and the model would look sunk into the text.
+        float modelHeight = Math.max(0.0F, Math.min((modelBottom - modelTop) * MODEL_FILL, w * MODEL_WIDTH_FILL));
+        float feetY = modelBottom - ((modelBottom - modelTop) - modelHeight) / 2.0F;
         boolean drawn = false;
         if (modelHeight > 0.0F) {
             PoseStack pose = p.poseStack();
             pose.pushPose();
-            pose.translate(x + w / 2.0F, modelBottom, Z_TEXT + modelHeight * MODEL_POP_OUT);
+            pose.translate(x + w / 2.0F, feetY, Z_TEXT + modelHeight * MODEL_POP_OUT);
             float yaw = (now % SPIN_PERIOD_MS) / (float) SPIN_PERIOD_MS * 360.0F + slot * SPIN_PHASE_DEGREES;
             drawn = BoardPokemonModels.render(entry.species(), new HashSet<>(entry.aspects()), pose,
                     p.buffers(), BoardPainter.LIGHT, modelHeight, yaw);
@@ -622,10 +657,10 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
         int alpha = GLOW_MIN_ALPHA + (int) (GLOW_ALPHA_RANGE * (0.5 + 0.5 * Math.sin(phase)));
         int argb = (alpha << ALPHA_SHIFT) | (color & RGB_MASK);
         float t = 1.0F;
-        p.fill(x, y, x + w, y + t, Z_DETAIL, argb);
-        p.fill(x, y + h - t, x + w, y + h, Z_DETAIL, argb);
-        p.fill(x, y + t, x + t, y + h - t, Z_DETAIL, argb);
-        p.fill(x + w - t, y + t, x + w, y + h - t, Z_DETAIL, argb);
+        p.fill(x, y, x + w, y + t, Z_GLOW, argb);
+        p.fill(x, y + h - t, x + w, y + h, Z_GLOW, argb);
+        p.fill(x, y + t, x + t, y + h - t, Z_GLOW, argb);
+        p.fill(x + w - t, y + t, x + w, y + h - t, Z_GLOW, argb);
     }
 
     // ---- Footer -------------------------------------------------------------

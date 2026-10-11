@@ -1,5 +1,6 @@
 package dev.darcosse.common.cobblemonsafari.shop;
 
+import dev.darcosse.common.cobblemonsafari.points.SafariPointsIcon;
 import com.cobblemon.mod.common.Cobblemon;
 import com.cobblemon.mod.common.api.pokemon.PokemonProperties;
 import com.cobblemon.mod.common.pokemon.Pokemon;
@@ -7,11 +8,13 @@ import com.cobblemon.mod.common.util.PlayerExtensionsKt;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.config.SafariShopConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariShopConfigManager;
+import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
 import dev.darcosse.common.cobblemonsafari.gate.SafariGate;
 import dev.darcosse.common.cobblemonsafari.network.SafariNetwork;
 import dev.darcosse.common.cobblemonsafari.network.SafariShopBuyPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariShopPayload;
 import dev.darcosse.common.cobblemonsafari.points.SafariPoints;
+import dev.darcosse.common.cobblemonsafari.structure.RestHouses;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -33,7 +36,7 @@ import java.util.Set;
  */
 public final class SafariShop {
 
-    /** Vanilla "gamemaster" level, as in SafariCommands: operators may shop away from a gate. */
+    /** Vanilla "gamemaster" level, as in SafariCommands: operators may shop anywhere. */
     private static final int OP_LEVEL = 2;
 
     /** Shop entries already reported as broken, to log each once. */
@@ -66,7 +69,7 @@ public final class SafariShop {
         List<SafariShopConfig.Entry> entries = SafariShopConfigManager.get().entries;
         if (!SafariShopConfigManager.get().enabled) {
             player.displayClientMessage(Component.translatable(key("message.shop_closed")), true);
-        } else if (!player.hasPermissions(OP_LEVEL) && !SafariGate.isNearGate(player)) {
+        } else if (!canShopHere(player)) {
             player.displayClientMessage(Component.translatable(key("command.shop.too_far")), true);
         } else if (request.index() < 0 || request.index() >= entries.size()
                 || entries.get(request.index()).price != request.expectedPrice()) {
@@ -84,28 +87,56 @@ public final class SafariShop {
      * entry; only when the shop is opened or refreshed.
      */
     private static SafariShopPayload snapshot(ServerPlayer player, boolean refresh) {
+        List<SafariShopPayload.Tab> tabs = new ArrayList<>();
+        for (SafariShopConfig.Tab tab : SafariShopConfigManager.get().tabs) {
+            tabs.add(new SafariShopPayload.Tab(tab.id, tab.name, icon(tab)));
+        }
         List<SafariShopPayload.Entry> out = new ArrayList<>();
         for (SafariShopConfig.Entry entry : SafariShopConfigManager.get().entries) {
             out.add(describe(entry));
         }
-        return new SafariShopPayload(refresh, SafariPoints.balance(player), out);
+        return new SafariShopPayload(refresh, SafariPoints.balance(player), tabs, out);
+    }
+
+    /**
+     * Whether a player may use the shop where they stand: operators anywhere,
+     * others at a Safari Gate (the warden) or in a rest house of the Safari
+     * (the clerk). Checked by {@code /safari shop} and again at each purchase.
+     */
+    public static boolean canShopHere(ServerPlayer player) {
+        if (player.hasPermissions(OP_LEVEL) || SafariGate.isNearGate(player)) {
+            return true;
+        }
+        // Margin 0: the house and its plaza, i.e. within reach of the clerk's counter.
+        return SafariDimensions.isSafari(player.level())
+                && RestHouses.isNear(player.getBlockX(), player.getBlockZ(), 0);
+    }
+
+    /** The item drawn on a tab; empty when the config names none or an unknown item. */
+    private static ItemStack icon(SafariShopConfig.Tab tab) {
+        ResourceLocation id = ResourceLocation.tryParse(tab.icon);
+        if (id == null || !BuiltInRegistries.ITEM.containsKey(id)) {
+            return ItemStack.EMPTY;
+        }
+        return new ItemStack(BuiltInRegistries.ITEM.get(id));
     }
 
     /** One entry as the client sees it; unavailable when the item or Pokémon cannot be built. */
     private static SafariShopPayload.Entry describe(SafariShopConfig.Entry entry) {
+        int tab = SafariShopConfigManager.tabIndex(entry.tab);
         if (entry.isPokemon()) {
             Pokemon pokemon = preview(entry);
             if (pokemon != null) {
-                return new SafariShopPayload.Entry(SafariShopPayload.KIND_POKEMON, entry.price, ItemStack.EMPTY,
+                return new SafariShopPayload.Entry(tab, SafariShopPayload.KIND_POKEMON, entry.price, ItemStack.EMPTY,
                         pokemon.getSpecies().getResourceIdentifier(), List.copyOf(pokemon.getAspects()),
                         pokemon.getLevel(), pokemon.getShiny());
             }
         } else if (SafariShopConfigManager.itemExists(entry)) {
             ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.get(ResourceLocation.parse(entry.item)), entry.count);
-            return new SafariShopPayload.Entry(SafariShopPayload.KIND_ITEM, entry.price, stack, null, List.of(),
+            return new SafariShopPayload.Entry(tab, SafariShopPayload.KIND_ITEM, entry.price, stack, null, List.of(),
                     0, false);
         }
-        return new SafariShopPayload.Entry(SafariShopPayload.KIND_UNAVAILABLE, entry.price, ItemStack.EMPTY, null,
+        return new SafariShopPayload.Entry(tab, SafariShopPayload.KIND_UNAVAILABLE, entry.price, ItemStack.EMPTY, null,
                 List.of(), 0, false);
     }
 
@@ -125,8 +156,8 @@ public final class SafariShop {
             player.displayClientMessage(Component.translatable(key("message.shop_failed")), true);
             return;
         }
-        player.sendSystemMessage(Component.translatable(key("message.shop_bought"), bought, entry.price,
-                SafariPoints.balance(player)));
+        player.sendSystemMessage(Component.translatable(key("message.shop_bought"), bought,
+                SafariPointsIcon.amount(entry.price), SafariPointsIcon.amount(SafariPoints.balance(player))));
     }
 
     /**

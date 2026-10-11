@@ -11,7 +11,7 @@ import org.joml.Quaternionf
 import org.joml.Vector3f
 
 /**
- * Draws turning, animated Cobblemon models in the shop screen.
+ * Draws animated Cobblemon models, gently swaying, in the shop screen.
  *
  * Uses Cobblemon's own GUI helper (`drawProfilePokemon`, what the PC and the
  * summary use) with the transform of a PC slot, scaled to the card. Each
@@ -33,11 +33,24 @@ object ShopPokemonModels {
     /** Camera tilt of Cobblemon's PC slots, so models look the same as there. */
     private const val PITCH_DEGREES = 13F
 
-    /** Turning speed of the display, in degrees per second. 0 stops it. */
-    private const val SPIN_DEGREES_PER_SECOND = 30F
+    /**
+     * Facing of the model at rest: three-quarter front, Cobblemon's PC angle.
+     * The model sways around it instead of turning a full circle: a full
+     * turn showed every Pokémon from behind half of the time, all at once.
+     */
+    private const val FRONT_YAW_DEGREES = 35F
 
-    private const val MILLIS_PER_SECOND = 1000F
-    private const val DEGREES_PER_TURN = 360F
+    /** How far the model sways to each side of [FRONT_YAW_DEGREES]. Past ~70 the back shows again. */
+    private const val SWAY_DEGREES = 30F
+
+    /** Time of one full sway, left and back. */
+    private const val SWAY_PERIOD_MILLIS = 6000.0
+
+    /**
+     * Phase offset between cards, in radians, so neighbouring cards do not
+     * sway in step like a choir.
+     */
+    private const val SWAY_PHASE_STEP = 1.3
 
     private val states = HashMap<String, FloatingState>()
 
@@ -61,16 +74,19 @@ object ShopPokemonModels {
      * The caller clips with a scissor: a large model may overflow the area.
      *
      * @param key one state per key; use the entry index so identical species keep separate animations
+     * @param frontYaw facing the model sways around, in degrees; the cards use the PC's three-quarter view
      */
     @JvmStatic
+    @JvmOverloads
     fun draw(graphics: GuiGraphics, key: String, species: ResourceLocation, aspects: Collection<String>,
-             x: Int, y: Int, size: Int, partialTicks: Float) {
+             x: Int, y: Int, size: Int, partialTicks: Float, frontYaw: Float = FRONT_YAW_DEGREES) {
         if (species in failed || PokemonSpecies.getByIdentifier(species) == null) {
             return
         }
         val state = states.getOrPut(key) { FloatingState() }
         state.currentAspects = aspects.toSet()
-        val yaw = (System.currentTimeMillis() / MILLIS_PER_SECOND * SPIN_DEGREES_PER_SECOND) % DEGREES_PER_TURN
+        val phase = System.currentTimeMillis() % SWAY_PERIOD_MILLIS.toLong() / SWAY_PERIOD_MILLIS * 2 * Math.PI
+        val yaw = frontYaw + SWAY_DEGREES * Math.sin(phase + key.hashCode() * SWAY_PHASE_STEP).toFloat()
         val factor = size / PC_SLOT_SIZE
         val pose = graphics.pose()
         pose.pushPose()

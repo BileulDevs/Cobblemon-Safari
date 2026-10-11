@@ -20,12 +20,17 @@ import java.util.List;
  *
  * @param refresh true to update an open shop screen only (after a purchase), false to open it
  * @param points  the player's Safari points
+ * @param tabs    tabs of the screen, in display order
  * @param entries what is for sale, in config order; the index is what a purchase refers to
  */
-public record SafariShopPayload(boolean refresh, int points, List<Entry> entries) implements CustomPacketPayload {
+public record SafariShopPayload(boolean refresh, int points, List<Tab> tabs, List<Entry> entries)
+        implements CustomPacketPayload {
 
-    /** Wire format version. Bump on EVERY change to write/read. v1: first version. */
-    public static final int WIRE_VERSION = 1;
+    /**
+     * Wire format version. Bump on EVERY change to write/read.
+     * v1: first version. v2: tabs, and the tab index of each entry.
+     */
+    public static final int WIRE_VERSION = 2;
 
     /** Entry kinds on the wire. Their numbers are the format: never renumber. */
     public static final int KIND_UNAVAILABLE = 0;
@@ -35,6 +40,7 @@ public record SafariShopPayload(boolean refresh, int points, List<Entry> entries
     /** Guards against corrupted or hostile packets announcing huge lists. */
     private static final int MAX_ENTRIES = 4096;
     private static final int MAX_ASPECTS = 64;
+    private static final int MAX_TABS = 64;
 
     public static final CustomPacketPayload.Type<SafariShopPayload> TYPE =
             new CustomPacketPayload.Type<>(CobblemonSafari.id("shop"));
@@ -44,8 +50,19 @@ public record SafariShopPayload(boolean refresh, int points, List<Entry> entries
                     SafariShopPayload::read);
 
     /**
+     * One tab of the screen.
+     *
+     * @param id   config id; built-in ids have a translated name
+     * @param name name set in the config, shown as is; empty to use the translation
+     * @param icon item drawn on the tab; may be empty
+     */
+    public record Tab(String id, String name, ItemStack icon) {
+    }
+
+    /**
      * One thing for sale.
      *
+     * @param tab     index in {@link #tabs} of the tab showing it
      * @param kind    {@link #KIND_ITEM}, {@link #KIND_POKEMON} or {@link #KIND_UNAVAILABLE}
      * @param price   cost in Safari points
      * @param item    the stack given, for items; empty otherwise
@@ -54,7 +71,7 @@ public record SafariShopPayload(boolean refresh, int points, List<Entry> entries
      * @param level   level, for Pokémon
      * @param shiny   whether the Pokémon is shiny
      */
-    public record Entry(int kind, int price, ItemStack item, ResourceLocation species, List<String> aspects,
+    public record Entry(int tab, int kind, int price, ItemStack item, ResourceLocation species, List<String> aspects,
                        int level, boolean shiny) {
     }
 
@@ -63,8 +80,16 @@ public record SafariShopPayload(boolean refresh, int points, List<Entry> entries
         buf.writeVarInt(WIRE_VERSION);
         buf.writeBoolean(refresh);
         buf.writeVarInt(points);
+        buf.writeVarInt(tabs.size());
+        for (Tab tab : tabs) {
+            buf.writeUtf(tab.id());
+            buf.writeUtf(tab.name());
+            // OPTIONAL: the plain codec refuses empty stacks, and a tab may have no icon.
+            ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, tab.icon());
+        }
         buf.writeVarInt(entries.size());
         for (Entry entry : entries) {
+            buf.writeVarInt(entry.tab());
             buf.writeVarInt(entry.kind());
             buf.writeVarInt(entry.price());
             if (entry.kind() == KIND_ITEM) {
@@ -90,16 +115,25 @@ public record SafariShopPayload(boolean refresh, int points, List<Entry> entries
         }
         boolean refresh = buf.readBoolean();
         int points = buf.readVarInt();
+        int tabCount = buf.readVarInt();
+        if (tabCount < 0 || tabCount > MAX_TABS) {
+            throw new IllegalStateException("Cobblemon Safari: invalid shop tab count " + tabCount);
+        }
+        List<Tab> tabs = new ArrayList<>(tabCount);
+        for (int i = 0; i < tabCount; i++) {
+            tabs.add(new Tab(buf.readUtf(), buf.readUtf(), ItemStack.OPTIONAL_STREAM_CODEC.decode(buf)));
+        }
         int count = buf.readVarInt();
         if (count < 0 || count > MAX_ENTRIES) {
             throw new IllegalStateException("Cobblemon Safari: invalid shop entry count " + count);
         }
         List<Entry> entries = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
+            int tab = buf.readVarInt();
             int kind = buf.readVarInt();
             int price = buf.readVarInt();
             if (kind == KIND_ITEM) {
-                entries.add(new Entry(kind, price, ItemStack.STREAM_CODEC.decode(buf), null, List.of(), 0, false));
+                entries.add(new Entry(tab, kind, price, ItemStack.STREAM_CODEC.decode(buf), null, List.of(), 0, false));
             } else if (kind == KIND_POKEMON) {
                 ResourceLocation species = buf.readResourceLocation();
                 int aspectCount = buf.readVarInt();
@@ -112,12 +146,12 @@ public record SafariShopPayload(boolean refresh, int points, List<Entry> entries
                 }
                 int level = buf.readVarInt();
                 boolean shiny = buf.readBoolean();
-                entries.add(new Entry(kind, price, ItemStack.EMPTY, species, List.copyOf(aspects), level, shiny));
+                entries.add(new Entry(tab, kind, price, ItemStack.EMPTY, species, List.copyOf(aspects), level, shiny));
             } else {
-                entries.add(new Entry(KIND_UNAVAILABLE, price, ItemStack.EMPTY, null, List.of(), 0, false));
+                entries.add(new Entry(tab, KIND_UNAVAILABLE, price, ItemStack.EMPTY, null, List.of(), 0, false));
             }
         }
-        return new SafariShopPayload(refresh, points, List.copyOf(entries));
+        return new SafariShopPayload(refresh, points, List.copyOf(tabs), List.copyOf(entries));
     }
 
     @Override

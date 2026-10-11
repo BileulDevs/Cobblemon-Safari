@@ -1,6 +1,7 @@
 package dev.darcosse.common.cobblemonsafari.event;
 
 import com.mojang.brigadier.CommandDispatcher;
+import dev.darcosse.common.cobblemonsafari.structure.RestHouseClerk;
 import dev.darcosse.common.cobblemonsafari.capture.CaptureGuard;
 import dev.darcosse.common.cobblemonsafari.command.SafariCommands;
 import dev.darcosse.common.cobblemonsafari.park.SafariBorder;
@@ -68,6 +69,7 @@ public final class SafariServerEvents {
         FeaturedSync.tick(server);
         SafariBounties.tick(server);
         SafariSpawnBoost.tick(server);
+        RestHouseClerk.tick(server);
     }
 
     /** A player finished joining and can receive custom payloads. */
@@ -133,6 +135,7 @@ public final class SafariServerEvents {
      * @return true when the loader must cancel the damage
      */
     public static boolean onIncomingDamage(LivingEntity entity, DamageSource source) {
-        return SafariProtection.shouldCancelDamage(entity, source) || GateResidents.shouldCancelDamage(entity, source);
+        return SafariProtection.shouldCancelDamage(entity, source) || GateResidents.shouldCancelDamage(entity, source)
+                || RestHouseClerk.shouldCancelDamage(entity, source);
     }
 }

@@ -86,6 +86,15 @@ final class RestHouseBuilder {
     private static final int BOARD_TOP_Y = 3;
     private static final int BOARD_Z = SIZE + 3;
 
+    /**
+     * Where the clerk stands: behind the counter (local z 2), between the
+     * shelves (x 1-2 and SIZE-2 to SIZE-1), next to the Healing Machine.
+     * Must stay a free cell of {@link #interior}; RestHouseClerk finds the
+     * floor there by looking for the gap under the ceiling.
+     */
+    static final int CLERK_X = SIZE / 2 - 2;
+    static final int CLERK_Z = 1;
+
     /** Cobblemon blocks and items, looked up by id so no Kotlin object accessor is involved. */
     private static final ResourceLocation HEALING_MACHINE_ID = cobblemon("healing_machine");
     private static final ResourceLocation PC_ID = cobblemon("pc");
@@ -315,11 +324,14 @@ final class RestHouseBuilder {
             set(at(door, 1, lz), Blocks.RED_CARPET.defaultBlockState());
         }
 
-        // PC against the right wall, screen toward the room.
-        placePc(at(SIZE - 1, 1, 4), localDirection(Direction.WEST));
+        // PC against the right wall, screen toward the room. Like every
+        // Cobblemon station, its "facing" is the direction its placer LOOKED
+        // (see placePc): a player in the room looks east at it.
+        placePc(at(SIZE - 1, 1, 4), localDirection(Direction.EAST));
 
         // Cooking corner on the left wall, near the door, away from the counter queue.
-        placePokePot(at(1, 1, 7), localDirection(Direction.EAST));
+        // Same convention: a player in the room looks west at the campfire.
+        placePokePot(at(1, 1, 7), localDirection(Direction.WEST));
         set(at(1, 1, 6), Blocks.BARREL.defaultBlockState());
         set(at(1, 1, 8), Blocks.SMOKER.defaultBlockState().setValue(HorizontalDirectionalBlock.FACING,
                 localDirection(Direction.EAST)));
@@ -395,13 +407,19 @@ final class RestHouseBuilder {
     /**
      * Places Cobblemon's PC, both halves: Cobblemon adds the top half in
      * {@code setPlacedBy}, which a block placed by code never calls.
+     *
+     * @param placerLook direction a player placing it by hand would look in:
+     *                   {@code PCBlock.getStateForPlacement} stores that, and
+     *                   the screen faces the other way, toward the player.
+     *                   Passing the screen direction (as a first version did)
+     *                   turns the PC to the wall.
      */
-    private void placePc(BlockPos pos, Direction screen) {
+    private void placePc(BlockPos pos, Direction placerLook) {
         BlockState bottom = cobblemonBlock(PC_ID);
         if (bottom == null) {
             return;
         }
-        bottom = with(bottom, "facing", screen.getSerializedName());
+        bottom = with(bottom, "facing", placerLook.getSerializedName());
         set(pos, with(bottom, "part", "bottom"));
         set(pos.above(), with(bottom, "part", "top"));
     }
@@ -410,14 +428,18 @@ final class RestHouseBuilder {
      * Places Cobblemon's campfire with a Poké Pot (campfire pot) on it, ready
      * to cook. The pot is the block entity's item, as when a player puts one
      * on a campfire.
+     *
+     * @param placerLook direction a player placing it by hand would look in,
+     *                   which {@code CampfireBlock.getStateForPlacement} stores
+     *                   in both {@code facing} and {@code item_facing}
      */
-    private void placePokePot(BlockPos pos, Direction front) {
+    private void placePokePot(BlockPos pos, Direction placerLook) {
         BlockState campfire = cobblemonBlock(CAMPFIRE_ID);
         if (campfire == null) {
             return;
         }
-        campfire = with(with(campfire, "facing", front.getSerializedName()), "item_facing",
-                front.getSerializedName());
+        campfire = with(with(campfire, "facing", placerLook.getSerializedName()), "item_facing",
+                placerLook.getSerializedName());
         set(pos, campfire);
         Item pot = BuiltInRegistries.ITEM.get(POT_ITEM_ID);
         BlockEntity blockEntity = level.getBlockEntity(pos);
@@ -490,6 +512,15 @@ final class RestHouseBuilder {
      * the rotation keeps handedness, so the layout is turned, never mirrored.
      */
     private BlockPos at(int lx, int y, int lz) {
+        return rotate(centerX, centerZ, facing, lx, lz).atY(floorY + y);
+    }
+
+    /**
+     * World column (at y 0) of a local cell of a house centred on
+     * (centerX, centerZ) with its door toward {@code facing}. Static so that
+     * code outside the build (the clerk's upkeep) finds the same cells.
+     */
+    static BlockPos rotate(int centerX, int centerZ, Direction facing, int lx, int lz) {
         int dx = lx - RestHouses.HALF_SIZE;
         int dz = lz - RestHouses.HALF_SIZE;
         int wx;
@@ -512,7 +543,12 @@ final class RestHouseBuilder {
                 wz = dz;
             }
         }
-        return new BlockPos(centerX + wx, floorY + y, centerZ + wz);
+        return new BlockPos(centerX + wx, 0, centerZ + wz);
+    }
+
+    /** World column where the clerk stands, behind the counter; see {@link #CLERK_X}. */
+    static BlockPos clerkColumn(int centerX, int centerZ, Direction facing) {
+        return rotate(centerX, centerZ, facing, CLERK_X, CLERK_Z);
     }
 
     /** Places one block with the builder's update flags. */

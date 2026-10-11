@@ -10,17 +10,22 @@ import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -56,6 +61,9 @@ public final class GateResidents {
 
     /** Prefix of the per-slot tag, so that each configured Pokémon exists once. */
     private static final String SLOT_TAG_PREFIX = COMPANION_TAG + ".";
+
+    /** Item the warden holds, looked up by id so no Kotlin object accessor is involved. */
+    private static final ResourceLocation SAFARI_BALL = ResourceLocation.fromNamespaceAndPath("cobblemon", "safari_ball");
 
     /** NPC class of the warden, shipped in the mod's datapack. */
     private static final ResourceLocation WARDEN_CLASS = CobblemonSafari.id("safari_warden");
@@ -184,6 +192,10 @@ public final class GateResidents {
         for (int i = 1; i < wardens.size(); i++) {
             wardens.get(i).discard();
         }
+        // Wardens spawned before he carried a ball get one on the next round.
+        if (wardens.get(0).getMainHandItem().isEmpty()) {
+            equipSafariBall(wardens.get(0));
+        }
         keepWithinReach(level, wardens.get(0), middle, axis, roamRadius);
     }
 
@@ -246,7 +258,24 @@ public final class GateResidents {
         warden.setNpc(npcClass);
         warden.initialize(1);
         warden.addTag(WARDEN_TAG);
+        equipSafariBall(warden);
         level.addFreshEntity(warden);
+    }
+
+    /**
+     * Puts a Safari Ball in the warden's right hand. Drawn by Cobblemon's NPC
+     * renderer at the model's "item" locator, which the warden's own model
+     * (safari_warden.geo) adds to the right hand. Never dropped: the ball is
+     * scenery, not loot.
+     */
+    private static void equipSafariBall(Mob warden) {
+        Item ball = BuiltInRegistries.ITEM.get(SAFARI_BALL);
+        if (ball == Items.AIR) {
+            reportOnce(SAFARI_BALL.toString(), "Item {} not found; the Safari Warden holds nothing");
+            return;
+        }
+        warden.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(ball));
+        warden.setDropChance(EquipmentSlot.MAINHAND, 0.0F);
     }
 
     /** Keeps one Pokémon per configured entry within the roaming area. */

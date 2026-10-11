@@ -80,7 +80,7 @@ public final class SafariPoints {
         int added = add(player, reward);
         if (added > 0) {
             player.displayClientMessage(Component.translatable(CobblemonSafari.MOD_ID + ".message.points_earned",
-                    added, balance(player)), true);
+                    SafariPointsIcon.amount(added), SafariPointsIcon.amount(balance(player))), true);
         }
     }
 

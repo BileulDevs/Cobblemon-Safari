@@ -28,8 +28,9 @@ public final class SafariNetwork {
      * 4: shop and shop purchase payloads added.
      * 5: bounties payload added.
      * 6: rules payload v4 (rest house columns).
+     * 7: shop payload v2 (tabs).
      */
-    public static final String PROTOCOL_VERSION = "6";
+    public static final String PROTOCOL_VERSION = "7";
 
     private SafariNetwork() {
     }
