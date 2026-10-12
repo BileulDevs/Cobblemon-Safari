@@ -1,7 +1,7 @@
 package dev.darcosse.common.cobblemonsafari.dimension;
 
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
-import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -14,8 +14,10 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>The dimension itself is declared in data
  * ({@code data/cobblemon_safari/dimension/safari.json}); no Java registration is
- * needed on either loader. Which dimension counts as the Safari comes from the
- * config so a server can point it at a hand-built map.
+ * needed on either loader. It is always the mod's own dimension: the
+ * terrain generation, the daily map reset, the rest houses and the border
+ * are all made for it (a "use another dimension" setting used to exist, and
+ * broke all of them).
  */
 public final class SafariDimensions {
 
@@ -26,12 +28,15 @@ public final class SafariDimensions {
      */
     public static final ResourceLocation EFFECTS_ID = CobblemonSafari.id("safari");
 
+    /** The Safari dimension, declared by data/cobblemon_safari/dimension/safari.json. */
+    private static final ResourceKey<Level> KEY = ResourceKey.create(Registries.DIMENSION, CobblemonSafari.id("safari"));
+
     private SafariDimensions() {
     }
 
-    /** Key of the dimension currently acting as the Safari. */
+    /** Key of the Safari dimension. */
     public static ResourceKey<Level> key() {
-        return SafariConfigManager.dimension();
+        return KEY;
     }
 
     /** Whether the given level is the Safari. */
@@ -40,8 +45,8 @@ public final class SafariDimensions {
     }
 
     /**
-     * The Safari level, or null when the configured dimension does not exist
-     * (typo in the config, or the datapack providing it was removed).
+     * The Safari level, or null when the dimension does not exist (its data
+     * file was removed or broken by a data pack).
      */
     @Nullable
     public static ServerLevel level(MinecraftServer server) {

@@ -27,6 +27,9 @@ public class SafariShopConfig {
      * apricorns, oran berries, a fire stone) become any apricorn, berry and
      * evolution stone.
      * Version 7: the default Tauros costs 200 points instead of 1500.
+     * Version 8: rotating.level removed; the random Pokémon come at their
+     * natural Safari level and their price grows with their evolution stage.
+     * Version 9: rotating.rarePrice 1000 to 500; a file still on 1000 follows.
      */
     public int configVersion = SafariShopConfigManager.CURRENT_VERSION;
 
@@ -50,6 +53,14 @@ public class SafariShopConfig {
      */
     static final String DEFAULT_POKEMON = "tauros level=45";
     static final int DEFAULT_POKEMON_PRICE = 200;
+
+    /**
+     * Base price of a rare random Pokémon, and the one before version 9. At
+     * 1000, twice the uncommon price, rarity outweighed strength: a second
+     * stage Kirlia cost four times a Centiskorch.
+     */
+    static final int RARE_PRICE = 500;
+    static final int OLD_RARE_PRICE = 1000;
 
     /** Its price in versions 4 to 6; a file still asking that much gets the new one. */
     static final int OLD_DEFAULT_POKEMON_PRICE = 1500;
@@ -118,14 +129,16 @@ public class SafariShopConfig {
          */
         public List<String> rarities = new ArrayList<>(List.of("common", "uncommon", "rare"));
 
-        /** Price per rarity, in Safari points. */
+        /**
+         * Base price per rarity, in Safari points: the price of a first-stage
+         * Pokémon. Later stages cost more (RotatingShop.STAGE_MULTIPLIERS):
+         * a Pokémon's spawn rarity says how often it appears, not how strong
+         * it is, and Cobblemon files many final evolutions as common.
+         */
         public int commonPrice = 250;
         public int uncommonPrice = 500;
-        public int rarePrice = 1000;
+        public int rarePrice = RARE_PRICE;
         public int ultraRarePrice = 2500;
-
-        /** Level of the Pokémon sold. */
-        public int level = 15;
 
         /**
          * Leaves out the specials of the current rotation, so the shop never

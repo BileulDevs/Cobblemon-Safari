@@ -4,7 +4,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.client.SafariLandscapes;
-import dev.darcosse.common.cobblemonsafari.config.PokemonDisplay;
 import dev.darcosse.common.cobblemonsafari.block.SafariBoardBlock;
 import dev.darcosse.common.cobblemonsafari.block.SafariBoardBlockEntity;
 import dev.darcosse.common.cobblemonsafari.block.ScreenLayout;
@@ -324,7 +323,7 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
         float bottom = height - BEZEL;
         SafariClientConfig.Board board = SafariClientConfigManager.get().board;
         landscape = board.backgroundImage;
-        spriteMode = board.pokemonDisplay == PokemonDisplay.SPRITE;
+        spriteMode = board.useSprites;
         panelAlpha = (int) Math.round(board.panelOpacity * ALPHA_MAX);
         if (landscape) {
             drawLandscape(p, left, top, right, bottom);

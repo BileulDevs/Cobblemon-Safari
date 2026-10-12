@@ -1,8 +1,8 @@
 package dev.darcosse.common.cobblemonsafari.teleport;
 
+import dev.darcosse.common.cobblemonsafari.park.ParkGeometry;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.config.ExitDestination;
-import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
 import dev.darcosse.common.cobblemonsafari.park.ParkBoundary;
@@ -117,12 +117,11 @@ public final class SafariTeleporter {
     /** Searches a dry, open spot around the arrival point, widening the search on failure. */
     @Nullable
     private static BlockPos findArrival(ServerLevel level) {
-        SafariConfig.Park park = SafariConfigManager.get().park;
         RandomSource random = level.getRandom();
         for (int attempt = 0; attempt < MAX_ARRIVAL_ATTEMPTS; attempt++) {
-            int spread = Math.max(1, park.arrivalSpread * (1 + attempt / ATTEMPTS_PER_RING));
-            int x = park.arrivalX + random.nextInt(spread * 2 + 1) - spread;
-            int z = park.arrivalZ + random.nextInt(spread * 2 + 1) - spread;
+            int spread = Math.max(1, ParkGeometry.ARRIVAL_SPREAD * (1 + attempt / ATTEMPTS_PER_RING));
+            int x = ParkGeometry.ARRIVAL_X + random.nextInt(spread * 2 + 1) - spread;
+            int z = ParkGeometry.ARRIVAL_Z + random.nextInt(spread * 2 + 1) - spread;
             // Outside the park the boundary would immediately pull the player back;
             // on a rest house the "ground" found would be its roof.
             if (ParkBoundary.isOutside(x, z) || RestHouses.isNear(x, z, ARRIVAL_HOUSE_MARGIN)) {

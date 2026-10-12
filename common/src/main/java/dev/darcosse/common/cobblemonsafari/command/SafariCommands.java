@@ -31,6 +31,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Collection;
@@ -143,7 +144,10 @@ public final class SafariCommands {
                         .executes(SafariCommands::reload))
                 .then(Commands.literal("reset")
                         .requires(s -> s.hasPermission(OP_LEVEL))
-                        .executes(SafariCommands::scheduleReset)));
+                        .executes(SafariCommands::scheduleReset))
+                .then(Commands.literal("rotate")
+                        .requires(s -> s.hasPermission(OP_LEVEL))
+                        .executes(SafariCommands::rotate)));
     }
 
     private enum TimeOperation { ADD, REMOVE, SET }
@@ -436,6 +440,20 @@ public final class SafariCommands {
         RestHouses.ensureBuilt(ctx.getSource().getServer());
         SafariNetwork.broadcastRules(ctx.getSource().getServer());
         ctx.getSource().sendSuccess(() -> Component.translatable(key("command.reload.success")), true);
+        return 1;
+    }
+
+    /**
+     * /safari rotate: starts a new rotation now (specials, bounties, shop
+     * Pokémon and purchase limits), ending at the next scheduled change.
+     */
+    private static int rotate(CommandContext<CommandSourceStack> ctx) {
+        MinecraftServer server = ctx.getSource().getServer();
+        FeaturedRotation.forceNext(server);
+        // Draws now rather than at the next check, so the log and the chat
+        // name the new specials together.
+        int specials = FeaturedRotation.today(server).size();
+        ctx.getSource().sendSuccess(() -> Component.translatable(key("command.rotate.success"), specials), true);
         return 1;
     }
 

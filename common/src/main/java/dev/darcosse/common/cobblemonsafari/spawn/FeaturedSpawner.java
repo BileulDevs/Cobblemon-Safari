@@ -1,5 +1,6 @@
 package dev.darcosse.common.cobblemonsafari.spawn;
 
+import dev.darcosse.common.cobblemonsafari.park.ParkGeometry;
 import com.cobblemon.mod.common.api.pokemon.PokemonProperties;
 import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
@@ -55,6 +56,26 @@ public final class FeaturedSpawner {
     /** Ticks since the server started, counted here so the spawner owns its own cadence. */
     private static int tickCounter;
 
+    /**
+     * Radius of the "specials already around this player" check, in blocks.
+     * Wider counts specials the player cannot see; each check scans the
+     * entity sections the box touches. Quoted in the comment of
+     * featured.maxNearbyPerPlayer (SafariConfig): keep both in step.
+     */
+    private static final int NEARBY_RADIUS = 64;
+
+    /**
+     * Spawn distance from the player, in blocks: far enough to be found
+     * rather than pop up in view, close enough to be within the simulation
+     * distance (beyond it a special spawns frozen and despawns unseen).
+     */
+    private static final int MIN_DISTANCE = 20;
+    private static final int MAX_DISTANCE = 48;
+
+    /** Level range when Cobblemon's spawn data gives none (legendaries, data pack species). */
+    private static final int FALLBACK_MIN_LEVEL = 20;
+    private static final int FALLBACK_MAX_LEVEL = 40;
+
     private FeaturedSpawner() {
     }
 
@@ -96,7 +117,7 @@ public final class FeaturedSpawner {
     /** One spawn attempt around a player: picks a loaded surface spot, then a special living there. */
     private static void trySpawnNear(ServerLevel level, ServerPlayer player, List<HabitatEntry> specials,
                                      SafariConfig.Featured config) {
-        AABB around = player.getBoundingBox().inflate(config.nearbyRadius, CHECK_HALF_HEIGHT, config.nearbyRadius);
+        AABB around = player.getBoundingBox().inflate(NEARBY_RADIUS, CHECK_HALF_HEIGHT, NEARBY_RADIUS);
         List<PokemonEntity> nearbySpecials = level.getEntitiesOfClass(PokemonEntity.class, around,
                 entity -> entity.getTags().contains(FEATURED_TAG));
         if (nearbySpecials.size() >= config.maxNearbyPerPlayer) {
@@ -105,7 +126,7 @@ public final class FeaturedSpawner {
 
         RandomSource random = level.getRandom();
         double angle = random.nextDouble() * Math.PI * 2.0;
-        double distance = config.minDistance + random.nextDouble() * (config.maxDistance - config.minDistance);
+        double distance = MIN_DISTANCE + random.nextDouble() * (MAX_DISTANCE - MIN_DISTANCE);
         int x = (int) Math.floor(player.getX() + Math.cos(angle) * distance);
         int z = (int) Math.floor(player.getZ() + Math.sin(angle) * distance);
         if (ParkBoundary.isOutside(x, z) || RestHouses.isNear(x, z, HOUSE_MARGIN)) {
@@ -183,10 +204,9 @@ public final class FeaturedSpawner {
      * whole park, but only for legendary-class specials, i.e. rarely.
      */
     private static boolean isRoamingAnywhere(ServerLevel level, HabitatEntry entry) {
-        SafariConfig.Park park = SafariConfigManager.get().park;
-        int half = park.borderHalfSize > 0 ? park.borderHalfSize : SafariConfigManager.get().featured.nearbyRadius;
-        AABB parkBox = new AABB(park.centerX - half, level.getMinBuildHeight(), park.centerZ - half,
-                park.centerX + half, level.getMaxBuildHeight(), park.centerZ + half);
+        int half = ParkGeometry.BORDER_HALF_SIZE;
+        AABB parkBox = new AABB(ParkGeometry.CENTER_X - half, level.getMinBuildHeight(), ParkGeometry.CENTER_Z - half,
+                ParkGeometry.CENTER_X + half, level.getMaxBuildHeight(), ParkGeometry.CENTER_Z + half);
         return !level.getEntitiesOfClass(PokemonEntity.class, parkBox,
                 entity -> entity.getTags().contains(FEATURED_TAG)
                         && entity.getPokemon().getSpecies() == entry.species()).isEmpty();
@@ -223,8 +243,8 @@ public final class FeaturedSpawner {
 
     /** A level within the natural range, or the configured fallback when the species has none. */
     private static int level(HabitatEntry entry, SafariConfig.Featured config, RandomSource random) {
-        int min = entry.minLevel() > 0 ? entry.minLevel() : config.fallbackMinLevel;
-        int max = entry.maxLevel() >= min ? entry.maxLevel() : Math.max(min, config.fallbackMaxLevel);
+        int min = entry.minLevel() > 0 ? entry.minLevel() : FALLBACK_MIN_LEVEL;
+        int max = entry.maxLevel() >= min ? entry.maxLevel() : Math.max(min, FALLBACK_MAX_LEVEL);
         return min + random.nextInt(max - min + 1);
     }
 }

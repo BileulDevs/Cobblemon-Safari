@@ -8,7 +8,13 @@ package dev.darcosse.common.cobblemonsafari.config;
  */
 public class SafariClientConfig {
 
-    /** Bumped when a field changes meaning. */
+    /**
+     * Bumped when a field changes meaning. Version 6: the board colours moved
+     * from {@code board} to {@code board.colors}, and
+     * {@code board.pokemonDisplay} (MODEL / SPRITE) became the boolean
+     * {@code board.useSprites}; {@link SafariClientConfigManager} converts
+     * older files.
+     */
     public int configVersion = SafariClientConfigManager.CURRENT_CONFIG_VERSION;
 
     /** Master switch for the timer HUD. */
@@ -32,18 +38,53 @@ public class SafariClientConfig {
     /** Below this many seconds the timer turns red and pulses, and the ball rocks faster. */
     public int criticalTimeSeconds = 10;
 
-    /** Colours of the Safari Board screens. */
+    /** Look of the Safari Board screens. */
     public Board board = new Board();
+
+    /**
+     * How the Safari Board screens look. The few real choices come first;
+     * the colours, many and rarely touched, have their own section.
+     */
+    public static class Board {
+        /**
+         * Draws the Pokémon as the flat sprites the mod ships
+         * (textures/pokemon_sprites, which resource packs can override)
+         * instead of their turning 3D Cobblemon models. A Pokémon without a
+         * sprite keeps its model.
+         */
+        public boolean useSprites = false;
+
+        /**
+         * Shows the safari landscape of the time of day behind the screen
+         * (the shop's pictures) instead of the plain background colour.
+         */
+        public boolean backgroundImage = true;
+
+        /**
+         * Opacity of the title band, cells and bars over the landscape, from
+         * 0 (invisible) to 1 (opaque, the landscape only shows between them).
+         * A colour given with its own alpha ({@code #AARRGGBB}) keeps it.
+         */
+        public double panelOpacity = 0.72;
+
+        /** Colours of the screens. */
+        public BoardColors colors = new BoardColors();
+    }
 
     /**
      * Colours of the Safari Board screens, as {@code "#RRGGBB"} or
      * {@code "#AARRGGBB"} (the alpha matters for the overlay effects only).
      * An invalid value is replaced by its default and the file is rewritten.
+     *
+     * <p>{@link BoardPalette} and the version 6 migration both walk every
+     * public String field of this class: a colour added here is validated
+     * and migrated without further code. Keep anything that is not a colour
+     * out of it.
      */
-    public static class Board {
+    public static class BoardColors {
         /** Thin border around the whole picture. */
         public String bezel = "#1A1C22";
-        /** Screen background. */
+        /** Screen background, when {@link Board#backgroundImage} is off. */
         public String background = "#0A1220";
         /** Title band. */
         public String header = "#13213B";
@@ -79,26 +120,5 @@ public class SafariClientConfig {
         public String shimmer = "#50FFFFFF";
         /** Flash when the list changes; its alpha is the flash's peak. */
         public String flash = "#90FFFFFF";
-
-        /**
-         * How the Pokémon are drawn on the screens: {@code MODEL}, their
-         * turning 3D Cobblemon model, or {@code SPRITE}, the flat picture the
-         * mod ships (textures/pokemon_sprites, which resource packs can
-         * override). A Pokémon without a sprite falls back to its model.
-         */
-        public PokemonDisplay pokemonDisplay = PokemonDisplay.MODEL;
-
-        /**
-         * Shows the safari landscape of the time of day behind the screen
-         * (the shop's pictures) instead of the plain background colour.
-         */
-        public boolean backgroundImage = true;
-
-        /**
-         * Opacity of the title band, cells and bars over the landscape, from
-         * 0 (invisible) to 1 (opaque, the landscape only shows between them).
-         * A colour given with its own alpha ({@code #AARRGGBB}) keeps it.
-         */
-        public double panelOpacity = 0.72;
     }
 }

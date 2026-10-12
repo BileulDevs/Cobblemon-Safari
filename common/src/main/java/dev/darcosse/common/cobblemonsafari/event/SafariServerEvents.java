@@ -60,6 +60,7 @@ public final class SafariServerEvents {
         // Single player keeps these classes loaded from one world to the next:
         // without this, a second world would show the first world's specials.
         FeaturedRotation.invalidate();
+        FeaturedRotation.attach(server);
         FeaturedSync.reset();
         SafariBounties.reset();
         SafariSpawnBoost.reset();

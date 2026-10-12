@@ -159,7 +159,7 @@ public final class SafariProtection {
 
     /** Whether fire must go out instead of spreading. Server side, called from the fire block tick. */
     public static boolean shouldExtinguishFire(Level level) {
-        return SafariConfigManager.get().protection.preventFireSpread && SafariDimensions.isSafari(level);
+        return SafariConfigManager.get().protection.protectBlocks && SafariDimensions.isSafari(level);
     }
 
     /**
@@ -168,7 +168,7 @@ public final class SafariProtection {
      */
     public static boolean shouldKeepBlocksFromExplosion(Level level) {
         return !level.isClientSide()
-                && SafariConfigManager.get().protection.preventExplosionBlockDamage
+                && SafariConfigManager.get().protection.protectBlocks
                 && SafariDimensions.isSafari(level);
     }
 

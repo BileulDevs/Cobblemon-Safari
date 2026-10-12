@@ -51,6 +51,24 @@ public final class FeaturedRotation {
      */
     private static final long EMPTY_INDEX_RETRY_MILLIS = 30_000L;
 
+    /**
+     * Species with no natural spawn anywhere (most legendaries, some data
+     * pack species) may be featured, their habitat guessed from their types.
+     * Whether a legendary can actually be drawn is the spawns.allowLegendary
+     * setting's job; this only makes such species known to the index.
+     */
+    private static final boolean INCLUDE_WITHOUT_NATURAL_SPAWN = true;
+
+    /**
+     * Chance that a slot goes to a starter's line when the pool holds both
+     * starters and others. Cobblemon files most starter lines as ultra-rare,
+     * where they would otherwise take most slots (27 lines against a short
+     * list of other ultra-rares). Higher brings starters back to the board
+     * more often; 1 drops the rule (starters first), 0 shows them only when
+     * nothing else is left.
+     */
+    private static final double STARTER_SLOT_CHANCE = 0.25;
+
     @Nullable
     private static Map<ResourceLocation, HabitatEntry> index;
     @Nullable
@@ -60,6 +78,12 @@ public final class FeaturedRotation {
     private static long lastEmptyBuildMillis;
     private static boolean emptyBuildPending;
     private static long revision;
+    /**
+     * The world's count of rotations started by hand (SafariWorldState),
+     * mirrored here because the rotation index is read without a server at
+     * hand. Set by {@link #attach} on server start and by {@link #forceNext}.
+     */
+    private static volatile long rotationOffset;
 
     private FeaturedRotation() {
     }
@@ -84,6 +108,30 @@ public final class FeaturedRotation {
         return revision;
     }
 
+    /**
+     * Loads the world's forced rotations. Call on server start, before the
+     * first use of {@link #period()}: single player keeps this class loaded
+     * from one world to the next.
+     */
+    public static void attach(MinecraftServer server) {
+        rotationOffset = SafariWorldState.get(server).rotationOffset();
+    }
+
+    /**
+     * Starts a new rotation now: new specials, and with them new bounties and
+     * shop Pokémon, all keyed on the rotation index, which this moves on by
+     * one. The schedule is kept: the forced rotation ends at the next
+     * scheduled change, so the rotations stay aligned on midnight UTC.
+     * Players are updated by the usual revision checks within a few seconds.
+     */
+    public static void forceNext(MinecraftServer server) {
+        SafariWorldState state = SafariWorldState.get(server);
+        state.advanceRotation();
+        rotationOffset = state.rotationOffset();
+        current = null;
+        revision++;
+    }
+
     /** The habitat index for the current data, built on first use. */
     public static Map<ResourceLocation, HabitatEntry> index(MinecraftServer server) {
         if (index == null) {
@@ -92,7 +140,7 @@ public final class FeaturedRotation {
                 return Map.of();
             }
             Map<ResourceLocation, HabitatEntry> built =
-                    SafariHabitatIndex.build(server, SafariConfigManager.get().featured.includeWithoutNaturalSpawn);
+                    SafariHabitatIndex.build(server, INCLUDE_WITHOUT_NATURAL_SPAWN);
             // Empty usually means Cobblemon has not loaded its species or spawn
             // pool yet; caching it would leave the board empty until a reload.
             if (built.isEmpty()) {
@@ -142,9 +190,12 @@ public final class FeaturedRotation {
         return length - Math.floorMod(System.currentTimeMillis(), length);
     }
 
-    /** Index of the rotation running now, counted from the Unix epoch. */
+    /**
+     * Index of the rotation running now: rotations since the Unix epoch,
+     * plus those started by hand.
+     */
     private static long currentPeriod() {
-        return Math.floorDiv(System.currentTimeMillis(), rotationLengthMillis());
+        return Math.floorDiv(System.currentTimeMillis(), rotationLengthMillis()) + rotationOffset;
     }
 
     /** Length of one rotation in milliseconds, from the config. */
@@ -176,13 +227,15 @@ public final class FeaturedRotation {
             if (entry.rarity() == Rarity.COMMON || !SpeciesRules.isAllowed(entry.species())) {
                 continue;
             }
-            if (!entry.natural() && !config.includeWithoutNaturalSpawn) {
+            if (!entry.natural() && !INCLUDE_WITHOUT_NATURAL_SPAWN) {
                 continue;
             }
             pools.get(entry.rarity()).add(entry);
         }
-        for (List<HabitatEntry> pool : pools.values()) {
+        for (Rarity rarity : Rarity.values()) {
+            List<HabitatEntry> pool = pools.get(rarity);
             Collections.shuffle(pool, random);
+            pools.put(rarity, limitStarters(pool, random));
         }
 
         List<HabitatEntry> picked = new ArrayList<>();
@@ -195,6 +248,33 @@ public final class FeaturedRotation {
 
         picked.sort((a, b) -> Integer.compare(a.rarity().ordinal(), b.rarity().ordinal()));
         return List.copyOf(picked);
+    }
+
+    /**
+     * Reorders a shuffled pool so that each position is a starter's line with
+     * {@link #STARTER_SLOT_CHANCE}, another species otherwise; when one kind
+     * runs out, the other fills the rest. {@link #fill} then takes the pool
+     * in this order. Uses the rotation's random, so the draw stays
+     * reproducible.
+     */
+    private static List<HabitatEntry> limitStarters(List<HabitatEntry> pool, Random random) {
+        List<HabitatEntry> starters = new ArrayList<>();
+        List<HabitatEntry> others = new ArrayList<>();
+        for (HabitatEntry entry : pool) {
+            (SpeciesRules.isStarterLine(entry.species()) ? starters : others).add(entry);
+        }
+        if (starters.isEmpty() || others.isEmpty()) {
+            return pool;
+        }
+        List<HabitatEntry> ordered = new ArrayList<>(pool.size());
+        int s = 0;
+        int o = 0;
+        while (s < starters.size() || o < others.size()) {
+            boolean starter = o >= others.size()
+                    || (s < starters.size() && random.nextDouble() < STARTER_SLOT_CHANCE);
+            ordered.add(starter ? starters.get(s++) : others.get(o++));
+        }
+        return ordered;
     }
 
     /**

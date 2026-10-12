@@ -23,7 +23,7 @@ import java.util.List;
  * @param protectBlocks              whether the terrain cannot be changed
  * @param exemptCreativeAndSpectator whether creative/spectator players ignore terrain protection
  * @param placeableBlocks            block ids that may be placed and broken despite the protection
- * @param restHouses                 centre columns of the rest houses, for their music; empty when disabled
+ * @param restHouses                 centre columns of the rest houses, for their music
  */
 public record SafariRulesPayload(ResourceLocation dimension, List<ResourceLocation> allowedBalls,
                                  boolean protectBlocks, boolean exemptCreativeAndSpectator,

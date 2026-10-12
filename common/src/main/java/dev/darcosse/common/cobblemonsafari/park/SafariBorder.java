@@ -1,7 +1,5 @@
 package dev.darcosse.common.cobblemonsafari.park;
 
-import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
-import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
 import net.minecraft.network.protocol.game.ClientboundInitializeBorderPacket;
 import net.minecraft.server.MinecraftServer;
@@ -44,26 +42,18 @@ public final class SafariBorder {
     private SafariBorder() {
     }
 
-    /** Applies the configured border to the Safari level. Call at server start and after a config reload. */
+    /** Applies the park's border to the Safari level. Call at server start and after a config reload. */
     public static void apply(MinecraftServer server) {
         ServerLevel safari = SafariDimensions.level(server);
         if (safari == null) {
             return;
         }
-        SafariConfig.Park park = SafariConfigManager.get().park;
         WorldBorder border = safari.getWorldBorder();
-        if (park.borderHalfSize <= 0) {
-            // Disabled: mirror the overworld again, which is the vanilla behaviour.
-            WorldBorder overworld = server.overworld().getWorldBorder();
-            border.setCenter(overworld.getCenterX(), overworld.getCenterZ());
-            border.setSize(overworld.getSize());
-            return;
-        }
         // Exact block coordinates, not block centres: ParkBoundary tests the same
         // square, and a half-block offset would make it pull back players the
         // border still lets stand on its eastern and southern edges.
-        border.setCenter(park.centerX, park.centerZ);
-        border.setSize(park.borderHalfSize * 2.0);
+        border.setCenter(ParkGeometry.CENTER_X, ParkGeometry.CENTER_Z);
+        border.setSize(ParkGeometry.BORDER_HALF_SIZE * 2.0);
         border.setWarningBlocks(WARNING_BLOCKS);
     }
 
@@ -78,7 +68,7 @@ public final class SafariBorder {
      */
     public static void enforce(MinecraftServer server) {
         ServerLevel safari = SafariDimensions.level(server);
-        if (safari == null || SafariConfigManager.get().park.borderHalfSize <= 0) {
+        if (safari == null) {
             return;
         }
         if (hasDrifted(safari.getWorldBorder())) {
@@ -92,15 +82,14 @@ public final class SafariBorder {
     /** Sends the Safari border to one player; call right after they arrive. */
     public static void sendTo(ServerPlayer player) {
         ServerLevel safari = SafariDimensions.level(player.getServer());
-        if (safari != null && SafariConfigManager.get().park.borderHalfSize > 0) {
+        if (safari != null) {
             player.connection.send(new ClientboundInitializeBorderPacket(safari.getWorldBorder()));
         }
     }
 
     private static boolean hasDrifted(WorldBorder border) {
-        SafariConfig.Park park = SafariConfigManager.get().park;
-        return Math.abs(border.getCenterX() - park.centerX) > DRIFT_EPSILON
-                || Math.abs(border.getCenterZ() - park.centerZ) > DRIFT_EPSILON
-                || Math.abs(border.getSize() - park.borderHalfSize * 2.0) > DRIFT_EPSILON;
+        return Math.abs(border.getCenterX() - ParkGeometry.CENTER_X) > DRIFT_EPSILON
+                || Math.abs(border.getCenterZ() - ParkGeometry.CENTER_Z) > DRIFT_EPSILON
+                || Math.abs(border.getSize() - ParkGeometry.BORDER_HALF_SIZE * 2.0) > DRIFT_EPSILON;
     }
 }

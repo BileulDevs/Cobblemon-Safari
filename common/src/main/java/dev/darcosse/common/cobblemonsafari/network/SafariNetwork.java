@@ -1,6 +1,7 @@
 package dev.darcosse.common.cobblemonsafari.network;
 
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
+import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
 import dev.darcosse.common.cobblemonsafari.platform.Platform;
 import dev.darcosse.common.cobblemonsafari.session.SafariSession;
 import dev.darcosse.common.cobblemonsafari.structure.RestHouses;
@@ -78,7 +79,7 @@ public final class SafariNetwork {
 
     /** Snapshot of the rules the client needs, from the current config. */
     private static SafariRulesPayload buildRules() {
-        return new SafariRulesPayload(SafariConfigManager.dimension().location(),
+        return new SafariRulesPayload(SafariDimensions.key().location(),
                 List.copyOf(SafariConfigManager.allowedBalls()),
                 SafariConfigManager.get().protection.protectBlocks,
                 SafariConfigManager.get().exemptCreativeAndSpectator,

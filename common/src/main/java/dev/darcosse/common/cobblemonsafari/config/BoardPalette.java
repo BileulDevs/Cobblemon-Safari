@@ -8,7 +8,7 @@ import java.lang.reflect.Modifier;
 import java.util.Locale;
 
 /**
- * The Safari Board colours, parsed once from {@link SafariClientConfig.Board}
+ * The Safari Board colours, parsed once from {@link SafariClientConfig.BoardColors}
  * into ARGB ints so the renderer never parses strings per frame.
  *
  * <p>Free of client-only imports: it only reads the client config file.
@@ -27,7 +27,7 @@ public record BoardPalette(int bezel, int background, int header, int title, int
     private static final int HEX = 16;
 
     /** Parses every colour; call {@link #repair} first so none is invalid. */
-    public static BoardPalette from(SafariClientConfig.Board b) {
+    public static BoardPalette from(SafariClientConfig.BoardColors b) {
         return new BoardPalette(parse(b.bezel), parse(b.background), parse(b.header), parse(b.title),
                 parse(b.cell), parse(b.text), parse(b.muted), parse(b.star), parse(b.liveOn), parse(b.liveOff),
                 parse(b.barBackground), parse(b.barRotation), parse(b.barSessionOk), parse(b.barSessionLow),
@@ -52,10 +52,10 @@ public record BoardPalette(int bezel, int background, int header, int title, int
      *
      * @return true if anything was replaced, i.e. the file must be rewritten
      */
-    static boolean repair(SafariClientConfig.Board board, String fileName) {
-        SafariClientConfig.Board defaults = new SafariClientConfig.Board();
+    static boolean repair(SafariClientConfig.BoardColors board, String fileName) {
+        SafariClientConfig.BoardColors defaults = new SafariClientConfig.BoardColors();
         boolean corrected = false;
-        for (Field field : SafariClientConfig.Board.class.getFields()) {
+        for (Field field : SafariClientConfig.BoardColors.class.getFields()) {
             if (field.getType() != String.class || Modifier.isStatic(field.getModifiers())) {
                 continue;
             }
@@ -63,14 +63,14 @@ public record BoardPalette(int bezel, int background, int header, int title, int
                 String value = (String) field.get(board);
                 if (value == null || !isValid(value)) {
                     String fallback = (String) field.get(defaults);
-                    CobblemonSafari.LOGGER.warn("Invalid colour board.{}={} in {}, using {}",
+                    CobblemonSafari.LOGGER.warn("Invalid colour board.colors.{}={} in {}, using {}",
                             field.getName(), value, fileName, fallback);
                     field.set(board, fallback);
                     corrected = true;
                 }
             } catch (IllegalAccessException e) {
                 // Public fields of a public class: cannot happen, but never crash the client over colours.
-                CobblemonSafari.LOGGER.error("Could not check colour board.{}", field.getName(), e);
+                CobblemonSafari.LOGGER.error("Could not check colour board.colors.{}", field.getName(), e);
             }
         }
         return corrected;

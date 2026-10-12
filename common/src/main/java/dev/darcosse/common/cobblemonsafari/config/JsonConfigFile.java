@@ -2,7 +2,10 @@ package dev.darcosse.common.cobblemonsafari.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
+import com.google.gson.JsonParser;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.platform.Platform;
 
@@ -13,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 
 /**
  * Reads and writes one JSON configuration file in the mod's folder of the
@@ -39,13 +43,29 @@ final class JsonConfigFile<T> {
     private final String legacyFileName;
     private final Class<T> type;
     private final Supplier<T> defaults;
+    /**
+     * Rewrites the raw JSON of an old file before Gson maps it. Needed when
+     * a key moves or changes type: Gson silently ignores a key it does not
+     * know, so a moved setting would be lost instead of migrated.
+     */
+    private final UnaryOperator<JsonObject> upgrader;
 
-    /** Describes a config file; nothing is read until {@link #read()}. */
+    /** Describes a config file whose keys never move; nothing is read until {@link #read()}. */
     JsonConfigFile(String fileName, String legacyFileName, Class<T> type, Supplier<T> defaults) {
+        this(fileName, legacyFileName, type, defaults, UnaryOperator.identity());
+    }
+
+    /**
+     * Describes a config file with a raw-JSON migration step, applied to
+     * every file read (it must leave current files unchanged).
+     */
+    JsonConfigFile(String fileName, String legacyFileName, Class<T> type, Supplier<T> defaults,
+                   UnaryOperator<JsonObject> upgrader) {
         this.fileName = fileName;
         this.legacyFileName = legacyFileName;
         this.type = type;
         this.defaults = defaults;
+        this.upgrader = upgrader;
     }
 
     /**
@@ -63,10 +83,15 @@ final class JsonConfigFile<T> {
             return fresh;
         }
         try (Reader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
-            T parsed = GSON.fromJson(reader, type);
-            // An empty file, or one containing literally "null", parses to null.
+            JsonElement tree = JsonParser.parseReader(reader);
+            if (!tree.isJsonObject()) {
+                // An empty file, or one containing literally "null".
+                return defaults.get();
+            }
+            T parsed = GSON.fromJson(upgrader.apply(tree.getAsJsonObject()), type);
             return parsed != null ? parsed : defaults.get();
-        } catch (IOException | JsonParseException e) {
+        } catch (IOException | JsonParseException | IllegalStateException e) {
+            // IllegalStateException: a key the upgrader expects holds another JSON type.
             CobblemonSafari.LOGGER.error("Could not read config/{}, using defaults until it is fixed: {}",
                     fileName, e.getMessage());
             return defaults.get();

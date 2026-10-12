@@ -24,6 +24,12 @@ import net.minecraft.server.level.ServerPlayer;
  */
 public final class SafariPoints {
 
+    /**
+     * Most points one player can hold. Only a safety stop against an int
+     * overflow from a runaway reward; no real balance comes near it.
+     */
+    private static final int MAX_BALANCE = 1_000_000;
+
     private SafariPoints() {
     }
 
@@ -47,7 +53,7 @@ public final class SafariPoints {
         SafariPointsStore store = SafariPointsStore.get(player.getServer());
         int before = store.get(player.getUUID());
         // long: a huge reward on a huge balance must not wrap around.
-        int after = (int) Math.min(SafariConfigManager.get().points.maxBalance, (long) before + Math.max(0, amount));
+        int after = (int) Math.min(MAX_BALANCE, (long) before + Math.max(0, amount));
         if (after > before) {
             store.set(player.getUUID(), after);
         }

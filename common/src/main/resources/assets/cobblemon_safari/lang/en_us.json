@@ -100,6 +100,7 @@
   "cobblemon_safari.command.credit.changed": "%1$s now has %2$s of Safari time banked.",
   "cobblemon_safari.command.reset.scheduled": "The Safari map will be regenerated at the next server start.",
   "cobblemon_safari.command.reset.failed": "Could not schedule the reset; see the server log.",
+  "cobblemon_safari.command.rotate.success": "New Safari rotation started: %s specials, new bounties and shop Pokémon, until the next scheduled change.",
   "block.cobblemon_safari.safari_gate": "Safari Gate",
   "block.cobblemon_safari.safari_gate.tooltip": "Operators only. Standing in it like a nether portal spends banked Safari time to enter the park; a warden and his Pokémon settle beside it.",
   "cobblemon_safari.command.enter.no_credit": "%s has no banked Safari time. Give them a ticket, or use /safari enter <player> <seconds> to test.",

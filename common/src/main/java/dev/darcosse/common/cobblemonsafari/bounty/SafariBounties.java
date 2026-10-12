@@ -68,6 +68,15 @@ public final class SafariBounties {
     /** Missions last broadcast, to push only when they change. */
     private static List<Bounty> sent;
 
+    /**
+     * How many Pokémon of a type a "catch N of a type" mission asks for,
+     * drawn in this range. Higher makes the mission a long hunt in a single
+     * rotation; the reward is per catch, so it scales anyway. Quoted in the
+     * comment of bounties.typeRewardPerCatch (SafariConfig): keep both in step.
+     */
+    private static final int TYPE_MIN_COUNT = 3;
+    private static final int TYPE_MAX_COUNT = 5;
+
     private SafariBounties() {
     }
 
@@ -304,7 +313,7 @@ public final class SafariBounties {
         for (Map.Entry<String, Integer> entry : weights.entrySet()) {
             roll -= entry.getValue();
             if (roll < 0) {
-                int count = config.typeMinCount + random.nextInt(config.typeMaxCount - config.typeMinCount + 1);
+                int count = TYPE_MIN_COUNT + random.nextInt(TYPE_MAX_COUNT - TYPE_MIN_COUNT + 1);
                 return new Bounty(Bounty.Kind.TYPE, entry.getKey(), count, count * config.typeRewardPerCatch);
             }
         }

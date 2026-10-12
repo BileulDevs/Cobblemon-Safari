@@ -9,6 +9,12 @@ import java.util.List;
  * <p>Plain data only: validation and derived values live in
  * {@link SafariConfigManager}. Field names are the JSON keys, so renaming a
  * field silently resets that setting on every existing server.
+ *
+ * <p>Only what a server owner may want to tune lives here. Values tied to the
+ * generated terrain (the park's border, arrival point and rest houses) are in
+ * {@code park.ParkGeometry}, written by the worldgen script; fine-tuning
+ * values with a single sensible setting are named constants in the classes
+ * that use them.
  */
 public class SafariConfig {
 
@@ -34,11 +40,18 @@ public class SafariConfig {
      * Version 15: added the ticketLoot section (no existing value changes).
      * Version 13: the default rotation went from 1440 to 240 minutes; files
      * still on the old default follow it.
+     * Version 16: removed dimension, park, featured.rotationHours and the
+     * fine-tuning values (now constants), capture.safariBallItem (the bonus
+     * follows loan.ballItem) and protection.preventFireSpread /
+     * preventExplosionBlockDamage (both follow protectBlocks). Their keys are
+     * dropped from the file on the next rewrite.
+     * Version 17: removed the restHouses section; the houses are always
+     * built, at anchors generated with the terrain (park.ParkGeometry).
+     * Version 18: capture points and bounty rewards about five times higher,
+     * so an hour of hunting buys a Pokémon of the shop; values still on the
+     * old defaults follow.
      */
     public int configVersion = SafariConfigManager.CURRENT_CONFIG_VERSION;
-
-    /** Dimension treated as the Safari. Point it to another dimension to use a hand-built park. */
-    public String dimension = "cobblemon_safari:safari";
 
     /**
      * Hard cap on the remaining time; adding time never goes above it. Also
@@ -81,9 +94,6 @@ public class SafariConfig {
     /** Remaining times, in seconds, at which the player gets a warning. */
     public List<Integer> warningThresholdsSeconds = new ArrayList<>(List.of(300, 60, 30, 10));
 
-    /** Geometry of the park inside the dimension. */
-    public Park park = new Park();
-
     /** What players can and cannot do to themselves and to the terrain inside the Safari. */
     public Protection protection = new Protection();
 
@@ -120,9 +130,6 @@ public class SafariConfig {
     /** The daily rotation of special Pokémon and the spawner that brings them in. */
     public Featured featured = new Featured();
 
-    /** Small Pokémon Centers built inside the Safari, where players heal their team. */
-    public RestHouses restHouses = new RestHouses();
-
     /**
      * Rules applied to every Pokémon appearing in the Safari.
      *
@@ -152,13 +159,10 @@ public class SafariConfig {
 
         /**
          * A natural spawn is cancelled when this many Pokémon of the same species
-         * already roam within {@link #sameSpeciesRadius}. Keeps one common species
-         * from flooding a habitat. 0 disables the cap.
+         * already roam within NativeSpawnRules.SAME_SPECIES_RADIUS. Keeps one
+         * common species from flooding a habitat. 0 disables the cap.
          */
         public int maxSameSpeciesNearby = 4;
-
-        /** Radius of the same-species check, in blocks. */
-        public int sameSpeciesRadius = 48;
 
         /**
          * How much faster Cobblemon's spawner ticks for players in the Safari.
@@ -239,20 +243,22 @@ public class SafariConfig {
         /** Master switch: when false, captures earn nothing (the shop still sells for points already earned). */
         public boolean enabled = true;
 
-        /** Points for a capture, by the species' rarity in the Safari (its Cobblemon spawn bucket). */
-        public int common = 2;
-        public int uncommon = 5;
-        public int rare = 12;
-        public int ultraRare = 30;
+        /**
+         * Points for a capture, by the species' rarity in the Safari (its
+         * Cobblemon spawn bucket). Sized with the bounties for about 600
+         * points per hour of active hunting, which buys a first-stage Pokémon
+         * of the shop in about a quarter of an hour.
+         */
+        public int common = 10;
+        public int uncommon = 20;
+        public int rare = 50;
+        public int ultraRare = 120;
 
         /** Extra points when the species is one of today's specials on the Safari Board. */
-        public int featuredBonus = 10;
+        public int featuredBonus = 50;
 
         /** Extra points for a shiny. */
-        public int shinyBonus = 50;
-
-        /** Most points a player can hold; captures beyond it earn nothing. */
-        public int maxBalance = 1_000_000;
+        public int shinyBonus = 250;
     }
 
     /**
@@ -267,20 +273,21 @@ public class SafariConfig {
         /** Missions per rotation. More missions mean more points per day; the board shows them all. */
         public int count = 3;
 
-        /** Catch N Pokémon of a type. N is drawn between these bounds. */
-        public int typeMinCount = 3;
-        public int typeMaxCount = 5;
-        /** Points for a type mission, per Pokémon asked: 3 Pokémon at 12 = 36 points. */
-        public int typeRewardPerCatch = 12;
+        /**
+         * Points for a "catch N Pokémon of a type" mission, per Pokémon asked
+         * (N between SafariBounties.TYPE_MIN_COUNT and TYPE_MAX_COUNT):
+         * 3 Pokémon at 30 = 90 points.
+         */
+        public int typeRewardPerCatch = 30;
 
         /** Points for catching a given species (two of a common one, one of an uncommon one). */
-        public int speciesReward = 40;
+        public int speciesReward = 120;
 
         /** Points for catching any of today's specials. Off when the specials are switched off. */
-        public int featuredReward = 80;
+        public int featuredReward = 250;
 
         /** Extra points once every mission of the rotation is done. */
-        public int allDoneBonus = 50;
+        public int allDoneBonus = 200;
     }
 
     /**
@@ -291,24 +298,19 @@ public class SafariConfig {
     public static class EscapeRope {
         /** Lends one rope to every player entering. */
         public boolean enabled = true;
-
-        /** Seconds before the same player can use a rope again. */
-        public int cooldownSeconds = 5;
     }
 
     /** Catch rate adjustments inside the Safari. */
     public static class Capture {
         /**
-         * Multiplies the species catch rate when a Safari Ball hits a wild
-         * Pokémon that is NOT in a battle, inside the Safari only. Cobblemon
+         * Multiplies the species catch rate when the loaned ball
+         * ({@link Loan#ballItem}) hits a wild Pokémon that is NOT in a
+         * battle, inside the Safari only. Cobblemon
          * halves every capture made outside a battle, so 3 means the Safari
          * Ball out of battle works 1.5 times as well as a normal throw in
          * battle (before Cobblemon's own 1.5 Safari Ball bonus). 1 disables it.
          */
         public double safariBallOutOfBattleMultiplier = 3.0;
-
-        /** Id of the ball the bonus applies to. */
-        public String safariBallItem = "cobblemon:safari_ball";
     }
 
     /**
@@ -329,12 +331,6 @@ public class SafariConfig {
          * Changing it starts a new draw right away.
          */
         public int rotationMinutes = SafariConfigManager.DEFAULT_ROTATION_MINUTES;
-
-        /**
-         * Version 5 setting, read only to migrate it into {@link #rotationMinutes}.
-         * Null once migrated, which keeps it out of the rewritten file.
-         */
-        public Integer rotationHours = null;
 
         /**
          * Species featured per rotation, by rarity. Weighted toward the rare
@@ -362,74 +358,14 @@ public class SafariConfig {
         public double spawnChance = 0.35;
 
         /**
-         * Special Pokémon allowed around one player at once. Also caps each
+         * Special Pokémon allowed around one player at once (within
+         * FeaturedSpawner.NEARBY_RADIUS). Also caps each
          * species to one around the player, so no special takes over.
          */
         public int maxNearbyPerPlayer = 2;
 
-        /** Radius of the nearby checks, in blocks. */
-        public int nearbyRadius = 64;
-
-        /** Spawn distance from the player, in blocks: far enough to be found, close enough to be loaded. */
-        public int minDistance = 20;
-        public int maxDistance = 48;
-
-        /** Level range used when Cobblemon's spawn data gives none (legendaries, datapack-only species). */
-        public int fallbackMinLevel = 20;
-        public int fallbackMaxLevel = 40;
-
-        /**
-         * Species with no natural spawn anywhere (most legendaries, some
-         * datapack species) may still be featured; their habitat is then guessed
-         * from their types. When false, only species that spawn naturally in a
-         * Safari-like biome are eligible.
-         */
-        public boolean includeWithoutNaturalSpawn = true;
-
         /** Lists the specials of the day in chat when a player enters. */
         public boolean announceOnEntry = true;
-    }
-
-    /**
-     * Rest houses: small Pokémon Centers with a Cobblemon Healing Machine that
-     * never runs out of charge. Built once per world, the first time the server
-     * starts with the Safari dimension available. The first one is the
-     * entrance and also holds a Safari Board.
-     */
-    public static class RestHouses {
-        /** Builds the rest houses. Already built houses are never removed. */
-        public boolean enabled = true;
-
-        /**
-         * Where each house goes, roughly: on each new map the house is built
-         * at the best spot within 64 blocks (32 for the first one, the
-         * entrance, which stays by the arrival point): dry, fairly flat, away
-         * from the other houses and from ruins. Default: the entrance just
-         * north of the arrival point, then one house east, south and west,
-         * halfway to the coast. A position added later is built at the next
-         * server start or reload.
-         */
-        public List<Position> positions = new ArrayList<>(List.of(
-                new Position(0, -296),
-                new Position(282, 0),
-                new Position(0, 282),
-                new Position(-282, 0)
-        ));
-    }
-
-    /** A column of the Safari, for features placed on the surface. */
-    public static class Position {
-        public int x;
-        public int z;
-
-        /** Gson needs a no-argument constructor. */
-        public Position() {
-        }
-
-        public Position(int x, int z) {
-            this.x = x;
-            this.z = z;
-        }
     }
 
     /**
@@ -545,38 +481,6 @@ public class SafariConfig {
     }
 
     /**
-     * The explorable area inside the Safari dimension, enclosed by a square
-     * world border.
-     *
-     * <p>The island shape is baked into the worldgen data
-     * ({@code tools/worldgen/generate_worldgen.py}, ISLAND_RADIUS); these values
-     * must match it. The generator prints the matching values when it runs.
-     */
-    public static class Park {
-        /** Centre of the island and of the world border. */
-        public int centerX = 0;
-        public int centerZ = 0;
-
-        /**
-         * Half the side of the square world border. Default: island radius (512)
-         * plus 13%, so the whole island and a strip of lagoon are inside and the
-         * corners are open sea. 0 disables the border and the boundary check.
-         */
-        public int borderHalfSize = 579;
-
-        /**
-         * Where arrivals are searched: north of the centre, in the grassland
-         * sector the worldgen places there, like the entrance area of the games'
-         * Safari Zones. The centre would drop players on the central summit.
-         */
-        public int arrivalX = 0;
-        public int arrivalZ = -282;
-
-        /** Arrivals are spread this far around the arrival point so groups do not stack on one block. */
-        public int arrivalSpread = 16;
-    }
-
-    /**
      * Protection rules. Creative and spectator players are exempt from the
      * terrain rules when {@link #exemptCreativeAndSpectator} is on, so builders
      * can still work on the park.
@@ -593,7 +497,10 @@ public class SafariConfig {
          * Players cannot break blocks, place blocks, empty or fill buckets, or
          * use tools that change blocks (hoe, shovel, axe stripping, flint and
          * steel, bone meal). Placement is included on purpose: breaking alone
-         * leaves TNT and lava buckets as a way to wreck the terrain.
+         * leaves TNT and lava buckets as a way to wreck the terrain. Also stops
+         * fire from spreading or burning blocks, and explosions from breaking
+         * any: protecting blocks from players while fire eats them would make
+         * no sense.
          */
         public boolean protectBlocks = true;
 
@@ -607,14 +514,5 @@ public class SafariConfig {
                 "cobblemon:poke_cake",
                 "cobblemon:poke_snack"
         ));
-
-        /** Fire never spreads or burns blocks inside the Safari; fire blocks go out on their first tick. */
-        public boolean preventFireSpread = true;
-
-        /**
-         * Explosions (TNT from a dispenser, creeper, Pokémon ride mod, anything)
-         * destroy no block inside the Safari. Knockback still applies.
-         */
-        public boolean preventExplosionBlockDamage = true;
     }
 }

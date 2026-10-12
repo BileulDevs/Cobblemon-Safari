@@ -1,5 +1,6 @@
 package dev.darcosse.common.cobblemonsafari.spawn;
 
+import com.cobblemon.mod.common.api.pokemon.evolution.PreEvolution;
 import com.cobblemon.mod.common.api.pokemon.labels.CobblemonPokemonLabels;
 import com.cobblemon.mod.common.pokemon.Species;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
@@ -23,7 +24,35 @@ public final class SpeciesRules {
             CobblemonPokemonLabels.ULTRA_BEAST,
             CobblemonPokemonLabels.PARADOX);
 
+    /**
+     * Label Cobblemon's species data puts on the first stage of every starter
+     * (bulbasaur, cyndaquil, rowlet...). Not among CobblemonPokemonLabels'
+     * constants in 1.8.0, hence the literal. Evolved starters do not carry
+     * it, see {@link #isStarterLine}.
+     */
+    private static final String STARTER_LABEL = "starter";
+
+    /** Most pre-evolution links followed; a datapack loop stops here. */
+    private static final int MAX_EVOLUTION_DEPTH = 4;
+
     private SpeciesRules() {
+    }
+
+    /**
+     * Whether the species belongs to a starter's line (Cyndaquil, Quilava or
+     * Typhlosion), by the label of the line's first stage: Cobblemon labels
+     * only that one.
+     */
+    public static boolean isStarterLine(Species species) {
+        Species root = species;
+        for (int i = 0; i < MAX_EVOLUTION_DEPTH; i++) {
+            PreEvolution pre = root.getPreEvolution();
+            if (pre == null || pre.getSpecies() == null) {
+                break;
+            }
+            root = pre.getSpecies();
+        }
+        return root.getLabels().contains(STARTER_LABEL) || species.getLabels().contains(STARTER_LABEL);
     }
 
     /** Whether the species carries one of the special labels. */

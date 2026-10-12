@@ -26,6 +26,14 @@ import net.minecraft.world.phys.AABB;
  */
 public final class NativeSpawnRules {
 
+    /**
+     * Radius of the same-species cap (spawns.maxSameSpeciesNearby), in
+     * blocks. Wider spreads a herd's cap over more of the habitat; each check
+     * is one entity query over the box. Quoted in the comment of
+     * spawns.maxSameSpeciesNearby (SafariConfig): keep both in step.
+     */
+    private static final int SAME_SPECIES_RADIUS = 48;
+
     private NativeSpawnRules() {
     }
 
@@ -40,7 +48,7 @@ public final class NativeSpawnRules {
      * Cancels a native spawn breaking a Safari rule.
      *
      * <p>Cost: nothing outside the Safari (one dimension comparison). Inside,
-     * one entity query over a box of {@code sameSpeciesRadius}, per spawn.
+     * one entity query over a box of {@link #SAME_SPECIES_RADIUS}, per spawn.
      * Cobblemon spawns a handful of Pokémon per second at most, so this stays
      * far below a tick budget.
      */
@@ -61,7 +69,7 @@ public final class NativeSpawnRules {
         }
         if (config.maxSameSpeciesNearby > 0) {
             BlockPos pos = event.getSpawnablePosition().getPosition();
-            AABB area = new AABB(pos).inflate(config.sameSpeciesRadius);
+            AABB area = new AABB(pos).inflate(SAME_SPECIES_RADIUS);
             // Wild only: a player's own Pokémon sent out nearby is not part of the habitat.
             int sameSpecies = level.getEntitiesOfClass(PokemonEntity.class, area,
                     other -> other.getPokemon().isWild() && other.getPokemon().getSpecies() == species).size();

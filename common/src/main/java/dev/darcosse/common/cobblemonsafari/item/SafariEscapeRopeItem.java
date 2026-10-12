@@ -2,7 +2,6 @@ package dev.darcosse.common.cobblemonsafari.item;
 
 import com.cobblemon.mod.common.battles.BattleRegistry;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
-import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
 import dev.darcosse.common.cobblemonsafari.teleport.SafariTeleporter;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
@@ -32,6 +31,12 @@ import java.util.List;
  * the Safari is removed, so it cannot become a free teleport elsewhere.
  */
 public class SafariEscapeRopeItem extends Item {
+
+    /**
+     * Seconds before the rope can be used again, so a double click does not
+     * send a second request while the first teleport is on its way.
+     */
+    private static final int COOLDOWN_SECONDS = 5;
 
     /** Rope item; properties come from {@link SafariItems}. */
     public SafariEscapeRopeItem(Properties properties) {
@@ -63,7 +68,7 @@ public class SafariEscapeRopeItem extends Item {
         SafariTeleporter.sendToSurface(serverPlayer, serverLevel, player.getBlockX(), player.getBlockZ());
         level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.CHORUS_FRUIT_TELEPORT,
                 SoundSource.PLAYERS, 1.0F, 1.0F);
-        int cooldown = Ticks.fromSeconds(SafariConfigManager.get().escapeRope.cooldownSeconds);
+        int cooldown = Ticks.fromSeconds(COOLDOWN_SECONDS);
         if (cooldown > 0) {
             player.getCooldowns().addCooldown(this, cooldown);
         }

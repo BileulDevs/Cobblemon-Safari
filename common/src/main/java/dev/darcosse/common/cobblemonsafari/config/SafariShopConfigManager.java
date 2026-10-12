@@ -24,6 +24,9 @@ public final class SafariShopConfigManager {
     /** Where the file lived before the mod had its own config folder; moved into it on load. */
     private static final String LEGACY_FILE_NAME = CobblemonSafari.MOD_ID + "_shop.json";
 
+    /** The version whose default rare price is 500; a file still on the old 1000 follows. */
+    private static final int CHEAPER_RARE_VERSION = 9;
+
     /** The version whose default Tauros costs 200 points; the old 1500 is lowered. */
     private static final int CHEAPER_TAUROS_VERSION = 7;
 
@@ -53,7 +56,7 @@ public final class SafariShopConfigManager {
             "porygon level=20", "dratini level=15", "scyther level=20");
 
     /** Version written by this build. */
-    public static final int CURRENT_VERSION = 7;
+    public static final int CURRENT_VERSION = 9;
 
     /**
      * Most random Pokémon per rotation. Each one is built for the screen
@@ -61,10 +64,6 @@ public final class SafariShopConfigManager {
      * catalogue nobody reads.
      */
     private static final int MAX_ROTATING = 32;
-
-    /** Lowest and highest level Cobblemon accepts by default. */
-    private static final int MIN_LEVEL = 1;
-    private static final int MAX_LEVEL = 100;
 
     /**
      * Largest stack an item entry may give. Beyond a full stack the surplus is
@@ -133,6 +132,11 @@ public final class SafariShopConfigManager {
                             entry.pokemon, entry.price);
                 }
             }
+        }
+        if (c.configVersion < CHEAPER_RARE_VERSION && c.rotating != null
+                && c.rotating.rarePrice == SafariShopConfig.OLD_RARE_PRICE) {
+            c.rotating.rarePrice = SafariShopConfig.RARE_PRICE;
+            CobblemonSafari.LOGGER.info("Migrated {}: rotating.rarePrice is now {}", FILE_NAME, c.rotating.rarePrice);
         }
         if (c.configVersion != CURRENT_VERSION) {
             c.configVersion = CURRENT_VERSION;
@@ -314,8 +318,8 @@ public final class SafariShopConfigManager {
     }
 
     /**
-     * Fixes the random Pokémon settings: missing section, counts, prices and
-     * level out of range, unknown rarities, a tab that does not exist.
+     * Fixes the random Pokémon settings: missing section, counts and prices
+     * out of range, unknown rarities, a tab that does not exist.
      *
      * @return true if anything changed
      */
@@ -327,10 +331,8 @@ public final class SafariShopConfigManager {
         }
         SafariShopConfig.Rotating r = c.rotating;
         int count = Math.max(0, Math.min(MAX_ROTATING, r.count));
-        int level = Math.max(MIN_LEVEL, Math.min(MAX_LEVEL, r.level));
-        if (count != r.count || level != r.level) {
+        if (count != r.count) {
             r.count = count;
-            r.level = level;
             corrected = true;
         }
         if (r.commonPrice < 0 || r.uncommonPrice < 0 || r.rarePrice < 0 || r.ultraRarePrice < 0) {

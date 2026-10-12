@@ -1,6 +1,7 @@
 package dev.darcosse.common.cobblemonsafari.shop;
 
 import com.cobblemon.mod.common.api.pokemon.PokemonProperties;
+import com.cobblemon.mod.common.api.pokemon.evolution.PreEvolution;
 import com.cobblemon.mod.common.pokemon.Species;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.config.SafariShopConfig;
@@ -35,6 +36,42 @@ public final class RotatingShop {
 
     /** Mixed into the seed so the shop never draws in step with the specials. */
     private static final long SHOP_SEED_MIX = 0xC2B2AE3D27D4EB4FL;
+
+    /**
+     * Price multiplier by evolution stage, applied to the rarity's base
+     * price: first stage, second stage, third stage and beyond. A Pokémon's
+     * spawn bucket says how often it appears, not how strong it is (Cobblemon
+     * files many final evolutions as common), so the stage carries the
+     * strength. Kept gentle so a third stage of a rare species stays within
+     * a few hours of hunting. Raising the later values makes evolved Pokémon
+     * a bigger purchase; at 1 they cost the same as their first stage again.
+     */
+    private static final double[] STAGE_MULTIPLIERS = {1.0, 2.0, 3.0};
+
+    /**
+     * Stage priced for a species that neither evolves nor evolves from
+     * anything (Tauros, Heracross...): fully grown at once, so priced like
+     * the end of a two-stage line rather than like a first stage.
+     */
+    private static final int STANDALONE_STAGE = 1;
+
+    /**
+     * Prices are rounded to this many points, so the cards read 650 rather
+     * than 625. Larger steps hide the multipliers' detail; 1 shows exact
+     * products.
+     */
+    private static final int PRICE_STEP = 50;
+
+    /**
+     * Level used when Cobblemon's spawn data gives none for a species. The
+     * random Pokémon normally come at the lowest level they spawn at in the
+     * Safari, so an evolved one is not sold below its evolution level.
+     */
+    private static final int FALLBACK_LEVEL = 15;
+
+    /** Lowest and highest level Cobblemon accepts by default; a datapack level outside is clamped. */
+    private static final int MIN_LEVEL = 1;
+    private static final int MAX_LEVEL = 100;
 
     @Nullable
     private static List<SafariShopConfig.Entry> cached;
@@ -113,8 +150,8 @@ public final class RotatingShop {
 
         List<SafariShopConfig.Entry> entries = new ArrayList<>(picked.size());
         for (HabitatEntry entry : picked) {
-            entries.add(SafariShopConfig.Entry.rotating(properties(entry, config.level), price(entry.rarity(), config),
-                    config.tab));
+            entries.add(SafariShopConfig.Entry.rotating(properties(entry, level(entry)),
+                    price(entry.rarity(), entry.species(), config), config.tab));
         }
         return List.copyOf(entries);
     }
@@ -133,13 +170,49 @@ public final class RotatingShop {
         return copy.asString(" ");
     }
 
-    /** Price of a Pokémon of the given rarity. */
-    private static int price(Rarity rarity, SafariShopConfig.Rotating config) {
-        return switch (rarity) {
+    /**
+     * Level of the Pokémon sold: the lowest level it naturally spawns at in
+     * the Safari, so a Staraptor comes at the level wild ones are met, not
+     * below the level a Starly evolves.
+     */
+    private static int level(HabitatEntry entry) {
+        int level = entry.minLevel() > 0 ? entry.minLevel() : FALLBACK_LEVEL;
+        return Math.max(MIN_LEVEL, Math.min(MAX_LEVEL, level));
+    }
+
+    /** Price of a Pokémon: its rarity's base price times its evolution stage's multiplier, rounded. */
+    private static int price(Rarity rarity, Species species, SafariShopConfig.Rotating config) {
+        int base = switch (rarity) {
             case COMMON -> config.commonPrice;
             case UNCOMMON -> config.uncommonPrice;
             case RARE -> config.rarePrice;
             case ULTRA_RARE -> config.ultraRarePrice;
         };
+        double price = base * STAGE_MULTIPLIERS[stage(species)];
+        return (int) (Math.round(price / PRICE_STEP) * PRICE_STEP);
+    }
+
+    /**
+     * Evolution stage of a species, 0 for a first stage, capped at the last
+     * multiplier. Counted by walking pre-evolutions; a species alone in its
+     * line counts as {@link #STANDALONE_STAGE}.
+     */
+    private static int stage(Species species) {
+        int last = STAGE_MULTIPLIERS.length - 1;
+        int stage = 0;
+        Species current = species;
+        // Capped walk: a datapack could declare a pre-evolution loop.
+        while (stage < last) {
+            PreEvolution pre = current.getPreEvolution();
+            if (pre == null || pre.getSpecies() == null || pre.getSpecies() == species) {
+                break;
+            }
+            current = pre.getSpecies();
+            stage++;
+        }
+        if (stage == 0 && species.getEvolutions().isEmpty()) {
+            return Math.min(STANDALONE_STAGE, last);
+        }
+        return stage;
     }
 }

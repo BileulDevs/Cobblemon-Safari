@@ -2,17 +2,16 @@ package dev.darcosse.common.cobblemonsafari.config;
 
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.lang.reflect.Field;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -30,7 +29,6 @@ public final class SafariConfigManager {
     /** Where the file lived before the mod had its own config folder; moved into it on load. */
     private static final String LEGACY_FILE_NAME = CobblemonSafari.MOD_ID + ".json";
 
-    private static final int MINUTES_PER_HOUR = 60;
     /** Last valid hour of the day for reset.hour. */
     private static final int LAST_HOUR = 23;
 
@@ -56,13 +54,13 @@ public final class SafariConfigManager {
     private static final int MAX_GATE_ROAM_RADIUS = 24;
 
     /**
-     * Most missions per rotation. The board lists them on one page; past
-     * about eight lines they no longer fit a two-block-high screen.
+     * Most missions per rotation. /safari bounties lists them in chat; past
+     * about eight lines the list scrolls out of the chat box.
      */
     private static final int MAX_BOUNTIES = 8;
 
     /** Version written by this build. Raise it together with a new step in {@link #migrate}. */
-    public static final int CURRENT_CONFIG_VERSION = 15;
+    public static final int CURRENT_CONFIG_VERSION = 18;
 
     /**
      * Default length of a featured rotation, in minutes: four hours, so the
@@ -76,6 +74,27 @@ public final class SafariConfigManager {
      * other value was chosen by the admin and is kept.
      */
     private static final int LEGACY_DEFAULT_ROTATION_MINUTES = 1440;
+
+    /** First version whose default rotation is DEFAULT_ROTATION_MINUTES. */
+    private static final int SHORT_ROTATION_VERSION = 13;
+
+    /** First version whose default special slots are 1/2/3. */
+    private static final int REVERSED_SLOTS_VERSION = 14;
+
+    /** First version whose default capture points and bounty rewards are about five times higher. */
+    private static final int RICHER_REWARDS_VERSION = 18;
+
+    /**
+     * Capture points and bounty rewards by default before version 18, by
+     * field name. A value still equal to its old default was never chosen
+     * by the admin and follows the new one; any other value is kept. Field
+     * names are the JSON keys, so a renamed field must be renamed here too.
+     */
+    private static final Map<String, Integer> LEGACY_POINTS = Map.of(
+            "common", 2, "uncommon", 5, "rare", 12, "ultraRare", 30,
+            "featuredBonus", 10, "shinyBonus", 50);
+    private static final Map<String, Integer> LEGACY_BOUNTY_REWARDS = Map.of(
+            "typeRewardPerCatch", 12, "speciesReward", 40, "featuredReward", 80, "allDoneBonus", 50);
 
     /**
      * Special slots by default before version 14. A file holding exactly
@@ -93,30 +112,15 @@ public final class SafariConfigManager {
      */
     private static final int MAX_LOANED_BALLS = 256;
 
-    /**
-     * Largest radius accepted for entity checks. Each check scans every entity
-     * section the box touches; beyond a few chunks it stops being cheap.
-     */
-    private static final int MAX_CHECK_RADIUS = 128;
-
-    /**
-     * Farthest a special Pokémon may spawn from its player. Past the usual
-     * entity simulation distance it would spawn frozen and despawn unseen.
-     */
-    private static final int MAX_SPAWN_DISTANCE = 96;
-
     /** Shortest session accepted. Zero would expire on the very tick it starts. */
     private static final int MIN_DURATION_SECONDS = 1;
 
-    /** Arrival spread is capped to this fraction of the border half-size so arrivals never land on the border. */
-    private static final float MAX_SPREAD_FRACTION_OF_BORDER = 0.5f;
 
     private static final JsonConfigFile<SafariConfig> FILE =
             new JsonConfigFile<>(FILE_NAME, LEGACY_FILE_NAME, SafariConfig.class, SafariConfig::new);
 
     private static SafariConfig config = new SafariConfig();
     private static Set<ResourceLocation> allowedBalls = Set.of();
-    private static ResourceKey<Level> dimension = defaultDimension();
     private static Set<Integer> warningTicks = Set.of();
     private static Set<ResourceLocation> placeableBlocks = Set.of();
     @Nullable
@@ -148,11 +152,6 @@ public final class SafariConfigManager {
         return config;
     }
 
-    /** Dimension currently acting as the Safari. */
-    public static ResourceKey<Level> dimension() {
-        return dimension;
-    }
-
     /** Poké Ball ids allowed inside the Safari. */
     public static Set<ResourceLocation> allowedBalls() {
         return allowedBalls;
@@ -179,11 +178,6 @@ public final class SafariConfigManager {
         return Ticks.fromSeconds(config.battleGraceSeconds);
     }
 
-    /** Key of the Safari dimension shipped with the mod, used when the configured id is unusable. */
-    private static ResourceKey<Level> defaultDimension() {
-        return ResourceKey.create(Registries.DIMENSION, CobblemonSafari.id("safari"));
-    }
-
     /** Recomputes the parsed and converted values read on hot paths, after every load. */
     private static void rebuildDerived() {
         Set<ResourceLocation> balls = new LinkedHashSet<>();
@@ -201,11 +195,6 @@ public final class SafariConfigManager {
             balls.add(loanedBallItem);
         }
         allowedBalls = Collections.unmodifiableSet(balls);
-
-        ResourceLocation dimensionId = ResourceLocation.tryParse(config.dimension);
-        dimension = dimensionId != null
-                ? ResourceKey.create(Registries.DIMENSION, dimensionId)
-                : defaultDimension();
 
         Set<Integer> ticks = new LinkedHashSet<>();
         for (int seconds : config.warningThresholdsSeconds) {
@@ -229,7 +218,10 @@ public final class SafariConfigManager {
     }
 
     /**
-     * Upgrades a file written by an older build, step by step.
+     * Upgrades a file written by an older build. Only changes of meaning or
+     * of default need a step here: a field added or removed needs none, Gson
+     * fills new fields with their defaults, ignores removed ones, and the
+     * rewrite that follows a version bump shows the result in the file.
      *
      * @return true if the file must be rewritten
      */
@@ -237,82 +229,51 @@ public final class SafariConfigManager {
         if (c.configVersion >= CURRENT_CONFIG_VERSION) {
             return false;
         }
-        if (c.configVersion < 3) {
-            // v1 described an infinite world, v2 a 288-block island with a
-            // circular boundary. v3 is a 512-block island inside a square world
-            // border: the whole park section changed meaning, so it is reset.
-            // The v2 "radius" key is simply ignored by Gson and dropped on rewrite.
-            c.park = new SafariConfig.Park();
-            CobblemonSafari.LOGGER.info("Migrated {} to version {}: park geometry reset to match the island",
-                    FILE_NAME, CURRENT_CONFIG_VERSION);
-        }
-        if (c.configVersion < 4) {
-            // Nothing to reset: Gson already filled the new sections with their
-            // defaults, the rewrite below just makes them visible in the file.
-            CobblemonSafari.LOGGER.info("Migrated {} to version 4: added the loan and ticket sections", FILE_NAME);
-        }
-        if (c.configVersion < 5) {
-            CobblemonSafari.LOGGER.info("Migrated {} to version 5: added the spawns, featured and restHouses sections",
-                    FILE_NAME);
-        }
-        if (c.configVersion < 6 && c.featured != null) {
-            if (c.featured.rotationHours != null) {
-                c.featured.rotationMinutes = c.featured.rotationHours * MINUTES_PER_HOUR;
-            }
-            CobblemonSafari.LOGGER.info("Migrated {} to version 6: featured.rotationHours is now "
-                    + "featured.rotationMinutes ({})", FILE_NAME, c.featured.rotationMinutes);
-        }
-        if (c.configVersion < 7) {
-            CobblemonSafari.LOGGER.info("Migrated {} to version 7: added ticket credit, capture and spawn rate "
-                    + "settings", FILE_NAME);
-        }
-        if (c.configVersion < 8) {
-            CobblemonSafari.LOGGER.info("Migrated {} to version 8: added the reset section", FILE_NAME);
-        }
-        if (c.configVersion < 12) {
-            CobblemonSafari.LOGGER.info("Migrated {} to version 12: added the bounties section", FILE_NAME);
-        }
-        if (c.configVersion < 11) {
-            CobblemonSafari.LOGGER.info("Migrated {} to version 11: added protection.placeableBlocks", FILE_NAME);
-        }
-        if (c.configVersion < 10) {
-            CobblemonSafari.LOGGER.info("Migrated {} to version 10: added the points and escapeRope sections",
-                    FILE_NAME);
-        }
-        if (c.configVersion < 13 && c.featured != null
+        // Defaults that changed: a value still equal to the old default was
+        // never chosen by the admin, so it follows the new one.
+        if (c.configVersion < SHORT_ROTATION_VERSION && c.featured != null
                 && c.featured.rotationMinutes == LEGACY_DEFAULT_ROTATION_MINUTES) {
             c.featured.rotationMinutes = DEFAULT_ROTATION_MINUTES;
-            CobblemonSafari.LOGGER.info("Migrated {} to version 13: featured.rotationMinutes moved from the old "
-                    + "default {} to the new default {}", FILE_NAME, LEGACY_DEFAULT_ROTATION_MINUTES,
-                    DEFAULT_ROTATION_MINUTES);
         }
-        if (c.configVersion < 14) {
-            CobblemonSafari.LOGGER.info("Migrated {} to version 14: added ticket.minAddedSeconds", FILE_NAME);
-            SafariConfig.Featured f = c.featured;
-            if (f != null && f.uncommonSlots == LEGACY_UNCOMMON_SLOTS && f.rareSlots == LEGACY_RARE_SLOTS
-                    && f.ultraRareSlots == LEGACY_ULTRA_RARE_SLOTS) {
-                SafariConfig.Featured defaults = new SafariConfig.Featured();
-                f.uncommonSlots = defaults.uncommonSlots;
-                f.rareSlots = defaults.rareSlots;
-                f.ultraRareSlots = defaults.ultraRareSlots;
-                CobblemonSafari.LOGGER.info("Migrated {}: default specials are now {} uncommon, {} rare, {} ultra-rare",
-                        FILE_NAME, f.uncommonSlots, f.rareSlots, f.ultraRareSlots);
+        if (c.configVersion < REVERSED_SLOTS_VERSION && c.featured != null && c.featured.uncommonSlots == LEGACY_UNCOMMON_SLOTS
+                && c.featured.rareSlots == LEGACY_RARE_SLOTS && c.featured.ultraRareSlots == LEGACY_ULTRA_RARE_SLOTS) {
+            SafariConfig.Featured defaults = new SafariConfig.Featured();
+            c.featured.uncommonSlots = defaults.uncommonSlots;
+            c.featured.rareSlots = defaults.rareSlots;
+            c.featured.ultraRareSlots = defaults.ultraRareSlots;
+        }
+        if (c.configVersion < RICHER_REWARDS_VERSION) {
+            if (c.points != null) {
+                followNewDefaults(c.points, new SafariConfig.Points(), LEGACY_POINTS);
+            }
+            if (c.bounties != null) {
+                followNewDefaults(c.bounties, new SafariConfig.Bounties(), LEGACY_BOUNTY_REWARDS);
             }
         }
-        if (c.configVersion < 15) {
-            CobblemonSafari.LOGGER.info("Migrated {} to version 15: added the ticketLoot section", FILE_NAME);
-        }
-        if (c.configVersion < 9) {
-            // The old key is simply ignored by Gson and dropped on rewrite.
-            CobblemonSafari.LOGGER.info("Migrated {} to version 9: defaultDurationSeconds removed (entry now always "
-                    + "spends banked time), added the gate section", FILE_NAME);
-        }
-        if (c.featured != null) {
-            // Dropped in every case: Gson leaves null fields out of the rewritten file.
-            c.featured.rotationHours = null;
-        }
+        CobblemonSafari.LOGGER.info("Migrated {} from version {} to {}", FILE_NAME, c.configVersion,
+                CURRENT_CONFIG_VERSION);
         c.configVersion = CURRENT_CONFIG_VERSION;
         return true;
+    }
+
+    /**
+     * Moves each int field of a config section still holding its old default
+     * to the current default (read from a fresh instance), field by field.
+     * Reflection keeps the old defaults a plain table instead of one if per
+     * field; an unknown name in the table is a programming error, logged.
+     */
+    private static void followNewDefaults(Object section, Object defaults, Map<String, Integer> legacy) {
+        for (Map.Entry<String, Integer> old : legacy.entrySet()) {
+            try {
+                Field field = section.getClass().getField(old.getKey());
+                if (field.getInt(section) == old.getValue()) {
+                    field.setInt(section, field.getInt(defaults));
+                }
+            } catch (ReflectiveOperationException | IllegalArgumentException e) {
+                CobblemonSafari.LOGGER.error("Cannot migrate {}.{} in {}: {}",
+                        section.getClass().getSimpleName(), old.getKey(), FILE_NAME, e.toString());
+            }
+        }
     }
 
     /**
@@ -324,11 +285,6 @@ public final class SafariConfigManager {
         boolean corrected = false;
         SafariConfig defaults = new SafariConfig();
 
-        if (c.dimension == null || ResourceLocation.tryParse(c.dimension) == null) {
-            warn("dimension", c.dimension, defaults.dimension);
-            c.dimension = defaults.dimension;
-            corrected = true;
-        }
         if (c.maxDurationSeconds < MIN_DURATION_SECONDS) {
             warn("maxDurationSeconds", c.maxDurationSeconds, defaults.maxDurationSeconds);
             c.maxDurationSeconds = defaults.maxDurationSeconds;
@@ -382,38 +338,6 @@ public final class SafariConfigManager {
             c.warningThresholdsSeconds = kept;
         }
 
-        if (c.park == null) {
-            c.park = new SafariConfig.Park();
-            corrected = true;
-        }
-        if (c.park.borderHalfSize < 0) {
-            warn("park.borderHalfSize", c.park.borderHalfSize, 0);
-            c.park.borderHalfSize = 0;
-            corrected = true;
-        }
-        if (c.park.arrivalSpread < 0) {
-            warn("park.arrivalSpread", c.park.arrivalSpread, 0);
-            c.park.arrivalSpread = 0;
-            corrected = true;
-        }
-        if (c.park.borderHalfSize > 0) {
-            int maxSpread = (int) (c.park.borderHalfSize * MAX_SPREAD_FRACTION_OF_BORDER);
-            if (c.park.arrivalSpread > maxSpread) {
-                warn("park.arrivalSpread", c.park.arrivalSpread, maxSpread);
-                c.park.arrivalSpread = maxSpread;
-                corrected = true;
-            }
-            // An arrival point outside the border would leave newcomers stuck
-            // outside it; fall back to the centre, which is always inside.
-            if (Math.abs(c.park.arrivalX - c.park.centerX) > c.park.borderHalfSize
-                    || Math.abs(c.park.arrivalZ - c.park.centerZ) > c.park.borderHalfSize) {
-                warn("park.arrivalX/arrivalZ", c.park.arrivalX + "," + c.park.arrivalZ,
-                        c.park.centerX + "," + c.park.centerZ);
-                c.park.arrivalX = c.park.centerX;
-                c.park.arrivalZ = c.park.centerZ;
-                corrected = true;
-            }
-        }
         if (c.protection == null) {
             c.protection = new SafariConfig.Protection();
             corrected = true;
@@ -514,11 +438,6 @@ public final class SafariConfigManager {
             c.capture.safariBallOutOfBattleMultiplier = 1.0;
             corrected = true;
         }
-        if (c.capture.safariBallItem == null || ResourceLocation.tryParse(c.capture.safariBallItem) == null) {
-            warn("capture.safariBallItem", c.capture.safariBallItem, new SafariConfig.Capture().safariBallItem);
-            c.capture.safariBallItem = new SafariConfig.Capture().safariBallItem;
-            corrected = true;
-        }
         corrected |= validateGate(c);
         corrected |= validatePoints(c);
         corrected |= validateBounties(c);
@@ -526,14 +445,8 @@ public final class SafariConfigManager {
             c.escapeRope = new SafariConfig.EscapeRope();
             corrected = true;
         }
-        if (c.escapeRope.cooldownSeconds < 0) {
-            warn("escapeRope.cooldownSeconds", c.escapeRope.cooldownSeconds, 0);
-            c.escapeRope.cooldownSeconds = 0;
-            corrected = true;
-        }
         corrected |= validateSpawns(c);
         corrected |= validateFeatured(c);
-        corrected |= validateRestHouses(c);
         return corrected;
     }
 
@@ -556,12 +469,6 @@ public final class SafariConfigManager {
             p.shinyBonus = Math.max(0, p.shinyBonus);
             corrected = true;
         }
-        if (p.maxBalance <= 0) {
-            int fixed = new SafariConfig.Points().maxBalance;
-            warn("points.maxBalance", p.maxBalance, fixed);
-            p.maxBalance = fixed;
-            corrected = true;
-        }
         return corrected;
     }
 
@@ -577,14 +484,6 @@ public final class SafariConfigManager {
             int fixed = Math.max(0, Math.min(MAX_BOUNTIES, b.count));
             warn("bounties.count", b.count, fixed);
             b.count = fixed;
-            corrected = true;
-        }
-        if (b.typeMinCount < 1 || b.typeMaxCount < b.typeMinCount) {
-            SafariConfig.Bounties defaults = new SafariConfig.Bounties();
-            warn("bounties.typeMinCount/typeMaxCount", b.typeMinCount + ".." + b.typeMaxCount,
-                    defaults.typeMinCount + ".." + defaults.typeMaxCount);
-            b.typeMinCount = defaults.typeMinCount;
-            b.typeMaxCount = defaults.typeMaxCount;
             corrected = true;
         }
         if (b.typeRewardPerCatch < 0 || b.speciesReward < 0 || b.featuredReward < 0 || b.allDoneBonus < 0) {
@@ -667,12 +566,6 @@ public final class SafariConfigManager {
             c.spawns.maxSameSpeciesNearby = 0;
             corrected = true;
         }
-        if (c.spawns.sameSpeciesRadius < 1 || c.spawns.sameSpeciesRadius > MAX_CHECK_RADIUS) {
-            int fixed = Math.max(1, Math.min(MAX_CHECK_RADIUS, c.spawns.sameSpeciesRadius));
-            warn("spawns.sameSpeciesRadius", c.spawns.sameSpeciesRadius, fixed);
-            c.spawns.sameSpeciesRadius = fixed;
-            corrected = true;
-        }
         return corrected;
     }
 
@@ -719,44 +612,7 @@ public final class SafariConfigManager {
             f.maxNearbyPerPlayer = 0;
             corrected = true;
         }
-        if (f.nearbyRadius < 1 || f.nearbyRadius > MAX_CHECK_RADIUS) {
-            int fixed = Math.max(1, Math.min(MAX_CHECK_RADIUS, f.nearbyRadius));
-            warn("featured.nearbyRadius", f.nearbyRadius, fixed);
-            f.nearbyRadius = fixed;
-            corrected = true;
-        }
-        if (f.minDistance < 1 || f.maxDistance < f.minDistance || f.maxDistance > MAX_SPAWN_DISTANCE) {
-            SafariConfig.Featured defaults = new SafariConfig.Featured();
-            warn("featured.minDistance/maxDistance", f.minDistance + ".." + f.maxDistance,
-                    defaults.minDistance + ".." + defaults.maxDistance);
-            f.minDistance = defaults.minDistance;
-            f.maxDistance = defaults.maxDistance;
-            corrected = true;
-        }
-        if (f.fallbackMinLevel < 1 || f.fallbackMaxLevel < f.fallbackMinLevel) {
-            SafariConfig.Featured defaults = new SafariConfig.Featured();
-            warn("featured.fallbackMinLevel/fallbackMaxLevel", f.fallbackMinLevel + ".." + f.fallbackMaxLevel,
-                    defaults.fallbackMinLevel + ".." + defaults.fallbackMaxLevel);
-            f.fallbackMinLevel = defaults.fallbackMinLevel;
-            f.fallbackMaxLevel = defaults.fallbackMaxLevel;
-            corrected = true;
-        }
         return corrected;
-    }
-
-    /** Fixes the restHouses section; returns true if anything changed. */
-    private static boolean validateRestHouses(SafariConfig c) {
-        if (c.restHouses == null) {
-            c.restHouses = new SafariConfig.RestHouses();
-            return true;
-        }
-        if (c.restHouses.positions == null) {
-            c.restHouses.positions = new ArrayList<>();
-            return true;
-        }
-        int before = c.restHouses.positions.size();
-        c.restHouses.positions.removeIf(java.util.Objects::isNull);
-        return c.restHouses.positions.size() != before;
     }
 
     /** Logs a corrected config value with the replacement used. */

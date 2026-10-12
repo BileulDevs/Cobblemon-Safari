@@ -4,7 +4,6 @@ import com.cobblemon.mod.common.api.npc.NPCClass;
 import com.cobblemon.mod.common.api.npc.NPCClasses;
 import com.cobblemon.mod.common.entity.npc.NPCEntity;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
-import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -68,7 +67,7 @@ public final class RestHouseClerk {
         }
         ticks = 0;
         ServerLevel safari = SafariDimensions.level(server);
-        if (!SafariConfigManager.get().restHouses.enabled || safari == null) {
+        if (safari == null) {
             return;
         }
         for (RestHouses.HouseSite site : RestHouses.sites()) {

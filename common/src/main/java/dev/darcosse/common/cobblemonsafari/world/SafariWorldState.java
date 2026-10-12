@@ -33,11 +33,18 @@ public final class SafariWorldState extends SavedData {
      * servers do not show the same specials on the same day.
      */
     private long rotationSalt;
-    /** Configured positions (anchors) whose house is built. */
+    /**
+     * Rotations started by hand (/safari rotate), added to the rotation
+     * index computed from the clock. Only ever grows, so a forced rotation
+     * never reuses the number, and thus the draw, bounty progress and shop
+     * limits, of an earlier one.
+     */
+    private long rotationOffset;
+    /** Anchors (park.ParkGeometry.REST_HOUSES) whose house is built. */
     private final Set<String> builtHouses = new HashSet<>();
     /**
      * Where the house of each anchor was built: the site search may move it
-     * away from the configured position to fit the terrain. Anchors missing
+     * away from its anchor to fit the terrain. Anchors missing
      * here (saves from before the search) were built on the anchor itself.
      */
     private final Map<String, String> houseSites = new HashMap<>();
@@ -58,6 +65,17 @@ public final class SafariWorldState extends SavedData {
     /** Salt of this world's rotation. */
     public long rotationSalt() {
         return rotationSalt;
+    }
+
+    /** Rotations started by hand so far; see {@link #rotationOffset}. */
+    public long rotationOffset() {
+        return rotationOffset;
+    }
+
+    /** Counts one more rotation started by hand and asks to be saved. */
+    public void advanceRotation() {
+        rotationOffset++;
+        setDirty();
     }
 
     /**
@@ -81,7 +99,7 @@ public final class SafariWorldState extends SavedData {
     /**
      * Remembers that the house of an anchor is built, and where.
      *
-     * @param anchorX configured position
+     * @param anchorX anchor of the house (park.ParkGeometry.REST_HOUSES)
      * @param siteX   centre column of the house actually built
      */
     public void markHouseBuilt(int anchorX, int anchorZ, int siteX, int siteZ) {
@@ -112,6 +130,7 @@ public final class SafariWorldState extends SavedData {
     @Override
     public CompoundTag save(CompoundTag nbt, HolderLookup.Provider registries) {
         nbt.putLong("rotation_salt", rotationSalt);
+        nbt.putLong("rotation_offset", rotationOffset);
         ListTag houses = new ListTag();
         for (String key : builtHouses) {
             houses.add(StringTag.valueOf(key));
@@ -128,6 +147,8 @@ public final class SafariWorldState extends SavedData {
     private static SafariWorldState load(CompoundTag nbt, HolderLookup.Provider registries) {
         SafariWorldState state = new SafariWorldState();
         state.rotationSalt = nbt.getLong("rotation_salt");
+        // Absent in older saves: 0, no rotation forced yet.
+        state.rotationOffset = nbt.getLong("rotation_offset");
         // Absent in older saves: 0, the salt of the original map, which is right.
         state.housesMapSalt = nbt.getLong("houses_map_salt");
         for (Tag house : nbt.getList("built_houses", Tag.TAG_STRING)) {
