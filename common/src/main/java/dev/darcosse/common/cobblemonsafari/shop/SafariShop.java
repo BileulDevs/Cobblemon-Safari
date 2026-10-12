@@ -21,6 +21,7 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
@@ -111,19 +112,33 @@ public final class SafariShop {
 
     /**
      * Everything for sale, in the order the screen and purchases index it:
-     * the fixed entries of the shop file, then the random Pokémon of the
-     * rotation.
+     * the fixed entries of the shop file, then the random Pokémon, items and
+     * balls of the rotation. Prices are resolved here, the one place every reader of a
+     * price (screen, purchase check, payment, limits) goes through, so
+     * {@code "auto"} never reaches them as a number.
      */
     private static List<SafariShopConfig.Entry> catalogue(ServerPlayer player) {
+        MinecraftServer server = player.getServer();
         List<SafariShopConfig.Entry> fixed = SafariShopConfigManager.get().entries;
-        List<SafariShopConfig.Entry> rotating = RotatingShop.entries(player.getServer());
-        if (rotating.isEmpty()) {
-            return fixed;
-        }
+        List<SafariShopConfig.Entry> rotating = RotatingShop.entries(server);
         List<SafariShopConfig.Entry> all = new ArrayList<>(fixed.size() + rotating.size());
-        all.addAll(fixed);
+        for (SafariShopConfig.Entry entry : fixed) {
+            all.add(entry.hasAutoPrice() ? entry.withPrice(autoPrice(server, entry)) : entry);
+        }
         all.addAll(rotating);
+        all.addAll(RotatingItems.entries(server));
         return all;
+    }
+
+    /**
+     * The computed price of a Pokémon entry priced {@code "auto"}. Builds the
+     * Pokémon once to learn its species (the properties may name it by any
+     * alias Cobblemon accepts); when that fails the entry is listed as
+     * unavailable anyway, so its price does not matter and is 0.
+     */
+    private static int autoPrice(MinecraftServer server, SafariShopConfig.Entry entry) {
+        Pokemon pokemon = preview(entry);
+        return pokemon == null ? 0 : RotatingShop.autoPrice(server, pokemon.getSpecies());
     }
 
     /**

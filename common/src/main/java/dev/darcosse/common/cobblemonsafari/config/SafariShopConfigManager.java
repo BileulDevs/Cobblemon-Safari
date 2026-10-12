@@ -24,6 +24,9 @@ public final class SafariShopConfigManager {
     /** Where the file lived before the mod had its own config folder; moved into it on load. */
     private static final String LEGACY_FILE_NAME = CobblemonSafari.MOD_ID + "_shop.json";
 
+    /** The version selling 15 random Pokémon by default instead of 4, and random items and balls. */
+    private static final int ROTATING_GOODS_VERSION = 10;
+
     /** The version whose default rare price is 500; a file still on the old 1000 follows. */
     private static final int CHEAPER_RARE_VERSION = 9;
 
@@ -56,7 +59,7 @@ public final class SafariShopConfigManager {
             "porygon level=20", "dratini level=15", "scyther level=20");
 
     /** Version written by this build. */
-    public static final int CURRENT_VERSION = 9;
+    public static final int CURRENT_VERSION = 10;
 
     /**
      * Most random Pokémon per rotation. Each one is built for the screen
@@ -138,6 +141,11 @@ public final class SafariShopConfigManager {
             c.rotating.rarePrice = SafariShopConfig.RARE_PRICE;
             CobblemonSafari.LOGGER.info("Migrated {}: rotating.rarePrice is now {}", FILE_NAME, c.rotating.rarePrice);
         }
+        if (c.configVersion < ROTATING_GOODS_VERSION && c.rotating != null
+                && c.rotating.count == SafariShopConfig.OLD_ROTATING_POKEMON) {
+            c.rotating.count = SafariShopConfig.ROTATING_POKEMON;
+            CobblemonSafari.LOGGER.info("Migrated {}: rotating.count is now {}", FILE_NAME, c.rotating.count);
+        }
         if (c.configVersion != CURRENT_VERSION) {
             c.configVersion = CURRENT_VERSION;
             corrected = true;
@@ -149,6 +157,16 @@ public final class SafariShopConfigManager {
         }
         corrected |= validateTabs(c);
         corrected |= validateRotating(c);
+        if (c.rotatingItems == null) {
+            c.rotatingItems = SafariShopConfig.RotatingGoods.items();
+            corrected = true;
+        }
+        if (c.rotatingBalls == null) {
+            c.rotatingBalls = SafariShopConfig.RotatingGoods.balls();
+            corrected = true;
+        }
+        corrected |= validateGoods(c, c.rotatingItems, "rotatingItems");
+        corrected |= validateGoods(c, c.rotatingBalls, "rotatingBalls");
         if (c.entries == null) {
             c.entries = new SafariShopConfig().entries;
             assignTabs(c);
@@ -160,11 +178,18 @@ public final class SafariShopConfigManager {
                 corrected = true;
                 continue;
             }
-            if (entry.price < 0) {
+            if (entry.price < 0 && !entry.hasAutoPrice()) {
                 CobblemonSafari.LOGGER.warn("Shop entry with a negative price set to 0: {} {}",
                         entry.item, entry.pokemon);
                 entry.price = 0;
                 corrected = true;
+            }
+            if (entry.hasAutoPrice() && !entry.isPokemon()) {
+                // Only a Pokémon has a rarity and a stage to price from; a free
+                // item would be worse than a missing one.
+                CobblemonSafari.LOGGER.warn("Removing shop item entry '{}': \"auto\" prices Pokémon only", entry.item);
+                corrected = true;
+                continue;
             }
             if (entry.isPokemon()) {
                 if (entry.pokemon == null || entry.pokemon.isBlank()) {
@@ -360,6 +385,65 @@ public final class SafariShopConfigManager {
                     ? SafariShopConfig.Tab.POKEMON : c.tabs.get(0).id;
             CobblemonSafari.LOGGER.warn("rotating.tab '{}' is not a tab of {}; using '{}'", r.tab, FILE_NAME, fallback);
             r.tab = fallback;
+            corrected = true;
+        }
+        return corrected;
+    }
+
+    /**
+     * Fixes a random items section: count in range, missing lists, malformed
+     * ids in the lists, price rules with a bad id or out-of-range values, a
+     * tab that does not exist. Ids are only checked for syntax: the config
+     * loads before other mods register their items and tags.
+     *
+     * @param name the section's key, for the log
+     * @return true if anything changed
+     */
+    private static boolean validateGoods(SafariShopConfig c, SafariShopConfig.RotatingGoods g, String name) {
+        boolean corrected = false;
+        int count = Math.max(0, Math.min(MAX_ROTATING, g.count));
+        if (count != g.count) {
+            g.count = count;
+            corrected = true;
+        }
+        if (g.always == null) {
+            g.always = new ArrayList<>();
+            corrected = true;
+        }
+        if (g.excluded == null) {
+            g.excluded = new ArrayList<>();
+            corrected = true;
+        }
+        if (g.prices == null) {
+            g.prices = new ArrayList<>();
+            corrected = true;
+        }
+        if (g.always.removeIf(id -> id == null || ResourceLocation.tryParse(id) == null)) {
+            CobblemonSafari.LOGGER.warn("Removed invalid item ids from {}.always in {}", name, FILE_NAME);
+            corrected = true;
+        }
+        if (g.excluded.removeIf(id -> id == null || ResourceLocation.tryParse(
+                id.startsWith(SafariShopConfig.Cost.TAG_PREFIX) ? id.substring(1) : id) == null)) {
+            CobblemonSafari.LOGGER.warn("Removed invalid ids from {}.excluded in {}", name, FILE_NAME);
+            corrected = true;
+        }
+        if (g.prices.removeIf(rule -> rule == null || rule.id() == null)) {
+            CobblemonSafari.LOGGER.warn("Removed price rules with an invalid item from {}.prices in {}", name, FILE_NAME);
+            corrected = true;
+        }
+        for (SafariShopConfig.PriceRule rule : g.prices) {
+            int stack = Math.max(1, Math.min(MAX_COUNT, rule.count));
+            int price = Math.max(0, rule.price);
+            if (stack != rule.count || price != rule.price) {
+                rule.count = stack;
+                rule.price = price;
+                corrected = true;
+            }
+        }
+        if (g.tab == null || c.tabs.stream().noneMatch(tab -> tab.id.equals(g.tab))) {
+            String fallback = c.tabs.get(0).id;
+            CobblemonSafari.LOGGER.warn("{}.tab '{}' is not a tab of {}; using '{}'", name, g.tab, FILE_NAME, fallback);
+            g.tab = fallback;
             corrected = true;
         }
         return corrected;

@@ -1,5 +1,6 @@
 package dev.darcosse.common.cobblemonsafari.config;
 
+import com.google.gson.annotations.JsonAdapter;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
@@ -30,6 +31,8 @@ public class SafariShopConfig {
      * Version 8: rotating.level removed; the random Pokémon come at their
      * natural Safari level and their price grows with their evolution stage.
      * Version 9: rotating.rarePrice 1000 to 500; a file still on 1000 follows.
+     * Version 10: rotating.count 4 to 15 (a file still on 4 follows); added
+     * rotatingItems and rotatingBalls.
      */
     public int configVersion = SafariShopConfigManager.CURRENT_VERSION;
 
@@ -110,13 +113,26 @@ public class SafariShopConfig {
      */
     public Rotating rotating = new Rotating();
 
+    /**
+     * Cobblemon items drawn at random for each rotation, sold in the items
+     * tab after the fixed entries, priced by kind (stones, potions, candies...).
+     */
+    public RotatingGoods rotatingItems = RotatingGoods.items();
+
+    /** Poké Balls drawn at random for each rotation, sold in the balls tab; Safari Balls always. */
+    public RotatingGoods rotatingBalls = RotatingGoods.balls();
+
+    /** Default number of random Pokémon per rotation, and the one before version 10. */
+    static final int ROTATING_POKEMON = 15;
+    static final int OLD_ROTATING_POKEMON = 4;
+
     /** Settings of the random Pokémon of the shop. */
     public static class Rotating {
         /** Master switch; off, the shop only sells {@link SafariShopConfig#entries}. */
         public boolean enabled = true;
 
         /** How many Pokémon are drawn per rotation. */
-        public int count = 4;
+        public int count = ROTATING_POKEMON;
 
         /** Tab showing them; an unknown id falls back to {@code pokemon}, then to the first tab. */
         public String tab = Tab.POKEMON;
@@ -151,6 +167,155 @@ public class SafariShopConfig {
 
         /** Species never drawn, as Cobblemon ids, e.g. {@code cobblemon:ditto}. */
         public List<String> excludedSpecies = new ArrayList<>();
+    }
+
+    /**
+     * Items drawn at random for each rotation of the specials, the same for
+     * every player, like the random Pokémon. Only items matched by a
+     * {@link #prices} rule can be drawn: the rules are both the catalogue and
+     * the price list, so nothing is ever sold without a price chosen for it.
+     */
+    public static class RotatingGoods {
+        /** Master switch. */
+        public boolean enabled = true;
+
+        /** How many items are drawn per rotation, on top of {@link #always}. */
+        public int count = 8;
+
+        /** Tab showing them; an unknown id falls back to the first tab. */
+        public String tab = Tab.ITEMS;
+
+        /**
+         * Items sold every rotation whatever the draw, as item ids; each
+         * still needs a {@link #prices} rule, which gives its price and stack.
+         */
+        public List<String> always = new ArrayList<>();
+
+        /**
+         * Items never drawn: item ids, or item tags prefixed with {@code #}
+         * (e.g. {@code #cobblemon:mints}). Items already sold by the fixed
+         * entries are left out too, so the shop never lists one twice.
+         */
+        public List<String> excluded = new ArrayList<>();
+
+        /**
+         * What can be drawn and at what price: each rule names an item id or
+         * an item tag ({@code #}), the stack sold and its price in points.
+         * The first rule matching an item wins, so specific items go before
+         * the tags that hold them (a Max Potion before {@code #cobblemon:potions}).
+         */
+        public List<PriceRule> prices = new ArrayList<>();
+
+        /** Gson needs a no-argument constructor. */
+        public RotatingGoods() {
+        }
+
+        /**
+         * Default random items: Cobblemon's medicine, candies, mints, battle
+         * items, gems, held items and evolution items, priced against about
+         * 600 points per hour of hunting (a stone is half an hour, a mint or
+         * an XL candy forty minutes, an Ability Capsule over an hour).
+         */
+        static RotatingGoods items() {
+            RotatingGoods goods = new RotatingGoods();
+            goods.tab = Tab.ITEMS;
+            goods.count = 8;
+            goods.excluded = new ArrayList<>(List.of(
+                    // Changes a hidden ability for good: a prize, not a shop item.
+                    "cobblemon:ability_patch",
+                    // Blocks that sit in Cobblemon's evolution tag for Sinistcha.
+                    "#cobblemon:teapots", "#cobblemon:teacups",
+                    // Vanilla items Cobblemon lets Pokémon hold.
+                    "minecraft:bone", "minecraft:snowball"));
+            goods.prices = new ArrayList<>(List.of(
+                    PriceRule.of("cobblemon:full_restore", 1, 200),
+                    PriceRule.of("cobblemon:max_potion", 1, 150),
+                    PriceRule.of("cobblemon:hyper_potion", 2, 120),
+                    PriceRule.of("cobblemon:super_potion", 3, 90),
+                    PriceRule.of("#cobblemon:potions", 5, 50),
+                    PriceRule.of("cobblemon:max_revive", 1, 300),
+                    PriceRule.of("#cobblemon:revives", 1, 150),
+                    PriceRule.of("cobblemon:full_heal", 2, 100),
+                    PriceRule.of("#cobblemon:restores", 3, 60),
+                    PriceRule.of("#cobblemon:remedies", 3, 30),
+                    PriceRule.of("cobblemon:max_elixir", 1, 400),
+                    PriceRule.of("cobblemon:elixir", 1, 250),
+                    PriceRule.of("cobblemon:max_ether", 1, 200),
+                    PriceRule.of("#cobblemon:ethers", 1, 100),
+                    PriceRule.of("cobblemon:rare_candy", 1, 150),
+                    PriceRule.of("cobblemon:exp_candy_xl", 1, 400),
+                    PriceRule.of("cobblemon:exp_candy_l", 1, 200),
+                    PriceRule.of("cobblemon:exp_candy_m", 2, 150),
+                    PriceRule.of("cobblemon:exp_candy_s", 3, 100),
+                    PriceRule.of("cobblemon:exp_candy_xs", 5, 75),
+                    PriceRule.of("#cobblemon:iv_candies", 1, 300),
+                    PriceRule.of("#cobblemon:mochis", 1, 250),
+                    PriceRule.of("#cobblemon:mints", 1, 400),
+                    PriceRule.of("#cobblemon:ability_changers", 1, 800),
+                    PriceRule.of("#cobblemon:battle_items", 3, 100),
+                    PriceRule.of("#cobblemon:type_gems", 1, 150),
+                    PriceRule.of("#cobblemon:evolution_stones", 1, 300),
+                    PriceRule.of("#cobblemon:evolution_items", 1, 500),
+                    PriceRule.of("#cobblemon:held/is_held_item", 1, 600)));
+            return goods;
+        }
+
+        /**
+         * Default random balls: Safari Balls every rotation, plus a few balls
+         * by Cobblemon's tiers, stacked so a purchase is a useful handful.
+         * Safari Balls cost more than Poké Balls: in the Safari they get the
+         * out-of-battle capture bonus.
+         */
+        static RotatingGoods balls() {
+            RotatingGoods goods = new RotatingGoods();
+            goods.tab = Tab.BALLS;
+            goods.count = 6;
+            goods.always = new ArrayList<>(List.of("cobblemon:safari_ball"));
+            goods.excluded = new ArrayList<>(List.of("#cobblemon:tier_5_poke_balls", "cobblemon:cherish_ball"));
+            goods.prices = new ArrayList<>(List.of(
+                    PriceRule.of("cobblemon:safari_ball", 10, 150),
+                    PriceRule.of("#cobblemon:tier_1_poke_balls", 10, 50),
+                    PriceRule.of("#cobblemon:tier_2_poke_balls", 5, 100),
+                    PriceRule.of("#cobblemon:tier_3_poke_balls", 5, 200),
+                    PriceRule.of("#cobblemon:tier_4_poke_balls", 1, 400)));
+            return goods;
+        }
+    }
+
+    /** One line of a {@link RotatingGoods#prices} list. */
+    public static class PriceRule {
+        /** Item id, or item tag prefixed with {@code #}. */
+        public String item = "";
+        /** Stack sold per purchase. */
+        public int count = 1;
+        /** Price of the stack, in Safari points. */
+        public int price = 0;
+
+        /** Gson needs a no-argument constructor. */
+        public PriceRule() {
+        }
+
+        /** Whether {@link #item} names an item tag. */
+        public boolean isTag() {
+            return item != null && item.startsWith(Cost.TAG_PREFIX);
+        }
+
+        /** The id of the item or tag, without the tag prefix; null when malformed. */
+        @Nullable
+        public ResourceLocation id() {
+            if (item == null) {
+                return null;
+            }
+            return ResourceLocation.tryParse(isTag() ? item.substring(Cost.TAG_PREFIX.length()) : item);
+        }
+
+        static PriceRule of(String item, int count, int price) {
+            PriceRule rule = new PriceRule();
+            rule.item = item;
+            rule.count = count;
+            rule.price = price;
+            return rule;
+        }
     }
 
     /** Items an entry takes in exchange. */
@@ -254,7 +419,14 @@ public class SafariShopConfig {
          */
         public String pokemon;
 
-        /** Cost in Safari points. */
+        /**
+         * Cost in Safari points, or {@code "auto"} in the file
+         * ({@link #AUTO_PRICE} here) for a Pokémon priced like the shop's
+         * random ones: its rarity in the Safari times its evolution stage.
+         * The shop resolves it each time it lists its entries, so it follows
+         * the rotating prices of the file.
+         */
+        @JsonAdapter(ShopPriceAdapter.class)
         public int price = 0;
 
         /**
@@ -278,6 +450,13 @@ public class SafariShopConfig {
          * otherwise. Filled in by the config manager.
          */
         public String tab = "";
+
+        /**
+         * In-memory value of {@link #price} for {@code "auto"}. Negative, so
+         * it can never be a real price; checked before any use of the price
+         * as a number of points.
+         */
+        public static final int AUTO_PRICE = -1;
 
         /** Value of {@link #type} for an item. */
         public static final String TYPE_ITEM = "item";
@@ -315,6 +494,16 @@ public class SafariShopConfig {
             return entry;
         }
 
+        /**
+         * An item of the current rotation (see {@link RotatingGoods}). Built
+         * in memory only, never written to the file.
+         */
+        public static Entry rotatingItem(String id, int count, int price, String tab) {
+            Entry entry = item(id, count, price);
+            entry.tab = tab;
+            return entry;
+        }
+
         /** Whether this entry asks for items. */
         public boolean hasCost() {
             return cost != null && !cost.isEmpty();
@@ -328,6 +517,29 @@ public class SafariShopConfig {
             Entry entry = pokemon(properties, price);
             entry.tab = tab;
             return entry;
+        }
+
+        /** Whether the price is computed rather than given. */
+        public boolean hasAutoPrice() {
+            return price == AUTO_PRICE;
+        }
+
+        /**
+         * A copy with a resolved price, for the shop's listing; the config
+         * entry keeps {@code "auto"}. Lists are shared, which is safe: the
+         * listing never changes them.
+         */
+        public Entry withPrice(int resolvedPrice) {
+            Entry copy = new Entry();
+            copy.type = type;
+            copy.item = item;
+            copy.count = count;
+            copy.pokemon = pokemon;
+            copy.price = resolvedPrice;
+            copy.cost = cost;
+            copy.limitPerRotation = limitPerRotation;
+            copy.tab = tab;
+            return copy;
         }
 
         /** Whether this entry sells a Pokémon. */

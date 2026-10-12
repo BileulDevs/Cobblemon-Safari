@@ -180,6 +180,20 @@ public final class RotatingShop {
         return Math.max(MIN_LEVEL, Math.min(MAX_LEVEL, level));
     }
 
+    /**
+     * The computed price of a species, for a shop entry priced {@code "auto"}:
+     * the same rule as the random Pokémon, with the species' rarity in the
+     * Safari. A species with no Safari spawn data gets the rarity the
+     * habitat index gives such species (rare, ultra-rare when legendary-like),
+     * so it is never sold cheap by default.
+     */
+    public static int autoPrice(MinecraftServer server, Species species) {
+        HabitatEntry entry = FeaturedRotation.index(server).get(species.getResourceIdentifier());
+        Rarity rarity = entry != null ? entry.rarity()
+                : SpeciesRules.isSpecial(species) ? Rarity.ULTRA_RARE : Rarity.RARE;
+        return price(rarity, species, SafariShopConfigManager.get().rotating);
+    }
+
     /** Price of a Pokémon: its rarity's base price times its evolution stage's multiplier, rounded. */
     private static int price(Rarity rarity, Species species, SafariShopConfig.Rotating config) {
         int base = switch (rarity) {

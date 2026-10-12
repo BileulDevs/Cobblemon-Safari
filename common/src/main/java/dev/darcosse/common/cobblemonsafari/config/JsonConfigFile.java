@@ -49,6 +49,13 @@ final class JsonConfigFile<T> {
      * know, so a moved setting would be lost instead of migrated.
      */
     private final UnaryOperator<JsonObject> upgrader;
+    /**
+     * Whether the last {@link #read()} could not parse the file. While set,
+     * {@link #write} does nothing: the managers validate what read returned
+     * (the defaults, then) and would otherwise "fix" and save them over the
+     * file, destroying the admin's edits along with their typo.
+     */
+    private boolean unreadable;
 
     /** Describes a config file whose keys never move; nothing is read until {@link #read()}. */
     JsonConfigFile(String fileName, String legacyFileName, Class<T> type, Supplier<T> defaults) {
@@ -71,12 +78,14 @@ final class JsonConfigFile<T> {
     /**
      * Loads the file, creating it with defaults when absent.
      *
-     * <p>The file is NOT rewritten on a parse error: overwriting it would destroy
-     * the admin's edits along with the typo that broke them.
+     * <p>The file is NOT rewritten on a parse error, neither here nor by a
+     * later {@link #write} of the defaults: overwriting it would destroy the
+     * admin's edits along with the typo that broke them.
      */
     T read() {
         Path path = path();
         moveLegacyFile(path);
+        unreadable = false;
         if (!Files.exists(path)) {
             T fresh = defaults.get();
             write(fresh);
@@ -94,12 +103,20 @@ final class JsonConfigFile<T> {
             // IllegalStateException: a key the upgrader expects holds another JSON type.
             CobblemonSafari.LOGGER.error("Could not read config/{}, using defaults until it is fixed: {}",
                     fileName, e.getMessage());
+            unreadable = true;
             return defaults.get();
         }
     }
 
-    /** Writes the given instance, logging instead of throwing on I/O failure. */
+    /**
+     * Writes the given instance, logging instead of throwing on I/O failure.
+     * Does nothing while the file on disk could not be parsed (see
+     * {@link #unreadable}); the next successful read lifts that.
+     */
     void write(T value) {
+        if (unreadable) {
+            return;
+        }
         Path path = path();
         try {
             Files.createDirectories(path.getParent());
