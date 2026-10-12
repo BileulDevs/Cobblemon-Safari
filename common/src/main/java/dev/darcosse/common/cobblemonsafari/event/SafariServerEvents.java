@@ -25,12 +25,27 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
 /**
  * The only surface loaders talk to. Each loader module translates its own
  * events into these calls, so the behaviour is written once and cannot drift
  * between Fabric and NeoForge.
  */
 public final class SafariServerEvents {
+
+    /**
+     * Players who joined since the last tick ended, waiting to be relocated
+     * if needed. Server thread only. Cleared every tick, so it never holds
+     * more than one tick's logins, and a player of a previous world (single
+     * player) at most until the first tick of the next one, where they are
+     * not online and are skipped.
+     */
+    private static final Set<UUID> JOINED = new LinkedHashSet<>();
 
     private SafariServerEvents() {
     }
@@ -64,6 +79,7 @@ public final class SafariServerEvents {
 
     /** End of every server tick. */
     public static void onServerTick(MinecraftServer server) {
+        settleJoinedPlayers(server);
         SafariSessionManager.tick(server);
         FeaturedSpawner.tick(server);
         FeaturedSync.tick(server);
@@ -72,14 +88,51 @@ public final class SafariServerEvents {
         RestHouseClerk.tick(server);
     }
 
-    /** A player finished joining and can receive custom payloads. */
+    /**
+     * A player is joining and can receive custom payloads. Only packets are
+     * sent here; anything that moves the player waits for the end of the
+     * tick ({@link #settleJoinedPlayers}).
+     *
+     * <p>Why: Fabric fires its JOIN event in the middle of vanilla's
+     * {@code PlayerList.placeNewPlayer}, before the player is added to its
+     * level. A teleport to another dimension at that point registered the
+     * player in the target level, after which vanilla added them to the
+     * original level as well; the chunk tracking of the two disagreed and
+     * the next dimension change crashed the server (NullPointerException in
+     * {@code DistanceManager.removePlayer}). NeoForge's event comes later,
+     * but sharing one path keeps both loaders identical.
+     */
     public static void onPlayerJoin(ServerPlayer player) {
-        // Sessions first: a player without one is sent out, and the map
-        // reset's relocation then has nothing to do.
         SafariSessionManager.onPlayerJoin(player);
-        SafariMapReset.onPlayerJoin(player);
         FeaturedSync.sendTo(player);
         SafariBounties.sendTo(player);
+        JOINED.add(player.getUUID());
+    }
+
+    /**
+     * Relocates the players who joined during this tick, now that each is
+     * fully placed in its level: out of the Safari without a session, or to
+     * the arrival point when their map is gone. Cost: nothing on ticks
+     * without a login.
+     */
+    private static void settleJoinedPlayers(MinecraftServer server) {
+        if (JOINED.isEmpty()) {
+            return;
+        }
+        // Copy: a relocation may in principle trigger another login callback.
+        List<UUID> joined = new ArrayList<>(JOINED);
+        JOINED.clear();
+        for (UUID id : joined) {
+            ServerPlayer player = server.getPlayerList().getPlayer(id);
+            if (player == null) {
+                // Disconnected within the same tick.
+                continue;
+            }
+            // Sessions first: a player without one is sent out, and the map
+            // reset's relocation then has nothing to do.
+            SafariSessionManager.settleJoined(player);
+            SafariMapReset.onPlayerJoin(player);
+        }
     }
 
     /** A player died (not cancelled). */

@@ -129,7 +129,9 @@ public final class SafariMapReset {
 
     /**
      * Moves a player who logs in inside the Safari to the arrival point when
-     * the map they left no longer exists, or when they would be stuck in a block.
+     * the map they left no longer exists, or when they would be stuck in a
+     * block. Called at the end of the tick they joined in, never from the
+     * join event itself (see SafariServerEvents.onPlayerJoin).
      */
     public static void onPlayerJoin(ServerPlayer player) {
         if (!SafariDimensions.isSafari(player.level())) {

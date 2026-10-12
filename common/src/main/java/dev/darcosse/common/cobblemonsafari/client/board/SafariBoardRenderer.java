@@ -1,16 +1,13 @@
 package dev.darcosse.common.cobblemonsafari.client.board;
 
-import dev.darcosse.common.cobblemonsafari.points.SafariPointsIcon;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.client.SafariLandscapes;
-import dev.darcosse.common.cobblemonsafari.config.SafariClientConfig;
+import dev.darcosse.common.cobblemonsafari.config.PokemonDisplay;
 import dev.darcosse.common.cobblemonsafari.block.SafariBoardBlock;
 import dev.darcosse.common.cobblemonsafari.block.SafariBoardBlockEntity;
 import dev.darcosse.common.cobblemonsafari.block.ScreenLayout;
-import dev.darcosse.common.cobblemonsafari.bounty.Bounty;
-import dev.darcosse.common.cobblemonsafari.client.BountyClientState;
 import dev.darcosse.common.cobblemonsafari.client.FeaturedClientState;
 import dev.darcosse.common.cobblemonsafari.client.SafariClientState;
 import dev.darcosse.common.cobblemonsafari.config.BoardPalette;
@@ -170,20 +167,22 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
     private static final long SPIN_PERIOD_MS = 12_000L;
     /** Angle between neighbouring models, so they do not turn in lockstep. */
     private static final float SPIN_PHASE_DEGREES = 47.0F;
+    /**
+     * Sprite mode: share of the model area the sprite fills (the sprites have
+     * a transparent margin of their own), space kept on each side of the
+     * cell, and a slow bob, staggered between cells. More than ~1 px of bob
+     * reads as jitter on a small screen.
+     */
+    private static final float SPRITE_FILL = 1.0F;
+    private static final float SPRITE_SIDE_MARGIN = 2.0F;
+    private static final float SPRITE_BOB_PIXELS = 0.75F;
+    private static final long SPRITE_BOB_PERIOD_MS = 2_400L;
+    private static final long SPRITE_BOB_STAGGER_MS = 300L;
+    /** Sprites are drawn with their own colours: no tint. */
+    private static final int SPRITE_TINT = 0xFFFFFFFF;
+
     /** Time each page stays up when the specials do not fit on one. */
     private static final long PAGE_DURATION_MS = 7_000L;
-    /**
-     * How long the specials and the missions each stay on screen before the
-     * board switches to the other, in ms. Two pages of specials fit in one
-     * turn; a longer value favours the specials.
-     */
-    private static final long VIEW_DURATION_MS = 14_000L;
-    /** Mission rows: tallest row, and the row height at which text is drawn at full size. */
-    private static final float MAX_BOUNTY_ROW_HEIGHT = 26.0F;
-    private static final float BOUNTY_ROW_REFERENCE = 24.0F;
-    private static final float BOUNTY_BOX_SIZE = 8.0F;
-    private static final float BOUNTY_BAR_HEIGHT = 2.0F;
-    private static final float ROW_PADDING = 2.0F;
     /**
      * Scroll speed of cell lines too long for their cell, in canvas pixels per
      * second, and the pause at each end before turning back. Faster is harder
@@ -233,6 +232,8 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
     private BoardPalette pal = SafariClientConfigManager.palette();
     /** Whether this frame draws the landscape, and the panels' alpha over it (from the client config). */
     private boolean landscape;
+    /** Whether this frame draws sprites instead of models (from the client config). */
+    private boolean spriteMode;
     private int panelAlpha = ALPHA_MAX;
 
     /** Created by the loader's renderer registry. */
@@ -323,6 +324,7 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
         float bottom = height - BEZEL;
         SafariClientConfig.Board board = SafariClientConfigManager.get().board;
         landscape = board.backgroundImage;
+        spriteMode = board.pokemonDisplay == PokemonDisplay.SPRITE;
         panelAlpha = (int) Math.round(board.panelOpacity * ALPHA_MAX);
         if (landscape) {
             drawLandscape(p, left, top, right, bottom);
@@ -339,16 +341,8 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
 
         List<SafariFeaturedPayload.Entry> entries = FeaturedClientState.entries();
 
-        // Specials and missions take turns; without missions the specials stay.
-        boolean missions = BountyClientState.hasBounties() && (now / VIEW_DURATION_MS) % 2 == 1;
-        Page page;
-        if (missions) {
-            drawBounties(p, x0, bodyTop, x1, bodyBottom, now);
-            page = Page.SINGLE;
-        } else {
-            page = drawBody(p, x0, bodyTop, x1, bodyBottom, entries, now);
-        }
-        drawHeader(p, x0, headerTop, x1, page, now, missions);
+        Page page = drawBody(p, x0, bodyTop, x1, bodyBottom, entries, now);
+        drawHeader(p, x0, headerTop, x1, page, now);
         drawFooter(p, x0, footerTop, x1, now, gameTime);
 
         drawScanline(p, left, top, right, bottom, now);
@@ -367,7 +361,7 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
      * screens the title shortens first, then the LIVE label goes and only its
      * light stays.
      */
-    private void drawHeader(BoardPainter p, float x0, float y, float x1, Page page, long now, boolean missions) {
+    private void drawHeader(BoardPainter p, float x0, float y, float x1, Page page, long now) {
         p.fill(x0, y, x1, y + HEADER_HEIGHT, Z_PANEL, panel(pal.header()));
         float textY = y + (HEADER_HEIGHT - LINE_HEIGHT) / 2.0F + 1.0F;
         float left = x0 + HEADER_MARGIN;
@@ -377,7 +371,7 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
         String counter = page.count() > 1 ? (page.index() + 1) + "/" + page.count() : "";
         float counterBlock = counter.isEmpty() ? 0.0F : p.width(counter) + HEADER_SPACING;
         float dotBlock = LIVE_DOT_SIZE + HEADER_SPACING;
-        String titleKey = missions ? "screen.bounties_title" : "screen.title";
+        String titleKey = "screen.title";
         String title = tr(titleKey).toUpperCase(Locale.ROOT);
         boolean liveLabel = true;
         float rightBlock = p.width(live) + dotBlock + counterBlock;
@@ -471,65 +465,6 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
     }
 
     /**
-     * Today's missions, one row each: a box ticked when done, what to catch,
-     * the reward and the local player's progress with a thin bar. Below them,
-     * when there is room, the bonus for finishing them all.
-     */
-    private void drawBounties(BoardPainter p, float x0, float y0, float x1, float y1, long now) {
-        List<Bounty> bounties = BountyClientState.bounties();
-        int count = bounties.size();
-        float rowHeight = Math.min(MAX_BOUNTY_ROW_HEIGHT, (y1 - y0 - (count - 1) * GAP) / count);
-        float scale = Math.max(MIN_CELL_TEXT_SCALE, Math.min(1.0F, rowHeight / BOUNTY_ROW_REFERENCE));
-        float subScale = scale * SUBTEXT_SCALE;
-        boolean allDone = true;
-        for (int i = 0; i < count; i++) {
-            Bounty bounty = bounties.get(i);
-            int progress = BountyClientState.progress(i);
-            boolean done = progress >= bounty.count();
-            allDone &= done;
-            float top = y0 + i * (rowHeight + GAP);
-            float bottom = top + rowHeight;
-            p.fill(x0, top, x1, bottom, Z_PANEL, panel(pal.cell()));
-
-            float box = Math.min(rowHeight - 2.0F * ROW_PADDING, BOUNTY_BOX_SIZE * scale);
-            float boxLeft = x0 + ROW_PADDING;
-            float boxTop = top + (rowHeight - box) / 2.0F;
-            p.fill(boxLeft, boxTop, boxLeft + box, boxTop + box, Z_DETAIL, pal.muted());
-            p.fill(boxLeft + 1.0F, boxTop + 1.0F, boxLeft + box - 1.0F, boxTop + box - 1.0F, Z_DETAIL_TOP,
-                    done ? pal.barSessionOk() : pal.cell());
-
-            float textLeft = boxLeft + box + ROW_PADDING * 2.0F;
-            float textRight = x1 - ROW_PADDING;
-            drawMarquee(p, bounty.describe().getString(), textLeft, textRight, top + ROW_PADDING, scale,
-                    done ? pal.barSessionOk() : pal.text(), now);
-
-            float subTop = top + ROW_PADDING + LINE_HEIGHT * scale;
-            Component reward = Component.translatable(CobblemonSafari.MOD_ID + ".board.bounty_reward",
-                    SafariPointsIcon.amount(bounty.reward()));
-            p.text(reward, textLeft, subTop, Z_TEXT, subScale, pal.star());
-            String counter = progress + "/" + bounty.count();
-            p.text(counter, textRight - p.width(counter) * subScale, subTop, Z_TEXT, subScale, pal.muted());
-
-            float barTop = bottom - ROW_PADDING - BOUNTY_BAR_HEIGHT;
-            p.fill(textLeft, barTop, textRight, barTop + BOUNTY_BAR_HEIGHT, Z_DETAIL, panel(pal.barBackground()));
-            float fraction = Math.min(1.0F, progress / (float) bounty.count());
-            p.fill(textLeft, barTop, textLeft + (textRight - textLeft) * fraction, barTop + BOUNTY_BAR_HEIGHT,
-                    Z_DETAIL_TOP, done ? pal.barSessionOk() : pal.barRotation());
-        }
-        float footerY = y0 + count * (rowHeight + GAP);
-        int bonus = BountyClientState.allDoneBonus();
-        if (bonus > 0 && footerY + LINE_HEIGHT <= y1) {
-            Component line = allDone
-                    ? Component.translatable(CobblemonSafari.MOD_ID + ".board.bounty_all_done")
-                    : Component.translatable(CobblemonSafari.MOD_ID + ".board.bounty_bonus", SafariPointsIcon.amount(bonus));
-            // Not fitted with an ellipsis like other lines: the icon glyph
-            // cannot be cut, and the line is short in every language.
-            p.text(line, x0 + (x1 - x0 - p.width(line)) / 2.0F, footerY, Z_TEXT, 1.0F,
-                    allDone ? pal.barSessionOk() : pal.muted());
-        }
-    }
-
-    /**
      * The grid shape that gives the largest cells for {@code count} specials,
      * judging a cell by its width and by its height scaled to the preferred
      * aspect, whichever is the limiting one.
@@ -548,6 +483,32 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
             }
         }
         return best;
+    }
+
+    /**
+     * The Pokémon's sprite from a resource pack, centred in the model area
+     * and bobbing slightly so the screen stays alive.
+     *
+     * @return false when no loaded pack has a sprite for it (the caller then draws the model)
+     */
+    private boolean drawSprite(BoardPainter p, float x, float w, float top, float bottom,
+                               SafariFeaturedPayload.Entry entry, int slot, long now) {
+        ResourceLocation sprite = PokemonSprites.find(entry.species(), new HashSet<>(entry.aspects()));
+        if (sprite == null) {
+            return false;
+        }
+        float size = Math.min(bottom - top, w - 2.0F * SPRITE_SIDE_MARGIN) * SPRITE_FILL;
+        if (size <= 0.0F) {
+            return false;
+        }
+        double phase = 2.0D * Math.PI * ((now + slot * SPRITE_BOB_STAGGER_MS) % SPRITE_BOB_PERIOD_MS)
+                / SPRITE_BOB_PERIOD_MS;
+        float bob = (float) Math.sin(phase) * SPRITE_BOB_PIXELS;
+        float left = x + (w - size) / 2.0F;
+        float spriteTop = (top + bottom) / 2.0F - size / 2.0F + bob;
+        p.image(sprite, left, spriteTop, left + size, spriteTop + size, Z_DETAIL, 0.0F, 0.0F, 1.0F, 1.0F,
+                SPRITE_TINT);
+        return true;
     }
 
     /** One special: rarity strip, turning model, name, rarity and, when there is room, habitat. */
@@ -577,7 +538,10 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
         float modelHeight = Math.max(0.0F, Math.min((modelBottom - modelTop) * MODEL_FILL, w * MODEL_WIDTH_FILL));
         float feetY = modelBottom - ((modelBottom - modelTop) - modelHeight) / 2.0F;
         boolean drawn = false;
-        if (modelHeight > 0.0F) {
+        if (spriteMode && modelBottom > modelTop) {
+            drawn = drawSprite(p, x, w, modelTop, modelBottom, entry, slot, now);
+        }
+        if (!drawn && modelHeight > 0.0F) {
             PoseStack pose = p.poseStack();
             pose.pushPose();
             pose.translate(x + w / 2.0F, feetY, Z_TEXT + modelHeight * MODEL_POP_OUT);

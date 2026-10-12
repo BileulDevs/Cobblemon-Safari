@@ -66,7 +66,8 @@
       "speaker": "npc",
       "lines": [
         "cobblemon_safari.dialogue.safari_warden.tickets.1",
-        "cobblemon_safari.dialogue.safari_warden.tickets.2"
+        "cobblemon_safari.dialogue.safari_warden.tickets.2",
+        "cobblemon_safari.dialogue.safari_warden.tickets.3"
       ],
       "input": "q.dialogue.set_page('greeting');"
     },

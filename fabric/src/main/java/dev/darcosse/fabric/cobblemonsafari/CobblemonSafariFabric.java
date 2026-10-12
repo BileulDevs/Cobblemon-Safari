@@ -5,6 +5,7 @@ import dev.darcosse.common.cobblemonsafari.event.SafariServerEvents;
 import dev.darcosse.common.cobblemonsafari.block.SafariBlockEntities;
 import dev.darcosse.common.cobblemonsafari.block.SafariBlocks;
 import dev.darcosse.common.cobblemonsafari.item.SafariItems;
+import dev.darcosse.common.cobblemonsafari.loot.TicketLoot;
 import dev.darcosse.common.cobblemonsafari.worldgen.SafariWorldgen;
 import dev.darcosse.fabric.cobblemonsafari.network.FabricSafariNetworking;
 import net.fabricmc.api.ModInitializer;
@@ -16,6 +17,7 @@ import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
+import net.fabricmc.fabric.api.loot.v3.LootTableEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -55,7 +57,6 @@ public class CobblemonSafariFabric implements ModInitializer {
         SafariItems.register((id, item) -> Registry.register(BuiltInRegistries.ITEM, id, item));
         ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.TOOLS_AND_UTILITIES).register(entries -> {
             entries.accept(SafariItems.safariTicket());
-            SafariItems.timedTickets().forEach(entries::accept);
             entries.accept(SafariItems.safariBoard());
             entries.accept(SafariItems.safariBoardFrame());
             entries.accept(SafariItems.safariGate());
@@ -68,6 +69,10 @@ public class CobblemonSafariFabric implements ModInitializer {
         ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resourceManager, success) ->
                 SafariServerEvents.onDataReload(server));
         ServerTickEvents.END_SERVER_TICK.register(SafariServerEvents::onServerTick);
+        // Every source (built-in or data pack): a pack replacing a village
+        // table still gets its tickets, as the server config asks.
+        LootTableEvents.MODIFY.register((key, tableBuilder, source, registries) ->
+                TicketLoot.poolFor(key.location()).ifPresent(tableBuilder::withPool));
 
         // JOIN, not INIT: payloads can only be sent once the play channel is ready.
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->

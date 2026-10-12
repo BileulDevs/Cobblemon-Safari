@@ -27,11 +27,6 @@ public final class TimerStyle {
     private TimerStyle() {
     }
 
-    /** Colour of the loaned-ball counter: red once the last ball is gone, like an empty bag. */
-    public static int ballColor(int balls) {
-        return balls > 0 ? COLOR_NORMAL : COLOR_CRITICAL;
-    }
-
     /** Text colour for the given remaining time. */
     public static int color(int remainingTicks, long clientGameTime, SafariClientConfig config) {
         if (remainingTicks <= 0) {

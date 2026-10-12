@@ -31,6 +31,7 @@ public class CobblemonSafariNeoForge {
         NeoForge.EVENT_BUS.addListener(NeoForgeServerEvents::onServerAboutToStart);
         NeoForge.EVENT_BUS.addListener(NeoForgeServerEvents::onServerStarted);
         NeoForge.EVENT_BUS.addListener(NeoForgeServerEvents::onDatapackSync);
+        NeoForge.EVENT_BUS.addListener(NeoForgeServerEvents::onLootTableLoad);
         NeoForge.EVENT_BUS.addListener(NeoForgeServerEvents::onServerTick);
         NeoForge.EVENT_BUS.addListener(NeoForgeServerEvents::onPlayerLoggedIn);
         // LOWEST so another mod that cancels the death (totem-like effects) runs

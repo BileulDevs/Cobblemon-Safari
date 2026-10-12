@@ -15,7 +15,8 @@ import java.nio.file.Path;
 import java.util.function.Supplier;
 
 /**
- * Reads and writes one JSON configuration file in the loader's config directory.
+ * Reads and writes one JSON configuration file in the mod's folder of the
+ * loader's config directory ({@code config/cobblemon_safari/}).
  *
  * <p>Shared by the server and client configurations so that both follow the same
  * recovery policy: a missing, empty or malformed file never prevents the game
@@ -28,13 +29,21 @@ final class JsonConfigFile<T> {
             .disableHtmlEscaping()
             .create();
 
+    /** Path of the file under the config directory, with forward slashes (Java accepts them on Windows too). */
     private final String fileName;
+    /**
+     * Where the file lived before the mod's config folder existed, directly
+     * in the config directory. Moved into the folder on first read, so
+     * existing servers keep their settings.
+     */
+    private final String legacyFileName;
     private final Class<T> type;
     private final Supplier<T> defaults;
 
     /** Describes a config file; nothing is read until {@link #read()}. */
-    JsonConfigFile(String fileName, Class<T> type, Supplier<T> defaults) {
+    JsonConfigFile(String fileName, String legacyFileName, Class<T> type, Supplier<T> defaults) {
         this.fileName = fileName;
+        this.legacyFileName = legacyFileName;
         this.type = type;
         this.defaults = defaults;
     }
@@ -47,6 +56,7 @@ final class JsonConfigFile<T> {
      */
     T read() {
         Path path = path();
+        moveLegacyFile(path);
         if (!Files.exists(path)) {
             T fresh = defaults.get();
             write(fresh);
@@ -78,5 +88,26 @@ final class JsonConfigFile<T> {
 
     private Path path() {
         return Platform.get().getConfigDir().resolve(fileName);
+    }
+
+    /**
+     * Moves the file from its old place into the mod's folder, when only the
+     * old one exists. On failure (permissions, a locked file on Windows) the
+     * old file is left alone and logged: the defaults are then written to the
+     * new place, and the admin can move their file by hand.
+     */
+    private void moveLegacyFile(Path path) {
+        Path legacy = Platform.get().getConfigDir().resolve(legacyFileName);
+        if (Files.exists(path) || !Files.exists(legacy)) {
+            return;
+        }
+        try {
+            Files.createDirectories(path.getParent());
+            Files.move(legacy, path);
+            CobblemonSafari.LOGGER.info("Moved config/{} to config/{}", legacyFileName, fileName);
+        } catch (IOException e) {
+            CobblemonSafari.LOGGER.error("Could not move config/{} to config/{}, move it by hand: {}",
+                    legacyFileName, fileName, e.getMessage());
+        }
     }
 }

@@ -40,7 +40,6 @@ public final class NeoForgeItemRegistration {
     static void onBuildCreativeTab(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
             event.accept(SafariItems.safariTicket());
-            SafariItems.timedTickets().forEach(event::accept);
             event.accept(SafariItems.safariBoard());
             event.accept(SafariItems.safariBoardFrame());
             event.accept(SafariItems.safariGate());

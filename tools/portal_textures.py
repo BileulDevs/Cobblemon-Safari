@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Draws the Safari Gate's portal texture: a 16x16 animated sprite in savanna
-colours with only gentle movement.
+Draws the Safari Gate's portal texture: an animated sprite in savanna
+colours with only gentle movement (the shipped style, amber_dust_spin, is
+the amber dust slowly turning on itself, at 32x32).
 
 Why drawn by code: the texture is original (no Mojang pixels) and its palette
 and pace can be changed here. Several styles are kept in STYLES; STYLE picks
@@ -31,8 +32,9 @@ SIZE = 16
 # shows a little. Lower is more see-through, 255 is an opaque wall.
 ALPHA = 200
 # Ticks per animation frame. Vanilla's portal uses 1-2 (fast swirl); high
-# values keep the movement calm. Changing it changes the pace only.
-FRAMETIME = 6
+# values keep the movement calm. Changing it changes the pace only: with the
+# 96 frames of amber_dust_spin, 3 makes a full turn last 14.4 s.
+FRAMETIME = 3
 
 # Savanna palette: dusk sky to dry grass.
 DEEP = (120, 50, 40)
@@ -202,6 +204,107 @@ def wavy_dunes(frame, frames):
     return img
 
 
+# Size of the rotating style's frames. Rotation at 16 px steps in whole
+# pixels and looks like jitter; 32 px keeps the arms smooth. Minecraft
+# accepts any power-of-two block texture.
+SWIRL_SIZE = 32
+# Spiral arms, and how much they wind from the centre to the edge (radians
+# across the radius). More arms read as a pinwheel, more winding as a vortex.
+SWIRL_ARMS = 3
+SWIRL_TWIST = 4.2
+# Radius (1 = block edge) where the arms have faded out. Above ~0.95 the
+# arms touch the edge and a seam shows between blocks; lower shrinks the swirl.
+SWIRL_EDGE = 0.92
+# Rotation per frame is one full turn spread over the frames, divided by the
+# arms (the pattern repeats every 1/ARMS turn, so the loop is seamless).
+
+
+def amber_swirl(frame, frames):
+    """
+    The amber field wound into a slow spiral that turns on itself, centred on
+    each block: gold and sand arms on an orange ground, fading into plain
+    orange before the edge so neighbouring blocks meet on the same colour,
+    with a few specks carried round by the spin. Flat colour bands, no dithering: a
+    dither pattern would shimmer as the bands move over it.
+    """
+    size = SWIRL_SIZE
+    colours = [DEEP, TERRACOTTA, ORANGE, GOLD, SAND]
+    img = Image.new("RGBA", (size, size))
+    px = img.load()
+    # One loop of the animation turns the pattern by one arm's angle.
+    spin = frame / frames * 2 * math.pi / SWIRL_ARMS
+    centre = (size - 1) / 2
+    half = size / 2
+    for y in range(size):
+        for x in range(size):
+            dx, dy = (x - centre) / half, (y - centre) / half
+            r = math.hypot(dx, dy)
+            theta = math.atan2(dy, dx)
+            arm = 0.5 + 0.5 * math.cos(SWIRL_ARMS * (theta - spin) + SWIRL_TWIST * r)
+            # Brighter at the heart (r reaches 1.41 in the corners).
+            glow = max(0.0, 1.0 - r / 1.25)
+            # The arms fade out before the block edge, so the border is one
+            # flat colour and neighbouring blocks join without a seam.
+            fade = max(0.0, 1.0 - r / SWIRL_EDGE)
+            level = 0.42 + 0.3 * glow + 0.4 * arm * fade
+            index = max(0, min(len(colours) - 1, int(level * len(colours))))
+            px[x, y] = colours[index] + (ALPHA,)
+    # Specks riding the spin: fixed radius and angle, turned with the pattern.
+    for i in range(6):
+        radius = 0.25 + 0.11 * i
+        angle = spin + i * 2 * math.pi / 6 + radius * SWIRL_TWIST / SWIRL_ARMS
+        x = int(round(centre + math.cos(angle) * radius * half))
+        y = int(round(centre + math.sin(angle) * radius * half))
+        if 0 <= x < size and 0 <= y < size:
+            px[x, y] = SAND + (ALPHA,)
+    return img
+
+
+# amber_dust_spin: the amber_dust texture, turning on itself. Its texture
+# size (the 16 px original sampled at 32 px, so the turn moves in half
+# pixels and does not jitter) and the radius, as a share of the half block,
+# over which the turning part hands over to the still edge. Larger turns
+# more of the block, but the hand-over must end before the edge or
+# neighbouring blocks show a seam.
+SPIN_SIZE = 32
+SPIN_FADE_START = 0.55
+SPIN_FADE_END = 0.95
+# Frames of amber_dust's own twinkle (its entry in STYLES).
+DUST_FRAMES = 16
+
+
+def amber_dust_spin(frame, frames):
+    """
+    The amber_dust texture itself, pixel for pixel, turning slowly on itself
+    around the centre of each block: one full turn per loop. Each output
+    pixel takes the amber_dust pixel found by turning back its position, so
+    the grain of the original turns with it and the motion is visible (a
+    redraw of its smooth glow would look still, the glow being nearly round).
+    Toward the edge the turning picture hands over to the still one through
+    an ordered dither, so neighbouring blocks still meet without a seam. The
+    specks keep twinkling as in amber_dust.
+    """
+    size = SPIN_SIZE
+    source = amber_dust(frame % DUST_FRAMES, DUST_FRAMES).load()
+    img = Image.new("RGBA", (size, size))
+    px = img.load()
+    spin = frame / frames * 2 * math.pi
+    cos_s, sin_s = math.cos(-spin), math.sin(-spin)
+    for y in range(size):
+        for x in range(size):
+            # Block units, centred: -0.5 .. 0.5.
+            u = (x + 0.5) / size - 0.5
+            v = (y + 0.5) / size - 0.5
+            r = math.hypot(u, v) * 2
+            still = (x * SIZE // size, y * SIZE // size)
+            ru = u * cos_s - v * sin_s + 0.5
+            rv = u * sin_s + v * cos_s + 0.5
+            turned = (int(ru * SIZE) % SIZE, int(rv * SIZE) % SIZE)
+            w = max(0.0, min(1.0, (r - SPIN_FADE_START) / (SPIN_FADE_END - SPIN_FADE_START)))
+            px[x, y] = source[still] if w > BAYER4[y % 4][x % 4] / 16 else source[turned]
+    return img
+
+
 # name: (drawing function, number of frames)
 STYLES = {
     "sunset": (sunset_bands, 16),
@@ -211,16 +314,23 @@ STYLES = {
     "woven_straw": (woven_straw, 12),
     "heat_haze": (heat_haze, 16),
     "wavy_dunes": (wavy_dunes, 16),
+    "amber_swirl": (amber_swirl, 32),
+    # 96 frames: one full turn per loop (a dither grain has no symmetry, so a
+    # part turn would jump when the loop restarts), a multiple of the 16
+    # twinkle frames so the specks loop too.
+    "amber_dust_spin": (amber_dust_spin, 96),
 }
-STYLE = "amber_dust"
+STYLE = "amber_dust_spin"
 
 
 def sheet(style):
     """The animation strip: frames stacked vertically, as Minecraft expects."""
     draw, frames = STYLES[style]
-    strip = Image.new("RGBA", (SIZE, SIZE * frames))
+    first = draw(0, frames)
+    size = first.width
+    strip = Image.new("RGBA", (size, size * frames))
     for f in range(frames):
-        strip.paste(draw(f, frames), (0, f * SIZE))
+        strip.paste(first if f == 0 else draw(f, frames), (0, f * size))
     return strip
 
 
@@ -231,11 +341,13 @@ def preview(style, out):
     images = []
     for f in range(frames):
         tile = draw(f, frames)
-        wall = Image.new("RGBA", (SIZE * 3, SIZE * 3))
+        size = tile.width
+        wall = Image.new("RGBA", (size * 3, size * 3))
         for i in range(3):
             for j in range(3):
-                wall.paste(tile, (i * SIZE, j * SIZE))
+                wall.paste(tile, (i * size, j * size))
         backdrop = Image.new("RGBA", wall.size, (90, 130, 200, 255))
+        # Same on-screen size whatever the texture resolution.
         images.append(Image.alpha_composite(backdrop, wall).convert("RGB")
                       .resize((SIZE * 3 * scale, SIZE * 3 * scale), Image.NEAREST))
     images[0].save(os.path.join(out, f"portal_{style}.gif"), save_all=True, append_images=images[1:],

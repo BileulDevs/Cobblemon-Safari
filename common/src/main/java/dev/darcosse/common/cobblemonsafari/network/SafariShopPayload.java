@@ -2,6 +2,8 @@ package dev.darcosse.common.cobblemonsafari.network;
 
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
@@ -19,18 +21,25 @@ import java.util.List;
  * the server, which builds the real Pokémon at purchase.
  *
  * @param refresh true to update an open shop screen only (after a purchase), false to open it
- * @param points  the player's Safari points
+ * @param points   the player's Safari points
+ * @param rotation rotation the random Pokémon belong to; sent back with a purchase
  * @param tabs    tabs of the screen, in display order
  * @param entries what is for sale, in config order; the index is what a purchase refers to
  */
-public record SafariShopPayload(boolean refresh, int points, List<Tab> tabs, List<Entry> entries)
+public record SafariShopPayload(boolean refresh, int points, long rotation, List<Tab> tabs, List<Entry> entries)
         implements CustomPacketPayload {
 
     /**
      * Wire format version. Bump on EVERY change to write/read.
      * v1: first version. v2: tabs, and the tab index of each entry.
+     * v3: rotation, after points.
+     * v4: each entry's cost (items taken in exchange) and remaining purchases, after the price.
+     * v5: a cost carries every item it accepts (an item tag) and its name.
      */
-    public static final int WIRE_VERSION = 2;
+    public static final int WIRE_VERSION = 5;
+
+    /** Value of {@link Entry#remaining} for an entry without a purchase limit. */
+    public static final int UNLIMITED = -1;
 
     /** Entry kinds on the wire. Their numbers are the format: never renumber. */
     public static final int KIND_UNAVAILABLE = 0;
@@ -41,6 +50,9 @@ public record SafariShopPayload(boolean refresh, int points, List<Tab> tabs, Lis
     private static final int MAX_ENTRIES = 4096;
     private static final int MAX_ASPECTS = 64;
     private static final int MAX_TABS = 64;
+    private static final int MAX_COSTS = 16;
+    /** Items one cost may accept: a large tag (every berry is about 70). */
+    private static final int MAX_COST_ITEMS = 512;
 
     public static final CustomPacketPayload.Type<SafariShopPayload> TYPE =
             new CustomPacketPayload.Type<>(CobblemonSafari.id("shop"));
@@ -68,11 +80,23 @@ public record SafariShopPayload(boolean refresh, int points, List<Tab> tabs, Lis
      * @param item    the stack given, for items; empty otherwise
      * @param species species id, for Pokémon; null otherwise
      * @param aspects Cobblemon aspects (forms, shiny...), for Pokémon
-     * @param level   level, for Pokémon
-     * @param shiny   whether the Pokémon is shiny
+     * @param level     level, for Pokémon
+     * @param shiny     whether the Pokémon is shiny
+     * @param cost      items taken in exchange, besides the price; empty for a plain purchase
+     * @param remaining purchases the player has left this rotation, or {@link #UNLIMITED}
      */
-    public record Entry(int tab, int kind, int price, ItemStack item, ResourceLocation species, List<String> aspects,
-                       int level, boolean shiny) {
+    public record Entry(int tab, int kind, int price, List<Cost> cost, int remaining, ItemStack item,
+                        ResourceLocation species, List<String> aspects, int level, boolean shiny) {
+    }
+
+    /**
+     * Items an entry takes in exchange: one item, or any mix of an item tag's.
+     *
+     * @param items the items accepted, as stacks of one (icons, and what the client counts)
+     * @param count how many in all; separate from the stacks, which cap at the item's stack size
+     * @param name  what to call them ("Apricorns" for a tag, the item's name otherwise)
+     */
+    public record Cost(List<ItemStack> items, int count, Component name) {
     }
 
     /** MUST list the same fields in the same order as {@link #read}. */
@@ -80,6 +104,7 @@ public record SafariShopPayload(boolean refresh, int points, List<Tab> tabs, Lis
         buf.writeVarInt(WIRE_VERSION);
         buf.writeBoolean(refresh);
         buf.writeVarInt(points);
+        buf.writeVarLong(rotation);
         buf.writeVarInt(tabs.size());
         for (Tab tab : tabs) {
             buf.writeUtf(tab.id());
@@ -92,6 +117,17 @@ public record SafariShopPayload(boolean refresh, int points, List<Tab> tabs, Lis
             buf.writeVarInt(entry.tab());
             buf.writeVarInt(entry.kind());
             buf.writeVarInt(entry.price());
+            buf.writeVarInt(entry.cost().size());
+            for (Cost cost : entry.cost()) {
+                buf.writeVarInt(cost.items().size());
+                for (ItemStack item : cost.items()) {
+                    ItemStack.STREAM_CODEC.encode(buf, item);
+                }
+                buf.writeVarInt(cost.count());
+                ComponentSerialization.TRUSTED_STREAM_CODEC.encode(buf, cost.name());
+            }
+            // +1: varints are cheapest for small non-negative numbers, and UNLIMITED is -1.
+            buf.writeVarInt(entry.remaining() + 1);
             if (entry.kind() == KIND_ITEM) {
                 ItemStack.STREAM_CODEC.encode(buf, entry.item());
             } else if (entry.kind() == KIND_POKEMON) {
@@ -115,6 +151,7 @@ public record SafariShopPayload(boolean refresh, int points, List<Tab> tabs, Lis
         }
         boolean refresh = buf.readBoolean();
         int points = buf.readVarInt();
+        long rotation = buf.readVarLong();
         int tabCount = buf.readVarInt();
         if (tabCount < 0 || tabCount > MAX_TABS) {
             throw new IllegalStateException("Cobblemon Safari: invalid shop tab count " + tabCount);
@@ -132,8 +169,28 @@ public record SafariShopPayload(boolean refresh, int points, List<Tab> tabs, Lis
             int tab = buf.readVarInt();
             int kind = buf.readVarInt();
             int price = buf.readVarInt();
+            int costCount = buf.readVarInt();
+            if (costCount < 0 || costCount > MAX_COSTS) {
+                throw new IllegalStateException("Cobblemon Safari: invalid shop cost count " + costCount);
+            }
+            List<Cost> cost = new ArrayList<>(costCount);
+            for (int c = 0; c < costCount; c++) {
+                int itemCount = buf.readVarInt();
+                if (itemCount < 1 || itemCount > MAX_COST_ITEMS) {
+                    throw new IllegalStateException("Cobblemon Safari: invalid shop cost item count " + itemCount);
+                }
+                List<ItemStack> items = new ArrayList<>(itemCount);
+                for (int k = 0; k < itemCount; k++) {
+                    items.add(ItemStack.STREAM_CODEC.decode(buf));
+                }
+                int amount = buf.readVarInt();
+                Component name = ComponentSerialization.TRUSTED_STREAM_CODEC.decode(buf);
+                cost.add(new Cost(List.copyOf(items), amount, name));
+            }
+            int remaining = buf.readVarInt() - 1;
             if (kind == KIND_ITEM) {
-                entries.add(new Entry(tab, kind, price, ItemStack.STREAM_CODEC.decode(buf), null, List.of(), 0, false));
+                entries.add(new Entry(tab, kind, price, List.copyOf(cost), remaining, ItemStack.STREAM_CODEC.decode(buf),
+                        null, List.of(), 0, false));
             } else if (kind == KIND_POKEMON) {
                 ResourceLocation species = buf.readResourceLocation();
                 int aspectCount = buf.readVarInt();
@@ -146,12 +203,14 @@ public record SafariShopPayload(boolean refresh, int points, List<Tab> tabs, Lis
                 }
                 int level = buf.readVarInt();
                 boolean shiny = buf.readBoolean();
-                entries.add(new Entry(tab, kind, price, ItemStack.EMPTY, species, List.copyOf(aspects), level, shiny));
+                entries.add(new Entry(tab, kind, price, List.copyOf(cost), remaining, ItemStack.EMPTY, species,
+                        List.copyOf(aspects), level, shiny));
             } else {
-                entries.add(new Entry(tab, KIND_UNAVAILABLE, price, ItemStack.EMPTY, null, List.of(), 0, false));
+                entries.add(new Entry(tab, KIND_UNAVAILABLE, price, List.copyOf(cost), remaining, ItemStack.EMPTY, null,
+                        List.of(), 0, false));
             }
         }
-        return new SafariShopPayload(refresh, points, List.copyOf(tabs), List.copyOf(entries));
+        return new SafariShopPayload(refresh, points, rotation, List.copyOf(tabs), List.copyOf(entries));
     }
 
     @Override

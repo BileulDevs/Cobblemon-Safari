@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Server-side rules of the Safari, serialised as {@code config/cobblemon_safari.json}.
+ * Server-side rules of the Safari, serialised as {@code config/cobblemon_safari/server.json}.
  *
  * <p>Plain data only: validation and derived values live in
  * {@link SafariConfigManager}. Field names are the JSON keys, so renaming a
@@ -25,9 +25,13 @@ public class SafariConfig {
      * Version 9: removed the top-level defaultDurationSeconds (no entry path
      * grants free time any more) and added the gate section.
      * Version 10: added the points and escapeRope sections (no existing value
-     * changes). The shop itself lives in cobblemon_safari_shop.json.
+     * changes). The shop itself lives in cobblemon_safari/shop.json.
      * Version 11: added protection.placeableBlocks (no existing value changes).
      * Version 12: added the bounties section (no existing value changes).
+     * Version 14: added ticket.minAddedSeconds (no existing value changes);
+     * the default specials went from 3 uncommon, 2 rare, 1 ultra-rare to
+     * 1, 2, 3, and files still on the old defaults follow.
+     * Version 15: added the ticketLoot section (no existing value changes).
      * Version 13: the default rotation went from 1440 to 240 minutes; files
      * still on the old default follow it.
      */
@@ -94,6 +98,9 @@ public class SafariConfig {
 
     /** Behaviour of the Safari Ticket item. */
     public Ticket ticket = new Ticket();
+
+    /** Safari Tickets found in overworld chests. */
+    public TicketLoot ticketLoot = new TicketLoot();
 
     /** The Safari Gates found in the overworld: entry, warden and roaming Pokémon. */
     public Gate gate = new Gate();
@@ -226,7 +233,7 @@ public class SafariConfig {
     /**
      * Safari points: a currency separate from Safari time, earned with every
      * capture inside the Safari and spent at the warden's shop
-     * ({@code config/cobblemon_safari_shop.json}).
+     * ({@code config/cobblemon_safari/shop.json}).
      */
     public static class Points {
         /** Master switch: when false, captures earn nothing (the shop still sells for points already earned). */
@@ -329,12 +336,17 @@ public class SafariConfig {
          */
         public Integer rotationHours = null;
 
-        /** Uncommon species featured per rotation. */
-        public int uncommonSlots = 3;
+        /**
+         * Species featured per rotation, by rarity. Weighted toward the rare
+         * end: the specials are what is worth a trip, and the board shows
+         * six of them at most comfortably on a 4 x 2 screen. A slot a rarity
+         * cannot fill goes to the next more common one.
+         */
+        public int uncommonSlots = 1;
         /** Rare species featured per rotation. */
         public int rareSlots = 2;
         /** Ultra-rare species featured per rotation. Legendaries land here when allowed. */
-        public int ultraRareSlots = 1;
+        public int ultraRareSlots = 3;
 
         /** Relative chance of an uncommon special being picked for a spawn. */
         public int weightUncommon = 10;
@@ -440,13 +452,70 @@ public class SafariConfig {
     }
 
     /**
+     * Safari Tickets added to the loot of overworld chests, a reward for
+     * exploring. Read when loot tables load: change it, then /reload (or
+     * restart) for chests generated afterwards; chests already opened keep
+     * what they held.
+     */
+    public static class TicketLoot {
+        /** Master switch. */
+        public boolean enabled = true;
+
+        /**
+         * Loot tables that may hold a ticket, each with its chance per chest
+         * (0 to 1). An id ending in {@code /} covers every table under that
+         * folder, e.g. {@code cobblemon:ruins/common/} for every Cobblemon
+         * ruin. Tables of other mods work too. Chests inside the Safari
+         * itself never hold one, whatever is listed: its map is rebuilt
+         * daily, and its ruins would otherwise hand out tickets forever.
+         */
+        public List<Source> sources = new ArrayList<>(List.of(
+                Source.of("minecraft:chests/village/village_plains_house", 0.05),
+                Source.of("minecraft:chests/village/village_savanna_house", 0.08),
+                Source.of("minecraft:chests/village/village_desert_house", 0.05),
+                Source.of("minecraft:chests/village/village_taiga_house", 0.05),
+                Source.of("minecraft:chests/village/village_snowy_house", 0.05),
+                Source.of("minecraft:chests/desert_pyramid", 0.10),
+                Source.of("minecraft:chests/jungle_temple", 0.10),
+                Source.of("cobblemon:ruins/common/", 0.15)
+        ));
+
+        /** One loot table (or folder of tables) and its chance. */
+        public static class Source {
+            /** Loot table id, or a folder ending in {@code /}. */
+            public String table = "";
+            /** Chance per chest, 0 to 1. */
+            public double chance = 0.0;
+
+            /** Gson needs a no-argument constructor. */
+            public Source() {
+            }
+
+            static Source of(String table, double chance) {
+                Source source = new Source();
+                source.table = table;
+                source.chance = chance;
+                return source;
+            }
+        }
+    }
+
+    /**
      * The Safari Ticket: the built-in item access method. A ticket may carry its
      * own duration in its custom data ({@code duration_seconds}), so tickets
      * sold at different prices can grant different hunts.
      */
     public static class Ticket {
-        /** Duration of a ticket that does not specify one. */
+        /** Time a Safari Ticket adds, unless the ticket carries its own (custom data). */
         public int defaultDurationSeconds = 30 * 60;
+
+        /**
+         * Fewest seconds a ticket may add. When the bank or the hunt is
+         * nearly full, a ticket adds only what fits; if that is less than
+         * this, it is refused and the player keeps it, rather than burning a
+         * ticket for a few seconds. 0 accepts any amount.
+         */
+        public int minAddedSeconds = 20 * 60;
 
         /**
          * Using a ticket while already inside adds its duration to the running

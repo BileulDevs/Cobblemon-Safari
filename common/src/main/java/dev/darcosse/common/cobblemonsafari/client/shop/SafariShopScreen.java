@@ -86,8 +86,38 @@ public class SafariShopScreen extends Screen {
     /** Items are drawn at this multiple of their 16 px icon on cards. */
     private static final float ITEM_SCALE = 2.5F;
     private static final int ITEM_ICON_SIZE = 16;
+    /**
+     * Stack count of an item card: how far it sticks out right of the icon,
+     * and its depth. Item models are drawn up to about z 150 + 16 × scale;
+     * the count must be in front of them or the icon hides it.
+     */
+    private static final float COUNT_OVERHANG = 4.0F;
+    private static final float ITEM_COUNT_Z = 250.0F;
+    private static final int COUNT_COLOR = 0xFFFFFFFF;
     /** Tab icons are drawn at this scale (16 px items, 12 px on the tab). */
     private static final float TAB_ICON_SCALE = 0.75F;
+    /**
+     * Cost icons on trade cards: 16 px items drawn at 10 px to sit on the
+     * price line, the gap before their count, and the space between two
+     * costs. Larger icons push a two-item cost out of the card.
+     */
+    private static final float COST_ICON_SCALE = 0.625F;
+    private static final int COST_ICON_SIZE = 10;
+    private static final int COST_ICON_GAP = 1;
+    private static final int COST_SPACING = 4;
+    /**
+     * How long each kind of a tag cost (each apricorn colour...) shows on
+     * the card, in ms. Shorter flickers, longer hides that several count.
+     */
+    private static final long COST_ICON_CYCLE_MS = 1_000L;
+    /**
+     * Card names wider than the card scroll back and forth, like the Safari
+     * Board's: speed in GUI pixels per second, and the pause at each end.
+     */
+    private static final float NAME_SCROLL_SPEED = 20.0F;
+    private static final long NAME_SCROLL_PAUSE_MS = 1_200L;
+    /** Space kept between a card name and the card's edges. */
+    private static final int NAME_MARGIN = 3;
     /** The level badge on Pokémon cards is drawn at this text scale. */
     private static final float BADGE_SCALE = 0.75F;
 
@@ -159,13 +189,16 @@ public class SafariShopScreen extends Screen {
 
     /** Applies a refresh, keeping the tab, page and selection when they still exist. */
     private void update(SafariShopPayload payload) {
+        // New random Pokémon: the same index may now be another species, so
+        // the selection is dropped rather than silently moved to it.
+        boolean redrawn = payload.rotation() != data.rotation();
         data = payload;
         awaitingServer = false;
         if (tab >= data.tabs().size() || entriesOf(tab).isEmpty()) {
             tab = firstTabWithEntries();
         }
         visible = entriesOf(tab);
-        if (!visible.contains(selected)) {
+        if (redrawn || !visible.contains(selected)) {
             selected = -1;
         }
         page = Math.min(page, Math.max(0, pageCount() - 1));
@@ -200,9 +233,10 @@ public class SafariShopScreen extends Screen {
             buyButton.setMessage(tr("shop.select"));
             buyButton.active = false;
         } else {
-            buyButton.setMessage(tr("shop.buy", SafariPointsIcon.amount(entry.price())));
+            buyButton.setMessage(entry.cost().isEmpty() ? tr("shop.buy", SafariPointsIcon.amount(entry.price()))
+                    : tr("shop.trade"));
             buyButton.active = !awaitingServer && entry.kind() != SafariShopPayload.KIND_UNAVAILABLE
-                    && data.points() >= entry.price();
+                    && entry.remaining() != 0 && data.points() >= entry.price() && hasCostItems(entry);
         }
     }
 
@@ -231,7 +265,7 @@ public class SafariShopScreen extends Screen {
         }
         awaitingServer = true;
         refreshButtons();
-        SafariClientNetwork.sendToServer(new SafariShopBuyPayload(selected, entry.price()));
+        SafariClientNetwork.sendToServer(new SafariShopBuyPayload(selected, entry.price(), data.rotation()));
     }
 
     /** Selects the card or opens the tab under the mouse; otherwise lets the buttons handle the click. */
@@ -445,14 +479,128 @@ public class SafariShopScreen extends Screen {
             graphics.pose().popPose();
         }
 
-        Component name = name(entry);
-        String shown = font.plainSubstrByWidth(name.getString(), CARD_WIDTH - 4);
-        graphics.drawString(font, shown, x + (CARD_WIDTH - font.width(shown)) / 2, pictureBottom + 2,
-                entry.shiny() ? GOLD : TEXT_COLOR);
-        Component price = tr("shop.price_short", SafariPointsIcon.amount(entry.price()));
-        graphics.drawString(font, price, x + (CARD_WIDTH - font.width(price)) / 2,
-                pictureBottom + 2 + font.lineHeight + 2,
-                data.points() >= entry.price() ? PRICE_COLOR : PRICE_TOO_HIGH);
+        drawName(graphics, name(entry), x, pictureBottom + 2, entry.shiny() ? GOLD : TEXT_COLOR);
+        int priceY = pictureBottom + 2 + font.lineHeight + 2;
+        if (entry.cost().isEmpty()) {
+            Component price = tr("shop.price_short", SafariPointsIcon.amount(entry.price()));
+            graphics.drawString(font, price, x + (CARD_WIDTH - font.width(price)) / 2, priceY,
+                    data.points() >= entry.price() ? PRICE_COLOR : PRICE_TOO_HIGH);
+        } else {
+            drawCost(graphics, entry, x, priceY);
+        }
+        if (entry.remaining() != SafariShopPayload.UNLIMITED) {
+            drawRemaining(graphics, entry.remaining(), x1, y);
+        }
+    }
+
+    /**
+     * A card's name, centred when it fits; otherwise clipped to the card and
+     * scrolled back and forth with a pause at each end, so the whole name
+     * can be read (it used to be cut off).
+     */
+    private void drawName(GuiGraphics graphics, Component name, int x, int y, int colour) {
+        int available = CARD_WIDTH - 2 * NAME_MARGIN;
+        int width = font.width(name);
+        if (width <= available) {
+            graphics.drawString(font, name, x + (CARD_WIDTH - width) / 2, y, colour);
+            return;
+        }
+        int overflow = width - available;
+        long travel = (long) (overflow / NAME_SCROLL_SPEED * 1000.0F);
+        long cycle = 2L * (travel + NAME_SCROLL_PAUSE_MS);
+        long t = System.currentTimeMillis() % cycle;
+        float offset;
+        if (t < NAME_SCROLL_PAUSE_MS) {
+            offset = 0.0F;
+        } else if (t < NAME_SCROLL_PAUSE_MS + travel) {
+            offset = overflow * (t - NAME_SCROLL_PAUSE_MS) / (float) travel;
+        } else if (t < 2L * NAME_SCROLL_PAUSE_MS + travel) {
+            offset = overflow;
+        } else {
+            offset = overflow * (1.0F - (t - 2L * NAME_SCROLL_PAUSE_MS - travel) / (float) travel);
+        }
+        int left = x + NAME_MARGIN;
+        graphics.enableScissor(left, y - 1, left + available, y + font.lineHeight);
+        graphics.pose().pushPose();
+        graphics.pose().translate(left - offset, y, 0.0F);
+        graphics.drawString(font, name, 0, 0, colour);
+        graphics.pose().popPose();
+        graphics.disableScissor();
+    }
+
+    /**
+     * The items a trade asks for, as small icons each followed by its count,
+     * centred on the price line: red counts for what the player lacks.
+     * Points, when the trade also costs some, come last.
+     */
+    private void drawCost(GuiGraphics graphics, SafariShopPayload.Entry entry, int x, int y) {
+        List<Component> counts = new ArrayList<>();
+        int width = 0;
+        for (SafariShopPayload.Cost cost : entry.cost()) {
+            Component count = Component.literal("×" + cost.count());
+            counts.add(count);
+            width += COST_ICON_SIZE + COST_ICON_GAP + font.width(count) + COST_SPACING;
+        }
+        Component points = entry.price() > 0 ? tr("shop.price_short", SafariPointsIcon.amount(entry.price())) : null;
+        width += points == null ? -COST_SPACING : font.width(points);
+        int cursor = x + (CARD_WIDTH - width) / 2;
+        for (int i = 0; i < entry.cost().size(); i++) {
+            SafariShopPayload.Cost cost = entry.cost().get(i);
+            graphics.pose().pushPose();
+            // Icon centred on the text line, which is a little shorter than the icon.
+            graphics.pose().translate(cursor, y + (font.lineHeight - COST_ICON_SIZE) / 2.0F - 1.0F, 0.0F);
+            graphics.pose().scale(COST_ICON_SCALE, COST_ICON_SCALE, 1.0F);
+            graphics.renderFakeItem(shownItem(cost), 0, 0);
+            graphics.pose().popPose();
+            cursor += COST_ICON_SIZE + COST_ICON_GAP;
+            boolean enough = carried(cost) >= cost.count();
+            graphics.drawString(font, counts.get(i), cursor, y, enough ? PRICE_COLOR : PRICE_TOO_HIGH);
+            cursor += font.width(counts.get(i)) + COST_SPACING;
+        }
+        if (points != null) {
+            graphics.drawString(font, points, cursor, y, data.points() >= entry.price() ? PRICE_COLOR : PRICE_TOO_HIGH);
+        }
+    }
+
+    /** "2 left" (or "Sold out") in the top right corner of a limited card, small like the level badge. */
+    private void drawRemaining(GuiGraphics graphics, int remaining, int right, int y) {
+        Component text = remaining > 0 ? tr("shop.remaining", remaining) : tr("shop.sold_out");
+        graphics.pose().pushPose();
+        graphics.pose().translate(right - 3 - font.width(text) * BADGE_SCALE, y + 3, 200.0F);
+        graphics.pose().scale(BADGE_SCALE, BADGE_SCALE, 1.0F);
+        graphics.drawString(font, text, 0, 0, remaining > 0 ? MUTED_COLOR : PRICE_TOO_HIGH);
+        graphics.pose().popPose();
+    }
+
+    /**
+     * The icon of a cost: its item, or for a tag each accepted item in turn,
+     * so the card shows what kinds count.
+     */
+    private static ItemStack shownItem(SafariShopPayload.Cost cost) {
+        int index = (int) ((System.currentTimeMillis() / COST_ICON_CYCLE_MS) % cost.items().size());
+        return cost.items().get(index);
+    }
+
+    /** How many of a cost's items the local player carries, all kinds together. Client-side guess; the server counts again. */
+    private int carried(SafariShopPayload.Cost cost) {
+        if (minecraft == null || minecraft.player == null) {
+            return 0;
+        }
+        int total = 0;
+        for (ItemStack item : cost.items()) {
+            total += minecraft.player.getInventory().countItem(item.getItem());
+        }
+        return total;
+    }
+
+    /** Whether the local player carries every item a trade asks for. */
+    private boolean hasCostItems(SafariShopPayload.Entry entry) {
+        for (SafariShopPayload.Cost cost : entry.cost()) {
+            if (carried(cost) < cost.count()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -473,8 +621,19 @@ public class SafariShopScreen extends Screen {
         graphics.pose().translate(x + (CARD_WIDTH - size) / 2.0F, y + (PICTURE_HEIGHT - size) / 2.0F, 0.0F);
         graphics.pose().scale(ITEM_SCALE, ITEM_SCALE, 1.0F);
         graphics.renderItem(stack, 0, 0);
-        graphics.renderItemDecorations(font, stack, 0, 0);
         graphics.pose().popPose();
+        if (stack.getCount() > 1) {
+            // Not renderItemDecorations: under the icon's scale the count
+            // grew with it and covered half the item. Drawn at text size
+            // instead, tucked into the icon's bottom-right corner.
+            String count = "×" + stack.getCount();
+            float right = x + (CARD_WIDTH + size) / 2.0F + COUNT_OVERHANG;
+            float bottom = y + (PICTURE_HEIGHT + size) / 2.0F;
+            graphics.pose().pushPose();
+            graphics.pose().translate(right - font.width(count), bottom - font.lineHeight, ITEM_COUNT_Z);
+            graphics.drawString(font, count, 0, 0, COUNT_COLOR, true);
+            graphics.pose().popPose();
+        }
     }
 
     /** What a card is called: species, item name, or "unavailable". The level is a badge, see {@link #drawCard}. */

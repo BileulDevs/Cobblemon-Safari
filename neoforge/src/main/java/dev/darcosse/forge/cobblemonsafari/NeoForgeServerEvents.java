@@ -4,6 +4,8 @@ import dev.darcosse.common.cobblemonsafari.event.SafariServerEvents;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import dev.darcosse.common.cobblemonsafari.loot.TicketLoot;
+import net.neoforged.neoforge.event.LootTableLoadEvent;
 import net.neoforged.neoforge.event.OnDatapackSyncEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
@@ -40,6 +42,14 @@ public final class NeoForgeServerEvents {
         if (event.getPlayer() == null) {
             SafariServerEvents.onDataReload(event.getPlayerList().getServer());
         }
+    }
+
+    /**
+     * A loot table is loading: adds the Safari Ticket pool to the tables the
+     * server config lists, like Fabric's LootTableEvents.MODIFY.
+     */
+    static void onLootTableLoad(LootTableLoadEvent event) {
+        TicketLoot.poolFor(event.getName()).ifPresent(pool -> event.getTable().addPool(pool.build()));
     }
 
     /** Post, like Fabric's END_SERVER_TICK, so both loaders see the same world state. */

@@ -32,10 +32,12 @@ import java.util.Optional;
  * player then spends the bank to enter. Used inside, it extends the running
  * session when the config allows it.
  *
- * <p>The 15 min, 30 min and 1 h tickets carry a fixed duration. The plain
- * ticket uses the configured default, or its own custom data, e.g.
+ * <p>A ticket adds {@code ticket.defaultDurationSeconds} (30 min by default),
+ * or the length written in its own custom data, e.g.
  * {@code /give @p cobblemon_safari:safari_ticket[custom_data={duration_seconds:600}]},
- * so a shop can still sell any length.
+ * so a server can still hand out other lengths. When the bank (or the hunt)
+ * is nearly full, the ticket adds only what fits, but never less than
+ * {@code ticket.minAddedSeconds}: below that it is refused and kept.
  */
 public class SafariTicketItem extends Item {
 
@@ -47,17 +49,9 @@ public class SafariTicketItem extends Item {
 
     private static final MapCodec<Integer> DURATION_FIELD = Codec.INT.fieldOf(DURATION_KEY);
 
-    /** Duration printed on the item, in seconds; 0 for the plain ticket (default or custom data). */
-    private final int fixedDurationSeconds;
-
-    /**
-     * Ticket item; properties come from {@link SafariItems}.
-     *
-     * @param fixedDurationSeconds duration of every ticket of this item, or 0 for the plain ticket
-     */
-    public SafariTicketItem(Properties properties, int fixedDurationSeconds) {
+    /** Ticket item; properties come from {@link SafariItems}. */
+    public SafariTicketItem(Properties properties) {
         super(properties);
-        this.fixedDurationSeconds = fixedDurationSeconds;
     }
 
     /**
@@ -86,7 +80,7 @@ public class SafariTicketItem extends Item {
                                 TooltipFlag flag) {
         // The client does not know the server's default, so only an explicit
         // duration can be shown as a number.
-        Component duration = fixedOrCustomDuration(stack)
+        Component duration = customDuration(stack)
                 .<Component>map(seconds -> Component.literal(Ticks.format(Ticks.fromSeconds(seconds))))
                 .orElseGet(() -> Component.translatable(CobblemonSafari.MOD_ID + ".item.safari_ticket.standard"));
         tooltip.add(Component.translatable(CobblemonSafari.MOD_ID + ".item.safari_ticket.duration", duration)
@@ -103,35 +97,53 @@ public class SafariTicketItem extends Item {
      */
     private boolean redeem(ServerPlayer player, ItemStack stack) {
         SafariConfig.Ticket config = SafariConfigManager.get().ticket;
-        int ticks = Ticks.fromSeconds(fixedOrCustomDuration(stack).orElse(config.defaultDurationSeconds));
+        int ticks = Ticks.fromSeconds(customDuration(stack).orElse(config.defaultDurationSeconds));
+        // A ticket shorter than the minimum only needs room for itself.
+        int minimum = Math.min(ticks, Ticks.fromSeconds(config.minAddedSeconds));
         SafariSession session = SafariSessionManager.getSession(player);
 
         if (session != null && config.extendsActiveSession) {
             int before = session.remainingTicks();
-            int after = SafariSessionManager.addTime(player, ticks);
-            // Already at the cap: consuming the ticket would take it for nothing.
-            if (after <= before) {
-                player.displayClientMessage(Component.translatable(key("message.ticket_at_max")), true);
+            int room = SafariConfigManager.maxDurationTicks() - before;
+            if (!hasRoom(player, room, minimum, "message.ticket_at_max")) {
                 return false;
             }
+            int after = SafariSessionManager.addTime(player, Math.min(ticks, room));
             player.displayClientMessage(Component.translatable(key("message.ticket_extended"),
                     Ticks.format(after - before), Ticks.format(after)), true);
             return true;
         }
 
-        int added = SafariCredit.add(player, ticks);
-        if (added <= 0) {
-            player.displayClientMessage(Component.translatable(key("message.credit_full")), true);
+        int room = Ticks.fromSeconds(config.maxCreditSeconds) - SafariCredit.balance(player);
+        if (!hasRoom(player, room, minimum, "message.credit_full")) {
             return false;
         }
+        int added = SafariCredit.add(player, Math.min(ticks, room));
         player.displayClientMessage(Component.translatable(key("message.credit_added"),
                 Ticks.format(added), Ticks.format(SafariCredit.balance(player))), true);
         return true;
     }
 
-    /** The item's fixed duration, or else the one written in its custom data. */
-    private Optional<Integer> fixedOrCustomDuration(ItemStack stack) {
-        return fixedDurationSeconds > 0 ? Optional.of(fixedDurationSeconds) : customDuration(stack);
+    /**
+     * Whether a ticket may be used given the room left under the cap; tells
+     * the player why not otherwise. No room at all and too little room get
+     * different messages: "full" is clearer than "only 0:00 left".
+     *
+     * @param room       ticks that can still be added before the cap
+     * @param minimum    fewest ticks the ticket may add
+     * @param fullKey    message key for a completely full bank or hunt
+     */
+    private static boolean hasRoom(ServerPlayer player, int room, int minimum, String fullKey) {
+        if (room <= 0) {
+            player.displayClientMessage(Component.translatable(key(fullKey)), true);
+            return false;
+        }
+        if (room < minimum) {
+            player.displayClientMessage(Component.translatable(key("message.ticket_too_little_room"),
+                    Ticks.format(room), Ticks.format(minimum)), true);
+            return false;
+        }
+        return true;
     }
 
     /** The duration written on the ticket, if any and positive. */

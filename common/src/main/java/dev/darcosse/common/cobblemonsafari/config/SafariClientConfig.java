@@ -1,7 +1,7 @@
 package dev.darcosse.common.cobblemonsafari.config;
 
 /**
- * Per-player display preferences, serialised as {@code config/cobblemon_safari-client.json}.
+ * Per-player display preferences, serialised as {@code config/cobblemon_safari/client.json}.
  *
  * <p>Separate from {@link SafariConfig} because these belong to the player, not
  * to the server: a server must never be able to move someone's HUD.
@@ -18,27 +18,19 @@ public class SafariClientConfig {
     public HudAnchor hudAnchor = HudAnchor.BOTTOM_CENTER;
 
     /**
-     * Offset from the anchor, in GUI pixels. The default sits the timer just
-     * above the vanilla action bar (drawn 68 px from the bottom), so Safari
-     * warnings shown in the action bar never cover it.
+     * Offset of the centre of the timer's Safari Ball from the anchor, in
+     * GUI pixels. The default puts it left of the hotbar, clear of the
+     * off-hand slot (the hotbar is 182 px wide, the off-hand slot 29 px
+     * beyond it), the time under the ball level with the hotbar.
      */
-    public int hudOffsetX = 0;
-    public int hudOffsetY = -84;
+    public int hudOffsetX = SafariClientConfigManager.DEFAULT_HUD_OFFSET_X;
+    public int hudOffsetY = SafariClientConfigManager.DEFAULT_HUD_OFFSET_Y;
 
     /** Below this many seconds the timer turns amber. */
     public int lowTimeSeconds = 60;
 
-    /** Below this many seconds the timer turns red and pulses. */
+    /** Below this many seconds the timer turns red and pulses, and the ball rocks faster. */
     public int criticalTimeSeconds = 10;
-
-    /** Shows the "Safari" label in front of the time. */
-    public boolean showLabel = true;
-
-    /** Shows how many loaned Safari Balls are left (only when the server lends balls). */
-    public boolean showBalls = true;
-
-    /** Shows how many Pokémon were caught this session. */
-    public boolean showCatches = true;
 
     /** Colours of the Safari Board screens. */
     public Board board = new Board();
@@ -87,6 +79,14 @@ public class SafariClientConfig {
         public String shimmer = "#50FFFFFF";
         /** Flash when the list changes; its alpha is the flash's peak. */
         public String flash = "#90FFFFFF";
+
+        /**
+         * How the Pokémon are drawn on the screens: {@code MODEL}, their
+         * turning 3D Cobblemon model, or {@code SPRITE}, the flat picture the
+         * mod ships (textures/pokemon_sprites, which resource packs can
+         * override). A Pokémon without a sprite falls back to its model.
+         */
+        public PokemonDisplay pokemonDisplay = PokemonDisplay.MODEL;
 
         /**
          * Shows the safari landscape of the time of day behind the screen

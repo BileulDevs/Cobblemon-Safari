@@ -94,7 +94,7 @@ public final class LoanedBalls {
         return taken;
     }
 
-    /** How many loaned balls the player carries. Safe on both sides; used every frame by the HUD. */
+    /** How many loaned balls the player carries. Safe on both sides, cheap enough to call every frame. */
     public static int count(Player player) {
         Inventory inventory = player.getInventory();
         int total = 0;

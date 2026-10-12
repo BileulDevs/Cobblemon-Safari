@@ -25,7 +25,10 @@ import java.util.Set;
  */
 public final class SafariConfigManager {
 
-    private static final String FILE_NAME = CobblemonSafari.MOD_ID + ".json";
+    /** Path under the config directory: the mod's folder keeps its files together. */
+    private static final String FILE_NAME = CobblemonSafari.MOD_ID + "/server.json";
+    /** Where the file lived before the mod had its own config folder; moved into it on load. */
+    private static final String LEGACY_FILE_NAME = CobblemonSafari.MOD_ID + ".json";
 
     private static final int MINUTES_PER_HOUR = 60;
     /** Last valid hour of the day for reset.hour. */
@@ -59,7 +62,7 @@ public final class SafariConfigManager {
     private static final int MAX_BOUNTIES = 8;
 
     /** Version written by this build. Raise it together with a new step in {@link #migrate}. */
-    public static final int CURRENT_CONFIG_VERSION = 13;
+    public static final int CURRENT_CONFIG_VERSION = 15;
 
     /**
      * Default length of a featured rotation, in minutes: four hours, so the
@@ -73,6 +76,15 @@ public final class SafariConfigManager {
      * other value was chosen by the admin and is kept.
      */
     private static final int LEGACY_DEFAULT_ROTATION_MINUTES = 1440;
+
+    /**
+     * Special slots by default before version 14. A file holding exactly
+     * these never changed them and gets the new defaults; any other mix was
+     * chosen by the admin and is kept.
+     */
+    private static final int LEGACY_UNCOMMON_SLOTS = 3;
+    private static final int LEGACY_RARE_SLOTS = 2;
+    private static final int LEGACY_ULTRA_RARE_SLOTS = 1;
 
     /**
      * Upper bound on loaned balls. A full inventory holds 36 stacks; beyond a
@@ -100,7 +112,7 @@ public final class SafariConfigManager {
     private static final float MAX_SPREAD_FRACTION_OF_BORDER = 0.5f;
 
     private static final JsonConfigFile<SafariConfig> FILE =
-            new JsonConfigFile<>(FILE_NAME, SafariConfig.class, SafariConfig::new);
+            new JsonConfigFile<>(FILE_NAME, LEGACY_FILE_NAME, SafariConfig.class, SafariConfig::new);
 
     private static SafariConfig config = new SafariConfig();
     private static Set<ResourceLocation> allowedBalls = Set.of();
@@ -274,6 +286,22 @@ public final class SafariConfigManager {
                     + "default {} to the new default {}", FILE_NAME, LEGACY_DEFAULT_ROTATION_MINUTES,
                     DEFAULT_ROTATION_MINUTES);
         }
+        if (c.configVersion < 14) {
+            CobblemonSafari.LOGGER.info("Migrated {} to version 14: added ticket.minAddedSeconds", FILE_NAME);
+            SafariConfig.Featured f = c.featured;
+            if (f != null && f.uncommonSlots == LEGACY_UNCOMMON_SLOTS && f.rareSlots == LEGACY_RARE_SLOTS
+                    && f.ultraRareSlots == LEGACY_ULTRA_RARE_SLOTS) {
+                SafariConfig.Featured defaults = new SafariConfig.Featured();
+                f.uncommonSlots = defaults.uncommonSlots;
+                f.rareSlots = defaults.rareSlots;
+                f.ultraRareSlots = defaults.ultraRareSlots;
+                CobblemonSafari.LOGGER.info("Migrated {}: default specials are now {} uncommon, {} rare, {} ultra-rare",
+                        FILE_NAME, f.uncommonSlots, f.rareSlots, f.ultraRareSlots);
+            }
+        }
+        if (c.configVersion < 15) {
+            CobblemonSafari.LOGGER.info("Migrated {} to version 15: added the ticketLoot section", FILE_NAME);
+        }
         if (c.configVersion < 9) {
             // The old key is simply ignored by Gson and dropped on rewrite.
             CobblemonSafari.LOGGER.info("Migrated {} to version 9: defaultDurationSeconds removed (entry now always "
@@ -428,6 +456,33 @@ public final class SafariConfigManager {
             int fixed = new SafariConfig.Ticket().defaultDurationSeconds;
             warn("ticket.defaultDurationSeconds", c.ticket.defaultDurationSeconds, fixed);
             c.ticket.defaultDurationSeconds = fixed;
+            corrected = true;
+        }
+        if (c.ticketLoot == null) {
+            c.ticketLoot = new SafariConfig.TicketLoot();
+            corrected = true;
+        }
+        if (c.ticketLoot.sources == null) {
+            c.ticketLoot.sources = new ArrayList<>();
+            corrected = true;
+        }
+        int sourceCount = c.ticketLoot.sources.size();
+        c.ticketLoot.sources.removeIf(source -> source == null || source.table == null
+                || ResourceLocation.tryParse(source.table) == null);
+        if (c.ticketLoot.sources.size() != sourceCount) {
+            CobblemonSafari.LOGGER.warn("Removed ticketLoot sources with an invalid table id from {}", FILE_NAME);
+            corrected = true;
+        }
+        for (SafariConfig.TicketLoot.Source source : c.ticketLoot.sources) {
+            if (!(source.chance >= 0.0D && source.chance <= 1.0D)) {
+                warn("ticketLoot chance of " + source.table, source.chance, 0);
+                source.chance = Math.max(0.0D, Math.min(1.0D, Double.isNaN(source.chance) ? 0.0D : source.chance));
+                corrected = true;
+            }
+        }
+        if (c.ticket.minAddedSeconds < 0) {
+            warn("ticket.minAddedSeconds", c.ticket.minAddedSeconds, 0);
+            c.ticket.minAddedSeconds = 0;
             corrected = true;
         }
         if (c.ticket.maxCreditSeconds < 0) {

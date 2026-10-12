@@ -1,10 +1,10 @@
 package dev.darcosse.common.cobblemonsafari.client.hud;
 
+import com.mojang.math.Axis;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.client.SafariClientState;
 import dev.darcosse.common.cobblemonsafari.config.SafariClientConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariClientConfigManager;
-import dev.darcosse.common.cobblemonsafari.loan.LoanedBalls;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -13,37 +13,53 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
- * Draws the remaining Safari time. CLIENT ONLY: never reference this class from
- * code that can run on a dedicated server.
+ * Draws the remaining Safari time: a Safari Ball that rocks gently, faster
+ * when time runs low, with the time under it. CLIENT ONLY: never reference
+ * this class from code that can run on a dedicated server.
  *
  * <p>Runs every frame while the HUD is drawn, so it only reads cached state:
- * a few small text components and one short list per frame, no config file access.
- * Cost per frame: one pass over the 41 inventory slots to count loaned balls.
+ * one formatted string and one texture blit per frame, no config file access.
  */
 public final class SafariTimerHud {
 
     /** Id of the HUD layer on NeoForge; also a stable name for other mods to order against. */
     public static final ResourceLocation LAYER_ID = CobblemonSafari.id("timer");
 
-    /** Inner padding of the background panel, in GUI pixels. */
-    private static final int PADDING = 4;
-    /** Semi-transparent black, readable over snow and sand alike. */
-    private static final int PANEL_COLOR = 0x90000000;
-    private static final int LABEL_COLOR = 0xFFB8E07A;
-    private static final int CATCHES_COLOR = 0xFFE8D27A;
-    /** Faint vertical line between statistics; fully opaque lines look like glitches on bright sand. */
-    private static final int DIVIDER_COLOR = 0x60FFFFFF;
     /**
-     * Horizontal space between two segments. Below ~6 the dividers touch the
-     * text; above ~14 the panel stretches across a 320 px wide GUI.
+     * Cobblemon's own Safari Ball item texture (16 x 16), read from its
+     * resources rather than copied, so a resource pack restyling the ball
+     * restyles the timer too.
      */
-    private static final int SEGMENT_GAP = 8;
-    /** Label, time, balls, catches: sizes the list once instead of growing it every frame. */
-    private static final int MAX_SEGMENTS = 4;
+    private static final ResourceLocation BALL_TEXTURE =
+            ResourceLocation.fromNamespaceAndPath("cobblemon", "textures/item/poke_balls/safari_ball.png");
+    private static final int TEXTURE_SIZE = 16;
+    /**
+     * Size of the texture on screen, in GUI pixels: one per texel, like an
+     * item in the hotbar, which keeps it crisp. The ball itself is the
+     * middle 12 x 12; a non-integer scale (e.g. 18) would give it uneven
+     * pixels.
+     */
+    private static final int BALL_SIZE = 16;
+    /** Transparent margin of the texture around the ball, in GUI pixels: the time tucks under the ball, not the margin. */
+    private static final int BALL_MARGIN = 2;
+
+    /** Scale of the time text: the normal font size, matching the smaller ball. */
+    private static final float TEXT_SCALE = 1.0F;
+    /** Gap between the bottom of the ball and the top of the time, in GUI pixels. */
+    private static final int TEXT_GAP = 1;
+
+    /**
+     * Rocking of the ball: one swing every this many ticks, up to this angle
+     * each way. Below the critical time it swings this many times faster,
+     * like a ball about to break free.
+     */
+    private static final float SWING_PERIOD_TICKS = 80.0F;
+    private static final float SWING_DEGREES = 30.0F;
+    private static final float CRITICAL_SWING_SPEED = 5.0F;
+
+    /** Keeps the whole widget this far inside the screen whatever the offset. */
+    private static final int SCREEN_MARGIN = 2;
 
     private SafariTimerHud() {
     }
@@ -70,60 +86,46 @@ public final class SafariTimerHud {
         }
 
         Font font = minecraft.font;
-        List<Segment> segments = new ArrayList<>(MAX_SEGMENTS);
-        if (config.showLabel) {
-            segments.add(new Segment(Component.translatable(CobblemonSafari.MOD_ID + ".hud.label"), LABEL_COLOR));
-        }
-        segments.add(new Segment(remaining > 0
+        Component time = remaining > 0
                 ? Component.literal(Ticks.format(remaining))
-                : Component.translatable(CobblemonSafari.MOD_ID + ".hud.time_up"),
-                TimerStyle.color(remaining, gameTime, config)));
-        if (config.showBalls && SafariClientState.ballsLoaned() > 0) {
-            // Counted from the client's own inventory rather than sent by the
-            // server: the inventory is already synced, and this reacts on the
-            // very frame a ball is thrown or picked back up.
-            int balls = minecraft.player != null ? LoanedBalls.count(minecraft.player) : 0;
-            segments.add(new Segment(Component.translatable(CobblemonSafari.MOD_ID + ".hud.balls", balls),
-                    TimerStyle.ballColor(balls)));
-        }
-        if (config.showCatches) {
-            segments.add(new Segment(Component.translatable(CobblemonSafari.MOD_ID + ".hud.catches",
-                    SafariClientState.catches()), CATCHES_COLOR));
-        }
+                : Component.translatable(CobblemonSafari.MOD_ID + ".hud.time_up");
+        int textWidth = Math.round(font.width(time) * TEXT_SCALE);
+        int halfWidth = Math.max(BALL_SIZE, textWidth) / 2;
+        int height = BALL_SIZE - BALL_MARGIN + TEXT_GAP + Math.round(font.lineHeight * TEXT_SCALE);
 
-        int width = PADDING * 2 + SEGMENT_GAP * (segments.size() - 1);
-        for (Segment segment : segments) {
-            width += font.width(segment.text());
-        }
-        int height = font.lineHeight + PADDING * 2;
+        // The pivot is the centre of the ball; the anchor and offset place it.
+        int pivotX = Math.round(graphics.guiWidth() * config.hudAnchor.xFraction) + config.hudOffsetX;
+        int pivotY = Math.round(graphics.guiHeight() * config.hudAnchor.yFraction) + config.hudOffsetY;
+        pivotX = clamp(pivotX, halfWidth + SCREEN_MARGIN, graphics.guiWidth() - halfWidth - SCREEN_MARGIN);
+        pivotY = clamp(pivotY, BALL_SIZE / 2 + SCREEN_MARGIN,
+                graphics.guiHeight() - (height - BALL_SIZE / 2) - SCREEN_MARGIN);
 
-        int x = Math.round(graphics.guiWidth() * config.hudAnchor.xFraction - width * config.hudAnchor.xFraction)
-                + config.hudOffsetX;
-        int y = Math.round(graphics.guiHeight() * config.hudAnchor.yFraction - height * config.hudAnchor.yFraction)
-                + config.hudOffsetY;
-        // Keep the panel on screen whatever the offset and GUI scale.
-        x = Math.max(0, Math.min(x, graphics.guiWidth() - width));
-        y = Math.max(0, Math.min(y, graphics.guiHeight() - height));
+        graphics.pose().pushPose();
+        graphics.pose().translate(pivotX, pivotY, 0.0F);
 
-        graphics.fill(x, y, x + width, y + height, PANEL_COLOR);
-        int textY = y + PADDING + 1;
-        int cursor = x + PADDING;
-        for (int i = 0; i < segments.size(); i++) {
-            Segment segment = segments.get(i);
-            if (i > 0) {
-                // Thin divider centred in the gap; skipped after the label,
-                // which reads as a title for the time rather than a separate stat.
-                if (!(i == 1 && config.showLabel)) {
-                    int dividerX = cursor - SEGMENT_GAP / 2 - 1;
-                    graphics.fill(dividerX, y + PADDING, dividerX + 1, y + height - PADDING, DIVIDER_COLOR);
-                }
-            }
-            graphics.drawString(font, segment.text(), cursor, textY, segment.color(), true);
-            cursor += font.width(segment.text()) + SEGMENT_GAP;
-        }
+        // Driven by the game clock plus the partial tick, so the swing is
+        // smooth at any frame rate; it pauses with the game, like the timer.
+        float ticks = gameTime + deltaTracker.getGameTimeDeltaPartialTick(false);
+        boolean critical = remaining > 0 && Ticks.toSecondsCeil(remaining) <= config.criticalTimeSeconds;
+        float speed = critical ? CRITICAL_SWING_SPEED : 1.0F;
+        float swing = (float) Math.sin(2.0D * Math.PI * ticks * speed / SWING_PERIOD_TICKS);
+        graphics.pose().pushPose();
+        graphics.pose().mulPose(Axis.ZP.rotationDegrees(swing * SWING_DEGREES));
+        graphics.blit(BALL_TEXTURE, -BALL_SIZE / 2, -BALL_SIZE / 2, 0.0F, 0.0F, BALL_SIZE, BALL_SIZE,
+                TEXTURE_SIZE, TEXTURE_SIZE);
+        graphics.pose().popPose();
+
+        graphics.pose().pushPose();
+        graphics.pose().translate(0.0F, BALL_SIZE / 2.0F - BALL_MARGIN + TEXT_GAP, 0.0F);
+        graphics.pose().scale(TEXT_SCALE, TEXT_SCALE, 1.0F);
+        graphics.drawString(font, time, -font.width(time) / 2, 0, TimerStyle.color(remaining, gameTime, config), true);
+        graphics.pose().popPose();
+
+        graphics.pose().popPose();
     }
 
-    /** One piece of text of the panel with its colour. */
-    private record Segment(Component text, int color) {
+    /** A value kept within bounds; the lower bound wins on a screen too small for both. */
+    private static int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(value, max));
     }
 }

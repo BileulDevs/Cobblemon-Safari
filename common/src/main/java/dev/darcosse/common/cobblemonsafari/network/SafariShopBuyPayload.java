@@ -14,11 +14,15 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
  *
  * @param index         position of the entry in the shop list
  * @param expectedPrice price shown on the screen
+ * @param rotation      rotation the screen's random Pokémon belong to (from {@link SafariShopPayload#rotation})
  */
-public record SafariShopBuyPayload(int index, int expectedPrice) implements CustomPacketPayload {
+public record SafariShopBuyPayload(int index, int expectedPrice, long rotation) implements CustomPacketPayload {
 
-    /** Wire format version. Bump on EVERY change to write/read. v1: first version. */
-    public static final int WIRE_VERSION = 1;
+    /**
+     * Wire format version. Bump on EVERY change to write/read.
+     * v1: first version. v2: rotation.
+     */
+    public static final int WIRE_VERSION = 2;
 
     public static final CustomPacketPayload.Type<SafariShopBuyPayload> TYPE =
             new CustomPacketPayload.Type<>(CobblemonSafari.id("shop_buy"));
@@ -32,6 +36,7 @@ public record SafariShopBuyPayload(int index, int expectedPrice) implements Cust
         buf.writeVarInt(WIRE_VERSION);
         buf.writeVarInt(index);
         buf.writeVarInt(expectedPrice);
+        buf.writeVarLong(rotation);
     }
 
     /** MUST list the same fields in the same order as {@link #write}. */
@@ -41,7 +46,10 @@ public record SafariShopBuyPayload(int index, int expectedPrice) implements Cust
             throw new IllegalStateException("Cobblemon Safari: shop purchase wire version mismatch (got " + version
                     + ", expected " + WIRE_VERSION + ").");
         }
-        return new SafariShopBuyPayload(buf.readVarInt(), buf.readVarInt());
+        int index = buf.readVarInt();
+        int expectedPrice = buf.readVarInt();
+        long rotation = buf.readVarLong();
+        return new SafariShopBuyPayload(index, expectedPrice, rotation);
     }
 
     @Override

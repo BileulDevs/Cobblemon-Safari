@@ -70,11 +70,21 @@ public class SafariGateBlock extends Block implements EntityBlock, Portal {
     private static final VoxelShape SHAPE_Z = Block.box(PANE_MIN, 0.0D, 0.0D, PANE_MAX, 16.0D, 16.0D);
 
     /**
-     * One particle per this many animation ticks per block, on average. The
-     * client calls animateTick for every nearby block about once per tick, so
-     * a whole gate of twelve blocks gives a few sparkles a second.
+     * Particles of the spore blossom drifting around the pane: one floating
+     * spore per pane block every this many client ticks on average, and a
+     * falling blossom petal more rarely. The client calls animateTick about
+     * once per tick for each nearby block, so a twelve-block gate shows
+     * about six floating spores and one petal a second. A spore blossom
+     * itself throws fourteen spores a tick over ten blocks: copied as is, a
+     * gate would fill the plaza.
      */
-    private static final int PARTICLE_ONE_IN = 6;
+    private static final int SPORE_ONE_IN = 2;
+    private static final int PETAL_ONE_IN = 12;
+    /**
+     * How far the floating spores drift from the pane's plane, in blocks
+     * each way. Within a block they read as coming from the pane.
+     */
+    private static final double SPORE_SPREAD = 1.0D;
 
     /**
      * Extra ticks the client keeps spinning after the countdown, so the swirl
@@ -221,20 +231,27 @@ public class SafariGateBlock extends Block implements EntityBlock, Portal {
     }
 
     /**
-     * Sparkles, and the gate's relaxed tune (in place of the nether portal's
+     * Spore blossom spores and petals, and the gate's relaxed tune (in place of the nether portal's
      * hum), so the gate reads as active from a distance. The tune is a loop
      * the client keeps once per gate; this only makes sure it is playing.
      */
     @Override
     public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
         GateClientHooks.onPaneAnimated(level, pos);
-        if (random.nextInt(PARTICLE_ONE_IN) != 0) {
-            return;
+        if (random.nextInt(SPORE_ONE_IN) == 0) {
+            // Spread across the pane's plane only, so the spores hang in front
+            // of and behind the doorway rather than inside the posts.
+            boolean alongX = state.getValue(AXIS) == Direction.Axis.X;
+            double spread = (random.nextDouble() * 2.0D - 1.0D) * SPORE_SPREAD;
+            double x = pos.getX() + random.nextDouble() + (alongX ? 0.0D : spread);
+            double y = pos.getY() + random.nextDouble();
+            double z = pos.getZ() + random.nextDouble() + (alongX ? spread : 0.0D);
+            level.addParticle(ParticleTypes.SPORE_BLOSSOM_AIR, x, y, z, 0.0D, 0.0D, 0.0D);
         }
-        double x = pos.getX() + random.nextDouble();
-        double y = pos.getY() + random.nextDouble();
-        double z = pos.getZ() + random.nextDouble();
-        level.addParticle(ParticleTypes.HAPPY_VILLAGER, x, y, z, 0.0D, 0.0D, 0.0D);
+        if (random.nextInt(PETAL_ONE_IN) == 0) {
+            level.addParticle(ParticleTypes.FALLING_SPORE_BLOSSOM, pos.getX() + random.nextDouble(),
+                    pos.getY() + random.nextDouble(), pos.getZ() + random.nextDouble(), 0.0D, 0.0D, 0.0D);
+        }
     }
 
     /** Every gate block has one; only the gate's bottom corner does any work. */
