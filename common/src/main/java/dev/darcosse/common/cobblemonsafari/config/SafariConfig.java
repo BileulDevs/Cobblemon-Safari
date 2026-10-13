@@ -50,6 +50,8 @@ public class SafariConfig {
      * Version 18: capture points and bounty rewards about five times higher,
      * so an hour of hunting buys a Pokémon of the shop; values still on the
      * old defaults follow.
+     * Version 19: added spawns.caughtSpeciesWeight (no existing value changes).
+     * Version 20: caughtSpeciesWeight 0.25 to 0.4; a file still on 0.25 follows.
      */
     public int configVersion = SafariConfigManager.CURRENT_CONFIG_VERSION;
 
@@ -177,6 +179,17 @@ public class SafariConfig {
          * Cobblemon's value.
          */
         public double pokemonPerChunkMultiplier = 2.0;
+
+        /**
+         * Weight, in Cobblemon's natural spawns around a player, of the
+         * species that player has already caught in the Safari, against 1
+         * for species they have not: 0.4 makes a new species two and a half
+         * times as likely as a caught one of the same weight. Caught species
+         * still appear, only less often; lower values make them feel gone. 1 turns it off; 0 stops them entirely
+         * while anything else can spawn. Acts within Cobblemon's rarity
+         * buckets, so a habitat whose species are all caught looks the same.
+         */
+        public double caughtSpeciesWeight = SafariConfigManager.DEFAULT_CAUGHT_SPECIES_WEIGHT;
     }
 
     /**

@@ -1,6 +1,7 @@
 {
   "replace": false,
   "values": [
+    "cobblemon_safari:flower_meadow",
     "cobblemon_safari:grassland"
   ]
 }

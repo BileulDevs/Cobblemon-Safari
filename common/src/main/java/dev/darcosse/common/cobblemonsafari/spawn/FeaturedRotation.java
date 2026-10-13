@@ -167,7 +167,10 @@ public final class FeaturedRotation {
                 // whole rotation, defeating the retry done by index().
                 return List.of();
             }
-            current = draw(available, period, SafariWorldState.get(server).rotationSalt());
+            SafariWorldState state = SafariWorldState.get(server);
+            current = draw(available, period, state.rotationSalt(), Set.copyOf(state.excludedFromSpecials(period)));
+            state.recordSpecials(period, current.stream()
+                    .map(entry -> entry.species().getResourceIdentifier().toString()).toList());
             currentPeriod = period;
             revision++;
             CobblemonSafari.LOGGER.info("Safari specials for rotation {}: {}", period,
@@ -212,14 +215,21 @@ public final class FeaturedRotation {
      * than staying empty. Within a rarity, species whose main habitat is not
      * taken yet go first, so the specials send players to different corners of
      * the park instead of all to the same forest.
+     *
+     * <p>The {@code excluded} species, the previous rotation's specials, are
+     * kept for last: a new rotation, natural or forced, never shows a special
+     * of the one before unless nothing else can fill a slot.
      */
-    private static List<HabitatEntry> draw(Map<ResourceLocation, HabitatEntry> index, long period, long salt) {
+    private static List<HabitatEntry> draw(Map<ResourceLocation, HabitatEntry> index, long period, long salt,
+                                           Set<String> excluded) {
         SafariConfig.Featured config = SafariConfigManager.get().featured;
         Random random = new Random(salt ^ (period * ROTATION_SEED_MIX));
 
         Map<Rarity, List<HabitatEntry>> pools = new EnumMap<>(Rarity.class);
+        Map<Rarity, List<HabitatEntry>> recentPools = new EnumMap<>(Rarity.class);
         for (Rarity rarity : Rarity.values()) {
             pools.put(rarity, new ArrayList<>());
+            recentPools.put(rarity, new ArrayList<>());
         }
         // The index is sorted by species id, so pools are built in a stable
         // order before shuffling: required for the draw to be reproducible.
@@ -230,12 +240,16 @@ public final class FeaturedRotation {
             if (!entry.natural() && !INCLUDE_WITHOUT_NATURAL_SPAWN) {
                 continue;
             }
-            pools.get(entry.rarity()).add(entry);
+            // The previous rotation's specials sit out this one, in their own
+            // pools: used only if the others cannot fill the slots.
+            boolean recent = excluded.contains(entry.species().getResourceIdentifier().toString());
+            (recent ? recentPools : pools).get(entry.rarity()).add(entry);
         }
         for (Rarity rarity : Rarity.values()) {
             List<HabitatEntry> pool = pools.get(rarity);
             Collections.shuffle(pool, random);
             pools.put(rarity, limitStarters(pool, random));
+            Collections.shuffle(recentPools.get(rarity), random);
         }
 
         List<HabitatEntry> picked = new ArrayList<>();
@@ -244,7 +258,15 @@ public final class FeaturedRotation {
         // Rarest first, so leftover slots can roll over to the more common tiers.
         carried = fill(pools.get(Rarity.ULTRA_RARE), config.ultraRareSlots + carried, picked, usedHabitats);
         carried = fill(pools.get(Rarity.RARE), config.rareSlots + carried, picked, usedHabitats);
-        fill(pools.get(Rarity.UNCOMMON), config.uncommonSlots + carried, picked, usedHabitats);
+        carried = fill(pools.get(Rarity.UNCOMMON), config.uncommonSlots + carried, picked, usedHabitats);
+        // Only when the fresh species cannot fill every slot (a tiny pool, most
+        // rarities forbidden): last rotation's specials come back rather than
+        // leave the board short.
+        if (carried > 0) {
+            carried = fill(recentPools.get(Rarity.ULTRA_RARE), carried, picked, usedHabitats);
+            carried = fill(recentPools.get(Rarity.RARE), carried, picked, usedHabitats);
+            fill(recentPools.get(Rarity.UNCOMMON), carried, picked, usedHabitats);
+        }
 
         picked.sort((a, b) -> Integer.compare(a.rarity().ordinal(), b.rarity().ordinal()));
         return List.copyOf(picked);

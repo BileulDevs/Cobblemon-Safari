@@ -68,19 +68,23 @@
     "subtitle": "subtitles.cobblemon_safari.ambient.pokemon",
     "sounds": [
       {
-        "name": "cobblemon:pokemon/diglett/diglett_cry",
+        "name": "cobblemon:pokemon/dwebble/dwebble_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/geodude/geodude_cry",
+        "name": "cobblemon:pokemon/orthworm/orthworm_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/rhyhorn/rhyhorn_cry",
+        "name": "cobblemon:pokemon/cacnea/cacnea_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/cubone/cubone_cry",
+        "name": "cobblemon:pokemon/sandshrew/sandshrew_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/bramblin/bramblin_cry",
         "volume": 0.3
       }
     ]
@@ -99,6 +103,14 @@
       {
         "name": "cobblemon:pokemon/onix/onix_cry",
         "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/roggenrola/roggenrola_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/lunatone/lunatone_cry",
+        "volume": 0.3
       }
     ]
   },
@@ -106,7 +118,7 @@
     "subtitle": "subtitles.cobblemon_safari.ambient.pokemon",
     "sounds": [
       {
-        "name": "cobblemon:pokemon/hoothoot/hoothoot_cry",
+        "name": "cobblemon:pokemon/misdreavus/misdreavus_cry",
         "volume": 0.3
       },
       {
@@ -114,11 +126,15 @@
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/murkrow/murkrow_cry",
+        "name": "cobblemon:pokemon/stunky/stunky_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/venonat/venonat_cry",
+        "name": "cobblemon:pokemon/skwovet/skwovet_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/nincada/nincada_cry",
         "volume": 0.3
       }
     ]
@@ -127,19 +143,23 @@
     "subtitle": "subtitles.cobblemon_safari.ambient.pokemon",
     "sounds": [
       {
-        "name": "cobblemon:pokemon/sandshrew/sandshrew_cry",
-        "volume": 0.3
-      },
-      {
-        "name": "cobblemon:pokemon/trapinch/trapinch_cry",
-        "volume": 0.3
-      },
-      {
         "name": "cobblemon:pokemon/cacnea/cacnea_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/hippopotas/hippopotas_cry",
+        "name": "cobblemon:pokemon/silicobra/silicobra_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/maractus/maractus_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/sandshrew/sandshrew_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/golett/golett_cry",
         "volume": 0.3
       }
     ]
@@ -148,15 +168,7 @@
     "subtitle": "subtitles.cobblemon_safari.ambient.pokemon",
     "sounds": [
       {
-        "name": "cobblemon:pokemon/oddish/oddish_cry",
-        "volume": 0.3
-      },
-      {
-        "name": "cobblemon:pokemon/skiploom/skiploom_cry",
-        "volume": 0.3
-      },
-      {
-        "name": "cobblemon:pokemon/combee/combee_cry",
+        "name": "cobblemon:pokemon/roselia/roselia_cry",
         "volume": 0.3
       },
       {
@@ -164,7 +176,15 @@
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/flabebe/flabebe_cry",
+        "name": "cobblemon:pokemon/fomantis/fomantis_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/budew/budew_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/jigglypuff/jigglypuff_cry",
         "volume": 0.3
       }
     ]
@@ -173,19 +193,23 @@
     "subtitle": "subtitles.cobblemon_safari.ambient.pokemon",
     "sounds": [
       {
+        "name": "cobblemon:pokemon/bergmite/bergmite_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/seel/seel_cry",
+        "volume": 0.3
+      },
+      {
         "name": "cobblemon:pokemon/spheal/spheal_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/snorunt/snorunt_cry",
+        "name": "cobblemon:pokemon/shellder/shellder_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/sneasel/sneasel_cry",
-        "volume": 0.3
-      },
-      {
-        "name": "cobblemon:pokemon/swinub/swinub_cry",
+        "name": "cobblemon:pokemon/snom/snom_cry",
         "volume": 0.3
       }
     ]
@@ -194,27 +218,23 @@
     "subtitle": "subtitles.cobblemon_safari.ambient.pokemon",
     "sounds": [
       {
-        "name": "cobblemon:pokemon/pidgey/pidgey_cry",
-        "volume": 0.3
-      },
-      {
         "name": "cobblemon:pokemon/rattata/rattata_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/doduo/doduo_cry",
+        "name": "cobblemon:pokemon/yungoos/yungoos_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/nidoranm/nidoranm_cry",
+        "name": "cobblemon:pokemon/nymble/nymble_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/nidoranf/nidoranf_cry",
+        "name": "cobblemon:pokemon/jigglypuff/jigglypuff_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/tauros/tauros_cry",
+        "name": "cobblemon:pokemon/scatterbug/scatterbug_cry",
         "volume": 0.3
       }
     ]
@@ -223,23 +243,19 @@
     "subtitle": "subtitles.cobblemon_safari.ambient.pokemon",
     "sounds": [
       {
-        "name": "cobblemon:pokemon/aipom/aipom_cry",
+        "name": "cobblemon:pokemon/oddish/oddish_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/tropius/tropius_cry",
+        "name": "cobblemon:pokemon/bellsprout/bellsprout_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/yanma/yanma_cry",
+        "name": "cobblemon:pokemon/caterpie/caterpie_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/paras/paras_cry",
-        "volume": 0.3
-      },
-      {
-        "name": "cobblemon:pokemon/exeggcute/exeggcute_cry",
+        "name": "cobblemon:pokemon/weedle/weedle_cry",
         "volume": 0.3
       }
     ]
@@ -248,19 +264,19 @@
     "subtitle": "subtitles.cobblemon_safari.ambient.pokemon",
     "sounds": [
       {
-        "name": "cobblemon:pokemon/magikarp/magikarp_cry",
+        "name": "cobblemon:pokemon/shellos/shellos_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/psyduck/psyduck_cry",
+        "name": "cobblemon:pokemon/corsola/corsola_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/goldeen/goldeen_cry",
+        "name": "cobblemon:pokemon/wishiwashi/wishiwashi_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/wingull/wingull_cry",
+        "name": "cobblemon:pokemon/mareanie/mareanie_cry",
         "volume": 0.3
       }
     ]
@@ -269,15 +285,23 @@
     "subtitle": "subtitles.cobblemon_safari.ambient.pokemon",
     "sounds": [
       {
-        "name": "cobblemon:pokemon/zubat/zubat_cry",
+        "name": "cobblemon:pokemon/ferroseed/ferroseed_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/paras/paras_cry",
+        "name": "cobblemon:pokemon/shuckle/shuckle_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/oddish/oddish_cry",
+        "name": "cobblemon:pokemon/morelull/morelull_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/goomy/goomy_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/venipede/venipede_cry",
         "volume": 0.3
       }
     ]
@@ -286,15 +310,7 @@
     "subtitle": "subtitles.cobblemon_safari.ambient.pokemon",
     "sounds": [
       {
-        "name": "cobblemon:pokemon/psyduck/psyduck_cry",
-        "volume": 0.3
-      },
-      {
         "name": "cobblemon:pokemon/wooper/wooper_cry",
-        "volume": 0.3
-      },
-      {
-        "name": "cobblemon:pokemon/poliwag/poliwag_cry",
         "volume": 0.3
       },
       {
@@ -302,7 +318,15 @@
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/lotad/lotad_cry",
+        "name": "cobblemon:pokemon/grimer/grimer_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/stunfisk/stunfisk_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/karrablast/karrablast_cry",
         "volume": 0.3
       }
     ]
@@ -311,7 +335,7 @@
     "subtitle": "subtitles.cobblemon_safari.ambient.pokemon",
     "sounds": [
       {
-        "name": "cobblemon:pokemon/shroomish/shroomish_cry",
+        "name": "cobblemon:pokemon/foongus/foongus_cry",
         "volume": 0.3
       },
       {
@@ -319,11 +343,15 @@
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/foongus/foongus_cry",
+        "name": "cobblemon:pokemon/shroomish/shroomish_cry",
         "volume": 0.3
       },
       {
         "name": "cobblemon:pokemon/morelull/morelull_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/toedscool/toedscool_cry",
         "volume": 0.3
       }
     ]
@@ -332,15 +360,23 @@
     "subtitle": "subtitles.cobblemon_safari.ambient.pokemon",
     "sounds": [
       {
-        "name": "cobblemon:pokemon/skarmory/skarmory_cry",
-        "volume": 0.3
-      },
-      {
-        "name": "cobblemon:pokemon/onix/onix_cry",
-        "volume": 0.3
-      },
-      {
         "name": "cobblemon:pokemon/geodude/geodude_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/meditite/meditite_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/teddiursa/teddiursa_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/makuhita/makuhita_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/nymble/nymble_cry",
         "volume": 0.3
       }
     ]
@@ -349,19 +385,23 @@
     "subtitle": "subtitles.cobblemon_safari.ambient.pokemon",
     "sounds": [
       {
-        "name": "cobblemon:pokemon/magikarp/magikarp_cry",
-        "volume": 0.3
-      },
-      {
         "name": "cobblemon:pokemon/poliwag/poliwag_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/goldeen/goldeen_cry",
+        "name": "cobblemon:pokemon/slowpoke/slowpoke_cry",
         "volume": 0.3
       },
       {
         "name": "cobblemon:pokemon/psyduck/psyduck_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/marill/marill_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/bidoof/bidoof_cry",
         "volume": 0.3
       }
     ]
@@ -370,19 +410,19 @@
     "subtitle": "subtitles.cobblemon_safari.ambient.pokemon",
     "sounds": [
       {
-        "name": "cobblemon:pokemon/geodude/geodude_cry",
-        "volume": 0.3
-      },
-      {
-        "name": "cobblemon:pokemon/onix/onix_cry",
-        "volume": 0.3
-      },
-      {
         "name": "cobblemon:pokemon/machop/machop_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/rhyhorn/rhyhorn_cry",
+        "name": "cobblemon:pokemon/buneary/buneary_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/buizel/buizel_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/azurill/azurill_cry",
         "volume": 0.3
       }
     ]
@@ -391,23 +431,23 @@
     "subtitle": "subtitles.cobblemon_safari.ambient.pokemon",
     "sounds": [
       {
-        "name": "cobblemon:pokemon/tauros/tauros_cry",
+        "name": "cobblemon:pokemon/meowth/meowth_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/girafarig/girafarig_cry",
+        "name": "cobblemon:pokemon/purrloin/purrloin_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/ponyta/ponyta_cry",
+        "name": "cobblemon:pokemon/komala/komala_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/doduo/doduo_cry",
+        "name": "cobblemon:pokemon/ekans/ekans_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/kangaskhan/kangaskhan_cry",
+        "name": "cobblemon:pokemon/sandshrew/sandshrew_cry",
         "volume": 0.3
       }
     ]
@@ -416,19 +456,23 @@
     "subtitle": "subtitles.cobblemon_safari.ambient.pokemon",
     "sounds": [
       {
-        "name": "cobblemon:pokemon/wingull/wingull_cry",
-        "volume": 0.3
-      },
-      {
         "name": "cobblemon:pokemon/krabby/krabby_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/shellder/shellder_cry",
+        "name": "cobblemon:pokemon/wimpod/wimpod_cry",
         "volume": 0.3
       },
       {
         "name": "cobblemon:pokemon/slowpoke/slowpoke_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/crabrawler/crabrawler_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/staryu/staryu_cry",
         "volume": 0.3
       }
     ]
@@ -437,19 +481,23 @@
     "subtitle": "subtitles.cobblemon_safari.ambient.pokemon",
     "sounds": [
       {
-        "name": "cobblemon:pokemon/swinub/swinub_cry",
+        "name": "cobblemon:pokemon/snom/snom_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/snorunt/snorunt_cry",
+        "name": "cobblemon:pokemon/sandshrew/sandshrew_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/delibird/delibird_cry",
+        "name": "cobblemon:pokemon/buneary/buneary_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/snover/snover_cry",
+        "name": "cobblemon:pokemon/bidoof/bidoof_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/zigzagoon/zigzagoon_cry",
         "volume": 0.3
       }
     ]
@@ -458,15 +506,23 @@
     "subtitle": "subtitles.cobblemon_safari.ambient.pokemon",
     "sounds": [
       {
-        "name": "cobblemon:pokemon/teddiursa/teddiursa_cry",
+        "name": "cobblemon:pokemon/pineco/pineco_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/hoothoot/hoothoot_cry",
+        "name": "cobblemon:pokemon/bidoof/bidoof_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/sneasel/sneasel_cry",
+        "name": "cobblemon:pokemon/zigzagoon/zigzagoon_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/buneary/buneary_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/skwovet/skwovet_cry",
         "volume": 0.3
       }
     ]
@@ -475,19 +531,19 @@
     "subtitle": "subtitles.cobblemon_safari.ambient.pokemon",
     "sounds": [
       {
-        "name": "cobblemon:pokemon/numel/numel_cry",
-        "volume": 0.3
-      },
-      {
         "name": "cobblemon:pokemon/slugma/slugma_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/ponyta/ponyta_cry",
+        "name": "cobblemon:pokemon/sizzlipede/sizzlipede_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/growlithe/growlithe_cry",
+        "name": "cobblemon:pokemon/cubone/cubone_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/magcargo/magcargo_cry",
         "volume": 0.3
       }
     ]
@@ -496,23 +552,23 @@
     "subtitle": "subtitles.cobblemon_safari.ambient.pokemon",
     "sounds": [
       {
-        "name": "cobblemon:pokemon/caterpie/caterpie_cry",
+        "name": "cobblemon:pokemon/bidoof/bidoof_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/weedle/weedle_cry",
+        "name": "cobblemon:pokemon/skwovet/skwovet_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/pidgey/pidgey_cry",
+        "name": "cobblemon:pokemon/stunky/stunky_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/hoothoot/hoothoot_cry",
+        "name": "cobblemon:pokemon/wurmple/wurmple_cry",
         "volume": 0.3
       },
       {
-        "name": "cobblemon:pokemon/pikachu/pikachu_cry",
+        "name": "cobblemon:pokemon/buneary/buneary_cry",
         "volume": 0.3
       }
     ]

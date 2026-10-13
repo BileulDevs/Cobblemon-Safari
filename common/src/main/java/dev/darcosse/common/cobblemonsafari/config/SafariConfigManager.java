@@ -60,7 +60,7 @@ public final class SafariConfigManager {
     private static final int MAX_BOUNTIES = 8;
 
     /** Version written by this build. Raise it together with a new step in {@link #migrate}. */
-    public static final int CURRENT_CONFIG_VERSION = 18;
+    public static final int CURRENT_CONFIG_VERSION = 20;
 
     /**
      * Default length of a featured rotation, in minutes: four hours, so the
@@ -80,6 +80,16 @@ public final class SafariConfigManager {
 
     /** First version whose default special slots are 1/2/3. */
     private static final int REVERSED_SLOTS_VERSION = 14;
+
+    /**
+     * Default spawns.caughtSpeciesWeight, and the one of version 19. At 0.25
+     * a caught species was rare enough to feel gone from the Safari.
+     */
+    public static final double DEFAULT_CAUGHT_SPECIES_WEIGHT = 0.4;
+    private static final double LEGACY_CAUGHT_SPECIES_WEIGHT = 0.25;
+
+    /** First version whose default caughtSpeciesWeight is 0.4. */
+    private static final int GENTLER_NOVELTY_VERSION = 20;
 
     /** First version whose default capture points and bounty rewards are about five times higher. */
     private static final int RICHER_REWARDS_VERSION = 18;
@@ -249,6 +259,11 @@ public final class SafariConfigManager {
             if (c.bounties != null) {
                 followNewDefaults(c.bounties, new SafariConfig.Bounties(), LEGACY_BOUNTY_REWARDS);
             }
+        }
+        // Exact comparison on purpose: only the untouched old default follows.
+        if (c.configVersion < GENTLER_NOVELTY_VERSION && c.spawns != null
+                && c.spawns.caughtSpeciesWeight == LEGACY_CAUGHT_SPECIES_WEIGHT) {
+            c.spawns.caughtSpeciesWeight = DEFAULT_CAUGHT_SPECIES_WEIGHT;
         }
         CobblemonSafari.LOGGER.info("Migrated {} from version {} to {}", FILE_NAME, c.configVersion,
                 CURRENT_CONFIG_VERSION);
@@ -559,6 +574,14 @@ public final class SafariConfigManager {
             double fixed = clampMultiplier(c.spawns.pokemonPerChunkMultiplier);
             warn("spawns.pokemonPerChunkMultiplier", c.spawns.pokemonPerChunkMultiplier, fixed);
             c.spawns.pokemonPerChunkMultiplier = fixed;
+            corrected = true;
+        }
+        if (!(c.spawns.caughtSpeciesWeight >= 0.0D && c.spawns.caughtSpeciesWeight <= 1.0D)) {
+            // Also catches NaN. Above 1 would favour what the player already has.
+            double fixed = Double.isNaN(c.spawns.caughtSpeciesWeight) ? 1.0D
+                    : Math.max(0.0D, Math.min(1.0D, c.spawns.caughtSpeciesWeight));
+            warn("spawns.caughtSpeciesWeight", c.spawns.caughtSpeciesWeight, fixed);
+            c.spawns.caughtSpeciesWeight = fixed;
             corrected = true;
         }
         if (c.spawns.maxSameSpeciesNearby < 0) {

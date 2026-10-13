@@ -9,8 +9,10 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.saveddata.SavedData;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -40,6 +42,15 @@ public final class SafariWorldState extends SavedData {
      * limits, of an earlier one.
      */
     private long rotationOffset;
+    /**
+     * The last rotation whose specials were drawn, those specials, and the
+     * ones that draw had to leave out (the specials of the rotation before).
+     * Kept so a redraw of the same rotation (restart, reload) excludes the
+     * same species and comes out the same; see {@link #excludedFromSpecials}.
+     */
+    private long specialsPeriod = Long.MIN_VALUE;
+    private final List<String> specials = new ArrayList<>();
+    private final List<String> specialsExcluded = new ArrayList<>();
     /** Anchors (park.ParkGeometry.REST_HOUSES) whose house is built. */
     private final Set<String> builtHouses = new HashSet<>();
     /**
@@ -70,6 +81,33 @@ public final class SafariWorldState extends SavedData {
     /** Rotations started by hand so far; see {@link #rotationOffset}. */
     public long rotationOffset() {
         return rotationOffset;
+    }
+
+    /**
+     * The species the draw of a rotation must leave out: the specials of the
+     * last rotation drawn before it, so no special comes back right away. A
+     * rotation drawn again (restart, datapack reload) gets the same answer.
+     */
+    public List<String> excludedFromSpecials(long period) {
+        return period == specialsPeriod ? List.copyOf(specialsExcluded) : List.copyOf(specials);
+    }
+
+    /**
+     * Records the specials of a rotation. The previous rotation's become the
+     * excluded ones the first time a new rotation is recorded; a redraw of
+     * the same rotation keeps them.
+     */
+    public void recordSpecials(long period, List<String> drawn) {
+        if (period != specialsPeriod) {
+            specialsExcluded.clear();
+            specialsExcluded.addAll(specials);
+            specialsPeriod = period;
+        }
+        if (!specials.equals(drawn)) {
+            specials.clear();
+            specials.addAll(drawn);
+        }
+        setDirty();
     }
 
     /** Counts one more rotation started by hand and asks to be saved. */
@@ -131,6 +169,9 @@ public final class SafariWorldState extends SavedData {
     public CompoundTag save(CompoundTag nbt, HolderLookup.Provider registries) {
         nbt.putLong("rotation_salt", rotationSalt);
         nbt.putLong("rotation_offset", rotationOffset);
+        nbt.putLong("specials_period", specialsPeriod);
+        nbt.put("specials", strings(specials));
+        nbt.put("specials_excluded", strings(specialsExcluded));
         ListTag houses = new ListTag();
         for (String key : builtHouses) {
             houses.add(StringTag.valueOf(key));
@@ -149,6 +190,14 @@ public final class SafariWorldState extends SavedData {
         state.rotationSalt = nbt.getLong("rotation_salt");
         // Absent in older saves: 0, no rotation forced yet.
         state.rotationOffset = nbt.getLong("rotation_offset");
+        // Absent in older saves: no rotation recorded, so nothing is excluded.
+        state.specialsPeriod = nbt.contains("specials_period") ? nbt.getLong("specials_period") : Long.MIN_VALUE;
+        for (Tag species : nbt.getList("specials", Tag.TAG_STRING)) {
+            state.specials.add(species.getAsString());
+        }
+        for (Tag species : nbt.getList("specials_excluded", Tag.TAG_STRING)) {
+            state.specialsExcluded.add(species.getAsString());
+        }
         // Absent in older saves: 0, the salt of the original map, which is right.
         state.housesMapSalt = nbt.getLong("houses_map_salt");
         for (Tag house : nbt.getList("built_houses", Tag.TAG_STRING)) {
@@ -167,5 +216,14 @@ public final class SafariWorldState extends SavedData {
     /** Key identifying a rest house by its column. */
     private static String houseKey(int x, int z) {
         return x + "," + z;
+    }
+
+    /** A list of strings as an NBT list. */
+    private static ListTag strings(List<String> values) {
+        ListTag list = new ListTag();
+        for (String value : values) {
+            list.add(StringTag.valueOf(value));
+        }
+        return list;
     }
 }

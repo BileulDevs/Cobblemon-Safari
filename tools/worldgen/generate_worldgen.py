@@ -267,28 +267,32 @@ CRY_TICK_CHANCE = 0.004
 CRY_VOLUME = 0.3
 
 # Cobblemon cry files are assets/cobblemon/sounds/pokemon/<species>/<species>_cry.ogg.
+# Only species one can meet there without bait: common spawns of the
+# habitat's bridged tags in Cobblemon 1.8.0, with a cry file. A cry of a
+# species that never shows up promises a Pokemon the habitat does not have;
+# re-check these lists when the bridge or Cobblemon's spawn data changes.
 HABITAT_SOUNDS = {
-    "grassland":      ("plains", ["pidgey", "rattata", "doduo", "nidoranm", "nidoranf", "tauros"]),
-    "savanna":        ("plains", ["tauros", "girafarig", "ponyta", "doduo", "kangaskhan"]),
-    "dunes":          ("arid",   ["sandshrew", "trapinch", "cacnea", "hippopotas"]),
-    "badlands":       ("arid",   ["diglett", "geodude", "rhyhorn", "cubone"]),
-    "jungle":         ("forest", ["aipom", "tropius", "yanma", "paras", "exeggcute"]),
-    "marsh":          ("forest", ["psyduck", "wooper", "poliwag", "croagunk", "lotad"]),
-    "mushroom_grove": ("forest", ["shroomish", "paras", "foongus", "morelull"]),
-    "flower_meadow":  ("plains", ["oddish", "skiploom", "combee", "cherubi", "flabebe"]),
-    "woodland":       ("forest", ["caterpie", "weedle", "pidgey", "hoothoot", "pikachu"]),
-    "deep_forest":    ("forest", ["hoothoot", "gastly", "murkrow", "venonat"]),
-    "taiga":          ("forest", ["teddiursa", "hoothoot", "sneasel"]),
-    "snowfield":      ("snow",   ["swinub", "snorunt", "delibird", "snover"]),
-    "glacier":        ("snow",   ["spheal", "snorunt", "sneasel", "swinub"]),
-    "rocky_hills":    ("arid",   ["geodude", "onix", "machop", "rhyhorn"]),
-    "peaks":          ("snow",   ["skarmory", "onix", "geodude"]),
-    "volcanic":       ("arid",   ["numel", "slugma", "ponyta", "growlithe"]),
-    "lake":           ("plains", ["magikarp", "psyduck", "goldeen", "wingull"]),
-    "river":          ("plains", ["magikarp", "poliwag", "goldeen", "psyduck"]),
-    "shore":          ("plains", ["wingull", "krabby", "shellder", "slowpoke"]),
-    "cavern":         ("caves",  ["zubat", "geodude", "onix"]),
-    "lush_grotto":    ("caves",  ["zubat", "paras", "oddish"]),
+    "grassland":      ("plains", ["rattata", "yungoos", "nymble", "jigglypuff", "scatterbug"]),
+    "savanna":        ("plains", ["meowth", "purrloin", "komala", "ekans", "sandshrew"]),
+    "dunes":          ("arid",   ["cacnea", "silicobra", "maractus", "sandshrew", "golett"]),
+    "badlands":       ("arid",   ["dwebble", "orthworm", "cacnea", "sandshrew", "bramblin"]),
+    "jungle":         ("forest", ["oddish", "bellsprout", "caterpie", "weedle"]),
+    "marsh":          ("forest", ["wooper", "croagunk", "grimer", "stunfisk", "karrablast"]),
+    "mushroom_grove": ("forest", ["foongus", "paras", "shroomish", "morelull", "toedscool"]),
+    "flower_meadow":  ("plains", ["roselia", "cherubi", "fomantis", "budew", "jigglypuff"]),
+    "woodland":       ("forest", ["bidoof", "skwovet", "stunky", "wurmple", "buneary"]),
+    "deep_forest":    ("forest", ["misdreavus", "gastly", "stunky", "skwovet", "nincada"]),
+    "taiga":          ("forest", ["pineco", "bidoof", "zigzagoon", "buneary", "skwovet"]),
+    "snowfield":      ("snow",   ["snom", "sandshrew", "buneary", "bidoof", "zigzagoon"]),
+    "glacier":        ("snow",   ["bergmite", "seel", "spheal", "shellder", "snom"]),
+    "rocky_hills":    ("arid",   ["machop", "buneary", "buizel", "azurill"]),
+    "peaks":          ("snow",   ["geodude", "meditite", "teddiursa", "makuhita", "nymble"]),
+    "volcanic":       ("arid",   ["slugma", "sizzlipede", "cubone", "magcargo"]),
+    "lake":           ("plains", ["shellos", "corsola", "wishiwashi", "mareanie"]),
+    "river":          ("plains", ["poliwag", "slowpoke", "psyduck", "marill", "bidoof"]),
+    "shore":          ("plains", ["krabby", "wimpod", "slowpoke", "crabrawler", "staryu"]),
+    "cavern":         ("caves",  ["zubat", "geodude", "onix", "roggenrola", "lunatone"]),
+    "lush_grotto":    ("caves",  ["ferroseed", "shuckle", "morelull", "goomy", "venipede"]),
 }
 
 SOUNDS_OUT = os.path.join(ROOT, "common", "src", "main", "resources", "assets", MOD_ID, "sounds.json")
@@ -397,7 +401,8 @@ TAGS = {
 # is what lets the native spawner populate the Safari with the right fauna,
 # including Pokemon added by datapacks, with no spawn file to maintain here.
 #
-# Deliberately absent: #cobblemon:is_overworld, is_temperate-style catch-alls
+# Deliberately absent from surface habitats: #cobblemon:is_overworld (only the
+# underground cavern takes it, see there), is_temperate-style catch-alls
 # used by "spawns everywhere" Pokemon, and has_structure/*. Adding them would
 # pour the generic overworld pool into every habitat and erase the difference
 # between zones. The Java SafariHabitatIndex reads these same tags at runtime,
@@ -409,20 +414,35 @@ COBBLEMON_TAG_BRIDGE = {
     "badlands":       ["is_badlands", "is_arid"],
     "jungle":         ["is_jungle"],
     "marsh":          ["is_swamp"],
-    "flower_meadow":  ["is_floral", "is_cherry_blossom"],
+    # is_plains: the meadow's open-field fauna; 32 species without bait alone.
+    "flower_meadow":  ["is_floral", "is_cherry_blossom", "is_plains"],
     "woodland":       ["is_forest"],
     "deep_forest":    ["is_forest", "is_spooky"],
     "taiga":          ["is_taiga", "is_cold"],
-    "snowfield":      ["is_snowy", "is_tundra"],
-    "glacier":        ["is_glacial", "is_snowy", "is_freezing"],
+    # is_snowy and is_tundra alone left the snowfield about six species one can
+    # meet without bait in Cobblemon 1.8.0: the snowy forests and taigas add
+    # the snow-country fauna (Buneary, Alolan Vulpix, Bidoof, Absol...).
+    "snowfield":      ["is_snowy", "is_tundra", "is_snowy_forest", "is_snowy_taiga"],
+    # is_frozen_ocean brings the icy coast (Spheal, Seel, Cubchoo, Shellder,
+    # Lapras), which no other habitat bridged.
+    "glacier":        ["is_glacial", "is_snowy", "is_freezing", "is_frozen_ocean"],
     "rocky_hills":    ["is_hills", "is_highlands"],
-    "mushroom_grove": ["is_mushroom"],
+    # is_magical: fairy and mystic species, at home among giant mushrooms;
+    # is_mushroom alone gives 23 species.
+    "mushroom_grove": ["is_mushroom", "is_magical"],
     "peaks":          ["is_peak", "is_mountain"],
-    "volcanic":       ["is_volcanic", "is_thermal"],
+    # is_badlands: the rocky, arid fauna of the volcano's slopes; the volcanic
+    # tags alone give 18 species.
+    "volcanic":       ["is_volcanic", "is_thermal", "is_badlands"],
     "lake":           ["is_ocean", "is_warm_ocean"],
     "river":          ["is_river", "is_freshwater"],
     "shore":          ["is_beach", "is_coast"],
-    "cavern":         ["is_cave", "is_dripstone"],
+    # is_overworld, the one catch-all allowed: Cobblemon spawns its cave
+    # Pokemon (Zubat, Geodude, Onix, Gible, Gastly... 126 species) through it
+    # with underground conditions, so is_cave alone left 13 species. Safe here
+    # only because the cavern is underground (depth D_UNDERGROUND): it is what
+    # any cave of a normal Cobblemon world gets, surface strays included.
+    "cavern":         ["is_cave", "is_dripstone", "is_overworld"],
     "lush_grotto":    ["is_cave", "is_lush"],
 }
 
