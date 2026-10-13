@@ -15,9 +15,10 @@ import java.util.TreeSet;
 
 /**
  * Finds the flat sprite of a Pokémon, for the Safari Board's sprite mode.
- * The mod ships its sprites at
- * {@code assets/cobblemon_safari/textures/pokemon_sprites/<species>[_<form>][_shiny].png},
- * which a resource pack can override or complete,
+ * The mod ships only the base sprite of each species, at
+ * {@code assets/cobblemon_safari/textures/pokemon_sprites/<species>.png}; a
+ * resource pack can override them or add forms and shiny sprites as
+ * {@code <species>[_<form>][_shiny].png}, still looked up first,
  * {@code <species>} being the path of the Cobblemon species id
  * ({@code bulbasaur}, {@code mrmime}) and {@code <form>} an aspect with
  * dashes turned into underscores ({@code alolan}, {@code female}).

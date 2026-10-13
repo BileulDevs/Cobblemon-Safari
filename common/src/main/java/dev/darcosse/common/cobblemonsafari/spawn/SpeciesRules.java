@@ -37,6 +37,12 @@ public final class SpeciesRules {
     /** Most pre-evolution links followed; a datapack loop stops here. */
     private static final int MAX_EVOLUTION_DEPTH = 4;
 
+    /**
+     * First stage of the Eevee line. Its eight evolutions all come from it,
+     * so a species whose line starts here is Eevee or an eeveelution.
+     */
+    private static final String EEVEE_ID = "cobblemon:eevee";
+
     private SpeciesRules() {
     }
 
@@ -46,6 +52,25 @@ public final class SpeciesRules {
      * only that one.
      */
     public static boolean isStarterLine(Species species) {
+        return lineRoot(species).getLabels().contains(STARTER_LABEL) || species.getLabels().contains(STARTER_LABEL);
+    }
+
+    /** Whether the species is Eevee or one of its evolutions, by the first stage of its line. */
+    public static boolean isEeveeLine(Species species) {
+        return EEVEE_ID.equals(lineRoot(species).getResourceIdentifier().toString());
+    }
+
+    /**
+     * Whether the species belongs to a line the specials draw keeps in check:
+     * a starter's line or Eevee's. Both are many species of one family filed
+     * in the same rarity, which would otherwise crowd the board.
+     */
+    public static boolean isCrowdingLine(Species species) {
+        return isStarterLine(species) || isEeveeLine(species);
+    }
+
+    /** First stage of the species' evolution line, following pre-evolutions. */
+    private static Species lineRoot(Species species) {
         Species root = species;
         for (int i = 0; i < MAX_EVOLUTION_DEPTH; i++) {
             PreEvolution pre = root.getPreEvolution();
@@ -54,7 +79,7 @@ public final class SpeciesRules {
             }
             root = pre.getSpecies();
         }
-        return root.getLabels().contains(STARTER_LABEL) || species.getLabels().contains(STARTER_LABEL);
+        return root;
     }
 
     /** Whether the species carries one of the special labels. */

@@ -16,9 +16,13 @@ then overrides the mod's sprites of the same name.
 <species> being the Cobblemon species id (letters and digits only: ho_oh
 becomes hooh, porygon-z porygonz), which is what PokemonSprites looks up.
 
+Only the base sprite of each species is installed (<species>.png): forms,
+megas, gigantamax and shiny sprites are left out, the board then showing the
+base sprite for them. Add --all-forms to install every sprite instead.
+
 Usage (from the repository root):
-    python3 tools/pokemon_sprites_pack.py <sprite folder> --mod
-    python3 tools/pokemon_sprites_pack.py <sprite folder> <output.zip>
+    python3 tools/pokemon_sprites_pack.py <sprite folder> --mod [--all-forms]
+    python3 tools/pokemon_sprites_pack.py <sprite folder> <output.zip> [--all-forms]
 Deterministic: same input, same files.
 """
 
@@ -111,11 +115,29 @@ def write_pack(source, names, output):
     return output
 
 
+# Option keeping every form, mega, gigantamax and shiny sprite.
+ALL_FORMS = "--all-forms"
+
+
+def is_base(name):
+    """Whether a pack name is a species' base sprite: species ids hold no underscore, forms add one."""
+    return "_" not in name
+
+
 def main():
-    if len(sys.argv) != 3:
+    args = sys.argv[1:]
+    all_forms = ALL_FORMS in args
+    args = [a for a in args if a != ALL_FORMS]
+    if len(args) != 2:
         sys.exit(__doc__)
-    source, output = sys.argv[1], sys.argv[2]
+    source, output = args
     names, skipped = collect(source)
+    if not all_forms:
+        # Kept out on purpose (not "skipped"): listing about two thousand
+        # files would bury the real problems of the input.
+        left_out = sum(1 for name in names if not is_base(name))
+        names = {name: path for name, path in names.items() if is_base(name)}
+        print("%d form, mega and shiny sprites left out (use %s to keep them)" % (left_out, ALL_FORMS))
     where = write_mod(source, names) if output == "--mod" else write_pack(source, names, output)
     print("%d sprites written to %s" % (len(names), where))
     for item in skipped:

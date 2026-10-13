@@ -61,14 +61,16 @@ public final class FeaturedRotation {
     private static final boolean INCLUDE_WITHOUT_NATURAL_SPAWN = true;
 
     /**
-     * Chance that a slot goes to a starter's line when the pool holds both
-     * starters and others. Cobblemon files most starter lines as ultra-rare,
-     * where they would otherwise take most slots (27 lines against a short
-     * list of other ultra-rares). Higher brings starters back to the board
-     * more often; 1 drops the rule (starters first), 0 shows them only when
-     * nothing else is left.
+     * Chance that a slot goes to a crowding line (a starter's line or Eevee's,
+     * see SpeciesRules.isCrowdingLine) when the pool holds both those and
+     * others. Cobblemon files most starter lines as ultra-rare, where they
+     * would otherwise take most slots (27 lines against a short list of other
+     * ultra-rares), and Eevee's eight evolutions land together in one rarity
+     * too. Both share this one chance, so together they take about a quarter
+     * of the slots. Higher brings them back to the board more often; 1 drops
+     * the rule (them first), 0 shows them only when nothing else is left.
      */
-    private static final double STARTER_SLOT_CHANCE = 0.25;
+    private static final double CROWDING_SLOT_CHANCE = 0.25;
 
     @Nullable
     private static Map<ResourceLocation, HabitatEntry> index;
@@ -249,7 +251,7 @@ public final class FeaturedRotation {
         for (Rarity rarity : Rarity.values()) {
             List<HabitatEntry> pool = pools.get(rarity);
             Collections.shuffle(pool, random);
-            pools.put(rarity, limitStarters(pool, random));
+            pools.put(rarity, limitCrowdingLines(pool, random));
             Collections.shuffle(recentPools.get(rarity), random);
         }
 
@@ -274,17 +276,17 @@ public final class FeaturedRotation {
     }
 
     /**
-     * Reorders a shuffled pool so that each position is a starter's line with
-     * {@link #STARTER_SLOT_CHANCE}, another species otherwise; when one kind
-     * runs out, the other fills the rest. {@link #fill} then takes the pool
-     * in this order. Uses the rotation's random, so the draw stays
-     * reproducible.
+     * Reorders a shuffled pool so that each position is a crowding line
+     * (starters, Eevee) with {@link #CROWDING_SLOT_CHANCE}, another species
+     * otherwise; when one kind runs out, the other fills the rest.
+     * {@link #fill} then takes the pool in this order. Uses the rotation's
+     * random, so the draw stays reproducible.
      */
-    private static List<HabitatEntry> limitStarters(List<HabitatEntry> pool, Random random) {
+    private static List<HabitatEntry> limitCrowdingLines(List<HabitatEntry> pool, Random random) {
         List<HabitatEntry> starters = new ArrayList<>();
         List<HabitatEntry> others = new ArrayList<>();
         for (HabitatEntry entry : pool) {
-            (SpeciesRules.isStarterLine(entry.species()) ? starters : others).add(entry);
+            (SpeciesRules.isCrowdingLine(entry.species()) ? starters : others).add(entry);
         }
         if (starters.isEmpty() || others.isEmpty()) {
             return pool;
@@ -294,7 +296,7 @@ public final class FeaturedRotation {
         int o = 0;
         while (s < starters.size() || o < others.size()) {
             boolean starter = o >= others.size()
-                    || (s < starters.size() && random.nextDouble() < STARTER_SLOT_CHANCE);
+                    || (s < starters.size() && random.nextDouble() < CROWDING_SLOT_CHANCE);
             ordered.add(starter ? starters.get(s++) : others.get(o++));
         }
         return ordered;
