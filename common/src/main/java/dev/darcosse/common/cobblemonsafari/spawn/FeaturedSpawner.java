@@ -36,8 +36,10 @@ import java.util.List;
  * corner of the park, as in the games.
  *
  * <p>Anti-monopoly: at most {@code maxNearbyPerPlayer} specials around a
- * player, never two of the same species around them, and never more than one
- * legendary-class special in the whole park at once.
+ * player, never two of the same species around them, never more than one
+ * legendary-class special in the whole park at once, and no more appearances
+ * of a legendary-class species per rotation than its category allows
+ * ({@link SpecialSpawnCounter}).
  */
 public final class FeaturedSpawner {
 
@@ -146,7 +148,7 @@ public final class FeaturedSpawner {
         BlockPos spawnPos = water ? feet.below() : feet;
         Holder<Biome> biome = level.getBiome(spawnPos);
 
-        HabitatEntry entry = pick(specials, biome, water, nearbySpecials, level, random);
+        HabitatEntry entry = pick(specials, biome, water, nearbySpecials, level, player.getServer(), random);
         if (entry == null) {
             return;
         }
@@ -155,19 +157,22 @@ public final class FeaturedSpawner {
 
     /**
      * Weighted pick among the specials living in that biome, leaving out
-     * species already present around the player and legendary-class species
-     * already roaming the park.
+     * species already present around the player, legendary-class species
+     * already roaming the park and those that used up their appearances for
+     * this rotation.
      */
     @Nullable
     private static HabitatEntry pick(List<HabitatEntry> specials, Holder<Biome> biome, boolean water,
-                                     List<PokemonEntity> nearbySpecials, ServerLevel level, RandomSource random) {
+                                     List<PokemonEntity> nearbySpecials, ServerLevel level, MinecraftServer server,
+                                     RandomSource random) {
         List<HabitatEntry> candidates = new ArrayList<>();
         int totalWeight = 0;
         for (HabitatEntry entry : specials) {
             boolean livesHere = (water ? entry.waterHabitats() : entry.landHabitats()).stream().anyMatch(key -> biome.is(key));
             if (!livesHere || !SpeciesRules.isAllowed(entry.species())
                     || isPresent(nearbySpecials, entry)
-                    || (SpeciesRules.isSpecial(entry.species()) && isRoamingAnywhere(level, entry))) {
+                    || (SpeciesRules.isSpecial(entry.species()) && isRoamingAnywhere(level, entry))
+                    || !SpecialSpawnCounter.canSpawn(server, entry.species())) {
                 continue;
             }
             int weight = weight(entry.rarity());
@@ -238,7 +243,10 @@ public final class FeaturedSpawner {
         pokemonEntity.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5,
                 random.nextFloat() * 360.0F, 0.0F);
         pokemonEntity.addTag(FEATURED_TAG);
-        level.addFreshEntity(pokemonEntity);
+        // Counted only once really added: another mod may veto the entity.
+        if (level.addFreshEntity(pokemonEntity)) {
+            SpecialSpawnCounter.recordSpawn(level.getServer(), entry.species(), pokemonEntity.getUUID(), pos);
+        }
     }
 
     /** A level within the natural range, or the configured fallback when the species has none. */

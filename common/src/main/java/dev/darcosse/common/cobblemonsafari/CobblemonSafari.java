@@ -10,6 +10,7 @@ import dev.darcosse.common.cobblemonsafari.bounty.SafariBounties;
 import dev.darcosse.common.cobblemonsafari.capture.CatchTracker;
 import dev.darcosse.common.cobblemonsafari.session.SafariSessionManager;
 import dev.darcosse.common.cobblemonsafari.spawn.NativeSpawnRules;
+import dev.darcosse.common.cobblemonsafari.spawn.SpecialSpawnCounter;
 import dev.darcosse.common.cobblemonsafari.stats.SafariStatsListener;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.platform.Platform;
@@ -48,6 +49,7 @@ public final class CobblemonSafari {
         CatchTracker.register();
         BattleGuard.register();
         NativeSpawnRules.register();
+        SpecialSpawnCounter.register();
         SafariBallBonus.register();
         SafariCredit.register();
         SafariGate.register();

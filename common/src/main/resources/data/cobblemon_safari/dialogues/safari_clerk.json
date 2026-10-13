@@ -48,9 +48,40 @@
             ]
           },
           {
+            "text": "cobblemon_safari.dialogue.safari_clerk.option.leave",
+            "value": "leave",
+            "action": "q.dialogue.set_page('leave');"
+          },
+          {
             "text": "cobblemon_safari.dialogue.safari_clerk.option.bye",
             "value": "bye",
             "action": "q.dialogue.set_page('bye');"
+          }
+        ]
+      }
+    },
+    {
+      "id": "leave",
+      "speaker": "npc",
+      "lines": [
+        "cobblemon_safari.dialogue.safari_clerk.leave_confirm"
+      ],
+      "input": {
+        "type": "option",
+        "vertical": true,
+        "options": [
+          {
+            "text": "cobblemon_safari.dialogue.safari_clerk.option.leave_yes",
+            "value": "leave_yes",
+            "action": [
+              "q.dialogue.close();",
+              "q.player.run_command('safari leave');"
+            ]
+          },
+          {
+            "text": "cobblemon_safari.dialogue.safari_clerk.option.leave_no",
+            "value": "leave_no",
+            "action": "q.dialogue.set_page('greeting');"
           }
         ]
       }

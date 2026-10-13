@@ -17,8 +17,9 @@ import net.minecraft.world.phys.AABB;
  *
  * <p>Thanks to the biome tag bridge, the native spawner fills each habitat
  * with its natural fauna. This filter adds the Safari's rules on top:
- * forbidden categories and species, and a same-species density cap so that
- * one very common Pokémon cannot take over a whole habitat.
+ * forbidden categories and species, the per-rotation cap of legendary-class
+ * species ({@link SpecialSpawnCounter}), and a same-species density cap so
+ * that one very common Pokémon cannot take over a whole habitat.
  *
  * <p>The mod's own special spawns do not go through Cobblemon's spawner and
  * are not filtered here; {@link FeaturedSpawner} applies the same species
@@ -63,7 +64,8 @@ public final class NativeSpawnRules {
         }
         SafariConfig.Spawns config = SafariConfigManager.get().spawns;
         Species species = pokemonEntity.getPokemon().getSpecies();
-        if (!config.nativeSpawns || !SpeciesRules.isAllowed(species)) {
+        if (!config.nativeSpawns || !SpeciesRules.isAllowed(species)
+                || !SpecialSpawnCounter.canSpawn(level.getServer(), species)) {
             event.cancel();
             return;
         }
@@ -75,7 +77,13 @@ public final class NativeSpawnRules {
                     other -> other.getPokemon().isWild() && other.getPokemon().getSpecies() == species).size();
             if (sameSpecies >= config.maxSameSpeciesNearby) {
                 event.cancel();
+                return;
             }
         }
+        // Counted when this filter lets the spawn through. If a listener running
+        // after this one cancels it, the counter's sweep never finds the entity
+        // and gives the slot back a few seconds later.
+        SpecialSpawnCounter.recordSpawn(level.getServer(), species, pokemonEntity.getUUID(),
+                event.getSpawnablePosition().getPosition());
     }
 }

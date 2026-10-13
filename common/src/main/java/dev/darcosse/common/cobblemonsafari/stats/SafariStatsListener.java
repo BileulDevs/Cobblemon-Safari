@@ -1,5 +1,6 @@
 package dev.darcosse.common.cobblemonsafari.stats;
 
+import dev.darcosse.common.cobblemonsafari.network.SafariNetwork;
 import dev.darcosse.common.cobblemonsafari.session.CatchRecord;
 import dev.darcosse.common.cobblemonsafari.session.SafariSession;
 import dev.darcosse.common.cobblemonsafari.session.SafariSessionListener;
@@ -7,8 +8,9 @@ import dev.darcosse.common.cobblemonsafari.session.SessionEndReason;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
- * Feeds {@link SafariStatsStore} from session events. Registered through the
- * public session listener API, like any third-party feature would be.
+ * Feeds {@link SafariStatsStore} from session events, and pushes the new
+ * record to the player for the wall screens' STATS page. Registered through
+ * the public session listener API, like any third-party feature would be.
  */
 public final class SafariStatsListener implements SafariSessionListener {
 
@@ -20,6 +22,7 @@ public final class SafariStatsListener implements SafariSessionListener {
         stats.setName(player.getGameProfile().getName());
         stats.addCatch(record.speciesId(), record.shiny());
         store.setDirty();
+        SafariNetwork.sendStats(player);
     }
 
     /** Closes the session in the record: count, best score, time hunted. */
@@ -30,5 +33,6 @@ public final class SafariStatsListener implements SafariSessionListener {
         stats.setName(player.getGameProfile().getName());
         stats.addFinishedSession(session.catches().size(), session.ticksUsed());
         store.setDirty();
+        SafariNetwork.sendStats(player);
     }
 }

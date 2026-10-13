@@ -1,5 +1,6 @@
 package dev.darcosse.common.cobblemonsafari.points;
 
+import dev.darcosse.common.cobblemonsafari.network.SafariNetwork;
 import com.cobblemon.mod.common.api.Priority;
 import com.cobblemon.mod.common.api.events.CobblemonEvents;
 import com.cobblemon.mod.common.api.events.pokemon.PokemonCapturedEvent;
@@ -56,6 +57,8 @@ public final class SafariPoints {
         int after = (int) Math.min(MAX_BALANCE, (long) before + Math.max(0, amount));
         if (after > before) {
             store.set(player.getUUID(), after);
+            // Here, the one place points are added, so no caller can forget it.
+            SafariNetwork.sendStats(player);
         }
         return Math.max(0, after - before);
     }
@@ -72,6 +75,9 @@ public final class SafariPoints {
             return false;
         }
         store.set(player.getUUID(), before - amount);
+        if (amount > 0) {
+            SafariNetwork.sendStats(player);
+        }
         return true;
     }
 

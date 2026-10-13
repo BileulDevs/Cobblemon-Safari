@@ -54,8 +54,9 @@ public final class FeaturedRotation {
     /**
      * Species with no natural spawn anywhere (most legendaries, some data
      * pack species) may be featured, their habitat guessed from their types.
-     * Whether a legendary can actually be drawn is the spawns.allowLegendary
-     * setting's job; this only makes such species known to the index.
+     * Whether a legendary can actually be drawn is the job of the
+     * spawns.legendary section (and its siblings); this only makes such
+     * species known to the index.
      */
     private static final boolean INCLUDE_WITHOUT_NATURAL_SPAWN = true;
 

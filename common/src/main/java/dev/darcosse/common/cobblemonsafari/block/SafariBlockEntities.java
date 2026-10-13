@@ -20,6 +20,7 @@ public final class SafariBlockEntities {
 
     private static BlockEntityType<SafariBoardBlockEntity> safariBoard;
     private static BlockEntityType<SafariGateBlockEntity> safariGate;
+    private static BlockEntityType<SafariWallScreenBlockEntity> safariWallScreen;
 
     private SafariBlockEntities() {
     }
@@ -57,6 +58,21 @@ public final class SafariBlockEntities {
         safariGate = (BlockEntityType<SafariGateBlockEntity>) factory.create(SafariGateBlockEntity::new,
                 SafariBlocks.safariGate());
         registrar.accept(SafariBlocks.SAFARI_GATE_ID, safariGate);
+        safariWallScreen = (BlockEntityType<SafariWallScreenBlockEntity>) factory.create(
+                SafariWallScreenBlockEntity::new, SafariBlocks.safariWallScreen());
+        registrar.accept(SafariBlocks.SAFARI_WALL_SCREEN_ID, safariWallScreen);
+    }
+
+    /**
+     * Type of the Safari Wall Screen's block entity.
+     *
+     * @throws IllegalStateException before registration, which means a loader entry point is wired wrong
+     */
+    public static BlockEntityType<SafariWallScreenBlockEntity> safariWallScreen() {
+        if (safariWallScreen == null) {
+            throw new IllegalStateException("SafariBlockEntities.register was never called");
+        }
+        return safariWallScreen;
     }
 
     /**

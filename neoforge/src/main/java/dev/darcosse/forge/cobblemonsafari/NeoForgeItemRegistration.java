@@ -42,6 +42,7 @@ public final class NeoForgeItemRegistration {
             event.accept(SafariItems.safariTicket());
             event.accept(SafariItems.safariBoard());
             event.accept(SafariItems.safariBoardFrame());
+            event.accept(SafariItems.safariWallScreen());
             event.accept(SafariItems.safariGate());
         }
     }

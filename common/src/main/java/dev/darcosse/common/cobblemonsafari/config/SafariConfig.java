@@ -52,6 +52,9 @@ public class SafariConfig {
      * old defaults follow.
      * Version 19: added spawns.caughtSpeciesWeight (no existing value changes).
      * Version 20: caughtSpeciesWeight 0.25 to 0.4; a file still on 0.25 follows.
+     * Version 21: spawns.allowLegendary, allowMythical, allowUltraBeast and
+     * allowParadox became the sections spawns.legendary, mythical, ultraBeast
+     * and paradox ({allowSpawn, maxSpawnPerPokemon}); the old values move in.
      */
     public int configVersion = SafariConfigManager.CURRENT_CONFIG_VERSION;
 
@@ -147,14 +150,41 @@ public class SafariConfig {
          */
         public boolean nativeSpawns = true;
 
-        /** Pokémon labelled {@code legendary} may appear. */
-        public boolean allowLegendary = false;
-        /** Pokémon labelled {@code mythical} may appear. */
-        public boolean allowMythical = false;
-        /** Pokémon labelled {@code ultra_beast} may appear. */
-        public boolean allowUltraBeast = false;
-        /** Pokémon labelled {@code paradox} may appear. */
-        public boolean allowParadox = false;
+        /**
+         * Defaults of the paradox category; see {@link #paradox}. Changing
+         * them only affects new config files and files without a paradox
+         * section: an existing section keeps what it says.
+         */
+        public static final boolean PARADOX_DEFAULT_ALLOWED = true;
+        public static final int PARADOX_DEFAULT_CAP = 0;
+
+        /** Pokémon labelled {@code legendary} (Rayquaza, Mewtwo...). */
+        public SpecialCategory legendary = new SpecialCategory();
+        /** Pokémon labelled {@code mythical} (Mew, Celebi...). */
+        public SpecialCategory mythical = new SpecialCategory();
+        /** Pokémon labelled {@code ultra_beast} (Nihilego, Buzzwole...). */
+        public SpecialCategory ultraBeast = new SpecialCategory();
+        /**
+         * Pokémon labelled {@code paradox} (Great Tusk, Iron Treads...).
+         * Allowed and uncapped by default, unlike the other categories: they
+         * are ordinary wild Pokémon in their own games, not one-of-a-kind
+         * legends.
+         */
+        public SpecialCategory paradox = SpecialCategory.of(PARADOX_DEFAULT_ALLOWED, PARADOX_DEFAULT_CAP);
+
+        /**
+         * Settings of version 20 and older, replaced by the sections above.
+         * Read once by the version 21 migration, then cleared: Gson leaves
+         * null fields out, so they disappear from the file on the rewrite.
+         * Never read anywhere else.
+         */
+        public Boolean allowLegendary;
+        /** See {@link #allowLegendary}. */
+        public Boolean allowMythical;
+        /** See {@link #allowLegendary}. */
+        public Boolean allowUltraBeast;
+        /** See {@link #allowLegendary}. */
+        public Boolean allowParadox;
 
         /** Species ids that never appear in the Safari, e.g. {@code cobblemon:ditto}. */
         public List<String> excludedSpecies = new ArrayList<>();
@@ -190,6 +220,42 @@ public class SafariConfig {
          * buckets, so a habitat whose species are all caught looks the same.
          */
         public double caughtSpeciesWeight = SafariConfigManager.DEFAULT_CAUGHT_SPECIES_WEIGHT;
+    }
+
+    /**
+     * Whether, and how often, one category of special Pokémon (legendary,
+     * mythical, ultra beast, paradox) may appear in the Safari. Applies to
+     * every door: the daily specials and Cobblemon's natural spawns alike.
+     */
+    public static class SpecialCategory {
+        /** Default {@link #maxSpawnPerPokemon} of every category but paradox. */
+        public static final int DEFAULT_CAP = 1;
+        /** Pokémon of this category may appear at all. */
+        public boolean allowSpawn = false;
+
+        /**
+         * Most Pokémon of each species of this category per rotation of the
+         * specials (featured.rotationMinutes), counting those caught in the
+         * Safari plus those still roaming: with 2, once two Rayquaza are
+         * caught, no third shows up before the next rotation. One that
+         * leaves uncaught (despawned, fled, knocked out) gives its place back
+         * within about ten seconds, so another player gets a chance. 0 lifts
+         * the cap. A species in two categories follows the lower cap.
+         */
+        public int maxSpawnPerPokemon = DEFAULT_CAP;
+
+        /**
+         * A category with other defaults than the no-argument constructor's.
+         * Gson still uses that constructor for a section present in the file,
+         * so a section written without one of the keys gets the plain
+         * defaults (not allowed, DEFAULT_CAP), not these.
+         */
+        public static SpecialCategory of(boolean allowSpawn, int cap) {
+            SpecialCategory category = new SpecialCategory();
+            category.allowSpawn = allowSpawn;
+            category.maxSpawnPerPokemon = cap;
+            return category;
+        }
     }
 
     /**

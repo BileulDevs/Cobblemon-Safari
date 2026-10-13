@@ -60,7 +60,7 @@ public final class SafariConfigManager {
     private static final int MAX_BOUNTIES = 8;
 
     /** Version written by this build. Raise it together with a new step in {@link #migrate}. */
-    public static final int CURRENT_CONFIG_VERSION = 20;
+    public static final int CURRENT_CONFIG_VERSION = 21;
 
     /**
      * Default length of a featured rotation, in minutes: four hours, so the
@@ -87,6 +87,9 @@ public final class SafariConfigManager {
      */
     public static final double DEFAULT_CAUGHT_SPECIES_WEIGHT = 0.4;
     private static final double LEGACY_CAUGHT_SPECIES_WEIGHT = 0.25;
+
+    /** First version with one section per special category instead of the allow* flags. */
+    private static final int SPECIAL_CATEGORIES_VERSION = 21;
 
     /** First version whose default caughtSpeciesWeight is 0.4. */
     private static final int GENTLER_NOVELTY_VERSION = 20;
@@ -265,10 +268,67 @@ public final class SafariConfigManager {
                 && c.spawns.caughtSpeciesWeight == LEGACY_CAUGHT_SPECIES_WEIGHT) {
             c.spawns.caughtSpeciesWeight = DEFAULT_CAUGHT_SPECIES_WEIGHT;
         }
+        if (c.configVersion < SPECIAL_CATEGORIES_VERSION && c.spawns != null) {
+            moveLegacyAllowFlags(c.spawns);
+        }
         CobblemonSafari.LOGGER.info("Migrated {} from version {} to {}", FILE_NAME, c.configVersion,
                 CURRENT_CONFIG_VERSION);
         c.configVersion = CURRENT_CONFIG_VERSION;
         return true;
+    }
+
+    /**
+     * Carries the version 20 allow* flags into the category sections, then
+     * clears them so the rewrite drops their keys. A flag missing from the
+     * file keeps the section's default (not allowed).
+     */
+    private static void moveLegacyAllowFlags(SafariConfig.Spawns spawns) {
+        // Runs before validate(), which would otherwise create missing sections:
+        // a hand-written "legendary": null must not swallow the old flag.
+        ensureCategories(spawns);
+        if (spawns.allowLegendary != null) {
+            spawns.legendary.allowSpawn = spawns.allowLegendary;
+        }
+        if (spawns.allowMythical != null) {
+            spawns.mythical.allowSpawn = spawns.allowMythical;
+        }
+        if (spawns.allowUltraBeast != null) {
+            spawns.ultraBeast.allowSpawn = spawns.allowUltraBeast;
+        }
+        if (spawns.allowParadox != null) {
+            spawns.paradox.allowSpawn = spawns.allowParadox;
+        }
+        spawns.allowLegendary = null;
+        spawns.allowMythical = null;
+        spawns.allowUltraBeast = null;
+        spawns.allowParadox = null;
+    }
+
+    /**
+     * Replaces missing category sections with defaults.
+     *
+     * @return true if one was missing
+     */
+    private static boolean ensureCategories(SafariConfig.Spawns spawns) {
+        boolean missing = false;
+        if (spawns.legendary == null) {
+            spawns.legendary = new SafariConfig.SpecialCategory();
+            missing = true;
+        }
+        if (spawns.mythical == null) {
+            spawns.mythical = new SafariConfig.SpecialCategory();
+            missing = true;
+        }
+        if (spawns.ultraBeast == null) {
+            spawns.ultraBeast = new SafariConfig.SpecialCategory();
+            missing = true;
+        }
+        if (spawns.paradox == null) {
+            spawns.paradox = SafariConfig.SpecialCategory.of(SafariConfig.Spawns.PARADOX_DEFAULT_ALLOWED,
+                    SafariConfig.Spawns.PARADOX_DEFAULT_CAP);
+            missing = true;
+        }
+        return missing;
     }
 
     /**
@@ -589,7 +649,22 @@ public final class SafariConfigManager {
             c.spawns.maxSameSpeciesNearby = 0;
             corrected = true;
         }
+        corrected |= ensureCategories(c.spawns);
+        corrected |= validateCategory("spawns.legendary", c.spawns.legendary);
+        corrected |= validateCategory("spawns.mythical", c.spawns.mythical);
+        corrected |= validateCategory("spawns.ultraBeast", c.spawns.ultraBeast);
+        corrected |= validateCategory("spawns.paradox", c.spawns.paradox);
         return corrected;
+    }
+
+    /** Fixes one special category section; returns true if anything changed. */
+    private static boolean validateCategory(String name, SafariConfig.SpecialCategory category) {
+        if (category.maxSpawnPerPokemon < 0) {
+            warn(name + ".maxSpawnPerPokemon", category.maxSpawnPerPokemon, 0);
+            category.maxSpawnPerPokemon = 0;
+            return true;
+        }
+        return false;
     }
 
     /** Fixes the featured section; returns true if anything changed. */

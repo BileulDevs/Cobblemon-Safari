@@ -7,6 +7,7 @@ import dev.darcosse.common.cobblemonsafari.client.FeaturedClientState;
 import dev.darcosse.common.cobblemonsafari.client.SafariClient;
 import dev.darcosse.common.cobblemonsafari.client.SafariClientState;
 import dev.darcosse.common.cobblemonsafari.client.board.SafariBoardRenderer;
+import dev.darcosse.common.cobblemonsafari.client.board.SafariWallScreenRenderer;
 import dev.darcosse.common.cobblemonsafari.client.hud.SafariTimerHud;
 import dev.darcosse.common.cobblemonsafari.client.sky.SafariSkyEffects;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
@@ -16,6 +17,10 @@ import dev.darcosse.common.cobblemonsafari.network.SafariClientNetwork;
 import dev.darcosse.common.cobblemonsafari.network.SafariRulesPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariShopPayload;
 import dev.darcosse.common.cobblemonsafari.network.ShopClientBridge;
+import dev.darcosse.common.cobblemonsafari.network.SafariStatsPayload;
+import dev.darcosse.common.cobblemonsafari.network.SafariWallScreenOpenPayload;
+import dev.darcosse.common.cobblemonsafari.network.WallScreenClientBridge;
+import dev.darcosse.common.cobblemonsafari.client.StatsClientState;
 import dev.darcosse.common.cobblemonsafari.network.SafariTimerPayload;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
@@ -27,7 +32,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 
 /**
- * Fabric client entry point: payload receivers, HUD, board screens, sky
+ * Fabric client entry point: payload receivers, HUD, board and wall screens, sky
  * effects, the gate's render layer and disconnect cleanup.
  */
 public class CobblemonSafariFabricClient implements ClientModInitializer {
@@ -46,8 +51,13 @@ public class CobblemonSafariFabricClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(SafariBountiesPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> BountyClientState.onBounties(payload)));
 
+        ClientPlayNetworking.registerGlobalReceiver(SafariStatsPayload.TYPE, (payload, context) ->
+                context.client().execute(() -> StatsClientState.onStats(payload)));
+
         ClientPlayNetworking.registerGlobalReceiver(SafariShopPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> ShopClientBridge.onShop(payload)));
+        ClientPlayNetworking.registerGlobalReceiver(SafariWallScreenOpenPayload.TYPE, (payload, context) ->
+                context.client().execute(() -> WallScreenClientBridge.onOpen(payload)));
         SafariClientNetwork.setSender(ClientPlayNetworking::send);
 
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> SafariClient.onDisconnect());
@@ -55,6 +65,7 @@ public class CobblemonSafariFabricClient implements ClientModInitializer {
         HudRenderCallback.EVENT.register(SafariTimerHud::render);
         // Vanilla registry, made public by Fabric's transitive access widener.
         BlockEntityRenderers.register(SafariBlockEntities.safariBoard(), SafariBoardRenderer::new);
+        BlockEntityRenderers.register(SafariBlockEntities.safariWallScreen(), SafariWallScreenRenderer::new);
 
         DimensionRenderingRegistry.registerDimensionEffects(SafariDimensions.EFFECTS_ID, new SafariSkyEffects());
 

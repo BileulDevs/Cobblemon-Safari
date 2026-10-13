@@ -8,8 +8,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * The pixel-art safari landscapes drawn by tools/gui_assets.py, each in three
  * lights (morning, dusk, night), and which light matches the time of day.
- * The shop and the Safari Board have their own scene but share the time
- * rule, so both change light together.
+ * The shop, the Safari Board and each wall screen page have their own
+ * scene but share the time rule, so all change light together.
  *
  * <p>Free of client-only imports, but only used by client code.
  */
@@ -45,6 +45,18 @@ public final class SafariLandscapes {
      * tools/gui_assets.py.
      */
     public static final Scene BOARD = scene("board_background_", 384, 192, 0.52F);
+
+    /**
+     * Behind the wall screens' STATS page: the rangers' camp. Same size and
+     * horizon as the board's, matching record_background in tools/gui_assets.py.
+     */
+    public static final Scene RECORD = scene("record_background_", 384, 192, 0.52F);
+
+    /**
+     * Behind the wall screens' BOUNTIES page: the expedition trail. Same size
+     * and horizon as the board's, matching missions_background in tools/gui_assets.py.
+     */
+    public static final Scene MISSIONS = scene("missions_background_", 384, 192, 0.52F);
 
     /**
      * Which light shows when, in ticks of the day (0 = 6 am, 6000 = noon,

@@ -43,9 +43,11 @@ public final class NeoForgeClientSetup {
         event.register(SafariDimensions.EFFECTS_ID, new SafariSkyEffects());
     }
 
-    /** Mod-bus handler: the board screen renderer, with NeoForge's culling box. */
+    /** Mod-bus handler: the board and wall screen renderers, with NeoForge's culling box. */
     private static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(SafariBlockEntities.safariBoard(), NeoForgeSafariBoardRenderer::new);
+        event.registerBlockEntityRenderer(SafariBlockEntities.safariWallScreen(),
+                NeoForgeSafariWallScreenRenderer::new);
     }
 
     /** Game-bus handler: forgets server state when leaving a world or server. */

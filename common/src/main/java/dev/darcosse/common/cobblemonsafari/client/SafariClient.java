@@ -4,6 +4,8 @@ import dev.darcosse.common.cobblemonsafari.client.gate.GateAmbience;
 import dev.darcosse.common.cobblemonsafari.gate.GateClientHooks;
 import dev.darcosse.common.cobblemonsafari.client.shop.SafariShopScreen;
 import dev.darcosse.common.cobblemonsafari.network.ShopClientBridge;
+import dev.darcosse.common.cobblemonsafari.network.WallScreenClientBridge;
+import dev.darcosse.common.cobblemonsafari.client.wallscreen.WallScreenSettingsScreen;
 import dev.darcosse.common.cobblemonsafari.client.board.BoardPokemonModels;
 import dev.darcosse.common.cobblemonsafari.config.SafariClientConfigManager;
 
@@ -16,10 +18,11 @@ public final class SafariClient {
     private SafariClient() {
     }
 
-    /** Loads display preferences and installs the shop screen as the shop payload handler. */
+    /** Loads display preferences and installs the shop and wall screen settings screens as payload handlers. */
     public static void init() {
         SafariClientConfigManager.load();
         ShopClientBridge.setHandler(SafariShopScreen::handle);
+        WallScreenClientBridge.setHandler(WallScreenSettingsScreen::handle);
         GateClientHooks.setPaneAnimated(GateAmbience::onPaneAnimated);
     }
 
@@ -28,6 +31,7 @@ public final class SafariClient {
         SafariClientState.clear();
         FeaturedClientState.clear();
         BountyClientState.clear();
+        StatsClientState.clear();
         // Animation states hold model references; the next server may ship other models.
         BoardPokemonModels.clear();
         GateAmbience.clear();

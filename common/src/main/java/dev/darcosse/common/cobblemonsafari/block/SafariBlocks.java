@@ -26,6 +26,9 @@ public final class SafariBlocks {
     /** Id of the Safari Board Frame; also its models, loot table and translation path. */
     public static final ResourceLocation SAFARI_BOARD_FRAME_ID = CobblemonSafari.id("safari_board_frame");
 
+    /** Id of the Safari Wall Screen; also its models, loot table and translation path. */
+    public static final ResourceLocation SAFARI_WALL_SCREEN_ID = CobblemonSafari.id("safari_wall_screen");
+
     /** Id of the Safari Gate pane; also its model and translation path. */
     public static final ResourceLocation SAFARI_GATE_ID = CobblemonSafari.id("safari_gate");
 
@@ -49,6 +52,7 @@ public final class SafariBlocks {
 
     private static Block safariBoard;
     private static Block safariBoardFrame;
+    private static Block safariWallScreen;
     private static Block safariGate;
 
     private SafariBlocks() {
@@ -68,6 +72,13 @@ public final class SafariBlocks {
                 .strength(FRAME_STRENGTH)
                 .noOcclusion());
         registrar.accept(SAFARI_BOARD_FRAME_ID, safariBoardFrame);
+        // Same feel as the board it derives from: a wooden-sounding screen, easy to move.
+        safariWallScreen = new SafariWallScreenBlock(BlockBehaviour.Properties.of()
+                .mapColor(MapColor.WOOD)
+                .sound(SoundType.WOOD)
+                .strength(BOARD_STRENGTH)
+                .noOcclusion());
+        registrar.accept(SAFARI_WALL_SCREEN_ID, safariWallScreen);
         safariGate = new SafariGateBlock(BlockBehaviour.Properties.of()
                 .mapColor(MapColor.EMERALD)
                 .sound(SoundType.GLASS)
@@ -90,6 +101,18 @@ public final class SafariBlocks {
             throw new IllegalStateException("SafariBlocks.register was never called");
         }
         return safariGate;
+    }
+
+    /**
+     * The Safari Wall Screen.
+     *
+     * @throws IllegalStateException before registration, which means a loader entry point is wired wrong
+     */
+    public static Block safariWallScreen() {
+        if (safariWallScreen == null) {
+            throw new IllegalStateException("SafariBlocks.register was never called");
+        }
+        return safariWallScreen;
     }
 
     /**

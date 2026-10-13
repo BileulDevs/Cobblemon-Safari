@@ -6,6 +6,8 @@ import com.cobblemon.mod.common.pokemon.Species;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -65,16 +67,54 @@ public final class SpeciesRules {
         return false;
     }
 
-    /** Whether the species may appear in the Safari under the current config. */
+    /**
+     * Whether the species may appear in the Safari under the current config.
+     * A species in several special categories needs all of them allowed.
+     */
     public static boolean isAllowed(Species species) {
         SafariConfig.Spawns config = SafariConfigManager.get().spawns;
         if (config.excludedSpecies.contains(species.getResourceIdentifier().toString())) {
             return false;
         }
+        for (SafariConfig.SpecialCategory category : categoriesOf(species, config)) {
+            if (!category.allowSpawn) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Most times the species may appear per rotation, from the categories it
+     * belongs to: the lowest positive cap among them, 0 when none sets one
+     * (ordinary species, or caps all lifted).
+     */
+    public static int spawnCap(Species species) {
+        int cap = 0;
+        for (SafariConfig.SpecialCategory category : categoriesOf(species, SafariConfigManager.get().spawns)) {
+            if (category.maxSpawnPerPokemon > 0) {
+                cap = cap == 0 ? category.maxSpawnPerPokemon : Math.min(cap, category.maxSpawnPerPokemon);
+            }
+        }
+        return cap;
+    }
+
+    /** The config sections of the special categories the species belongs to; empty for an ordinary species. */
+    private static List<SafariConfig.SpecialCategory> categoriesOf(Species species, SafariConfig.Spawns config) {
         Set<String> labels = species.getLabels();
-        return (config.allowLegendary || !labels.contains(CobblemonPokemonLabels.LEGENDARY))
-                && (config.allowMythical || !labels.contains(CobblemonPokemonLabels.MYTHICAL))
-                && (config.allowUltraBeast || !labels.contains(CobblemonPokemonLabels.ULTRA_BEAST))
-                && (config.allowParadox || !labels.contains(CobblemonPokemonLabels.PARADOX));
+        List<SafariConfig.SpecialCategory> categories = new ArrayList<>(SPECIAL_LABELS.size());
+        if (labels.contains(CobblemonPokemonLabels.LEGENDARY)) {
+            categories.add(config.legendary);
+        }
+        if (labels.contains(CobblemonPokemonLabels.MYTHICAL)) {
+            categories.add(config.mythical);
+        }
+        if (labels.contains(CobblemonPokemonLabels.ULTRA_BEAST)) {
+            categories.add(config.ultraBeast);
+        }
+        if (labels.contains(CobblemonPokemonLabels.PARADOX)) {
+            categories.add(config.paradox);
+        }
+        return categories;
     }
 }

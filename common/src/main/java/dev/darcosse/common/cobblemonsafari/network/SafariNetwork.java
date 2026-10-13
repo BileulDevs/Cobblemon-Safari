@@ -3,6 +3,10 @@ package dev.darcosse.common.cobblemonsafari.network;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
 import dev.darcosse.common.cobblemonsafari.platform.Platform;
+import dev.darcosse.common.cobblemonsafari.points.SafariPoints;
+import dev.darcosse.common.cobblemonsafari.stats.PlayerSafariStats;
+import dev.darcosse.common.cobblemonsafari.stats.SafariStatsStore;
+import dev.darcosse.common.cobblemonsafari.util.Ticks;
 import dev.darcosse.common.cobblemonsafari.session.SafariSession;
 import dev.darcosse.common.cobblemonsafari.structure.RestHouses;
 import net.minecraft.server.MinecraftServer;
@@ -30,8 +34,9 @@ public final class SafariNetwork {
      * 5: bounties payload added.
      * 6: rules payload v4 (rest house columns).
      * 7: shop payload v2 (tabs).
+     * 8: stats, wall screen open and wall screen settings payloads added.
      */
-    public static final String PROTOCOL_VERSION = "7";
+    public static final String PROTOCOL_VERSION = "8";
 
     private SafariNetwork() {
     }
@@ -74,6 +79,32 @@ public final class SafariNetwork {
 
     /** Sends the shop contents to one player, opening or refreshing their shop screen. */
     public static void sendShop(ServerPlayer player, SafariShopPayload payload) {
+        Platform.get().sendToPlayer(player, payload);
+    }
+
+    /**
+     * Sends a player their own Safari record and points, for the wall
+     * screens' STATS page. A player who never played gets zeros, so the page
+     * shows an empty record rather than waiting forever.
+     */
+    public static void sendStats(ServerPlayer player) {
+        MinecraftServer server = player.getServer();
+        if (server == null) {
+            return;
+        }
+        PlayerSafariStats stats = SafariStatsStore.get(server).find(player.getUUID());
+        int points = SafariPoints.balance(player);
+        if (stats == null) {
+            Platform.get().sendToPlayer(player, new SafariStatsPayload(0, 0, 0, 0, 0L, 0, points));
+            return;
+        }
+        Platform.get().sendToPlayer(player, new SafariStatsPayload(stats.sessions(), stats.totalCatches(),
+                stats.shinyCatches(), stats.bestSessionCatches(), stats.ticksHunted() / Ticks.PER_SECOND,
+                stats.speciesCaught().size(), points));
+    }
+
+    /** Opens the settings screen of a wall screen group on one player's client. */
+    public static void sendWallScreenOpen(ServerPlayer player, SafariWallScreenOpenPayload payload) {
         Platform.get().sendToPlayer(player, payload);
     }
 

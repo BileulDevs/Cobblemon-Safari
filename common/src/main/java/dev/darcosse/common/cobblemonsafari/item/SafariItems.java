@@ -32,6 +32,7 @@ public final class SafariItems {
     private static Item safariTicket;
     private static Item safariBoard;
     private static Item safariBoardFrame;
+    private static Item safariWallScreen;
     private static Item safariGate;
     private static Item escapeRope;
 
@@ -54,6 +55,8 @@ public final class SafariItems {
         registrar.accept(SafariBlocks.SAFARI_BOARD_ID, safariBoard);
         safariBoardFrame = new BlockItem(SafariBlocks.safariBoardFrame(), new Item.Properties());
         registrar.accept(SafariBlocks.SAFARI_BOARD_FRAME_ID, safariBoardFrame);
+        safariWallScreen = new BlockItem(SafariBlocks.safariWallScreen(), new Item.Properties());
+        registrar.accept(SafariBlocks.SAFARI_WALL_SCREEN_ID, safariWallScreen);
         // Epic like other blocks only operators can get (command blocks, structure blocks).
         safariGate = new BlockItem(SafariBlocks.safariGate(), new Item.Properties().rarity(Rarity.EPIC));
         registrar.accept(SafariBlocks.SAFARI_GATE_ID, safariGate);
@@ -96,6 +99,18 @@ public final class SafariItems {
             throw new IllegalStateException("SafariItems.register was never called");
         }
         return safariBoardFrame;
+    }
+
+    /**
+     * The Safari Wall Screen, as an item.
+     *
+     * @throws IllegalStateException before registration
+     */
+    public static Item safariWallScreen() {
+        if (safariWallScreen == null) {
+            throw new IllegalStateException("SafariItems.register was never called");
+        }
+        return safariWallScreen;
     }
 
     /**

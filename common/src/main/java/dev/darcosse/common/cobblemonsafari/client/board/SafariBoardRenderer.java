@@ -7,12 +7,18 @@ import dev.darcosse.common.cobblemonsafari.client.SafariLandscapes;
 import dev.darcosse.common.cobblemonsafari.block.SafariBoardBlock;
 import dev.darcosse.common.cobblemonsafari.block.SafariBoardBlockEntity;
 import dev.darcosse.common.cobblemonsafari.block.ScreenLayout;
+import dev.darcosse.common.cobblemonsafari.block.WallScreenContent;
+import dev.darcosse.common.cobblemonsafari.bounty.Bounty;
+import dev.darcosse.common.cobblemonsafari.client.BountyClientState;
+import dev.darcosse.common.cobblemonsafari.client.StatsClientState;
 import dev.darcosse.common.cobblemonsafari.client.FeaturedClientState;
 import dev.darcosse.common.cobblemonsafari.client.SafariClientState;
 import dev.darcosse.common.cobblemonsafari.config.BoardPalette;
 import dev.darcosse.common.cobblemonsafari.config.SafariClientConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariClientConfigManager;
 import dev.darcosse.common.cobblemonsafari.network.SafariFeaturedPayload;
+import dev.darcosse.common.cobblemonsafari.network.SafariStatsPayload;
+import dev.darcosse.common.cobblemonsafari.points.SafariPointsIcon;
 import dev.darcosse.common.cobblemonsafari.spawn.Rarity;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
 import net.minecraft.client.Minecraft;
@@ -38,6 +44,9 @@ import java.util.Locale;
  * Pokémon of the day with their animated models
  * and a progress bar for the time that matters to the viewer (their own
  * hunt if they have a session, otherwise the time until the next rotation).
+ *
+ * <p>Also paints the STATS and BOUNTIES pages of the wall screens (see
+ * {@link #paintScreen}), with the same header, footer and effects.
  *
  * <p>Only the bottom-left block of a screen draws; it draws the whole
  * rectangle. Everything is laid out on a virtual canvas whose shorter side is
@@ -107,6 +116,31 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
     private static final float MIN_CELL_HEIGHT = 40.0F;
     /** Preferred cell width over height; the grid picker favours shapes close to it. */
     private static final float CELL_ASPECT = 0.85F;
+
+    /**
+     * Stats page: smallest readable tile, preferred tile shape (wider than
+     * tall: a label over a number), and the largest size of the number
+     * relative to the font. Below the minimum, tiles are split over pages.
+     */
+    private static final float MIN_TILE_WIDTH = 40.0F;
+    private static final float MIN_TILE_HEIGHT = 22.0F;
+    private static final float TILE_ASPECT = 2.0F;
+    private static final float TILE_VALUE_MAX_SCALE = 2.0F;
+    /** Space between a tile's label and its number, and around them, in canvas pixels. */
+    private static final float TILE_INNER_GAP = 2.0F;
+
+    /**
+     * Bounties page: a row holds the mission on one line and its reward and
+     * progress bar on a second one. Below the minimum height the two lines
+     * overlap, so rows are split over pages; above the maximum, rows stop
+     * growing and leave the rest of the body empty instead of turning into
+     * slabs with tiny text.
+     */
+    private static final float MIN_ROW_HEIGHT = 22.0F;
+    private static final float MAX_ROW_HEIGHT = 30.0F;
+    private static final float ROW_BAR_HEIGHT = 3.0F;
+    /** Width of the coloured strip on the left of each mission row. */
+    private static final float ROW_STRIP = 2.0F;
     /** Cell width at which cell text is drawn at full size; narrower cells shrink their text. */
     private static final float CELL_TEXT_REFERENCE_WIDTH = 64.0F;
     private static final float MIN_CELL_TEXT_SCALE = 0.5F;
@@ -288,7 +322,6 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
             return;
         }
         Direction facing = state.getValue(HorizontalDirectionalBlock.FACING);
-        pal = SafariClientConfigManager.palette();
         // Framed sides: the picture covers the frame's planks up to its beam.
         float growLeft = layout.framedLeft() ? FRAME_OVERLAP : 0.0F;
         float growRight = layout.framedRight() ? FRAME_OVERLAP : 0.0F;
@@ -296,8 +329,6 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
         float growBottom = layout.framedBottom() ? FRAME_OVERLAP : 0.0F;
         float widthBlocks = layout.width() + growLeft + growRight;
         float heightBlocks = layout.height() + growTop + growBottom;
-        float pixelsPerBlock = CANVAS_SHORT_SIDE / Math.min(widthBlocks, heightBlocks);
-        float unit = 1.0F / pixelsPerBlock;
 
         poseStack.pushPose();
         // Block centre, then turn so +X is the reader's right, +Y up and +Z out
@@ -306,16 +337,37 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
         poseStack.mulPose(Axis.YP.rotationDegrees(-facing.toYRot()));
         // Top-left corner of the whole screen, just in front of the panel.
         poseStack.translate(-0.5F - growLeft, -0.5F + layout.height() + growTop, PANEL_FRONT_Z + SURFACE_GAP);
-        poseStack.scale(unit, -unit, unit);
+        paintScreen(poseStack, buffers, widthBlocks, heightBlocks, level.getGameTime(), WallScreenContent.FEATURED);
+        poseStack.popPose();
+    }
 
+    /**
+     * Draws the whole picture of a screen of the given size, in blocks. The
+     * pose must already sit at the screen's top-left corner, on its surface,
+     * with +X to the reader's right, +Y up and +Z toward the reader; the pose
+     * is left as it was found.
+     *
+     * <p>Shared with {@code SafariWallScreenRenderer}, which tilts the pose
+     * first: one layout code for both screens, so they always look alike.
+     *
+     * @param content which page to show; the Safari Board always shows {@link WallScreenContent#FEATURED}
+     */
+    void paintScreen(PoseStack poseStack, MultiBufferSource buffers, float widthBlocks, float heightBlocks,
+                     long gameTime, WallScreenContent content) {
+        pal = SafariClientConfigManager.palette();
+        float pixelsPerBlock = CANVAS_SHORT_SIDE / Math.min(widthBlocks, heightBlocks);
+        float unit = 1.0F / pixelsPerBlock;
+        poseStack.pushPose();
+        poseStack.scale(unit, -unit, unit);
         BoardPainter painter = new BoardPainter(poseStack, buffers, font);
         drawScreen(painter, widthBlocks * pixelsPerBlock, heightBlocks * pixelsPerBlock,
-                System.currentTimeMillis(), level.getGameTime());
+                System.currentTimeMillis(), gameTime, content);
         poseStack.popPose();
     }
 
     /** Lays out and draws every part of the screen. */
-    private void drawScreen(BoardPainter p, float width, float height, long now, long gameTime) {
+    private void drawScreen(BoardPainter p, float width, float height, long now, long gameTime,
+                            WallScreenContent content) {
         p.fill(0.0F, 0.0F, width, height, Z_BACKGROUND, pal.bezel());
         float left = BEZEL;
         float top = BEZEL;
@@ -326,7 +378,7 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
         spriteMode = board.useSprites;
         panelAlpha = (int) Math.round(board.panelOpacity * ALPHA_MAX);
         if (landscape) {
-            drawLandscape(p, left, top, right, bottom);
+            drawLandscape(p, left, top, right, bottom, sceneOf(content));
         } else {
             p.fill(left, top, right, bottom, Z_BACKGROUND + Z_PANEL / 2.0F, pal.background());
         }
@@ -338,15 +390,19 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
         float footerTop = bottom - PADDING - FOOTER_HEIGHT;
         float bodyBottom = footerTop - GAP;
 
-        List<SafariFeaturedPayload.Entry> entries = FeaturedClientState.entries();
-
-        Page page = drawBody(p, x0, bodyTop, x1, bodyBottom, entries, now);
-        drawHeader(p, x0, headerTop, x1, page, now);
+        Page page = switch (content) {
+            case STATS -> drawStats(p, x0, bodyTop, x1, bodyBottom, now, gameTime);
+            case BOUNTIES -> drawBounties(p, x0, bodyTop, x1, bodyBottom, now);
+            default -> drawBody(p, x0, bodyTop, x1, bodyBottom, FeaturedClientState.entries(), now);
+        };
+        drawHeader(p, x0, headerTop, x1, page, now, titleKey(content));
         drawFooter(p, x0, footerTop, x1, now, gameTime);
 
         drawScanline(p, left, top, right, bottom, now);
         long sinceChange = now - FeaturedClientState.changedAtMillis();
-        if (FeaturedClientState.received() && sinceChange >= 0 && sinceChange < FLASH_MS) {
+        // The flash marks new specials: on the other pages it would flash for nothing they show.
+        if (content == WallScreenContent.FEATURED && FeaturedClientState.received()
+                && sinceChange >= 0 && sinceChange < FLASH_MS) {
             int peak = pal.flash() >>> ALPHA_SHIFT;
             int alpha = (int) (peak * (1.0F - sinceChange / (float) FLASH_MS));
             p.fill(left, top, right, bottom, Z_OVERLAY, (alpha << ALPHA_SHIFT) | (pal.flash() & RGB_MASK));
@@ -355,12 +411,30 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
 
     // ---- Header ------------------------------------------------------------
 
+    /** Background scene of a page, so each page is recognisable at a glance. */
+    private static SafariLandscapes.Scene sceneOf(WallScreenContent content) {
+        return switch (content) {
+            case STATS -> SafariLandscapes.RECORD;
+            case BOUNTIES -> SafariLandscapes.MISSIONS;
+            default -> SafariLandscapes.BOARD;
+        };
+    }
+
+    /** Header title of a page; each has a "_short" form for narrow screens. */
+    private static String titleKey(WallScreenContent content) {
+        return switch (content) {
+            case STATS -> "screen.stats_title";
+            case BOUNTIES -> "screen.bounties_title";
+            default -> "screen.title";
+        };
+    }
+
     /**
      * Title band with the page counter and a blinking LIVE light. On narrow
      * screens the title shortens first, then the LIVE label goes and only its
      * light stays.
      */
-    private void drawHeader(BoardPainter p, float x0, float y, float x1, Page page, long now) {
+    private void drawHeader(BoardPainter p, float x0, float y, float x1, Page page, long now, String titleKey) {
         p.fill(x0, y, x1, y + HEADER_HEIGHT, Z_PANEL, panel(pal.header()));
         float textY = y + (HEADER_HEIGHT - LINE_HEIGHT) / 2.0F + 1.0F;
         float left = x0 + HEADER_MARGIN;
@@ -370,7 +444,6 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
         String counter = page.count() > 1 ? (page.index() + 1) + "/" + page.count() : "";
         float counterBlock = counter.isEmpty() ? 0.0F : p.width(counter) + HEADER_SPACING;
         float dotBlock = LIVE_DOT_SIZE + HEADER_SPACING;
-        String titleKey = "screen.title";
         String title = tr(titleKey).toUpperCase(Locale.ROOT);
         boolean liveLabel = true;
         float rightBlock = p.width(live) + dotBlock + counterBlock;
@@ -463,19 +536,192 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
         return new Page(pageIndex, pageCount);
     }
 
+    // ---- Stats page -----------------------------------------------------------
+
+    /** One stat tile: a small label over a big value. */
+    private record StatTile(String label, Component value) {
+    }
+
+    /**
+     * The viewer's own Safari record as a grid of tiles, split over pages
+     * when the screen is too small for all of them.
+     *
+     * @return the page shown, for the header's page counter
+     */
+    private Page drawStats(BoardPainter p, float x0, float y0, float x1, float y1, long now, long gameTime) {
+        SafariStatsPayload stats = StatsClientState.stats();
+        if (stats == null) {
+            int dots = (int) ((now / CONNECTING_DOT_MS) % 4);
+            drawCentered(p, tr("screen.connecting") + ".".repeat(dots), x0, x1,
+                    (y0 + y1) / 2.0F - LINE_HEIGHT / 2.0F, pal.muted());
+            return Page.SINGLE;
+        }
+        List<StatTile> tiles = List.of(
+                new StatTile(tr("screen.stats.points"), SafariPointsIcon.amount(stats.points())),
+                new StatTile(tr("screen.stats.catches"), Component.literal(String.valueOf(stats.catches()))),
+                new StatTile(tr("screen.stats.species"), Component.literal(String.valueOf(stats.species()))),
+                new StatTile(tr("screen.stats.shiny"), Component.literal(String.valueOf(stats.shinies()))),
+                new StatTile(tr("screen.stats.best"), Component.literal(String.valueOf(stats.bestSession()))),
+                new StatTile(tr("screen.stats.time"), Component.literal(Ticks.format(liveTimeHunted(stats, gameTime)))));
+
+        float width = x1 - x0;
+        float height = y1 - y0;
+        int perPage = tiles.size();
+        Grid grid = bestGrid(perPage, width, height, TILE_ASPECT);
+        while (perPage > 1 && (grid.cellWidth() < MIN_TILE_WIDTH || grid.cellHeight() < MIN_TILE_HEIGHT)) {
+            perPage--;
+            grid = bestGrid(perPage, width, height, TILE_ASPECT);
+        }
+        int pageCount = (tiles.size() + perPage - 1) / perPage;
+        int pageIndex = (int) ((now / PAGE_DURATION_MS) % pageCount);
+        int first = pageIndex * perPage;
+        int last = Math.min(tiles.size(), first + perPage);
+        for (int i = first; i < last; i++) {
+            int slot = i - first;
+            float cx = x0 + (slot % grid.columns()) * (grid.cellWidth() + GAP);
+            float cy = y0 + (slot / grid.columns()) * (grid.cellHeight() + GAP);
+            drawStatTile(p, cx, cy, grid.cellWidth(), grid.cellHeight(), tiles.get(i));
+        }
+        return new Page(pageIndex, pageCount);
+    }
+
+    /**
+     * Time hunted, ticking while the viewer hunts: the finished games from
+     * the server's record, plus the time already used in the current game
+     * (granted minus remaining, the same sum the server adds when the game
+     * ends). Saturates instead of overflowing on years of play.
+     */
+    private static int liveTimeHunted(SafariStatsPayload stats, long gameTime) {
+        long ticks = (long) Ticks.fromSeconds(stats.secondsHunted());
+        if (SafariClientState.isActive()) {
+            ticks += Math.max(0, SafariClientState.grantedTicks() - SafariClientState.remainingTicks(gameTime));
+        }
+        return (int) Math.min(Integer.MAX_VALUE, ticks);
+    }
+
+    /** A tile: label at the top in small muted type, the value as large as the tile allows below it. */
+    private void drawStatTile(BoardPainter p, float x, float y, float w, float h, StatTile tile) {
+        p.fill(x, y, x + w, y + h, Z_PANEL, panel(pal.cell()));
+        float labelScale = Math.max(MIN_CELL_TEXT_SCALE, Math.min(1.0F, w / CELL_TEXT_REFERENCE_WIDTH)) * SUBTEXT_SCALE;
+        float labelRoom = (w - 2.0F * TILE_INNER_GAP) / labelScale;
+        String label = p.fit(tile.label(), labelRoom);
+        float labelWidth = p.width(label) * labelScale;
+        p.text(label, x + (w - labelWidth) / 2.0F, y + TILE_INNER_GAP, Z_TEXT, labelScale, pal.muted());
+
+        float valueTop = y + TILE_INNER_GAP * 2.0F + LINE_HEIGHT * labelScale;
+        float valueRoom = h - (valueTop - y) - TILE_INNER_GAP;
+        float valueWidth = Math.max(1.0F, p.width(tile.value()));
+        float valueScale = Math.min(TILE_VALUE_MAX_SCALE,
+                Math.min((w - 2.0F * TILE_INNER_GAP) / valueWidth, valueRoom / LINE_HEIGHT));
+        if (valueScale <= 0.0F) {
+            return;
+        }
+        float valueX = x + (w - valueWidth * valueScale) / 2.0F;
+        float valueY = valueTop + (valueRoom - LINE_HEIGHT * valueScale) / 2.0F;
+        p.text(tile.value(), valueX, valueY, Z_TEXT, valueScale, pal.title());
+    }
+
+    // ---- Bounties page --------------------------------------------------------
+
+    /**
+     * Today's missions with the viewer's progress, one row each, split over
+     * pages when they do not fit.
+     *
+     * @return the page shown, for the header's page counter
+     */
+    private Page drawBounties(BoardPainter p, float x0, float y0, float x1, float y1, long now) {
+        float centerY = (y0 + y1) / 2.0F - LINE_HEIGHT / 2.0F;
+        if (!BountyClientState.hasBounties()) {
+            drawCentered(p, tr("bounty.none"), x0, x1, centerY, pal.muted());
+            return Page.SINGLE;
+        }
+        List<Bounty> bounties = BountyClientState.bounties();
+        float height = y1 - y0;
+        int perPage = bounties.size();
+        while (perPage > 1 && rowHeight(perPage, height) < MIN_ROW_HEIGHT) {
+            perPage--;
+        }
+        float rowHeight = Math.min(MAX_ROW_HEIGHT, rowHeight(perPage, height));
+        int pageCount = (bounties.size() + perPage - 1) / perPage;
+        int pageIndex = (int) ((now / PAGE_DURATION_MS) % pageCount);
+        int first = pageIndex * perPage;
+        int last = Math.min(bounties.size(), first + perPage);
+        for (int i = first; i < last; i++) {
+            float rowTop = y0 + (i - first) * (rowHeight + GAP);
+            drawBountyRow(p, x0, rowTop, x1, rowHeight, bounties.get(i), i, now);
+        }
+        return new Page(pageIndex, pageCount);
+    }
+
+    /** Height of each of {@code rows} rows sharing {@code height}, gaps included. */
+    private static float rowHeight(int rows, float height) {
+        return (height - (rows - 1) * GAP) / rows;
+    }
+
+    /**
+     * One mission: what to catch and the count on the first line, the reward
+     * and a progress bar on the second. A done mission turns green.
+     */
+    private void drawBountyRow(BoardPainter p, float x0, float y, float x1, float h, Bounty bounty, int index,
+                               long now) {
+        int progress = BountyClientState.progress(index);
+        boolean done = progress >= bounty.count();
+        int accent = done ? pal.barSessionOk() : pal.barRotation();
+        p.fill(x0, y, x1, y + h, Z_PANEL, panel(pal.cell()));
+        p.fill(x0, y, x0 + ROW_STRIP, y + h, Z_DETAIL, accent);
+
+        // Text shrinks with the row so both lines always fit: the first line
+        // gets the font's height, the second the subtext's, plus the margins.
+        float lines = LINE_HEIGHT * (1.0F + SUBTEXT_SCALE) + 3.0F * TILE_INNER_GAP;
+        float scale = Math.max(MIN_CELL_TEXT_SCALE, Math.min(1.0F, h / lines));
+        float subScale = scale * SUBTEXT_SCALE;
+        float left = x0 + ROW_STRIP + TILE_INNER_GAP;
+        float right = x1 - TILE_INNER_GAP;
+
+        String count = Math.min(progress, bounty.count()) + "/" + bounty.count();
+        float countWidth = p.width(count) * scale;
+        float lineY = y + TILE_INNER_GAP;
+        p.text(count, right - countWidth, lineY, Z_TEXT, scale, done ? accent : pal.text());
+        String mark = done ? "✔ " : "• ";
+        float markWidth = p.width(mark) * scale;
+        p.text(mark, left, lineY, Z_TEXT, scale, accent);
+        // Built every frame: describe() looks up the type or species name,
+        // which may change language at any time; a few rows per screen.
+        drawMarquee(p, bounty.describe().getString(), left + markWidth, right - countWidth - HEADER_SPACING,
+                lineY, scale, done ? pal.muted() : pal.text(), now, false);
+
+        float subY = lineY + LINE_HEIGHT * scale + TILE_INNER_GAP;
+        Component reward = Component.literal("+").append(SafariPointsIcon.amount(bounty.reward()));
+        float rewardWidth = p.width(reward) * subScale;
+        p.text(reward, left, subY, Z_TEXT, subScale, pal.star());
+        float barLeft = left + rewardWidth + HEADER_SPACING;
+        float barTop = subY + (LINE_HEIGHT * subScale - ROW_BAR_HEIGHT) / 2.0F;
+        if (barLeft < right) {
+            p.fill(barLeft, barTop, right, barTop + ROW_BAR_HEIGHT, Z_DETAIL, panel(pal.barBackground()));
+            float fraction = Math.min(1.0F, progress / (float) Math.max(1, bounty.count()));
+            p.fill(barLeft, barTop, barLeft + (right - barLeft) * fraction, barTop + ROW_BAR_HEIGHT,
+                    Z_DETAIL_TOP, accent);
+        }
+    }
+
     /**
      * The grid shape that gives the largest cells for {@code count} specials,
      * judging a cell by its width and by its height scaled to the preferred
      * aspect, whichever is the limiting one.
      */
     private static Grid bestGrid(int count, float width, float height) {
+        return bestGrid(count, width, height, CELL_ASPECT);
+    }
+
+    /** Same as {@link #bestGrid(int, float, float)} for cells of another preferred shape. */
+    private static Grid bestGrid(int count, float width, float height, float aspect) {
         Grid best = null;
         float bestScore = -1.0F;
         for (int columns = 1; columns <= count; columns++) {
             int rows = (count + columns - 1) / columns;
             float cellWidth = (width - (columns - 1) * GAP) / columns;
             float cellHeight = (height - (rows - 1) * GAP) / rows;
-            float score = Math.min(cellWidth, cellHeight * CELL_ASPECT);
+            float score = Math.min(cellWidth, cellHeight * aspect);
             if (score > bestScore) {
                 bestScore = score;
                 best = new Grid(columns, rows, cellWidth, cellHeight);
@@ -593,10 +839,20 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
      */
     private void drawMarquee(BoardPainter p, String text, float x0, float x1, float y, float scale, int color,
                              long now) {
+        drawMarquee(p, text, x0, x1, y, scale, color, now, true);
+    }
+
+    /**
+     * Same as {@link #drawMarquee(BoardPainter, String, float, float, float, float, int, long)}, with
+     * the choice of where a line that fits sits: centred in a cell, or
+     * against the left edge in a list row where lines must align.
+     */
+    private void drawMarquee(BoardPainter p, String text, float x0, float x1, float y, float scale, int color,
+                             long now, boolean centred) {
         float room = x1 - x0;
         float width = p.width(text) * scale;
         if (width <= room) {
-            p.text(text, x0 + (room - width) / 2.0F, y, Z_TEXT, scale, color);
+            p.text(text, centred ? x0 + (room - width) / 2.0F : x0, y, Z_TEXT, scale, color);
             return;
         }
         float overflow = width - room;
@@ -757,11 +1013,11 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
      * board shows the horizon line) and dimmed so text stays readable.
      * Drawn before every fill: the translucent panels blend over it.
      */
-    private void drawLandscape(BoardPainter p, float left, float top, float right, float bottom) {
+    private void drawLandscape(BoardPainter p, float left, float top, float right, float bottom,
+                               SafariLandscapes.Scene scene) {
         float width = right - left;
         float height = bottom - top;
         float screenAspect = width / height;
-        SafariLandscapes.Scene scene = SafariLandscapes.BOARD;
         float textureAspect = scene.width() / (float) scene.height();
         float u0 = 0.0F;
         float u1 = 1.0F;

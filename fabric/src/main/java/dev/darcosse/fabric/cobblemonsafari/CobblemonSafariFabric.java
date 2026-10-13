@@ -59,6 +59,7 @@ public class CobblemonSafariFabric implements ModInitializer {
             entries.accept(SafariItems.safariTicket());
             entries.accept(SafariItems.safariBoard());
             entries.accept(SafariItems.safariBoardFrame());
+            entries.accept(SafariItems.safariWallScreen());
             entries.accept(SafariItems.safariGate());
         });
         FabricSafariNetworking.registerPayloadTypes();

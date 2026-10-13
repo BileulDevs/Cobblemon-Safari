@@ -1,5 +1,6 @@
 package dev.darcosse.common.cobblemonsafari.event;
 
+import dev.darcosse.common.cobblemonsafari.network.SafariNetwork;
 import com.mojang.brigadier.CommandDispatcher;
 import dev.darcosse.common.cobblemonsafari.structure.RestHouseClerk;
 import dev.darcosse.common.cobblemonsafari.capture.CaptureGuard;
@@ -15,6 +16,7 @@ import dev.darcosse.common.cobblemonsafari.spawn.FeaturedRotation;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedSpawner;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedSync;
 import dev.darcosse.common.cobblemonsafari.spawn.SafariSpawnBoost;
+import dev.darcosse.common.cobblemonsafari.spawn.SpecialSpawnCounter;
 import dev.darcosse.common.cobblemonsafari.structure.RestHouses;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.MinecraftServer;
@@ -64,6 +66,7 @@ public final class SafariServerEvents {
         FeaturedSync.reset();
         SafariBounties.reset();
         SafariSpawnBoost.reset();
+        SpecialSpawnCounter.reset();
         SafariBorder.apply(server);
         // A reset map has no rest houses yet, whatever the save says.
         SafariWorldState.get(server).forgetHousesIfMapChanged(SafariMapReset.salt());
@@ -83,6 +86,7 @@ public final class SafariServerEvents {
         settleJoinedPlayers(server);
         SafariSessionManager.tick(server);
         FeaturedSpawner.tick(server);
+        SpecialSpawnCounter.tick(server);
         FeaturedSync.tick(server);
         SafariBounties.tick(server);
         SafariSpawnBoost.tick(server);
@@ -107,6 +111,7 @@ public final class SafariServerEvents {
         SafariSessionManager.onPlayerJoin(player);
         FeaturedSync.sendTo(player);
         SafariBounties.sendTo(player);
+        SafariNetwork.sendStats(player);
         JOINED.add(player.getUUID());
     }
 

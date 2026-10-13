@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
 Draws the GUI textures: the safari landscape behind the shop panel, the
-wider watering-hole landscape behind the Safari Board screens, and the
-Safari points icon used as a font glyph.
+wider watering-hole landscape behind the Safari Board screens, the ranger
+camp and expedition trail behind the wall screens' STATS and BOUNTIES
+pages, and the Safari points icon used as a font glyph.
 
 Why drawn by code: the pictures are original pixel art in Minecraft's style,
 free of rights, and can be redrawn (palette, size) by editing this file.
@@ -20,6 +21,8 @@ Usage (from the repository root; needs Pillow and numpy):
 Outputs (overwritten):
     common/src/main/resources/assets/cobblemon_safari/textures/gui/shop_background_<scene>.png
     common/src/main/resources/assets/cobblemon_safari/textures/gui/board_background_<scene>.png
+    common/src/main/resources/assets/cobblemon_safari/textures/gui/record_background_<scene>.png
+    common/src/main/resources/assets/cobblemon_safari/textures/gui/missions_background_<scene>.png
     common/src/main/resources/assets/cobblemon_safari/textures/font/safari_points.png
 Deterministic: the same script draws the same pixels.
 """
@@ -752,6 +755,347 @@ def board_grass(img, pal, rng):
                 px[x, y] = colour
 
 
+# ---------------------------------------------------------------------------
+# Wall screen pages: one scene for the STATS page (the ranger camp) and one
+# for the BOUNTIES page (the expedition trail). Same size, horizon and three
+# lights as the board scene, so the screens crop them the same way. Must
+# match SafariLandscapes.RECORD and SafariLandscapes.MISSIONS.
+# ---------------------------------------------------------------------------
+
+# What the camp and trail scenes add to each palette: wood, canvas, fire,
+# the Safari flag and the dirt path.
+PAGE_EXTRAS = {
+    "dusk": {
+        "wood": (122, 78, 52), "wood_dark": (84, 54, 40), "canvas": (226, 186, 132), "canvas_dark": (176, 132, 92),
+        "fire": (255, 150, 60), "fire_light": (255, 226, 130), "flag": (220, 96, 44), "flag_dark": (170, 66, 34),
+        "path": (196, 150, 96), "path_dark": (160, 118, 78), "cliff": (150, 96, 80), "cliff_dark": (112, 72, 66),
+        "glow": None,
+    },
+    "morning": {
+        "wood": (140, 98, 62), "wood_dark": (100, 70, 46), "canvas": (238, 222, 184), "canvas_dark": (196, 176, 136),
+        "fire": (255, 140, 50), "fire_light": (255, 220, 110), "flag": (232, 110, 46), "flag_dark": (184, 78, 36),
+        "path": (214, 184, 128), "path_dark": (180, 150, 100), "cliff": (170, 150, 128), "cliff_dark": (132, 116, 102),
+        "glow": None,
+    },
+    "night": {
+        "wood": (52, 42, 46), "wood_dark": (36, 30, 36), "canvas": (92, 96, 120), "canvas_dark": (64, 68, 94),
+        "fire": (255, 140, 50), "fire_light": (255, 226, 130), "flag": (120, 60, 56), "flag_dark": (86, 44, 46),
+        "path": (70, 74, 90), "path_dark": (54, 58, 74), "cliff": (50, 52, 82), "cliff_dark": (36, 38, 64),
+        "glow": (120, 82, 58),
+    },
+}
+
+# Who stays around the camp and along the trail, per light: (creature, x, y, scale, mirror).
+RECORD_CASTS = {
+    "dusk": [("calfling", 118, 152, 1, False), ("calfling", 134, 154, 1, True), ("tuft", 330, 150, 2, True),
+             ("kitebird", 70, 30, 1, False), ("kitebird", 98, 22, 1, False)],
+    "morning": [("calfling", 120, 152, 1, False), ("tuft", 328, 150, 2, True), ("beetle", 60, 166, 1, False),
+                ("jelly", 300, 34, 1, False), ("kitebird", 90, 26, 1, False)],
+    "night": [("jelly", 290, 40, 1, False), ("jelly", 320, 58, 2, False), ("jelly", 90, 48, 1, False),
+              ("beetle", 60, 166, 2, False), ("tuft", 330, 152, 1, True)],
+}
+MISSIONS_CASTS = {
+    "dusk": [("wader", 166, 132, 1, True), ("calfling", 300, 140, 1, True), ("calfling", 318, 142, 1, True),
+             ("kitebird", 150, 24, 1, False), ("kitebird", 176, 32, 1, False)],
+    "morning": [("wader", 150, 134, 1, False), ("wader", 170, 140, 1, True), ("calfling", 306, 140, 1, True),
+                ("tuft", 110, 160, 2, False), ("jelly", 168, 30, 1, False), ("kitebird", 300, 22, 1, False)],
+    "night": [("wader", 164, 134, 1, True), ("jelly", 120, 40, 1, False), ("jelly", 160, 56, 2, False),
+              ("jelly", 300, 36, 1, False), ("beetle", 300, 160, 2, True)],
+}
+
+
+def page_sky(img, pal, horizon, sun_x, star_seed):
+    """Banded sky, stars at night, and the sun low (or the moon high) at sun_x; shared by the page scenes."""
+    px = img.load()
+    w = img.width
+    top, mid, low = pal["sky"]
+    for y in range(horizon):
+        t = y / horizon
+        for x in range(w):
+            px[x, y] = dithered(top, mid, t / 0.7, x, y, SKY_BANDS) if t < 0.7 \
+                else dithered(mid, low, (t - 0.7) / 0.3, x, y, SKY_BANDS // 2)
+    if pal["stars"]:
+        star_rng = np.random.default_rng(star_seed)
+        for _ in range(120):
+            x, y = int(star_rng.integers(0, w)), int(star_rng.integers(4, horizon - 24))
+            px[x, y] = (255, 255, 230) if star_rng.random() < 0.3 else (170, 180, 220)
+    sx, sy, sr = (sun_x, 30, 11) if pal["moon"] else (sun_x, horizon - 22, 18)
+    for y in range(max(0, sy - sr - 3), min(img.height, sy + sr + 4)):
+        for x in range(max(0, sx - sr - 3), min(w, sx + sr + 4)):
+            d = math.hypot(x - sx, y - sy)
+            if pal["moon"] and math.hypot(x - sx - 5, y - sy + 3) <= sr - 1:
+                continue
+            if d <= sr:
+                px[x, y] = pal["sun"]
+            elif d <= sr + 2 and (x + y) % 2 == 0:
+                px[x, y] = pal["sun_rim"]
+
+
+def page_plain(img, pal, horizon):
+    """The plain below the horizon, banded toward the viewer."""
+    px = img.load()
+    for y in range(horizon, img.height):
+        t = (y - horizon) / (img.height - horizon)
+        for x in range(img.width):
+            px[x, y] = dithered(pal["plain_dark"], pal["plain"], t, x, y, 3)
+
+
+def rect(img, x0, y0, x1, y1, colour):
+    """Fills a rectangle, both corners included."""
+    for y in range(y0, y1 + 1):
+        for x in range(x0, x1 + 1):
+            put(img, x, y, colour)
+
+
+def flag(img, pal, x, top, length):
+    """A Safari pennant on a pole: orange triangle with a darker hem, waving slightly."""
+    for y in range(top, top + length):
+        put(img, x, y, pal["wood_dark"])
+    for row in range(7):
+        reach = 12 - abs(row - 3) * 3
+        for dx in range(1, reach + 1):
+            wave = 1 if (dx // 4) % 2 else 0
+            put(img, x + dx, top + row + wave, pal["flag_dark"] if row in (0, 6) or dx == reach else pal["flag"])
+
+
+def draw_tower(img, pal, x0, ground):
+    """The rangers' lookout: four legs with cross braces, a railed platform, a thatched roof and a flag."""
+    legs, height, width = (x0, x0 + 4, x0 + 22, x0 + 26), 58, 28
+    platform = ground - height
+    for lx in legs:
+        for y in range(platform, ground + 1):
+            put(img, lx, y, pal["wood_dark"] if lx in (x0 + 4, x0 + 22) else pal["wood"])
+    # Cross braces between the front legs, every 14 pixels.
+    for y0 in range(platform + 6, ground - 4, 14):
+        for i in range(19):
+            put(img, x0 + 4 + i, y0 + i * 12 // 18, pal["wood_dark"])
+            put(img, x0 + 22 - i, y0 + i * 12 // 18, pal["wood_dark"])
+    rect(img, x0 - 3, platform - 1, x0 + width + 1, platform + 1, pal["wood"])
+    for x in range(x0 - 3, x0 + width + 2, 3):
+        for y in range(platform - 8, platform - 1):
+            put(img, x, y, pal["wood"])
+    rect(img, x0 - 3, platform - 9, x0 + width + 1, platform - 8, pal["wood_dark"])
+    # Roof posts, then a thatched pyramid roof.
+    for x in (x0 - 2, x0 + width):
+        for y in range(platform - 20, platform - 8):
+            put(img, x, y, pal["wood_dark"])
+    for i in range(10):
+        for x in range(x0 - 6 + i * 2, x0 + width + 5 - i * 2):
+            put(img, x, platform - 21 - i, pal["canvas_dark"] if (x + i) % 3 == 0 else pal["canvas"])
+    flag(img, pal, x0 + width // 2, platform - 44, 14)
+    # Ladder up the right side.
+    for y in range(platform + 2, ground + 1):
+        put(img, x0 + 29, y, pal["wood_dark"])
+        put(img, x0 + 33, y, pal["wood_dark"])
+        if y % 4 == 0:
+            for x in range(x0 + 30, x0 + 33):
+                put(img, x, y, pal["wood"])
+
+
+def draw_tent(img, pal, cx, ground, half, height):
+    """A canvas ridge tent seen from the front: lit and shaded halves, an open dark door."""
+    for y in range(ground - height, ground + 1):
+        t = (y - (ground - height)) / height
+        reach = int(half * t)
+        for x in range(cx - reach, cx + reach + 1):
+            put(img, x, y, pal["canvas"] if x <= cx else pal["canvas_dark"])
+        door = int(half * 0.35 * t)
+        if t > 0.4:
+            for x in range(cx - door, cx + door + 1):
+                put(img, x, y, pal["tree"])
+    for x in (cx - half - 3, cx + half + 3):
+        put(img, x, ground, pal["wood_dark"])
+        put(img, x, ground - 1, pal["wood_dark"])
+
+
+def draw_campfire(img, pal, cx, ground):
+    """Logs crossed under a flame, ringed by stones; at night a warm glow on the ground around it."""
+    if pal["glow"]:
+        for y in range(ground - 10, ground + 6):
+            for x in range(cx - 22, cx + 23):
+                d = ((x - cx) / 22) ** 2 + ((y - ground) / 8) ** 2
+                if d <= 1.0 and (x + y) % 2 == 0:
+                    put(img, x, y, pal["glow"])
+    stone = shade((150, 146, 136), pal["light"])
+    for dx in range(-7, 8, 2):
+        put(img, cx + dx, ground, stone)
+    for i in range(9):
+        put(img, cx - 5 + i, ground - 1 - i // 3, pal["wood_dark"])
+        put(img, cx + 5 - i, ground - 1 - i // 3, pal["wood"])
+    for y in range(ground - 13, ground - 1):
+        t = (ground - 1 - y) / 12
+        reach = int(4 * (1 - t) + 1)
+        for x in range(cx - reach, cx + reach + 1):
+            inner = abs(x - cx) < reach * 0.5 and t < 0.7
+            put(img, x + (1 if (y // 3) % 2 and t > 0.4 else 0), y, pal["fire_light"] if inner else pal["fire"])
+
+
+def draw_crates(img, pal, x0, ground):
+    """Supply crates stacked by the tent, planks drawn as darker lines."""
+    for bx, by, size in ((x0, ground, 10), (x0 + 11, ground, 10), (x0 + 5, ground - 10, 9)):
+        rect(img, bx, by - size + 1, bx + size - 1, by, pal["wood"])
+        for x in range(bx, bx + size):
+            put(img, x, by - size + 1, pal["wood_dark"])
+            put(img, x, by, pal["wood_dark"])
+        for y in range(by - size + 1, by + 1):
+            put(img, bx, y, pal["wood_dark"])
+            put(img, bx + size - 1, y, pal["wood_dark"])
+            put(img, bx + (y - by + size) * (size - 1) // size, y, pal["wood_dark"])
+
+
+def record_background(scene_name):
+    """
+    The STATS page: the rangers' camp on the savanna, where the hunts are
+    written down. Lookout tower with the Safari flag, a tent and supply
+    crates, a campfire, distant mountains and grazers resting nearby.
+    """
+    pal = dict(PALETTES[scene_name], **BOARD_EXTRAS[scene_name], **PAGE_EXTRAS[scene_name])
+    w, h = BOARD_WIDTH, BOARD_HEIGHT
+    rng = np.random.default_rng(SEED + 20)
+    img = Image.new("RGB", (w, h))
+    px = img.load()
+    horizon = int(h * BOARD_HORIZON)
+    page_sky(img, pal, horizon, int(w * 0.20), SEED + 21)
+    for profile, colour in ((ridge(rng, w, horizon - 26, 12, 3), pal["mountain_far"]),
+                            (ridge(rng, w, horizon - 9, 6, 4), pal["mountain_near"])):
+        for x in range(w):
+            for y in range(max(0, profile[x]), horizon + 1):
+                px[x, y] = colour
+    page_plain(img, pal, horizon)
+    for x0, size in ((40, 8), (120, 6), (218, 7), (360, 9)):
+        acacia(img, x0, horizon + size // 2 + 2, size, rng, pal)
+    ground = h - 30
+    draw_tower(img, pal, 262, ground - 4)
+    draw_tent(img, pal, 206, ground, 22, 26)
+    draw_crates(img, pal, 236, ground)
+    draw_campfire(img, pal, 160, ground + 4)
+    for name, x, y, scale, mirror in RECORD_CASTS[scene_name]:
+        rows, colours, glow = CREATURES[name]
+        sprite(img, rows, colours, x, y, scale, mirror, pal["light"], glow)
+    board_grass(img, pal, rng)
+    return img
+
+
+def draw_signpost(img, pal, x0, ground):
+    """A wooden signpost with two arrow boards pointing different ways, as at a trail fork."""
+    for y in range(ground - 34, ground + 1):
+        put(img, x0, y, pal["wood_dark"])
+        put(img, x0 + 1, y, pal["wood"])
+    for top, direction, length in ((ground - 32, 1, 22), (ground - 22, -1, 18)):
+        start = x0 + 2 if direction > 0 else x0 - 1
+        for i in range(length):
+            x = start + direction * i
+            tip = length - i <= 3
+            reach = (length - i) if tip else 3
+            for y in range(top + 3 - min(3, reach), top + 4 + min(3, reach)):
+                put(img, x, y, pal["wood"] if y not in (top, top + 6) else pal["wood_dark"])
+        for i in range(2, length - 4, 3):
+            put(img, start + direction * i, top + 3, pal["wood_dark"])
+
+
+# The bridge spans the river where the path crosses it: the river's centre at
+# that height is about x 176, its half-width 16 (see the river loop), so the
+# deck reaches a little past both banks. Moving the river moves these too.
+BRIDGE_X0, BRIDGE_X1, BRIDGE_Y = 150, 204, 126
+
+
+def missions_background(scene_name):
+    """
+    The BOUNTIES page: the expedition trail. A river falls from far cliffs
+    and winds to the foreground under a plank bridge; a dirt path crosses
+    it, flagged with Safari pennants where the missions wait, and a
+    signpost stands at the fork.
+    """
+    pal = dict(PALETTES[scene_name], **BOARD_EXTRAS[scene_name], **PAGE_EXTRAS[scene_name])
+    w, h = BOARD_WIDTH, BOARD_HEIGHT
+    rng = np.random.default_rng(SEED + 30)
+    img = Image.new("RGB", (w, h))
+    px = img.load()
+    horizon = int(h * BOARD_HORIZON)
+    page_sky(img, pal, horizon, int(w * 0.62), SEED + 31)
+    hills = ridge(rng, w, horizon - 8, 4, 3)
+    for x in range(w):
+        for y in range(max(0, hills[x]), horizon + 1):
+            px[x, y] = pal["mountain_far"]
+    # Cliffs with flat tops and stepped faces, the waterfall between them.
+    for x0, x1, height in ((150, 214, 40), (226, 300, 34), (100, 150, 22)):
+        for y in range(horizon - height, horizon + 1):
+            step = (y - (horizon - height)) // 6
+            for x in range(x0 - step, x1 + step + 1):
+                put(img, x, y, pal["cliff_dark"] if (y // 4) % 3 == 0 or x > x1 - 3 else pal["cliff"])
+    fall_x0, fall_x1, fall_top = 214, 226, horizon - 36
+    for y in range(fall_top, horizon + 2):
+        for x in range(fall_x0, fall_x1 + 1):
+            put(img, x, y, pal["water_light"] if (x + y // 2) % 4 == 0 else pal["water"])
+    page_plain(img, pal, horizon)
+
+    # The river: a band widening toward the viewer, swinging left then right.
+    for y in range(horizon + 1, h):
+        t = (y - horizon) / (h - horizon)
+        centre = 220 - int(60 * math.sin(t * math.pi * 0.9))
+        half = int(6 + 34 * t)
+        for x in range(centre - half, centre + half + 1):
+            edge = abs(x - centre) > half - 2
+            colour = pal["water_dark"] if edge else pal["water"]
+            if not edge and (y % 3 == 0) and (x * 5 + y) % 9 < 3:
+                colour = pal["water_light"]
+            put(img, x, y, colour)
+
+    # The path from the lower left over the bridge to the far bank.
+    # Two legs: up to the bridge's west end, then on from its east end.
+    path_points = [(-6, h - 4), (70, h - 26), (120, 134), (BRIDGE_X0 + 2, BRIDGE_Y + 1), None,
+                   (BRIDGE_X1 - 2, BRIDGE_Y + 1), (260, 122), (320, 116), (390, 110)]
+    for start, end in zip(path_points, path_points[1:]):
+        if start is None or end is None:
+            continue
+        (ax, ay), (bx, by) = start, end
+        steps = max(abs(bx - ax), abs(by - ay))
+        for i in range(steps + 1):
+            x = ax + (bx - ax) * i // steps
+            y = ay + (by - ay) * i // steps
+            width = 3 + (y - horizon) // 8
+            for dx in range(-width, width + 1):
+                for dy in range(-1, 2):
+                    if put_path_ok(img, x + dx, y + dy, pal):
+                        put(img, x + dx, y + dy, pal["path_dark"] if dy == 1 else pal["path"])
+    # Plank bridge over the river where the path crosses it, with a rail.
+    for x in range(BRIDGE_X0, BRIDGE_X1 + 1):
+        for y in range(BRIDGE_Y - 3, BRIDGE_Y + 3):
+            put(img, x, y, pal["wood_dark"] if y in (BRIDGE_Y - 3, BRIDGE_Y + 2) or x % 4 == 0 else pal["wood"])
+    for x in range(BRIDGE_X0, BRIDGE_X1 + 1, 11):
+        for y in range(BRIDGE_Y - 9, BRIDGE_Y - 2):
+            put(img, x, y, pal["wood_dark"])
+    for x in range(BRIDGE_X0, BRIDGE_X1 + 1):
+        put(img, x, BRIDGE_Y - 8, pal["wood"])
+
+    # Pennants marking the mission spots along the trail.
+    for fx, fy in ((126, 112), (322, 94), (88, 140)):
+        flag(img, pal, fx, fy, 22)
+    for x0, size in ((40, 8), (350, 7), (300, 6)):
+        acacia(img, x0, horizon + size // 2 + 2, size, rng, pal)
+    for name, x, y, scale, mirror in MISSIONS_CASTS[scene_name]:
+        rows, colours, glow = CREATURES[name]
+        sprite(img, rows, colours, x, y, scale, mirror, pal["light"], glow)
+    draw_signpost(img, pal, 34, h - 14)
+    board_grass(img, pal, rng)
+    if pal["stars"]:
+        frng = np.random.default_rng(SEED + 32)
+        for _ in range(30):
+            put(img, int(frng.integers(0, w)), int(frng.integers(130, h - 4)), (230, 255, 150))
+    return img
+
+
+def put_path_ok(img, x, y, pal):
+    """Whether the path may paint this pixel: not over the river, which the bridge crosses instead."""
+    if not (0 <= x < img.width and 0 <= y < img.height):
+        return False
+    colour = img.getpixel((x, y))
+    return colour not in (pal["water"], pal["water_light"], pal["water_dark"])
+
+
+# Wall screen page scenes and their texture prefixes (textures/gui/<prefix><light>.png).
+PAGE_SCENES = (("record_background_", record_background), ("missions_background_", missions_background))
+
 # Safari points icon: a 16x16 gold coin with a green leaf, drawn as a font
 # glyph at 8 GUI pixels high (16 texels for crisp rendering at GUI scale 2+).
 ICON_SIZE = 16
@@ -803,7 +1147,10 @@ def main():
             board = board_background(name)
             board.resize((BOARD_WIDTH * PREVIEW_SCALE, BOARD_HEIGHT * PREVIEW_SCALE), Image.NEAREST) \
                 .save(os.path.join(out, f"board_background_{name}.png"))
-        print(f"Wrote {2 * len(SCENES)} previews to {out}")
+            for prefix, draw in PAGE_SCENES:
+                draw(name).resize((BOARD_WIDTH * PREVIEW_SCALE, BOARD_HEIGHT * PREVIEW_SCALE), Image.NEAREST) \
+                    .save(os.path.join(out, f"{prefix}{name}.png"))
+        print(f"Wrote {(2 + len(PAGE_SCENES)) * len(SCENES)} previews to {out}")
         return
     os.makedirs(os.path.join(ASSETS, "gui"), exist_ok=True)
     os.makedirs(os.path.join(ASSETS, "font"), exist_ok=True)
@@ -812,8 +1159,12 @@ def main():
         background(name).save(os.path.join(ASSETS, "gui", f"shop_background_{name}.png"), optimize=True)
         # Read by SafariLandscapes.BOARD.
         board_background(name).save(os.path.join(ASSETS, "gui", f"board_background_{name}.png"), optimize=True)
+        # Read by SafariLandscapes.RECORD and SafariLandscapes.MISSIONS.
+        for prefix, draw in PAGE_SCENES:
+            draw(name).save(os.path.join(ASSETS, "gui", f"{prefix}{name}.png"), optimize=True)
     points_icon().save(os.path.join(ASSETS, "font", "safari_points.png"), optimize=True)
-    print(f"Wrote {len(SCENES)} shop backgrounds, {len(SCENES)} board backgrounds and safari_points.png")
+    print(f"Wrote {len(SCENES)} shop backgrounds, {len(SCENES)} board backgrounds, "
+          f"{len(SCENES) * len(PAGE_SCENES)} wall screen page backgrounds and safari_points.png")
 
 
 if __name__ == "__main__":

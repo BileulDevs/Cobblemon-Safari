@@ -6,6 +6,10 @@ import dev.darcosse.common.cobblemonsafari.network.SafariRulesPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariTimerPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariShopBuyPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariShopPayload;
+import dev.darcosse.common.cobblemonsafari.network.SafariStatsPayload;
+import dev.darcosse.common.cobblemonsafari.network.SafariWallScreenOpenPayload;
+import dev.darcosse.common.cobblemonsafari.network.SafariWallScreenSetPayload;
+import dev.darcosse.common.cobblemonsafari.block.WallScreenSettings;
 import dev.darcosse.common.cobblemonsafari.shop.SafariShop;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -23,7 +27,8 @@ public final class FabricSafariNetworking {
 
     /**
      * Registers every payload type, both directions, and the server-side
-     * receiver of shop purchases (Fabric runs it on the server thread).
+     * receivers of shop purchases and wall screen settings (Fabric runs them
+     * on the server thread).
      */
     public static void registerPayloadTypes() {
         PayloadTypeRegistry.playS2C().register(SafariShopPayload.TYPE, SafariShopPayload.CODEC);
@@ -34,5 +39,10 @@ public final class FabricSafariNetworking {
         PayloadTypeRegistry.playS2C().register(SafariRulesPayload.TYPE, SafariRulesPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SafariFeaturedPayload.TYPE, SafariFeaturedPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SafariBountiesPayload.TYPE, SafariBountiesPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(SafariStatsPayload.TYPE, SafariStatsPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(SafariWallScreenOpenPayload.TYPE, SafariWallScreenOpenPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(SafariWallScreenSetPayload.TYPE, SafariWallScreenSetPayload.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(SafariWallScreenSetPayload.TYPE,
+                (payload, context) -> WallScreenSettings.handleSet(context.player(), payload));
     }
 }
