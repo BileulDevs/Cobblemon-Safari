@@ -33,6 +33,8 @@ public class SafariShopConfig {
      * Version 9: rotating.rarePrice 1000 to 500; a file still on 1000 follows.
      * Version 10: rotating.count 4 to 15 (a file still on 4 follows); added
      * rotatingItems and rotatingBalls.
+     * Version 11: added the cooking tab and its default ingredients (added to
+     * existing files once).
      */
     public int configVersion = SafariShopConfigManager.CURRENT_VERSION;
 
@@ -47,6 +49,7 @@ public class SafariShopConfig {
             Tab.of(Tab.POKEMON, "cobblemon:poke_ball"),
             Tab.of(Tab.ITEMS, "cobblemon:rare_candy"),
             Tab.of(Tab.BALLS, "cobblemon:great_ball"),
+            Tab.of(Tab.COOKING, COOKING_ICON),
             Tab.of(Tab.TICKETS, TICKET_ITEM)
     ));
 
@@ -81,10 +84,26 @@ public class SafariShopConfig {
             Entry.item("cobblemon:poke_ball", 10, 20),
             Entry.item("cobblemon:great_ball", 5, 40),
             Entry.item("cobblemon:ultra_ball", 5, 80),
+            Entry.cooking("cobblemon:hearty_grains", 8, 40),
+            Entry.cooking("cobblemon:vivichoke", 2, 60),
+            Entry.cooking("cobblemon:medicinal_leek", 4, 40),
+            Entry.cooking("cobblemon:tasty_tail", 1, 80),
+            Entry.cooking("cobblemon:galarica_nuts", 4, 60),
+            Entry.cooking("cobblemon:pep_up_flower", 4, 40),
+            Entry.cooking("cobblemon:energy_root", 2, 60),
+            Entry.cooking("minecraft:honey_bottle", 4, 30),
+            Entry.cooking("minecraft:sugar", 16, 20),
+            Entry.cooking("minecraft:milk_bucket", 1, 20),
             Entry.ticketTrade(TRADE_APRICORN_TAG, TRADE_APRICORNS),
             Entry.ticketTrade(TRADE_BERRY_TAG, TRADE_BERRIES),
             Entry.ticketTrade(TRADE_STONE_TAG, TRADE_STONES)
     ));
+
+    /**
+     * Icon of the cooking tab: the Poké Pot the rest houses cook in, the
+     * same item RestHouseBuilder puts on their campfire.
+     */
+    static final String COOKING_ICON = "cobblemon:campfire_pot_red";
 
     /** The Safari Ticket's item id, what ticket trades give. */
     public static final String TICKET_ITEM = "cobblemon_safari:safari_ticket";
@@ -365,6 +384,13 @@ public class SafariShopConfig {
         public static final String ITEMS = "items";
         public static final String BALLS = "balls";
         public static final String TICKETS = "tickets";
+        /**
+         * What to cook in the Poké Pot: Cobblemon's own ingredients, which
+         * do not grow everywhere, plus a few vanilla staples its recipes ask
+         * for. Prices against about 600 points per hour of hunting: all a
+         * Poké Cake needs costs under twenty minutes of it.
+         */
+        public static final String COOKING = "cooking";
 
         /**
          * Id entries refer to. For a built-in id the name comes from the
@@ -483,6 +509,13 @@ public class SafariShopConfig {
             entry.type = TYPE_POKEMON;
             entry.pokemon = properties;
             entry.price = price;
+            return entry;
+        }
+
+        /** An ingredient of the cooking tab. */
+        static Entry cooking(String id, int count, int price) {
+            Entry entry = item(id, count, price);
+            entry.tab = Tab.COOKING;
             return entry;
         }
 

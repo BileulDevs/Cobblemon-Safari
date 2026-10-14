@@ -194,6 +194,7 @@
   "cobblemon_safari.shop.missing_items": "这次交换需要%1$s × %2$s。",
   "cobblemon_safari.shop.limit_reached": "在下次轮换前，你已用完这项交换的次数。",
   "cobblemon_safari.message.shop_traded": "你用%1$s换到了%2$s。",
+  "cobblemon_safari.shop.tab.cooking": "烹饪",
   "cobblemon_safari.shop.tab.tickets": "门票",
   "cobblemon_safari.tag.cobblemon.apricorns": "球果",
   "cobblemon_safari.tag.cobblemon.berries": "树果",

@@ -194,6 +194,7 @@
   "cobblemon_safari.shop.missing_items": "Il vous faut %s × %s pour cet échange.",
   "cobblemon_safari.shop.limit_reached": "Vous avez fait cet échange autant de fois que permis jusqu'à la prochaine rotation.",
   "cobblemon_safari.message.shop_traded": "Vous avez échangé %s contre %s.",
+  "cobblemon_safari.shop.tab.cooking": "Cuisine",
   "cobblemon_safari.shop.tab.tickets": "Tickets",
   "cobblemon_safari.tag.cobblemon.apricorns": "Noigrumes",
   "cobblemon_safari.tag.cobblemon.berries": "Baies",

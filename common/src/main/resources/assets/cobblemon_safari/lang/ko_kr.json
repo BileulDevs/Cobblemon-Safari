@@ -194,6 +194,7 @@
   "cobblemon_safari.shop.missing_items": "이 교환에는 %1$s × %2$s이(가) 필요합니다.",
   "cobblemon_safari.shop.limit_reached": "다음 교체까지 이 교환을 허용된 횟수만큼 모두 했습니다.",
   "cobblemon_safari.message.shop_traded": "%1$s을(를) %2$s(으)로 교환했습니다.",
+  "cobblemon_safari.shop.tab.cooking": "요리",
   "cobblemon_safari.shop.tab.tickets": "티켓",
   "cobblemon_safari.tag.cobblemon.apricorns": "규토리",
   "cobblemon_safari.tag.cobblemon.berries": "나무열매",

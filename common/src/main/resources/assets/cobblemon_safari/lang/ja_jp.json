@@ -194,6 +194,7 @@
   "cobblemon_safari.shop.missing_items": "この交換には%1$s × %2$sが必要です。",
   "cobblemon_safari.shop.limit_reached": "次の入れ替えまで、この交換はもうできません。",
   "cobblemon_safari.message.shop_traded": "%1$sを%2$sと交換した。",
+  "cobblemon_safari.shop.tab.cooking": "料理",
   "cobblemon_safari.shop.tab.tickets": "チケット",
   "cobblemon_safari.tag.cobblemon.apricorns": "ぼんぐり",
   "cobblemon_safari.tag.cobblemon.berries": "きのみ",

@@ -194,6 +194,7 @@
   "cobblemon_safari.shop.missing_items": "Для этого обмена нужно %1$s × %2$s.",
   "cobblemon_safari.shop.limit_reached": "Вы уже совершили этот обмен максимальное число раз до следующей смены.",
   "cobblemon_safari.message.shop_traded": "Вы обменяли %1$s на %2$s.",
+  "cobblemon_safari.shop.tab.cooking": "Кулинария",
   "cobblemon_safari.shop.tab.tickets": "Билеты",
   "cobblemon_safari.tag.cobblemon.apricorns": "Априкорны",
   "cobblemon_safari.tag.cobblemon.berries": "Ягоды",

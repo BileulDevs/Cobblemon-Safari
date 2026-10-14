@@ -57,6 +57,22 @@ public class SafariShopScreen extends Screen {
     private static final int TAB_GAP = 2;
     /** Gap above the tabs, under the header. */
     private static final int TAB_TOP_GAP = 2;
+    /**
+     * Width of the scroll arrows at the ends of the tab row, shown only when
+     * even the names alone do not fit. Narrower is hard to click.
+     */
+    private static final int TAB_ARROW_WIDTH = 12;
+    /**
+     * Tighter tab metrics, used when the normal ones do not fit: less
+     * padding, a 10 px icon instead of 12, 1 px gaps, and the row may use the
+     * whole box width instead of keeping the box padding. Measured on the
+     * five default tabs, this keeps icons and names in English, French and
+     * German, where the normal metrics overflow by about 35 px. Smaller
+     * icons stop reading as items.
+     */
+    private static final int TAB_PADDING_TIGHT = 2;
+    private static final float TAB_ICON_SCALE_TIGHT = 0.625F;
+    private static final int TAB_GAP_TIGHT = 1;
     /** Gap between the content box and the footer. */
     private static final int CONTENT_BOTTOM_GAP = 2;
 
@@ -155,6 +171,12 @@ public class SafariShopScreen extends Screen {
     private int selected = -1;
     /** True between a purchase request and the server's refresh. */
     private boolean awaitingServer;
+    /**
+     * First tab shown when the tab row scrolls (position among the tabs that
+     * hold entries, not an index in data.tabs()). Kept so the row does not
+     * jump back when another tab opens.
+     */
+    private int tabScroll;
 
     private int left;
     private int top;
@@ -244,6 +266,27 @@ public class SafariShopScreen extends Screen {
         refreshButtons();
     }
 
+    /**
+     * Opens the previous or next tab holding entries, which also scrolls the
+     * tab row to it: the arrows browse the tabs rather than only slide the
+     * row, so a click always shows something new. Stops at both ends.
+     */
+    private void scrollTabs(int direction) {
+        List<Integer> shown = new ArrayList<>();
+        for (int i = 0; i < data.tabs().size(); i++) {
+            if (!entriesOf(i).isEmpty()) {
+                shown.add(i);
+            }
+        }
+        if (shown.isEmpty()) {
+            return;
+        }
+        int position = Math.max(0, shown.indexOf(tab));
+        int next = Math.max(0, Math.min(shown.size() - 1, position + direction));
+        // No scroll bookkeeping here: tabLayout slides the window to keep the open tab in view.
+        openTab(shown.get(next));
+    }
+
     /** Opens a tab on its first page; the selection does not follow to another tab. */
     private void openTab(int index) {
         if (index == tab) {
@@ -271,6 +314,10 @@ public class SafariShopScreen extends Screen {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         int tabIndex = tabAt(mouseX, mouseY);
+        if (tabIndex == ARROW_BACK || tabIndex == ARROW_FORWARD) {
+            scrollTabs(tabIndex == ARROW_BACK ? -1 : 1);
+            return true;
+        }
         if (tabIndex >= 0) {
             openTab(tabIndex);
             return true;
@@ -367,26 +414,120 @@ public class SafariShopScreen extends Screen {
     }
 
     /**
+     * How a row of tabs is drawn: padding inside a tab, icon scale (0 for
+     * no icon), gap after the icon and between tabs, and where the row
+     * starts and how wide it may be.
+     */
+    private record TabMetrics(int padding, float iconScale, int gap, int start, int room) {
+
+        /** Whether tabs show their icon. */
+        boolean icons() {
+            return iconScale > 0.0F;
+        }
+    }
+
+    /**
+     * Where one tab of the row sits, or a scroll arrow (index
+     * {@link #ARROW_BACK} / {@link #ARROW_FORWARD}), with the metrics it is
+     * drawn with.
+     */
+    private record TabSlot(int index, int x, int width, TabMetrics metrics) {
+    }
+
+    /** Pseudo tab indices of the scroll arrows in a {@link TabSlot}. */
+    private static final int ARROW_BACK = -2;
+    private static final int ARROW_FORWARD = -3;
+
+    /**
+     * Lays the tab row out, for drawing and for clicks alike, so the two
+     * can never disagree. Names always stay readable, icons stay as long as
+     * possible; four steps, each only when the previous one does not fit:
+     * normal tabs with icon and name; tight tabs with icon and name (see
+     * {@link #TAB_PADDING_TIGHT}); tight tabs with their name alone; then the
+     * row scrolls, names alone, with arrows at both ends, keeping the open
+     * tab in view.
+     *
+     * <p>Before, tabs past the box's width were simply not drawn, so a fifth
+     * tab silently hid the last one (the tickets).
+     */
+    private List<TabSlot> tabLayout() {
+        List<Integer> shown = new ArrayList<>();
+        for (int i = 0; i < data.tabs().size(); i++) {
+            if (!entriesOf(i).isEmpty()) {
+                shown.add(i);
+            }
+        }
+        TabMetrics normal = new TabMetrics(TAB_PADDING, TAB_ICON_SCALE, TAB_GAP,
+                left + CONTENT_LEFT + CONTENT_PADDING, CONTENT_WIDTH - 2 * CONTENT_PADDING);
+        // One pixel in from each side of the box, clear of its wooden border.
+        int tightStart = left + CONTENT_LEFT + 1;
+        int tightRoom = CONTENT_WIDTH - 2;
+        TabMetrics tight = new TabMetrics(TAB_PADDING_TIGHT, TAB_ICON_SCALE_TIGHT, TAB_GAP_TIGHT, tightStart, tightRoom);
+        TabMetrics namesOnly = new TabMetrics(TAB_PADDING_TIGHT, 0.0F, TAB_GAP_TIGHT, tightStart, tightRoom);
+        for (TabMetrics metrics : new TabMetrics[]{normal, tight, namesOnly}) {
+            if (rowWidth(shown, metrics) <= metrics.room()) {
+                return place(shown, metrics.start(), metrics);
+            }
+        }
+        // Scrolling: the window of tabs between the two arrows.
+        int windowRoom = tightRoom - 2 * (TAB_ARROW_WIDTH + TAB_GAP_TIGHT);
+        int openPosition = Math.max(0, shown.indexOf(tab));
+        tabScroll = Math.max(0, Math.min(tabScroll, shown.size() - 1));
+        if (openPosition < tabScroll) {
+            tabScroll = openPosition;
+        }
+        // Moves the window right until the open tab fits in it.
+        while (tabScroll < openPosition
+                && rowWidth(shown.subList(tabScroll, openPosition + 1), namesOnly) > windowRoom) {
+            tabScroll++;
+        }
+        int end = tabScroll;
+        while (end < shown.size() && rowWidth(shown.subList(tabScroll, end + 1), namesOnly) <= windowRoom) {
+            end++;
+        }
+        List<TabSlot> slots = new ArrayList<>();
+        slots.add(new TabSlot(ARROW_BACK, tightStart, TAB_ARROW_WIDTH, namesOnly));
+        slots.addAll(place(shown.subList(tabScroll, Math.max(end, tabScroll + 1)),
+                tightStart + TAB_ARROW_WIDTH + TAB_GAP_TIGHT, namesOnly));
+        slots.add(new TabSlot(ARROW_FORWARD, tightStart + tightRoom - TAB_ARROW_WIDTH, TAB_ARROW_WIDTH, namesOnly));
+        return slots;
+    }
+
+    /** Places tabs left to right from {@code x}. */
+    private List<TabSlot> place(List<Integer> indices, int x, TabMetrics metrics) {
+        List<TabSlot> slots = new ArrayList<>();
+        for (int i : indices) {
+            int w = tabWidth(data.tabs().get(i), metrics);
+            slots.add(new TabSlot(i, x, w, metrics));
+            x += w + metrics.gap();
+        }
+        return slots;
+    }
+
+    /** Total width of a row of tabs, gaps included. */
+    private int rowWidth(List<Integer> indices, TabMetrics metrics) {
+        int total = 0;
+        for (int i : indices) {
+            total += tabWidth(data.tabs().get(i), metrics) + metrics.gap();
+        }
+        return Math.max(0, total - metrics.gap());
+    }
+
+    /**
      * The tab row, as folder tabs on the content box: each tab with an icon
-     * then its name. The open tab is taller, gold-edged, and melts into the
-     * box (same colour, no line between them); the others sit lower, darker.
+     * then its name (the icon gives way only when the row is very crowded,
+     * see {@link #tabLayout}). The open
+     * tab is taller, gold-edged, and melts into the box (same colour, no line
+     * between them); the others sit lower, darker.
      */
     private void drawTabs(GuiGraphics graphics, int mouseX, int mouseY) {
-        int x = left + CONTENT_LEFT + CONTENT_PADDING;
         int bottom = top + CONTENT_TOP;
         int openLeft = -1;
         int openRight = -1;
-        for (int i = 0; i < data.tabs().size(); i++) {
-            if (entriesOf(i).isEmpty()) {
-                continue;
-            }
-            SafariShopPayload.Tab shown = data.tabs().get(i);
-            int w = tabWidth(shown);
-            if (x + w > left + CONTENT_LEFT + CONTENT_WIDTH - CONTENT_PADDING) {
-                // More tabs than fit: the rest stay hidden rather than spill out of the box.
-                break;
-            }
-            boolean open = i == tab;
+        for (TabSlot slot : tabLayout()) {
+            int x = slot.x();
+            int w = slot.width();
+            boolean open = slot.index() == tab;
             int y = bottom - TAB_HEIGHT + (open ? 0 : TAB_INACTIVE_DROP);
             boolean hovered = mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < bottom;
             if (open) {
@@ -404,19 +545,27 @@ public class SafariShopScreen extends Screen {
                 graphics.vLine(x, y, bottom, WOOD);
                 graphics.vLine(x + w - 1, y, bottom, WOOD);
             }
-            int textX = x + TAB_PADDING;
             int middle = y + (bottom - y) / 2;
-            if (!shown.icon().isEmpty()) {
+            if (slot.index() < 0) {
+                String glyph = slot.index() == ARROW_BACK ? "<" : ">";
+                graphics.drawString(font, glyph, x + (w - font.width(glyph)) / 2, middle - font.lineHeight / 2 + 1,
+                        hovered ? TEXT_COLOR : MUTED_COLOR);
+                continue;
+            }
+            SafariShopPayload.Tab shown = data.tabs().get(slot.index());
+            TabMetrics metrics = slot.metrics();
+            int textX = x + metrics.padding();
+            if (metrics.icons() && !shown.icon().isEmpty()) {
+                float scale = metrics.iconScale();
                 graphics.pose().pushPose();
-                graphics.pose().translate(x + TAB_PADDING, middle - ITEM_ICON_SIZE * TAB_ICON_SCALE / 2.0F, 0.0F);
-                graphics.pose().scale(TAB_ICON_SCALE, TAB_ICON_SCALE, 1.0F);
+                graphics.pose().translate(x + metrics.padding(), middle - ITEM_ICON_SIZE * scale / 2.0F, 0.0F);
+                graphics.pose().scale(scale, scale, 1.0F);
                 graphics.renderFakeItem(shown.icon(), 0, 0);
                 graphics.pose().popPose();
-                textX += (int) (ITEM_ICON_SIZE * TAB_ICON_SCALE) + TAB_GAP;
+                textX += (int) (ITEM_ICON_SIZE * scale) + metrics.gap();
             }
             graphics.drawString(font, tabName(shown), textX, middle - font.lineHeight / 2 + 1,
                     open ? GOLD : hovered ? TEXT_COLOR : MUTED_COLOR);
-            x += w + TAB_GAP;
         }
         int boxLeft = left + CONTENT_LEFT;
         int boxRight = boxLeft + CONTENT_WIDTH;
@@ -661,30 +810,27 @@ public class SafariShopScreen extends Screen {
                 : Character.toUpperCase(shown.id().charAt(0)) + shown.id().substring(1));
     }
 
-    private int tabWidth(SafariShopPayload.Tab shown) {
-        int iconWidth = shown.icon().isEmpty() ? 0 : (int) (ITEM_ICON_SIZE * TAB_ICON_SCALE) + TAB_GAP;
-        return TAB_PADDING * 2 + iconWidth + font.width(tabName(shown));
+    /** Width of a tab with the given metrics: its name, with its icon in front when shown. */
+    private int tabWidth(SafariShopPayload.Tab shown, TabMetrics metrics) {
+        int iconWidth = metrics.icons() && !shown.icon().isEmpty()
+                ? (int) (ITEM_ICON_SIZE * metrics.iconScale()) + metrics.gap() : 0;
+        return metrics.padding() * 2 + iconWidth + font.width(tabName(shown));
     }
 
-    /** Index of the tab under the point, or -1. Mirrors the layout of {@link #drawTabs}. */
+    /**
+     * Index of the tab under the point, {@link #ARROW_BACK} or
+     * {@link #ARROW_FORWARD} for a scroll arrow, or -1. Uses the same layout
+     * as {@link #drawTabs}.
+     */
     private int tabAt(double mouseX, double mouseY) {
         int bottom = top + CONTENT_TOP;
         if (mouseY < bottom - TAB_HEIGHT || mouseY >= bottom) {
             return -1;
         }
-        int x = left + CONTENT_LEFT + CONTENT_PADDING;
-        for (int i = 0; i < data.tabs().size(); i++) {
-            if (entriesOf(i).isEmpty()) {
-                continue;
+        for (TabSlot slot : tabLayout()) {
+            if (mouseX >= slot.x() && mouseX < slot.x() + slot.width()) {
+                return slot.index();
             }
-            int w = tabWidth(data.tabs().get(i));
-            if (x + w > left + CONTENT_LEFT + CONTENT_WIDTH - CONTENT_PADDING) {
-                break;
-            }
-            if (mouseX >= x && mouseX < x + w) {
-                return i;
-            }
-            x += w + TAB_GAP;
         }
         return -1;
     }

@@ -58,8 +58,11 @@ public final class SafariShopConfigManager {
     private static final Set<String> OLD_DEFAULT_POKEMON = Set.of("abra level=10", "clefairy level=12",
             "porygon level=20", "dratini level=15", "scyther level=20");
 
+    /** The version that added the cooking tab; older files get it and its ingredients once. */
+    private static final int COOKING_VERSION = 11;
+
     /** Version written by this build. */
-    public static final int CURRENT_VERSION = 10;
+    public static final int CURRENT_VERSION = 11;
 
     /**
      * Most random Pokémon per rotation. Each one is built for the screen
@@ -145,6 +148,9 @@ public final class SafariShopConfigManager {
                 && c.rotating.count == SafariShopConfig.OLD_ROTATING_POKEMON) {
             c.rotating.count = SafariShopConfig.ROTATING_POKEMON;
             CobblemonSafari.LOGGER.info("Migrated {}: rotating.count is now {}", FILE_NAME, c.rotating.count);
+        }
+        if (c.configVersion < COOKING_VERSION) {
+            addCookingTab(c);
         }
         if (c.configVersion != CURRENT_VERSION) {
             c.configVersion = CURRENT_VERSION;
@@ -310,6 +316,42 @@ public final class SafariShopConfigManager {
         }
         defaults.entries.stream().filter(SafariShopConfig.Entry::hasCost).forEach(c.entries::add);
         CobblemonSafari.LOGGER.info("Added the default ticket trades to {}", FILE_NAME);
+    }
+
+    /**
+     * Adds the cooking tab, before the tickets tab when there is one, and
+     * its default ingredients, unless the file already has a cooking tab
+     * (an admin who made one keeps theirs). Files without tabs get the
+     * default tabs later in validation, the cooking one included.
+     */
+    private static void addCookingTab(SafariShopConfig c) {
+        if (c.tabs == null || c.tabs.isEmpty() || c.tabs.stream().anyMatch(tab -> tab != null
+                && SafariShopConfig.Tab.COOKING.equals(tab.id))) {
+            return;
+        }
+        SafariShopConfig defaults = new SafariShopConfig();
+        SafariShopConfig.Tab cooking = defaults.tabs.stream()
+                .filter(tab -> SafariShopConfig.Tab.COOKING.equals(tab.id)).findFirst().orElse(null);
+        if (cooking == null) {
+            return;
+        }
+        int tickets = -1;
+        for (int i = 0; i < c.tabs.size(); i++) {
+            if (c.tabs.get(i) != null && SafariShopConfig.Tab.TICKETS.equals(c.tabs.get(i).id)) {
+                tickets = i;
+                break;
+            }
+        }
+        if (tickets >= 0) {
+            c.tabs.add(tickets, cooking);
+        } else {
+            c.tabs.add(cooking);
+        }
+        if (c.entries != null) {
+            defaults.entries.stream().filter(entry -> SafariShopConfig.Tab.COOKING.equals(entry.tab))
+                    .forEach(c.entries::add);
+        }
+        CobblemonSafari.LOGGER.info("Added the cooking tab and its ingredients to {}", FILE_NAME);
     }
 
     /**
