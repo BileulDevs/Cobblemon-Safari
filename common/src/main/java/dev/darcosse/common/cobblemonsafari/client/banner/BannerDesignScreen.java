@@ -24,7 +24,9 @@ import java.util.Locale;
 /**
  * Picks the picture of a Safari Banner among every texture under
  * {@code textures/block/banner/} of the loaded resource packs, shown as a
- * grid of thumbnails (animated ones move, being atlas sprites).
+ * grid of thumbnails (animated ones move, being atlas sprites). When there
+ * are more than fit, a scrollbar appears on the right of the grid: drag its
+ * thumb, click its track, or use the wheel.
  *
  * <p>Every click is sent to the server at once, so the banner behind the
  * screen changes live; the game is not paused for the same reason. The
@@ -65,6 +67,21 @@ public class BannerDesignScreen extends Screen {
     private static final int SELECTED_FRAME = 0xFFF2C14E;
     private static final int HOVER_FRAME = 0xFFB0B0B0;
 
+    /**
+     * Scrollbar, in GUI pixels: width, gap to the grid, and the shortest the
+     * thumb gets (with many rows a proportional thumb would be too small to
+     * grab). Only reserved when the designs do not fit.
+     */
+    private static final int SCROLLBAR_WIDTH = 6;
+    private static final int SCROLLBAR_GAP = 4;
+    private static final int SCROLLBAR_MIN_THUMB = 10;
+    /** Scrollbar colours (ARGB), in the panel's walnut and gold. */
+    private static final int SCROLLBAR_TRACK = 0xFF2A2D33;
+    private static final int SCROLLBAR_THUMB = 0xFF8A7458;
+    private static final int SCROLLBAR_THUMB_HOVER = 0xFFC9A66B;
+    /** Value of {@link #thumbGrab} while the thumb is not held. */
+    private static final double NOT_GRABBED = -1;
+
     /** The banner the picker was opened on. */
     private final BlockPos pos;
     private ResourceLocation selected;
@@ -76,6 +93,16 @@ public class BannerDesignScreen extends Screen {
     private int visibleRows;
     /** First visible row of the grid, for scrolling. */
     private int scrollRow;
+    /** Whether the designs overflow, so the scrollbar is shown and its lane reserved. */
+    private boolean scrollable;
+    /** Left edge of the grid area, and its width (the panel minus margins and the scrollbar lane). */
+    private int gridLeft;
+    private int gridAreaWidth;
+    /**
+     * While the thumb is dragged, how far below its top it was grabbed, so it
+     * does not jump under the cursor; {@link #NOT_GRABBED} otherwise.
+     */
+    private double thumbGrab = NOT_GRABBED;
 
     /** Picker starting from the design the server sent. */
     private BannerDesignScreen(SafariBannerOpenPayload payload) {
@@ -107,16 +134,30 @@ public class BannerDesignScreen extends Screen {
 
         left = (width - PANEL_WIDTH) / 2;
         top = (height - PANEL_HEIGHT) / 2;
-        int gridWidth = PANEL_WIDTH - 2 * MARGIN;
         int gridHeight = PANEL_HEIGHT - TITLE_HEIGHT - 3 * MARGIN - BUTTON_HEIGHT;
-        columns = Math.max(1, (gridWidth + THUMB_GAP) / (THUMB_WIDTH + THUMB_GAP));
         visibleRows = Math.max(1, (gridHeight + THUMB_GAP) / (THUMB_HEIGHT + THUMB_GAP));
+        gridLeft = left + MARGIN;
+        gridAreaWidth = PANEL_WIDTH - 2 * MARGIN;
+        columns = columnsIn(gridAreaWidth);
+        // Only when the designs overflow does the scrollbar take its lane; that
+        // can cost a column, which is why the overflow is checked again after.
+        scrollable = maxScroll() > 0;
+        if (scrollable) {
+            gridAreaWidth -= SCROLLBAR_WIDTH + SCROLLBAR_GAP;
+            columns = columnsIn(gridAreaWidth);
+        }
         scrollRow = Mth.clamp(scrollRow, 0, maxScroll());
+        thumbGrab = NOT_GRABBED;
 
         addRenderableWidget(Button.builder(Component.translatable("gui.done"),
                         b -> Minecraft.getInstance().setScreen(null))
                 .bounds(left + (PANEL_WIDTH - DONE_BUTTON_WIDTH) / 2, top + PANEL_HEIGHT - MARGIN - BUTTON_HEIGHT,
                         DONE_BUTTON_WIDTH, BUTTON_HEIGHT).build());
+    }
+
+    /** How many thumbnails fit side by side in a width. */
+    private static int columnsIn(int width) {
+        return Math.max(1, (width + THUMB_GAP) / (THUMB_WIDTH + THUMB_GAP));
     }
 
     /** The screen behind stays live, so the player sees the banner change. */
@@ -146,9 +187,23 @@ public class BannerDesignScreen extends Screen {
             TextureAtlasSprite sprite = SafariBannerRenderer.sprite(design);
             graphics.blit(x, y, 0, THUMB_WIDTH, THUMB_HEIGHT, sprite);
         }
+        if (scrollable) {
+            renderScrollbar(graphics, mouseX, mouseY);
+        }
         if (hovered != null) {
             graphics.renderTooltip(font, nameOf(hovered), mouseX, mouseY);
         }
+    }
+
+    /** Track and thumb; the thumb lights up while hovered or held. */
+    private void renderScrollbar(GuiGraphics graphics, int mouseX, int mouseY) {
+        int x = trackLeft();
+        graphics.fill(x, trackTop(), x + SCROLLBAR_WIDTH, trackTop() + trackHeight(), SCROLLBAR_TRACK);
+        int thumbTop = thumbTop();
+        boolean lit = thumbGrab != NOT_GRABBED || (mouseX >= x && mouseX < x + SCROLLBAR_WIDTH
+                && mouseY >= thumbTop && mouseY < thumbTop + thumbHeight());
+        graphics.fill(x, thumbTop, x + SCROLLBAR_WIDTH, thumbTop + thumbHeight(),
+                lit ? SCROLLBAR_THUMB_HOVER : SCROLLBAR_THUMB);
     }
 
     /** Panel and title, under the widgets. */
@@ -162,9 +217,23 @@ public class BannerDesignScreen extends Screen {
                 top + (TITLE_HEIGHT - font.lineHeight) / 2, TEXT_COLOR);
     }
 
-    /** A click on a thumbnail shows that picture on the banner at once. */
+    /**
+     * A click on a thumbnail shows that picture on the banner at once. On the
+     * scrollbar, the thumb is grabbed; a click on the track moves the thumb
+     * under the cursor and grabs it there, so the player can keep dragging.
+     */
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (scrollable && onTrack(mouseX, mouseY)) {
+            int thumbTop = thumbTop();
+            if (mouseY >= thumbTop && mouseY < thumbTop + thumbHeight()) {
+                thumbGrab = mouseY - thumbTop;
+            } else {
+                thumbGrab = thumbHeight() / 2.0;
+                dragThumbTo(mouseY);
+            }
+            return true;
+        }
         ResourceLocation design = designAt(mouseX, mouseY);
         if (design != null) {
             selected = design;
@@ -172,6 +241,73 @@ public class BannerDesignScreen extends Screen {
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    /** Moves the held thumb with the cursor. */
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (thumbGrab != NOT_GRABBED) {
+            dragThumbTo(mouseY);
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    /** Lets go of the thumb. */
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (thumbGrab != NOT_GRABBED) {
+            thumbGrab = NOT_GRABBED;
+            return true;
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    /**
+     * Scrolls to the row whose thumb position is nearest the cursor. The grid
+     * moves a whole row at a time, so thumbnails are never cut in half; the
+     * thumb follows in steps.
+     */
+    private void dragThumbTo(double mouseY) {
+        int travel = trackHeight() - thumbHeight();
+        if (travel <= 0) {
+            return;
+        }
+        double fraction = (mouseY - thumbGrab - trackTop()) / travel;
+        scrollRow = Mth.clamp((int) Math.round(fraction * maxScroll()), 0, maxScroll());
+    }
+
+    /** Whether a point is on the scrollbar's track (thumb included). */
+    private boolean onTrack(double mouseX, double mouseY) {
+        return mouseX >= trackLeft() && mouseX < trackLeft() + SCROLLBAR_WIDTH
+                && mouseY >= trackTop() && mouseY < trackTop() + trackHeight();
+    }
+
+    /** Left edge of the scrollbar, against the panel's right margin. */
+    private int trackLeft() {
+        return left + PANEL_WIDTH - MARGIN - SCROLLBAR_WIDTH;
+    }
+
+    /** Top of the scrollbar, level with the first row of thumbnails. */
+    private int trackTop() {
+        return top + TITLE_HEIGHT + MARGIN;
+    }
+
+    /** Height of the scrollbar: the visible rows of thumbnails. */
+    private int trackHeight() {
+        return visibleRows * (THUMB_HEIGHT + THUMB_GAP) - THUMB_GAP;
+    }
+
+    /** Thumb height, the share of the rows that is visible, never below the grabbable minimum. */
+    private int thumbHeight() {
+        int rows = (designs.size() + columns - 1) / columns;
+        return Math.min(trackHeight(), Math.max(SCROLLBAR_MIN_THUMB, trackHeight() * visibleRows / Math.max(1, rows)));
+    }
+
+    /** Top of the thumb for the current scroll. */
+    private int thumbTop() {
+        int max = maxScroll();
+        return trackTop() + (max == 0 ? 0 : (trackHeight() - thumbHeight()) * scrollRow / max);
     }
 
     /** The wheel scrolls the grid by one row. */
@@ -196,7 +332,7 @@ public class BannerDesignScreen extends Screen {
         }
         int column = index % columns;
         int gridWidth = columns * THUMB_WIDTH + (columns - 1) * THUMB_GAP;
-        int x = left + (PANEL_WIDTH - gridWidth) / 2 + column * (THUMB_WIDTH + THUMB_GAP);
+        int x = gridLeft + (gridAreaWidth - gridWidth) / 2 + column * (THUMB_WIDTH + THUMB_GAP);
         int y = top + TITLE_HEIGHT + MARGIN + row * (THUMB_HEIGHT + THUMB_GAP);
         return new int[]{x, y};
     }
