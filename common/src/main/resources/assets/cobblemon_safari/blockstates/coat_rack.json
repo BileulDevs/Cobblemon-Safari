@@ -1,0 +1,484 @@
+{
+  "variants": {
+    "facing=north,half=lower,hat=white": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower"
+    },
+    "facing=north,half=upper,hat=white": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_white"
+    },
+    "facing=east,half=lower,hat=white": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 90
+    },
+    "facing=east,half=upper,hat=white": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_white",
+      "y": 90
+    },
+    "facing=south,half=lower,hat=white": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 180
+    },
+    "facing=south,half=upper,hat=white": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_white",
+      "y": 180
+    },
+    "facing=west,half=lower,hat=white": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 270
+    },
+    "facing=west,half=upper,hat=white": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_white",
+      "y": 270
+    },
+    "facing=north,half=lower,hat=orange": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower"
+    },
+    "facing=north,half=upper,hat=orange": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_orange"
+    },
+    "facing=east,half=lower,hat=orange": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 90
+    },
+    "facing=east,half=upper,hat=orange": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_orange",
+      "y": 90
+    },
+    "facing=south,half=lower,hat=orange": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 180
+    },
+    "facing=south,half=upper,hat=orange": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_orange",
+      "y": 180
+    },
+    "facing=west,half=lower,hat=orange": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 270
+    },
+    "facing=west,half=upper,hat=orange": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_orange",
+      "y": 270
+    },
+    "facing=north,half=lower,hat=magenta": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower"
+    },
+    "facing=north,half=upper,hat=magenta": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_magenta"
+    },
+    "facing=east,half=lower,hat=magenta": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 90
+    },
+    "facing=east,half=upper,hat=magenta": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_magenta",
+      "y": 90
+    },
+    "facing=south,half=lower,hat=magenta": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 180
+    },
+    "facing=south,half=upper,hat=magenta": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_magenta",
+      "y": 180
+    },
+    "facing=west,half=lower,hat=magenta": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 270
+    },
+    "facing=west,half=upper,hat=magenta": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_magenta",
+      "y": 270
+    },
+    "facing=north,half=lower,hat=light_blue": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower"
+    },
+    "facing=north,half=upper,hat=light_blue": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_light_blue"
+    },
+    "facing=east,half=lower,hat=light_blue": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 90
+    },
+    "facing=east,half=upper,hat=light_blue": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_light_blue",
+      "y": 90
+    },
+    "facing=south,half=lower,hat=light_blue": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 180
+    },
+    "facing=south,half=upper,hat=light_blue": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_light_blue",
+      "y": 180
+    },
+    "facing=west,half=lower,hat=light_blue": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 270
+    },
+    "facing=west,half=upper,hat=light_blue": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_light_blue",
+      "y": 270
+    },
+    "facing=north,half=lower,hat=yellow": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower"
+    },
+    "facing=north,half=upper,hat=yellow": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_yellow"
+    },
+    "facing=east,half=lower,hat=yellow": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 90
+    },
+    "facing=east,half=upper,hat=yellow": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_yellow",
+      "y": 90
+    },
+    "facing=south,half=lower,hat=yellow": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 180
+    },
+    "facing=south,half=upper,hat=yellow": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_yellow",
+      "y": 180
+    },
+    "facing=west,half=lower,hat=yellow": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 270
+    },
+    "facing=west,half=upper,hat=yellow": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_yellow",
+      "y": 270
+    },
+    "facing=north,half=lower,hat=lime": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower"
+    },
+    "facing=north,half=upper,hat=lime": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_lime"
+    },
+    "facing=east,half=lower,hat=lime": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 90
+    },
+    "facing=east,half=upper,hat=lime": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_lime",
+      "y": 90
+    },
+    "facing=south,half=lower,hat=lime": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 180
+    },
+    "facing=south,half=upper,hat=lime": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_lime",
+      "y": 180
+    },
+    "facing=west,half=lower,hat=lime": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 270
+    },
+    "facing=west,half=upper,hat=lime": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_lime",
+      "y": 270
+    },
+    "facing=north,half=lower,hat=pink": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower"
+    },
+    "facing=north,half=upper,hat=pink": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_pink"
+    },
+    "facing=east,half=lower,hat=pink": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 90
+    },
+    "facing=east,half=upper,hat=pink": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_pink",
+      "y": 90
+    },
+    "facing=south,half=lower,hat=pink": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 180
+    },
+    "facing=south,half=upper,hat=pink": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_pink",
+      "y": 180
+    },
+    "facing=west,half=lower,hat=pink": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 270
+    },
+    "facing=west,half=upper,hat=pink": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_pink",
+      "y": 270
+    },
+    "facing=north,half=lower,hat=gray": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower"
+    },
+    "facing=north,half=upper,hat=gray": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_gray"
+    },
+    "facing=east,half=lower,hat=gray": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 90
+    },
+    "facing=east,half=upper,hat=gray": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_gray",
+      "y": 90
+    },
+    "facing=south,half=lower,hat=gray": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 180
+    },
+    "facing=south,half=upper,hat=gray": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_gray",
+      "y": 180
+    },
+    "facing=west,half=lower,hat=gray": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 270
+    },
+    "facing=west,half=upper,hat=gray": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_gray",
+      "y": 270
+    },
+    "facing=north,half=lower,hat=light_gray": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower"
+    },
+    "facing=north,half=upper,hat=light_gray": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_light_gray"
+    },
+    "facing=east,half=lower,hat=light_gray": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 90
+    },
+    "facing=east,half=upper,hat=light_gray": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_light_gray",
+      "y": 90
+    },
+    "facing=south,half=lower,hat=light_gray": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 180
+    },
+    "facing=south,half=upper,hat=light_gray": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_light_gray",
+      "y": 180
+    },
+    "facing=west,half=lower,hat=light_gray": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 270
+    },
+    "facing=west,half=upper,hat=light_gray": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_light_gray",
+      "y": 270
+    },
+    "facing=north,half=lower,hat=cyan": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower"
+    },
+    "facing=north,half=upper,hat=cyan": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_cyan"
+    },
+    "facing=east,half=lower,hat=cyan": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 90
+    },
+    "facing=east,half=upper,hat=cyan": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_cyan",
+      "y": 90
+    },
+    "facing=south,half=lower,hat=cyan": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 180
+    },
+    "facing=south,half=upper,hat=cyan": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_cyan",
+      "y": 180
+    },
+    "facing=west,half=lower,hat=cyan": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 270
+    },
+    "facing=west,half=upper,hat=cyan": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_cyan",
+      "y": 270
+    },
+    "facing=north,half=lower,hat=purple": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower"
+    },
+    "facing=north,half=upper,hat=purple": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_purple"
+    },
+    "facing=east,half=lower,hat=purple": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 90
+    },
+    "facing=east,half=upper,hat=purple": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_purple",
+      "y": 90
+    },
+    "facing=south,half=lower,hat=purple": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 180
+    },
+    "facing=south,half=upper,hat=purple": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_purple",
+      "y": 180
+    },
+    "facing=west,half=lower,hat=purple": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 270
+    },
+    "facing=west,half=upper,hat=purple": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_purple",
+      "y": 270
+    },
+    "facing=north,half=lower,hat=blue": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower"
+    },
+    "facing=north,half=upper,hat=blue": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_blue"
+    },
+    "facing=east,half=lower,hat=blue": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 90
+    },
+    "facing=east,half=upper,hat=blue": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_blue",
+      "y": 90
+    },
+    "facing=south,half=lower,hat=blue": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 180
+    },
+    "facing=south,half=upper,hat=blue": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_blue",
+      "y": 180
+    },
+    "facing=west,half=lower,hat=blue": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 270
+    },
+    "facing=west,half=upper,hat=blue": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_blue",
+      "y": 270
+    },
+    "facing=north,half=lower,hat=brown": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower"
+    },
+    "facing=north,half=upper,hat=brown": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_brown"
+    },
+    "facing=east,half=lower,hat=brown": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 90
+    },
+    "facing=east,half=upper,hat=brown": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_brown",
+      "y": 90
+    },
+    "facing=south,half=lower,hat=brown": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 180
+    },
+    "facing=south,half=upper,hat=brown": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_brown",
+      "y": 180
+    },
+    "facing=west,half=lower,hat=brown": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 270
+    },
+    "facing=west,half=upper,hat=brown": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_brown",
+      "y": 270
+    },
+    "facing=north,half=lower,hat=green": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower"
+    },
+    "facing=north,half=upper,hat=green": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_green"
+    },
+    "facing=east,half=lower,hat=green": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 90
+    },
+    "facing=east,half=upper,hat=green": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_green",
+      "y": 90
+    },
+    "facing=south,half=lower,hat=green": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 180
+    },
+    "facing=south,half=upper,hat=green": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_green",
+      "y": 180
+    },
+    "facing=west,half=lower,hat=green": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 270
+    },
+    "facing=west,half=upper,hat=green": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_green",
+      "y": 270
+    },
+    "facing=north,half=lower,hat=red": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower"
+    },
+    "facing=north,half=upper,hat=red": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_red"
+    },
+    "facing=east,half=lower,hat=red": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 90
+    },
+    "facing=east,half=upper,hat=red": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_red",
+      "y": 90
+    },
+    "facing=south,half=lower,hat=red": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 180
+    },
+    "facing=south,half=upper,hat=red": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_red",
+      "y": 180
+    },
+    "facing=west,half=lower,hat=red": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 270
+    },
+    "facing=west,half=upper,hat=red": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_red",
+      "y": 270
+    },
+    "facing=north,half=lower,hat=black": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower"
+    },
+    "facing=north,half=upper,hat=black": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_black"
+    },
+    "facing=east,half=lower,hat=black": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 90
+    },
+    "facing=east,half=upper,hat=black": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_black",
+      "y": 90
+    },
+    "facing=south,half=lower,hat=black": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 180
+    },
+    "facing=south,half=upper,hat=black": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_black",
+      "y": 180
+    },
+    "facing=west,half=lower,hat=black": {
+      "model": "cobblemon_safari:block/decor/coat_rack_lower",
+      "y": 270
+    },
+    "facing=west,half=upper,hat=black": {
+      "model": "cobblemon_safari:block/decor/coat_rack_upper_black",
+      "y": 270
+    }
+  }
+}

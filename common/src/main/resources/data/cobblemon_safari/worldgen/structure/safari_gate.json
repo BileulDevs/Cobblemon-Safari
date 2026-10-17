@@ -1,15 +1,16 @@
 {
   "type": "cobblemon_safari:dry_jigsaw",
   "biomes": "#cobblemon_safari:has_structure/safari_gate",
-  "step": "surface_structures",
+  "step": "top_layer_modification",
   "spawn_overrides": {},
   "terrain_adaptation": "beard_thin",
   "footprint_radius": 13,
   "max_relief": 5,
+  "structure_clearance": 4,
   "jigsaw": {
     "type": "minecraft:jigsaw",
     "biomes": "#cobblemon_safari:has_structure/safari_gate",
-    "step": "surface_structures",
+    "step": "top_layer_modification",
     "spawn_overrides": {},
     "terrain_adaptation": "beard_thin",
     "start_pool": "cobblemon_safari:safari_gate/start",

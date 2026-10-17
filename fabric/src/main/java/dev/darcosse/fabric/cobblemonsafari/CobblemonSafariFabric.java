@@ -4,6 +4,7 @@ import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.event.SafariServerEvents;
 import dev.darcosse.common.cobblemonsafari.block.SafariBlockEntities;
 import dev.darcosse.common.cobblemonsafari.block.SafariBlocks;
+import dev.darcosse.common.cobblemonsafari.decor.SafariDecor;
 import dev.darcosse.common.cobblemonsafari.item.SafariItems;
 import dev.darcosse.common.cobblemonsafari.loot.TicketLoot;
 import dev.darcosse.common.cobblemonsafari.worldgen.SafariWorldgen;
@@ -26,6 +27,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 /**
@@ -61,6 +63,10 @@ public class CobblemonSafariFabric implements ModInitializer {
             entries.accept(SafariItems.safariBoardFrame());
             entries.accept(SafariItems.safariWallScreen());
             entries.accept(SafariItems.safariGate());
+            // A loop rather than a method reference: accept is overloaded.
+            for (Item item : SafariDecor.items()) {
+                entries.accept(item);
+            }
         });
         FabricSafariNetworking.registerPayloadTypes();
 

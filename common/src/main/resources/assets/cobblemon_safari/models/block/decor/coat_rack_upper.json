@@ -1,0 +1,338 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "wood": "cobblemon_safari:block/decor/teak",
+    "jacket": "cobblemon_safari:block/decor/jacket_front",
+    "jacket_side": "cobblemon_safari:block/decor/jacket_side",
+    "band": "cobblemon_safari:block/decor/hat_band",
+    "particle": "cobblemon_safari:block/decor/teak"
+  },
+  "elements": [
+    {
+      "from": [
+        7,
+        0,
+        7
+      ],
+      "to": [
+        9,
+        12,
+        9
+      ],
+      "faces": {
+        "north": {
+          "texture": "#wood"
+        },
+        "south": {
+          "texture": "#wood"
+        },
+        "east": {
+          "texture": "#wood"
+        },
+        "west": {
+          "texture": "#wood"
+        },
+        "up": {
+          "texture": "#wood"
+        },
+        "down": {
+          "texture": "#wood",
+          "cullface": "down"
+        }
+      },
+      "name": "pole"
+    },
+    {
+      "from": [
+        6.5,
+        12,
+        6.5
+      ],
+      "to": [
+        9.5,
+        13,
+        9.5
+      ],
+      "faces": {
+        "north": {
+          "texture": "#wood"
+        },
+        "south": {
+          "texture": "#wood"
+        },
+        "east": {
+          "texture": "#wood"
+        },
+        "west": {
+          "texture": "#wood"
+        },
+        "up": {
+          "texture": "#wood"
+        },
+        "down": {
+          "texture": "#wood"
+        }
+      },
+      "name": "knob"
+    },
+    {
+      "from": [
+        7.5,
+        8,
+        3
+      ],
+      "to": [
+        8.5,
+        9,
+        7
+      ],
+      "faces": {
+        "north": {
+          "texture": "#wood"
+        },
+        "south": {
+          "texture": "#wood"
+        },
+        "east": {
+          "texture": "#wood"
+        },
+        "west": {
+          "texture": "#wood"
+        },
+        "up": {
+          "texture": "#wood"
+        },
+        "down": {
+          "texture": "#wood"
+        }
+      },
+      "name": "front_hook"
+    },
+    {
+      "from": [
+        3,
+        8,
+        7.5
+      ],
+      "to": [
+        7,
+        9,
+        8.5
+      ],
+      "faces": {
+        "north": {
+          "texture": "#wood"
+        },
+        "south": {
+          "texture": "#wood"
+        },
+        "east": {
+          "texture": "#wood"
+        },
+        "west": {
+          "texture": "#wood"
+        },
+        "up": {
+          "texture": "#wood"
+        },
+        "down": {
+          "texture": "#wood"
+        }
+      },
+      "name": "side_hook"
+    },
+    {
+      "from": [
+        9,
+        8,
+        7.5
+      ],
+      "to": [
+        13,
+        9,
+        8.5
+      ],
+      "faces": {
+        "north": {
+          "texture": "#wood"
+        },
+        "south": {
+          "texture": "#wood"
+        },
+        "east": {
+          "texture": "#wood"
+        },
+        "west": {
+          "texture": "#wood"
+        },
+        "up": {
+          "texture": "#wood"
+        },
+        "down": {
+          "texture": "#wood"
+        }
+      },
+      "name": "side_hook"
+    },
+    {
+      "from": [
+        7.5,
+        8,
+        9
+      ],
+      "to": [
+        8.5,
+        9,
+        13
+      ],
+      "faces": {
+        "north": {
+          "texture": "#wood"
+        },
+        "south": {
+          "texture": "#wood"
+        },
+        "east": {
+          "texture": "#wood"
+        },
+        "west": {
+          "texture": "#wood"
+        },
+        "up": {
+          "texture": "#wood"
+        },
+        "down": {
+          "texture": "#wood"
+        }
+      },
+      "name": "back_hook"
+    },
+    {
+      "from": [
+        4,
+        0,
+        2
+      ],
+      "to": [
+        12,
+        9,
+        6
+      ],
+      "faces": {
+        "north": {
+          "texture": "#jacket"
+        },
+        "south": {
+          "texture": "#jacket_side"
+        },
+        "east": {
+          "texture": "#jacket_side"
+        },
+        "west": {
+          "texture": "#jacket_side"
+        },
+        "up": {
+          "texture": "#jacket_side"
+        },
+        "down": {
+          "texture": "#jacket_side",
+          "cullface": "down"
+        }
+      },
+      "name": "jacket_shoulders"
+    },
+    {
+      "from": [
+        3,
+        13,
+        3
+      ],
+      "to": [
+        13,
+        14,
+        13
+      ],
+      "faces": {
+        "north": {
+          "texture": "#felt"
+        },
+        "south": {
+          "texture": "#felt"
+        },
+        "east": {
+          "texture": "#felt"
+        },
+        "west": {
+          "texture": "#felt"
+        },
+        "up": {
+          "texture": "#felt"
+        },
+        "down": {
+          "texture": "#felt"
+        }
+      },
+      "name": "hat_brim"
+    },
+    {
+      "from": [
+        5,
+        14,
+        5
+      ],
+      "to": [
+        11,
+        17,
+        11
+      ],
+      "faces": {
+        "north": {
+          "texture": "#felt"
+        },
+        "south": {
+          "texture": "#felt"
+        },
+        "east": {
+          "texture": "#felt"
+        },
+        "west": {
+          "texture": "#felt"
+        },
+        "up": {
+          "texture": "#felt"
+        },
+        "down": {
+          "texture": "#felt"
+        }
+      },
+      "name": "hat_crown"
+    },
+    {
+      "from": [
+        4.9,
+        14,
+        4.9
+      ],
+      "to": [
+        11.1,
+        15.2,
+        11.1
+      ],
+      "faces": {
+        "north": {
+          "texture": "#band"
+        },
+        "south": {
+          "texture": "#band"
+        },
+        "east": {
+          "texture": "#band"
+        },
+        "west": {
+          "texture": "#band"
+        }
+      },
+      "name": "hat_band"
+    }
+  ]
+}

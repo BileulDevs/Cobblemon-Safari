@@ -18,12 +18,16 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
  *
  * @param pos            the screen the settings were opened on
  * @param contentOrdinal ordinal of the wanted {@code WallScreenContent}
- * @param tilt           wanted tilt, in steps
+ * @param tilt           wanted tilt, in signed steps (negative faces the ceiling)
  */
 public record SafariWallScreenSetPayload(BlockPos pos, int contentOrdinal, int tilt) implements CustomPacketPayload {
 
-    /** Wire format version. Bump on EVERY change to write/read. v1: first version. */
-    public static final int WIRE_VERSION = 1;
+    /**
+     * Wire format version. Bump on EVERY change to write/read. v1: first
+     * version. v2: tilt is signed (negative faces the ceiling); same fields,
+     * new meaning, so a v1 peer must be refused.
+     */
+    public static final int WIRE_VERSION = 2;
 
     public static final CustomPacketPayload.Type<SafariWallScreenSetPayload> TYPE =
             new CustomPacketPayload.Type<>(CobblemonSafari.id("wall_screen_set"));

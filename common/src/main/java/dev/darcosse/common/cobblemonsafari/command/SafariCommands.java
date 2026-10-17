@@ -20,6 +20,7 @@ import dev.darcosse.common.cobblemonsafari.reset.SafariMapReset;
 import dev.darcosse.common.cobblemonsafari.session.SafariSession;
 import dev.darcosse.common.cobblemonsafari.session.SafariSessionManager;
 import dev.darcosse.common.cobblemonsafari.session.SessionEndReason;
+import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedBoard;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedRotation;
 import dev.darcosse.common.cobblemonsafari.structure.RestHouses;
@@ -229,14 +230,29 @@ public final class SafariCommands {
         return ended;
     }
 
-    /** Lets a player end their own session early. */
+    /**
+     * Lets a player end their own session early, or simply walk out.
+     *
+     * <p>A player can stand in the Safari without a session: a creative or
+     * spectator player exempt from the rules, typically an operator testing
+     * on a server. Before, they were told "you are not in the Safari Zone"
+     * and stayed inside, which is also what the clerk's "leave" answer did
+     * for them. They are now sent to the world spawn, the same place a
+     * player without a session is sent when logging in inside.
+     *
+     * <p>The leave itself happens on the next tick
+     * ({@link SafariSessionManager#requestLeave}): run from the clerk's
+     * dialogue, ending and teleporting right away ended the session but left
+     * the player inside.
+     */
     private static int leave(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
-        if (!SafariSessionManager.end(player, SessionEndReason.VOLUNTARY)) {
-            ctx.getSource().sendFailure(Component.translatable(key("command.self_no_session")));
-            return 0;
+        if (SafariSessionManager.getSession(player) != null || SafariDimensions.isSafari(player.level())) {
+            SafariSessionManager.requestLeave(player);
+            return 1;
         }
-        return 1;
+        ctx.getSource().sendFailure(Component.translatable(key("command.self_no_session")));
+        return 0;
     }
 
     /** Enters the Safari with banked time, if the server allows the command. */

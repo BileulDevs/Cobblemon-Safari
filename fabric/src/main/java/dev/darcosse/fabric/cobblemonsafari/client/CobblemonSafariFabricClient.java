@@ -20,6 +20,9 @@ import dev.darcosse.common.cobblemonsafari.network.ShopClientBridge;
 import dev.darcosse.common.cobblemonsafari.network.SafariStatsPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariWallScreenOpenPayload;
 import dev.darcosse.common.cobblemonsafari.network.WallScreenClientBridge;
+import dev.darcosse.common.cobblemonsafari.network.BannerClientBridge;
+import dev.darcosse.common.cobblemonsafari.network.SafariBannerOpenPayload;
+import dev.darcosse.common.cobblemonsafari.client.banner.SafariBannerRenderer;
 import dev.darcosse.common.cobblemonsafari.client.StatsClientState;
 import dev.darcosse.common.cobblemonsafari.network.SafariTimerPayload;
 import net.fabricmc.api.ClientModInitializer;
@@ -58,6 +61,8 @@ public class CobblemonSafariFabricClient implements ClientModInitializer {
                 context.client().execute(() -> ShopClientBridge.onShop(payload)));
         ClientPlayNetworking.registerGlobalReceiver(SafariWallScreenOpenPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> WallScreenClientBridge.onOpen(payload)));
+        ClientPlayNetworking.registerGlobalReceiver(SafariBannerOpenPayload.TYPE, (payload, context) ->
+                context.client().execute(() -> BannerClientBridge.onOpen(payload)));
         SafariClientNetwork.setSender(ClientPlayNetworking::send);
 
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> SafariClient.onDisconnect());
@@ -66,6 +71,7 @@ public class CobblemonSafariFabricClient implements ClientModInitializer {
         // Vanilla registry, made public by Fabric's transitive access widener.
         BlockEntityRenderers.register(SafariBlockEntities.safariBoard(), SafariBoardRenderer::new);
         BlockEntityRenderers.register(SafariBlockEntities.safariWallScreen(), SafariWallScreenRenderer::new);
+        BlockEntityRenderers.register(SafariBlockEntities.safariBanner(), SafariBannerRenderer::new);
 
         DimensionRenderingRegistry.registerDimensionEffects(SafariDimensions.EFFECTS_ID, new SafariSkyEffects());
 

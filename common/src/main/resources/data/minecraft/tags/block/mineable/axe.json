@@ -3,6 +3,9 @@
   "values": [
     "cobblemon_safari:safari_board",
     "cobblemon_safari:safari_board_frame",
-    "cobblemon_safari:safari_wall_screen"
+    "cobblemon_safari:safari_wall_screen",
+    "cobblemon_safari:safari_banner",
+    "cobblemon_safari:safari_wall_banner",
+    "cobblemon_safari:coat_rack"
   ]
 }

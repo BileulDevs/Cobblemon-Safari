@@ -22,6 +22,7 @@ import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.BlockHitResult;
@@ -36,7 +37,8 @@ import java.util.Map;
 
 /**
  * The Safari Wall Screen: the Safari Board's picture on a panel held off the
- * wall by a single arm, tilted toward the floor like a TV mounted high.
+ * wall by a single arm, tilted toward the floor like a TV mounted high, or
+ * toward the ceiling like a screen mounted low.
  *
  * <p>Up to {@link WallScreenLayout#MAX_WIDTH} screens side by side, facing the
  * same way, merge into one wider panel with one arm at its centre. They never
@@ -56,23 +58,32 @@ public class SafariWallScreenBlock extends HorizontalDirectionalBlock implements
     public static final MapCodec<SafariWallScreenBlock> CODEC = simpleCodec(SafariWallScreenBlock::new);
 
     /**
-     * Degrees added per click. Smaller steps take more clicks to cover the
-     * range; the renderer and the hit boxes follow any value.
+     * Degrees per step of the tilt slider. Smaller steps give a finer slider
+     * and more block states; the renderer and the hit boxes follow any value.
      */
     public static final int TILT_STEP_DEGREES = 5;
 
     /**
-     * Number of steps above 0°, so the range is 0° to {@code 6 × 5 = 30°}.
-     * Raising it tilts further: past about 40° the bottom of the panel goes
-     * into the wall unless {@link #PIVOT_DEPTH_PIXELS} grows with it (the
-     * panel's lower half swings back by {@code PANEL_HEIGHT / 2 × sin(tilt)}).
+     * Number of steps on each side of 0°, so the range is -30° to +30°.
+     * Raising it tilts further: past about 40° the edge of the panel that
+     * swings back goes into the wall unless {@link #PIVOT_DEPTH_PIXELS} grows
+     * with it (that half swings back by {@code PANEL_HEIGHT / 2 × sin(tilt)}).
      * Changing it changes the block state list, so existing screens with a
      * higher value than the new maximum fall back to the default.
      */
     public static final int MAX_TILT_STEPS = 6;
 
-    /** Tilt of the panel, in steps of {@link #TILT_STEP_DEGREES} away from the wall at the top. */
+    /** How far the panel is tilted, in steps of {@link #TILT_STEP_DEGREES}; the direction is {@link #UPWARD}. */
     public static final IntegerProperty TILT = IntegerProperty.create("tilt", 0, MAX_TILT_STEPS);
+
+    /**
+     * Whether the panel faces up (bottom away from the wall) instead of down
+     * (top away from the wall). A separate flag rather than a signed TILT
+     * range: TILT keeps its values 0 to 6 with their old meaning, so the
+     * screens of existing worlds keep their angle. Meaningless at tilt 0;
+     * read the angle through {@link #signedTilt}.
+     */
+    public static final BooleanProperty UPWARD = BooleanProperty.create("upward");
 
     /** What the screen shows. New screens show the specials, like the Safari Board. */
     public static final EnumProperty<WallScreenContent> CONTENT = EnumProperty.create("content", WallScreenContent.class);
@@ -109,14 +120,14 @@ public class SafariWallScreenBlock extends HorizontalDirectionalBlock implements
     /** Pixels in a block, for {@link Block#box} coordinates. */
     private static final double FULL = 16.0D;
 
-    /** Hit boxes per facing then per tilt step, built once. */
+    /** Hit boxes per facing then per signed tilt step (index = step + MAX_TILT_STEPS), built once. */
     private static final Map<Direction, VoxelShape[]> SHAPES = buildShapes();
 
     /** Block with the given behaviour; see {@link SafariBlocks} for the actual properties. */
     public SafariWallScreenBlock(Properties properties) {
         super(properties);
         registerDefaultState(getStateDefinition().any().setValue(FACING, Direction.NORTH).setValue(TILT, 0)
-                .setValue(CONTENT, WallScreenContent.FEATURED));
+                .setValue(UPWARD, false).setValue(CONTENT, WallScreenContent.FEATURED));
     }
 
     /** Codec required by the block registry since 1.20.5. */
@@ -128,7 +139,7 @@ public class SafariWallScreenBlock extends HorizontalDirectionalBlock implements
     /** Which way the screen points, how far it is tilted and what it shows. */
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING, TILT, CONTENT);
+        builder.add(FACING, TILT, UPWARD, CONTENT);
     }
 
     /**
@@ -147,7 +158,7 @@ public class SafariWallScreenBlock extends HorizontalDirectionalBlock implements
             BlockState neighbour = ctx.getLevel().getBlockState(ctx.getClickedPos().relative(side));
             if (neighbour.getBlock() instanceof SafariWallScreenBlock
                     && neighbour.getValue(FACING) == facing) {
-                return placed.setValue(TILT, neighbour.getValue(TILT))
+                return withSignedTilt(placed, signedTilt(neighbour))
                         .setValue(CONTENT, neighbour.getValue(CONTENT));
             }
         }
@@ -157,7 +168,7 @@ public class SafariWallScreenBlock extends HorizontalDirectionalBlock implements
     /** The tilted panel, as a staircase of slices (see {@link #HITBOX_SLICES}). */
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return SHAPES.get(state.getValue(FACING))[state.getValue(TILT)];
+        return SHAPES.get(state.getValue(FACING))[signedTilt(state) + MAX_TILT_STEPS];
     }
 
     /**
@@ -194,9 +205,27 @@ public class SafariWallScreenBlock extends HorizontalDirectionalBlock implements
                 .withStyle(ChatFormatting.GRAY));
     }
 
-    /** Angle of a tilt step value, in degrees; the one conversion shared with the renderer. */
+    /**
+     * Angle of a signed tilt step value, in degrees; the one conversion
+     * shared with the renderer. Positive faces the floor, negative the ceiling.
+     */
     public static float tiltDegrees(int tiltSteps) {
         return tiltSteps * (float) TILT_STEP_DEGREES;
+    }
+
+    /** The tilt of a screen as one signed step value: positive toward the floor, negative toward the ceiling. */
+    public static int signedTilt(BlockState state) {
+        int steps = state.getValue(TILT);
+        return state.getValue(UPWARD) ? -steps : steps;
+    }
+
+    /**
+     * A screen state with the given signed tilt, clamped to the range. Zero
+     * clears {@link #UPWARD}, so one angle has one state.
+     */
+    public static BlockState withSignedTilt(BlockState state, int signedSteps) {
+        int clamped = Math.max(-MAX_TILT_STEPS, Math.min(MAX_TILT_STEPS, signedSteps));
+        return state.setValue(TILT, Math.abs(clamped)).setValue(UPWARD, clamped < 0);
     }
 
     /**
@@ -207,8 +236,8 @@ public class SafariWallScreenBlock extends HorizontalDirectionalBlock implements
     private static Map<Direction, VoxelShape[]> buildShapes() {
         Map<Direction, VoxelShape[]> shapes = new EnumMap<>(Direction.class);
         for (Direction facing : new Direction[]{Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST}) {
-            VoxelShape[] byTilt = new VoxelShape[MAX_TILT_STEPS + 1];
-            for (int tilt = 0; tilt <= MAX_TILT_STEPS; tilt++) {
+            VoxelShape[] byTilt = new VoxelShape[2 * MAX_TILT_STEPS + 1];
+            for (int tilt = -MAX_TILT_STEPS; tilt <= MAX_TILT_STEPS; tilt++) {
                 double angle = Math.toRadians(tiltDegrees(tilt));
                 double sin = Math.sin(angle);
                 double cos = Math.cos(angle);
@@ -226,7 +255,8 @@ public class SafariWallScreenBlock extends HorizontalDirectionalBlock implements
                     double maxDepth = -Double.MAX_VALUE;
                     for (double y : new double[]{yLow, yHigh}) {
                         for (double depth : new double[]{0.0D, PANEL_THICKNESS_PIXELS}) {
-                            // Same rotation as the renderer's: the top swings away from the wall.
+                            // Same rotation as the renderer's: a positive angle swings the top
+                            // away from the wall, a negative one the bottom.
                             double rotatedY = y * cos - depth * sin;
                             double rotatedDepth = y * sin + depth * cos;
                             minY = Math.min(minY, rotatedY);
@@ -240,7 +270,7 @@ public class SafariWallScreenBlock extends HorizontalDirectionalBlock implements
                             clamp(PIVOT_DEPTH_PIXELS + minDepth), clamp(PIVOT_DEPTH_PIXELS + maxDepth));
                     shape = shape == null ? sliceBox : Shapes.or(shape, sliceBox);
                 }
-                byTilt[tilt] = shape.optimize();
+                byTilt[tilt + MAX_TILT_STEPS] = shape.optimize();
             }
             shapes.put(facing, byTilt);
         }

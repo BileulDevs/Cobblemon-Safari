@@ -81,7 +81,7 @@ public final class WallScreenSettings {
         WallScreenLayout layout = WallScreenLayout.compute(level, pos, state);
         BlockState anchor = level.getBlockState(layout.anchorPos());
         SafariNetwork.sendWallScreenOpen(player, new SafariWallScreenOpenPayload(pos.immutable(),
-                anchor.getValue(SafariWallScreenBlock.CONTENT), anchor.getValue(SafariWallScreenBlock.TILT)));
+                anchor.getValue(SafariWallScreenBlock.CONTENT), SafariWallScreenBlock.signedTilt(anchor)));
     }
 
     /**
@@ -103,7 +103,7 @@ public final class WallScreenSettings {
         BlockState state = level.getBlockState(pos);
         WallScreenContent content = WallScreenContent.byOrdinal(request.contentOrdinal());
         if (!(state.getBlock() instanceof SafariWallScreenBlock) || content == null
-                || request.tilt() < 0 || request.tilt() > SafariWallScreenBlock.MAX_TILT_STEPS) {
+                || Math.abs(request.tilt()) > SafariWallScreenBlock.MAX_TILT_STEPS) {
             return;
         }
         if (!canEdit(player, level, pos)) {
@@ -118,7 +118,7 @@ public final class WallScreenSettings {
             if (!(partState.getBlock() instanceof SafariWallScreenBlock)) {
                 continue;
             }
-            BlockState updated = partState.setValue(SafariWallScreenBlock.TILT, request.tilt())
+            BlockState updated = SafariWallScreenBlock.withSignedTilt(partState, request.tilt())
                     .setValue(SafariWallScreenBlock.CONTENT, content);
             if (updated != partState) {
                 // UPDATE_KNOWN_SHAPE: neither setting changes a neighbour's shape.

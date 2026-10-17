@@ -18,13 +18,17 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
  *
  * @param pos     the screen that was clicked; any block of the group works
  * @param content what the group shows now
- * @param tilt    the group's tilt, in steps
+ * @param tilt    the group's tilt, in signed steps (negative faces the ceiling)
  */
 public record SafariWallScreenOpenPayload(BlockPos pos, WallScreenContent content, int tilt)
         implements CustomPacketPayload {
 
-    /** Wire format version. Bump on EVERY change to write/read. v1: first version. */
-    public static final int WIRE_VERSION = 1;
+    /**
+     * Wire format version. Bump on EVERY change to write/read. v1: first
+     * version. v2: tilt is signed (negative faces the ceiling); same fields,
+     * new meaning, so a v1 peer must be refused.
+     */
+    public static final int WIRE_VERSION = 2;
 
     public static final CustomPacketPayload.Type<SafariWallScreenOpenPayload> TYPE =
             new CustomPacketPayload.Type<>(CobblemonSafari.id("wall_screen_open"));

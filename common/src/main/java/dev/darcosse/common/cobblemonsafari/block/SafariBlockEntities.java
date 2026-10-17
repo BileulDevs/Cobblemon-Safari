@@ -1,5 +1,7 @@
 package dev.darcosse.common.cobblemonsafari.block;
 
+import dev.darcosse.common.cobblemonsafari.decor.SafariBannerBlockEntity;
+import dev.darcosse.common.cobblemonsafari.decor.SafariDecor;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
@@ -21,6 +23,7 @@ public final class SafariBlockEntities {
     private static BlockEntityType<SafariBoardBlockEntity> safariBoard;
     private static BlockEntityType<SafariGateBlockEntity> safariGate;
     private static BlockEntityType<SafariWallScreenBlockEntity> safariWallScreen;
+    private static BlockEntityType<SafariBannerBlockEntity> safariBanner;
 
     private SafariBlockEntities() {
     }
@@ -38,11 +41,13 @@ public final class SafariBlockEntities {
     public interface TypeFactory {
 
         /**
-         * Builds the type that creates block entities with {@code constructor}.
-         * Returned as a wildcard because a lambda cannot implement a generic
-         * method; {@link #register} casts it back to the type it asked for.
+         * Builds the type that creates block entities with {@code constructor},
+         * valid on the given blocks (several for a block with a wall twin,
+         * like the banners). Returned as a wildcard because a lambda cannot
+         * implement a generic method; {@link #register} casts it back to the
+         * type it asked for.
          */
-        BlockEntityType<?> create(BiFunction<BlockPos, BlockState, ? extends BlockEntity> constructor, Block block);
+        BlockEntityType<?> create(BiFunction<BlockPos, BlockState, ? extends BlockEntity> constructor, Block... blocks);
     }
 
     /**
@@ -61,6 +66,22 @@ public final class SafariBlockEntities {
         safariWallScreen = (BlockEntityType<SafariWallScreenBlockEntity>) factory.create(
                 SafariWallScreenBlockEntity::new, SafariBlocks.safariWallScreen());
         registrar.accept(SafariBlocks.SAFARI_WALL_SCREEN_ID, safariWallScreen);
+        // One type for both banners: the picture belongs to the banner, whichever way it hangs.
+        safariBanner = (BlockEntityType<SafariBannerBlockEntity>) factory.create(SafariBannerBlockEntity::new,
+                SafariDecor.safariBanner(), SafariDecor.safariWallBanner());
+        registrar.accept(SafariDecor.SAFARI_BANNER_ID, safariBanner);
+    }
+
+    /**
+     * Type of the Safari Banners' block entity, standing and on a wall.
+     *
+     * @throws IllegalStateException before registration, which means a loader entry point is wired wrong
+     */
+    public static BlockEntityType<SafariBannerBlockEntity> safariBanner() {
+        if (safariBanner == null) {
+            throw new IllegalStateException("SafariBlockEntities.register was never called");
+        }
+        return safariBanner;
     }
 
     /**

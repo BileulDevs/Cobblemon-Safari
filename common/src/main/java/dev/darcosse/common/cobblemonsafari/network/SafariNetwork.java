@@ -35,8 +35,10 @@ public final class SafariNetwork {
      * 6: rules payload v4 (rest house columns).
      * 7: shop payload v2 (tabs).
      * 8: stats, wall screen open and wall screen settings payloads added.
+     * 9: wall screen open and settings payloads v2 (signed tilt).
+     * 10: banner open and banner set payloads added.
      */
-    public static final String PROTOCOL_VERSION = "8";
+    public static final String PROTOCOL_VERSION = "10";
 
     private SafariNetwork() {
     }
@@ -105,6 +107,11 @@ public final class SafariNetwork {
 
     /** Opens the settings screen of a wall screen group on one player's client. */
     public static void sendWallScreenOpen(ServerPlayer player, SafariWallScreenOpenPayload payload) {
+        Platform.get().sendToPlayer(player, payload);
+    }
+
+    /** Opens the design picker of a banner on one player's client. */
+    public static void sendBannerOpen(ServerPlayer player, SafariBannerOpenPayload payload) {
         Platform.get().sendToPlayer(player, payload);
     }
 

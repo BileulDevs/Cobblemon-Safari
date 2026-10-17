@@ -2,9 +2,11 @@ package dev.darcosse.forge.cobblemonsafari;
 
 import dev.darcosse.common.cobblemonsafari.block.SafariBlockEntities;
 import dev.darcosse.common.cobblemonsafari.block.SafariBlocks;
+import dev.darcosse.common.cobblemonsafari.decor.SafariDecor;
 import dev.darcosse.common.cobblemonsafari.item.SafariItems;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
@@ -44,6 +46,10 @@ public final class NeoForgeItemRegistration {
             event.accept(SafariItems.safariBoardFrame());
             event.accept(SafariItems.safariWallScreen());
             event.accept(SafariItems.safariGate());
+            // A loop rather than a method reference: accept is overloaded.
+            for (Item item : SafariDecor.items()) {
+                event.accept(item);
+            }
         }
     }
 }

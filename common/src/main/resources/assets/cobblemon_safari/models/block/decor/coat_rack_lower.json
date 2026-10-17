@@ -1,0 +1,145 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "wood": "cobblemon_safari:block/decor/teak",
+    "jacket": "cobblemon_safari:block/decor/jacket_front",
+    "jacket_side": "cobblemon_safari:block/decor/jacket_side",
+    "particle": "cobblemon_safari:block/decor/teak"
+  },
+  "elements": [
+    {
+      "from": [
+        3,
+        0,
+        7
+      ],
+      "to": [
+        13,
+        1,
+        9
+      ],
+      "faces": {
+        "north": {
+          "texture": "#wood"
+        },
+        "south": {
+          "texture": "#wood"
+        },
+        "east": {
+          "texture": "#wood"
+        },
+        "west": {
+          "texture": "#wood"
+        },
+        "up": {
+          "texture": "#wood"
+        },
+        "down": {
+          "texture": "#wood",
+          "cullface": "down"
+        }
+      },
+      "name": "foot"
+    },
+    {
+      "from": [
+        7,
+        0,
+        3
+      ],
+      "to": [
+        9,
+        1,
+        13
+      ],
+      "faces": {
+        "north": {
+          "texture": "#wood"
+        },
+        "south": {
+          "texture": "#wood"
+        },
+        "east": {
+          "texture": "#wood"
+        },
+        "west": {
+          "texture": "#wood"
+        },
+        "up": {
+          "texture": "#wood"
+        },
+        "down": {
+          "texture": "#wood",
+          "cullface": "down"
+        }
+      },
+      "name": "foot"
+    },
+    {
+      "from": [
+        7,
+        1,
+        7
+      ],
+      "to": [
+        9,
+        16,
+        9
+      ],
+      "faces": {
+        "north": {
+          "texture": "#wood"
+        },
+        "south": {
+          "texture": "#wood"
+        },
+        "east": {
+          "texture": "#wood"
+        },
+        "west": {
+          "texture": "#wood"
+        },
+        "up": {
+          "texture": "#wood"
+        },
+        "down": {
+          "texture": "#wood"
+        }
+      },
+      "name": "pole"
+    },
+    {
+      "from": [
+        4,
+        6,
+        2
+      ],
+      "to": [
+        12,
+        16,
+        6
+      ],
+      "faces": {
+        "north": {
+          "texture": "#jacket"
+        },
+        "south": {
+          "texture": "#jacket_side"
+        },
+        "east": {
+          "texture": "#jacket_side"
+        },
+        "west": {
+          "texture": "#jacket_side"
+        },
+        "up": {
+          "texture": "#jacket_side"
+        },
+        "down": {
+          "texture": "#jacket_side"
+        }
+      },
+      "name": "jacket_tails"
+    }
+  ]
+}

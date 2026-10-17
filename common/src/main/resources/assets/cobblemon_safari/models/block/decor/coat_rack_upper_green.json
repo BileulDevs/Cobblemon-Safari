@@ -1,0 +1,6 @@
+{
+  "parent": "cobblemon_safari:block/decor/coat_rack_upper",
+  "textures": {
+    "felt": "cobblemon_safari:block/decor/hat_felt_green"
+  }
+}

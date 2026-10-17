@@ -5,6 +5,8 @@ import dev.darcosse.common.cobblemonsafari.gate.GateClientHooks;
 import dev.darcosse.common.cobblemonsafari.client.shop.SafariShopScreen;
 import dev.darcosse.common.cobblemonsafari.network.ShopClientBridge;
 import dev.darcosse.common.cobblemonsafari.network.WallScreenClientBridge;
+import dev.darcosse.common.cobblemonsafari.network.BannerClientBridge;
+import dev.darcosse.common.cobblemonsafari.client.banner.BannerDesignScreen;
 import dev.darcosse.common.cobblemonsafari.client.wallscreen.WallScreenSettingsScreen;
 import dev.darcosse.common.cobblemonsafari.client.board.BoardPokemonModels;
 import dev.darcosse.common.cobblemonsafari.config.SafariClientConfigManager;
@@ -18,11 +20,15 @@ public final class SafariClient {
     private SafariClient() {
     }
 
-    /** Loads display preferences and installs the shop and wall screen settings screens as payload handlers. */
+    /**
+     * Loads display preferences and installs the shop, wall screen settings
+     * and banner design screens as payload handlers.
+     */
     public static void init() {
         SafariClientConfigManager.load();
         ShopClientBridge.setHandler(SafariShopScreen::handle);
         WallScreenClientBridge.setHandler(WallScreenSettingsScreen::handle);
+        BannerClientBridge.setHandler(BannerDesignScreen::handle);
         GateClientHooks.setPaneAnimated(GateAmbience::onPaneAnimated);
     }
 

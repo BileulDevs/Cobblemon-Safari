@@ -20,7 +20,14 @@ import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -50,6 +57,27 @@ public final class SafariSessionManager {
     private static final int RESYNC_INTERVAL_TICKS = 5 * Ticks.PER_SECOND;
 
     private static final List<SafariSessionListener> LISTENERS = new CopyOnWriteArrayList<>();
+
+    /**
+     * Where each online player last stood outside the Safari, refreshed by
+     * every sweep. A player who gets in without a session (a waystone,
+     * another mod's teleport, a command) is sent back there rather than to
+     * the world spawn, so a misdirected teleport costs them nothing. Not
+     * saved: after a restart, a player logging in inside is handled by
+     * {@link #settleJoined}. Server thread only.
+     */
+    private static final Map<UUID, ReturnPoint> LAST_OUTSIDE = new HashMap<>();
+
+    /**
+     * Players who asked to leave (/safari leave, the clerk's dialogue),
+     * handled at the start of the next server tick ({@link #processLeaves}).
+     * The clerk runs the command from inside Cobblemon's dialogue handling,
+     * where a cross-dimension teleport was seen ending the session without
+     * moving the player; on the next tick nothing of the dialogue is on the
+     * stack any more. Concurrent because nothing guarantees the dialogue
+     * runs the command on the server thread.
+     */
+    private static final Queue<UUID> PENDING_LEAVES = new ConcurrentLinkedQueue<>();
 
     private static int tickCounter;
 
@@ -196,6 +224,9 @@ public final class SafariSessionManager {
      * {@link #settleJoined}'s job.
      */
     public static void onPlayerJoin(ServerPlayer player) {
+        // A position from before the login (another world in single player,
+        // or a session before a restart) means nothing now.
+        LAST_OUTSIDE.remove(player.getUUID());
         SafariNetwork.sendRules(player);
         if (SafariDimensions.isSafari(player.level())) {
             SafariBorder.sendTo(player);
@@ -245,6 +276,32 @@ public final class SafariSessionManager {
         }
     }
 
+    /**
+     * Asks for a player to leave the Safari on the next server tick: their
+     * session ends and they are sent out, or, inside without a session (an
+     * exempt builder), they are simply sent to the world spawn. Safe to call
+     * from any thread.
+     */
+    public static void requestLeave(ServerPlayer player) {
+        PENDING_LEAVES.add(player.getUUID());
+    }
+
+    /** Handles the leave requests of the last tick; see {@link #PENDING_LEAVES}. */
+    private static void processLeaves(MinecraftServer server) {
+        UUID id;
+        while ((id = PENDING_LEAVES.poll()) != null) {
+            ServerPlayer player = server.getPlayerList().getPlayer(id);
+            // Logged out in between: the login rules take over.
+            if (player == null || end(player, SessionEndReason.VOLUNTARY)) {
+                continue;
+            }
+            if (SafariDimensions.isSafari(player.level())) {
+                SafariTeleporter.sendToWorldSpawn(player);
+                player.sendSystemMessage(Component.translatable(SessionEndReason.VOLUNTARY.translationKey()));
+            }
+        }
+    }
+
     /** Ends the session of a player who died inside. The respawn takes them out. */
     public static void onPlayerDeath(ServerPlayer player) {
         if (SafariDimensions.isSafari(player.level())) {
@@ -255,13 +312,17 @@ public final class SafariSessionManager {
     /**
      * Runs every server tick.
      *
-     * <p>Cost per tick: one pass over active sessions (a map lookup each). Every
+     * <p>Cost per tick: an emptiness check of the leave requests, one pass
+     * over active sessions (a map lookup each). Every
      * {@link #CONSISTENCY_INTERVAL_TICKS}, one extra pass over online players.
      * Nothing here loads chunks except a boundary correction or an eviction,
      * which are rare.
      */
     public static void tick(MinecraftServer server) {
         tickCounter++;
+        if (!PENDING_LEAVES.isEmpty()) {
+            processLeaves(server);
+        }
         SafariSessionStore store = SafariSessionStore.get(server);
         if (!store.isEmpty()) {
             tickSessions(server, store);
@@ -330,7 +391,8 @@ public final class SafariSessionManager {
 
     /**
      * Reconciles the world with the session store: keeps the Safari border in
-     * place, evicts players inside without a session, ends sessions of players
+     * place, evicts players inside without a session back to where they last
+     * stood outside, ends sessions of players
      * who got out by other means, and brings back anyone outside the border.
      */
     private static void enforceConsistency(MinecraftServer server, SafariSessionStore store) {
@@ -350,8 +412,14 @@ public final class SafariSessionManager {
                 LoanedBalls.reclaim(player);
                 EscapeRopes.reclaim(player);
             }
+            if (!inside) {
+                LAST_OUTSIDE.put(player.getUUID(), ReturnPoint.of(player));
+            }
             if (inside && !hasSession && !exempt) {
-                SafariTeleporter.sendToWorldSpawn(player);
+                // Got in without going through a gate: whatever their banked
+                // time, an entry only starts at a gate or with /safari start,
+                // which record the return point and lend the balls.
+                SafariTeleporter.sendOut(player, LAST_OUTSIDE.get(player.getUUID()));
                 player.sendSystemMessage(Component.translatable(key("message.no_session")));
             } else if (!inside && hasSession) {
                 end(player, SessionEndReason.LEFT);
@@ -359,6 +427,12 @@ public final class SafariSessionManager {
                 ParkBoundary.pullBack(player);
             }
         }
+        // Forgets players who logged out, so the map stays the size of the player list.
+        Set<UUID> online = new HashSet<>();
+        for (ServerPlayer player : players) {
+            online.add(player.getUUID());
+        }
+        LAST_OUTSIDE.keySet().retainAll(online);
     }
 
     /** Keeps a requested duration between one second and the configured maximum. */

@@ -29,10 +29,16 @@ public final class SafariCredit {
     /** Registers the refund listener. Called once from common init. */
     public static void register() {
         SafariSessionManager.addListener(new SafariSessionListener() {
-            /** Gives back the unused time of a hunt paid with credit, when the player left on purpose. */
+            /**
+             * Gives back the unused time of a hunt paid with credit, when the
+             * player left on purpose or died inside. Death counts as leaving:
+             * players inside are invulnerable by default, so only /kill or the
+             * void kill them there, and neither should cost the hunt.
+             */
             @Override
             public void onEnd(ServerPlayer player, SafariSession session, SessionEndReason reason) {
-                if (reason == SessionEndReason.VOLUNTARY && SOURCE.equals(session.source())
+                if ((reason == SessionEndReason.VOLUNTARY || reason == SessionEndReason.DEATH)
+                        && SOURCE.equals(session.source())
                         && SafariConfigManager.get().ticket.refundUnusedTimeOnLeave
                         && session.remainingTicks() > 0) {
                     int refunded = add(player, session.remainingTicks());

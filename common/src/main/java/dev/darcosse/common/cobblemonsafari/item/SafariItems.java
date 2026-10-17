@@ -3,6 +3,7 @@ package dev.darcosse.common.cobblemonsafari.item;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import net.minecraft.resources.ResourceLocation;
 import dev.darcosse.common.cobblemonsafari.block.SafariBlocks;
+import dev.darcosse.common.cobblemonsafari.decor.SafariDecor;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Rarity;
@@ -63,6 +64,7 @@ public final class SafariItems {
         // One per player and never used up, so no stacking.
         escapeRope = new SafariEscapeRopeItem(new Item.Properties().stacksTo(1));
         registrar.accept(ESCAPE_ROPE_ID, escapeRope);
+        SafariDecor.registerItems(registrar);
     }
 
     /**

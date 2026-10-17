@@ -1,6 +1,7 @@
 package dev.darcosse.common.cobblemonsafari.block;
 
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
+import dev.darcosse.common.cobblemonsafari.decor.SafariDecor;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
@@ -89,6 +90,7 @@ public final class SafariBlocks {
                 .noLootTable()
                 .pushReaction(PushReaction.BLOCK));
         registrar.accept(SAFARI_GATE_ID, safariGate);
+        SafariDecor.registerBlocks(registrar);
     }
 
     /**

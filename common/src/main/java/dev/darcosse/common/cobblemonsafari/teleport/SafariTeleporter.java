@@ -112,6 +112,14 @@ public final class SafariTeleporter {
         player.stopRiding();
         player.teleportTo(level, x, y, z, yaw, pitch);
         player.resetFallDistance();
+        // The teleport can be refused silently (another mod cancelling the
+        // dimension change, a call from the wrong thread). Said in the log,
+        // since the player is then left where they were with no explanation.
+        if (player.level() != level) {
+            CobblemonSafari.LOGGER.warn("Teleport of {} to {} did not happen (thread {}); still in {}",
+                    player.getGameProfile().getName(), level.dimension().location(),
+                    Thread.currentThread().getName(), player.level().dimension().location());
+        }
     }
 
     /** Searches a dry, open spot around the arrival point, widening the search on failure. */

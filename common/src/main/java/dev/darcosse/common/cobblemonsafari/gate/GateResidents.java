@@ -38,7 +38,13 @@ import java.util.Set;
 
 /**
  * The people and Pokémon living at a Safari Gate: a Safari Warden standing
- * beside it and a few of his Pokémon roaming the plaza.
+ * beside the gate and a few of his Pokémon roaming the plaza.
+ *
+ * <p>Only a gate that keeps a warden (a generated one, see
+ * {@code SafariGateBlockEntity.KEEPS_WARDEN_KEY}) gets him; a gate placed
+ * by hand only gets the roaming Pokémon. Whoever goes missing, including
+ * after {@code /kill}, is spawned again on the next check while a player is
+ * near, so a generated gate always ends up with its warden, the way in.
  *
  * <p>They are ordinary entities, recognised by scoreboard tags rather than
  * stored ids, so a gate needs no saved state and adopts whatever residents
@@ -74,15 +80,26 @@ public final class GateResidents {
     private static final double PLAYER_RANGE = 48.0D;
 
     /**
-     * Where the warden stands relative to the middle of the gate: this many
-     * blocks along the gate's axis and across it. Tried in all four
-     * quadrants; the structure keeps those spots clear whatever its rotation.
+     * Where the warden stands, in blocks from the middle of the gate's
+     * bottom row: this many along the gate's axis and across it. Tried in
+     * all four quadrants, first free one wins, so the spot works whatever
+     * the structure's rotation. In structure/safari_gate.nbt all four are
+     * clear ground beside the avenue; moving them onto the stairs or the
+     * avenue puts him on another quadrant or in the doorway.
      */
-    private static final int WARDEN_ALONG = 3;
-    private static final int WARDEN_ACROSS = 2;
+    private static final int WARDEN_ALONG = 2;
+    private static final int WARDEN_ACROSS = 3;
 
-    /** Box half-size searched for the warden; beyond it a new one is spawned. */
+    /** Box half-size searched for the warden around the gate; beyond it a new one is spawned. */
     private static final double WARDEN_SEARCH = 12.0D;
+
+    /**
+     * How far the warden may wander from his spot before being walked back,
+     * in blocks, and teleported back beyond TELEPORT_FACTOR times that.
+     * Kept small: players talk to him to enter, which only works within 10
+     * blocks of a gate (SafariGate.COMMAND_RANGE).
+     */
+    private static final int WARDEN_LEASH = 4;
 
     /** Residents farther than roamRadius × this are teleported back instead of walked back. */
     private static final double TELEPORT_FACTOR = 2.0D;
@@ -157,54 +174,83 @@ public final class GateResidents {
     }
 
     /**
-     * Makes sure the warden and every configured Pokémon are at the gate.
-     * Two entity box queries, plus a spawn now and then; called every few
-     * seconds per gate, only while a player is near.
+     * Makes sure every configured Pokémon roams the gate's plaza, and that a
+     * gate keeping a warden has exactly one. Two entity box queries and a few
+     * block reads, plus a spawn now and then; called every few seconds per
+     * gate, only while a player is near.
      *
-     * @param middle bottom block in the middle of the gate
-     * @param axis   horizontal axis the gate spans
+     * @param middle      bottom block in the middle of the gate
+     * @param axis        horizontal axis the gate spans
+     * @param keepsWarden whether this gate gets a warden (a generated gate)
      */
-    public static void maintain(ServerLevel level, BlockPos middle, Direction.Axis axis) {
+    public static void maintain(ServerLevel level, BlockPos middle, Direction.Axis axis, boolean keepsWarden) {
         Vec3 centre = Vec3.atBottomCenterOf(middle);
         if (!level.hasNearbyAlivePlayer(centre.x, centre.y, centre.z, PLAYER_RANGE)) {
             return;
         }
         SafariConfig.Gate config = SafariConfigManager.get().gate;
-        Direction along = Direction.fromAxisAndDirection(axis, Direction.AxisDirection.POSITIVE);
-        Direction across = along.getClockWise();
-        if (config.spawnWarden) {
-            maintainWarden(level, middle, axis, along, across, config.roamRadius);
+        if (keepsWarden && config.spawnWarden) {
+            maintainWarden(level, middle, axis);
         }
         maintainCompanions(level, middle, axis, config);
     }
 
     /**
-     * Keeps exactly one warden, wandering within the roaming area. He walks
-     * around on his own (Cobblemon's wander behaviour, see the NPC class);
-     * this only brings him back when he strays too far.
+     * Keeps exactly one warden beside the gate, wandering a few blocks
+     * around his spot ({@link #WARDEN_LEASH}). He walks around on his own
+     * (Cobblemon's wander behaviour, see the NPC class); this only brings
+     * him back when he strays too far, and spawns a new one when he is gone.
+     * Two generated gates closer than {@link #WARDEN_SEARCH} share one.
      */
-    private static void maintainWarden(ServerLevel level, BlockPos middle, Direction.Axis axis, Direction along,
-                                       Direction across, int roamRadius) {
+    private static void maintainWarden(ServerLevel level, BlockPos middle, Direction.Axis axis) {
         List<NPCEntity> wardens = level.getEntitiesOfClass(NPCEntity.class,
                 new AABB(middle).inflate(WARDEN_SEARCH), entity -> entity.getTags().contains(WARDEN_TAG));
-        if (wardens.isEmpty()) {
-            BlockPos spot = wardenSpot(level, middle, along, across);
-            if (spot != null) {
-                spawnWarden(level, spot);
-            } else {
-                reportOnce(middle.toShortString(), "No free spot for the Safari Warden beside the gate at {}");
-            }
+        BlockPos spot = wardenSpot(level, middle, axis);
+        if (spot == null) {
+            reportOnce(middle.toShortString(), "No free spot for the Safari Warden beside the gate at {}");
             return;
         }
-        // Two gates close together, or a copy pasted by an operator: keep one.
+        if (wardens.isEmpty()) {
+            spawnWarden(level, spot);
+            return;
+        }
+        // A copy pasted by an operator, or two gates close together: keep one.
         for (int i = 1; i < wardens.size(); i++) {
             wardens.get(i).discard();
         }
+        Vec3 centre = Vec3.atBottomCenterOf(spot);
+        Mob warden = wardens.get(0);
         // Wardens spawned before he carried a ball get one on the next round.
-        if (wardens.get(0).getMainHandItem().isEmpty()) {
-            equipSafariBall(wardens.get(0));
+        if (warden.getMainHandItem().isEmpty()) {
+            equipSafariBall(warden);
         }
-        keepWithinReach(level, wardens.get(0), middle, axis, roamRadius);
+        double distance = horizontalDistance(warden.position(), centre);
+        if (distance > WARDEN_LEASH * TELEPORT_FACTOR) {
+            warden.teleportTo(centre.x, centre.y, centre.z);
+        } else if (distance > WARDEN_LEASH) {
+            walkBack(warden, spot);
+        }
+    }
+
+    /**
+     * First free standing spot among the four quadrants beside the gate
+     * ({@link #WARDEN_ALONG}, {@link #WARDEN_ACROSS}), or null. Same order
+     * every time, so the warden always heads back to the same spot.
+     */
+    @Nullable
+    private static BlockPos wardenSpot(ServerLevel level, BlockPos middle, Direction.Axis axis) {
+        Direction along = Direction.fromAxisAndDirection(axis, Direction.AxisDirection.POSITIVE);
+        Direction across = along.getClockWise();
+        int[][] signs = {{1, 1}, {-1, 1}, {1, -1}, {-1, -1}};
+        for (int[] sign : signs) {
+            BlockPos column = middle.relative(along, WARDEN_ALONG * sign[0])
+                    .relative(across, WARDEN_ACROSS * sign[1]);
+            BlockPos spot = standingSpot(level, column, middle.getY());
+            if (spot != null) {
+                return spot;
+            }
+        }
+        return null;
     }
 
     /**
@@ -238,20 +284,6 @@ public final class GateResidents {
         } else {
             resident.getNavigation().moveTo(middle.getX() + 0.5D, middle.getY(), middle.getZ() + 0.5D, NAVIGATION_SPEED);
         }
-    }
-
-    /** First free standing spot among the four quadrants beside the gate, or null. */
-    @Nullable
-    private static BlockPos wardenSpot(ServerLevel level, BlockPos middle, Direction along, Direction across) {
-        int[][] signs = {{1, 1}, {-1, 1}, {1, -1}, {-1, -1}};
-        for (int[] sign : signs) {
-            BlockPos column = middle.relative(along, WARDEN_ALONG * sign[0]).relative(across, WARDEN_ACROSS * sign[1]);
-            BlockPos spot = standingSpot(level, column, middle.getY());
-            if (spot != null) {
-                return spot;
-            }
-        }
-        return null;
     }
 
     /** Spawns the warden, if the datapack still defines him. */

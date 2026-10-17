@@ -96,7 +96,8 @@ public final class FeaturedSpawner {
             return;
         }
         ServerLevel safari = SafariDimensions.level(server);
-        if (safari == null || safari.players().isEmpty()) {
+        // Cobblemon's gamerule switches every wild spawn off; the specials are wild spawns too.
+        if (safari == null || safari.players().isEmpty() || !PokemonSpawningRule.allowed(server)) {
             return;
         }
         List<HabitatEntry> specials = FeaturedRotation.today(server);

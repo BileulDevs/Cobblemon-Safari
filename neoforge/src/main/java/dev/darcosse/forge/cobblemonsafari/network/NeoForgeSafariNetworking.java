@@ -16,6 +16,10 @@ import dev.darcosse.common.cobblemonsafari.network.SafariWallScreenSetPayload;
 import dev.darcosse.common.cobblemonsafari.network.WallScreenClientBridge;
 import dev.darcosse.common.cobblemonsafari.client.StatsClientState;
 import dev.darcosse.common.cobblemonsafari.block.WallScreenSettings;
+import dev.darcosse.common.cobblemonsafari.decor.BannerDesigns;
+import dev.darcosse.common.cobblemonsafari.network.BannerClientBridge;
+import dev.darcosse.common.cobblemonsafari.network.SafariBannerOpenPayload;
+import dev.darcosse.common.cobblemonsafari.network.SafariBannerSetPayload;
 import dev.darcosse.common.cobblemonsafari.shop.SafariShop;
 import net.minecraft.server.level.ServerPlayer;
 import dev.darcosse.common.cobblemonsafari.network.SafariTimerPayload;
@@ -60,6 +64,15 @@ public final class NeoForgeSafariNetworking {
                 (payload, context) -> context.enqueueWork(() -> {
                     if (context.player() instanceof ServerPlayer player) {
                         WallScreenSettings.handleSet(player, payload);
+                    }
+                }));
+        // Through the bridge for the same reason as the shop.
+        registrar.playToClient(SafariBannerOpenPayload.TYPE, SafariBannerOpenPayload.CODEC,
+                (payload, context) -> context.enqueueWork(() -> BannerClientBridge.onOpen(payload)));
+        registrar.playToServer(SafariBannerSetPayload.TYPE, SafariBannerSetPayload.CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (context.player() instanceof ServerPlayer player) {
+                        BannerDesigns.handleSet(player, payload);
                     }
                 }));
         registrar.playToServer(SafariShopBuyPayload.TYPE, SafariShopBuyPayload.CODEC,

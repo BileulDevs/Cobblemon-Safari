@@ -7,7 +7,9 @@ Generates the Safari Gate assets:
   * the structure template         data/cobblemon_safari/structure/safari_gate.nbt
 
 Run from the repository root:  python3 tools/safari_gate_assets.py
-Requires Pillow. Re-running overwrites both files.
+Requires Pillow. Writes the skin only: the gate shipped with the mod is now
+built by hand in game. Add --structure to regenerate the old generated lodge
+(which overwrites the hand-built template).
 
 The gate's pane texture is drawn by tools/portal_textures.py.
 
@@ -456,7 +458,17 @@ def structure():
     return len(entries), len(palette)
 
 
+# Option that rebuilds the structure template. Off by default since the gate
+# is built by hand in game (safari_gate_v1.1): running the script plainly
+# must not overwrite that build with this older generated lodge.
+STRUCTURE_FLAG = "--structure"
+
+
 if __name__ == "__main__":
+    import sys
     warden_skin()
-    count, states = structure()
-    print("warden skin, structure (%d blocks, %d states) written" % (count, states))
+    if STRUCTURE_FLAG in sys.argv[1:]:
+        count, states = structure()
+        print("warden skin, structure (%d blocks, %d states) written" % (count, states))
+    else:
+        print("warden skin written; structure left as is (pass %s to regenerate the old lodge)" % STRUCTURE_FLAG)

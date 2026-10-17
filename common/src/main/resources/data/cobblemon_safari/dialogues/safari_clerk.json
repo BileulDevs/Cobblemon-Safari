@@ -74,8 +74,8 @@
             "text": "cobblemon_safari.dialogue.safari_clerk.option.leave_yes",
             "value": "leave_yes",
             "action": [
-              "q.dialogue.close();",
-              "q.player.run_command('safari leave');"
+              "q.player.run_command('safari leave');",
+              "q.dialogue.close();"
             ]
           },
           {

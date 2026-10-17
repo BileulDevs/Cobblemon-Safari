@@ -52,8 +52,9 @@ import java.util.WeakHashMap;
  * time simply stay where they are, with the reason on the action bar. It cannot be mined in survival, so a gate found in the
  * wild cannot be carried home; operators place their own with the creative
  * item. Every gate block has a block entity, but only the bottom corner of a
- * gate (see {@link SafariGateBlockEntity}) looks after its warden and roaming
- * Pokémon.
+ * gate (see {@link SafariGateBlockEntity}) looks after its roaming Pokémon,
+ * and after its warden only for a generated gate: a block placed by hand
+ * brings no warden.
  */
 public class SafariGateBlock extends Block implements EntityBlock, Portal {
 

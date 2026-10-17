@@ -292,7 +292,12 @@ public class SafariConfig {
          */
         public boolean allowEntry = true;
 
-        /** Keeps a Safari Warden standing next to each gate, who explains how entry works. */
+        /**
+         * Keeps a Safari Warden next to each generated gate, who explains how
+         * entry works. Gates placed by hand never have one (see
+         * SafariGateBlockEntity.KEEPS_WARDEN_KEY). One removed with /kill
+         * comes back within a few seconds while a player is near.
+         */
         public boolean spawnWarden = true;
 
         /**
@@ -307,8 +312,9 @@ public class SafariConfig {
         ));
 
         /**
-         * How far, in blocks, the warden and his Pokémon may wander from the
-         * gate before being walked back (teleported beyond twice this).
+         * How far, in blocks, the warden's Pokémon may wander from the gate
+         * before being walked back (teleported beyond twice this). The warden
+         * keeps to a few blocks around his spot, whatever this says.
          */
         public int roamRadius = 8;
     }
@@ -546,8 +552,8 @@ public class SafariConfig {
 
         /**
          * Gives the unused time of a hunt paid with banked time back to the bank
-         * when the player leaves on purpose (/safari leave). Time running out,
-         * death or an operator ending the hunt never refund.
+         * when the player leaves on purpose (/safari leave, the clerk) or dies
+         * inside. Time running out or an operator ending the hunt never refund.
          */
         public boolean refundUnusedTimeOnLeave = true;
 

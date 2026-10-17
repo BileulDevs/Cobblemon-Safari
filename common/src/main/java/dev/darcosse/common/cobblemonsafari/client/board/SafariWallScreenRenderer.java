@@ -162,7 +162,7 @@ public class SafariWallScreenRenderer implements BlockEntityRenderer<SafariWallS
         // The anchor's settings are the group's: placement and the settings screen
         // keep the others equal, but a freshly regrouped row may disagree until
         // its settings are next changed.
-        float tilt = SafariWallScreenBlock.tiltDegrees(state.getValue(SafariWallScreenBlock.TILT));
+        float tilt = SafariWallScreenBlock.tiltDegrees(SafariWallScreenBlock.signedTilt(state));
         int width = layout.width();
         float widthPixels = width * PIXELS_PER_BLOCK;
         float centre = widthPixels / 2.0F;

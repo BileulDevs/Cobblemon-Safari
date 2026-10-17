@@ -10,6 +10,9 @@ import dev.darcosse.common.cobblemonsafari.network.SafariStatsPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariWallScreenOpenPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariWallScreenSetPayload;
 import dev.darcosse.common.cobblemonsafari.block.WallScreenSettings;
+import dev.darcosse.common.cobblemonsafari.decor.BannerDesigns;
+import dev.darcosse.common.cobblemonsafari.network.SafariBannerOpenPayload;
+import dev.darcosse.common.cobblemonsafari.network.SafariBannerSetPayload;
 import dev.darcosse.common.cobblemonsafari.shop.SafariShop;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -44,5 +47,9 @@ public final class FabricSafariNetworking {
         PayloadTypeRegistry.playC2S().register(SafariWallScreenSetPayload.TYPE, SafariWallScreenSetPayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(SafariWallScreenSetPayload.TYPE,
                 (payload, context) -> WallScreenSettings.handleSet(context.player(), payload));
+        PayloadTypeRegistry.playS2C().register(SafariBannerOpenPayload.TYPE, SafariBannerOpenPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(SafariBannerSetPayload.TYPE, SafariBannerSetPayload.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(SafariBannerSetPayload.TYPE,
+                (payload, context) -> BannerDesigns.handleSet(context.player(), payload));
     }
 }
