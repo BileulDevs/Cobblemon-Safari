@@ -13,7 +13,6 @@ import net.minecraft.world.level.chunk.ChunkGeneratorStructureState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.RandomState;
 import net.minecraft.world.level.levelgen.structure.StructureSet;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,7 +25,7 @@ import java.util.List;
  * <p>Candidates on a grid around the anchor are judged on the terrain the
  * generator would produce, read from the noise ({@link ChunkGenerator#getBaseHeight})
  * without generating a single chunk: dry ground under the whole footprint
- * and plaza, little relief, inside the park, away from the other houses and
+ * and steps, little relief, inside the park, away from the other houses and
  * from the spots where the Safari's ruins and towers may stand. Among the
  * good ones, the flattest wins, closeness to the anchor breaking ties.
  *
@@ -42,12 +41,12 @@ final class RestHouseSites {
     private static final int STEP = 12;
 
     /**
-     * Footprint samples, in house-local coordinates (see {@link RestHouseBuilder#rotate}):
-     * the corners, edges and middle of the house plus the far edge of the
-     * plaza and the cleared ring, so the whole building lot is judged.
+     * Footprint samples, in template coordinates (see {@link RestHouseBuilder#column}):
+     * the corners, edges and middle of the 20 × 19 template plus the cleared
+     * ring one block beyond, so the whole building lot is judged.
      */
-    private static final int[] SAMPLE_X = {-2, RestHouses.HALF_SIZE, 2 * RestHouses.HALF_SIZE + 2};
-    private static final int[] SAMPLE_Z = {0, RestHouses.HALF_SIZE, 2 * RestHouses.HALF_SIZE, 2 * RestHouses.HALF_SIZE + 4};
+    private static final int[] SAMPLE_X = {-1, 0, 10, 19, 20};
+    private static final int[] SAMPLE_Z = {-1, 0, 9, 18, 19};
 
     /**
      * Highest acceptable difference between the highest and lowest sample, in
@@ -61,6 +60,31 @@ final class RestHouseSites {
 
     /** Weight of one block of relief against one block of distance from the anchor. */
     private static final int RELIEF_WEIGHT = 12;
+
+    /**
+     * Search radius multipliers tried in turn when nothing is found. Larger
+     * last steps always find land on this island; each step costs about four
+     * times the previous one in noise reads.
+     */
+    private static final int[] RADIUS_FACTORS = {1, 2, 4};
+
+    /**
+     * Candidates returned, best first. The caller checks them against the
+     * real terrain one by one; more lets it skip more wet spots, each check
+     * generating the few chunks under a house.
+     */
+    static final int MAX_CANDIDATES = 6;
+
+    /**
+     * Step of the dense dry check, in blocks, and how far beyond the
+     * template it reaches. 4 blocks catches any pond worth the name; finer
+     * multiplies the noise reads of each candidate checked.
+     */
+    private static final int DENSE_STEP = 4;
+    private static final int DENSE_MARGIN = 2;
+    /** Last template cell on each axis (template 20 × 19). */
+    private static final int TEMPLATE_X = 19;
+    private static final int TEMPLATE_Z = 18;
 
     /** Smallest distance between two houses' centres, in blocks. */
     private static final int MIN_HOUSE_SPACING = 64;
@@ -82,32 +106,42 @@ final class RestHouseSites {
     }
 
     /**
-     * The centre column {x, z} for a house, or the anchor itself (logged)
-     * when no candidate is acceptable even with the relaxed relief.
+     * Candidate centre columns {x, z} for a house, best first, at most
+     * {@link #MAX_CANDIDATES}; empty when nothing is acceptable. The caller
+     * checks each against the real terrain ({@link RestHouseBuilder#wetColumns})
+     * before building, since the noise misses small water.
      *
-     * @param radius how far from the anchor to look, in blocks
+     * <p>The search widens when it finds nothing: first the given radius with
+     * the strict relief, then the relaxed relief, then twice and four times
+     * the radius. It used to give up after the given radius and build on the
+     * anchor itself, which put an entrance house in a lake.
+     *
+     * @param radius how far from the anchor to look first, in blocks
      * @param taken  centres of the houses already placed on this map
      */
-    static int[] find(ServerLevel level, int anchorX, int anchorZ, int radius, List<int[]> taken) {
+    static List<int[]> candidates(ServerLevel level, int anchorX, int anchorZ, int radius, List<int[]> taken) {
         Context context = new Context(level);
-        int[] site = search(context, anchorX, anchorZ, radius, taken, MAX_RELIEF);
-        if (site == null) {
-            site = search(context, anchorX, anchorZ, radius, taken, RELAXED_RELIEF);
+        for (int factor : RADIUS_FACTORS) {
+            for (int maxRelief : new int[]{MAX_RELIEF, RELAXED_RELIEF}) {
+                List<int[]> found = search(context, anchorX, anchorZ, radius * factor, taken, maxRelief);
+                if (!found.isEmpty()) {
+                    return found;
+                }
+            }
         }
-        if (site == null) {
-            CobblemonSafari.LOGGER.warn("No good spot for the rest house near {}, {}; building it on that position",
-                    anchorX, anchorZ);
-            return new int[]{anchorX, anchorZ};
-        }
-        return site;
+        CobblemonSafari.LOGGER.warn("No dry, even spot for the rest house within {} blocks of {}, {}",
+                radius * RADIUS_FACTORS[RADIUS_FACTORS.length - 1], anchorX, anchorZ);
+        return List.of();
     }
 
-    /** One pass over the grid; null when nothing passes. */
-    @Nullable
-    private static int[] search(Context context, int anchorX, int anchorZ, int radius, List<int[]> taken,
-                                int maxRelief) {
-        int[] best = null;
-        double bestScore = Double.MAX_VALUE;
+    /**
+     * One pass over the grid: the spots that pass, best first, each also
+     * checked dry on a dense grid of the footprint. Only the best ones are
+     * checked densely, until {@link #MAX_CANDIDATES} pass.
+     */
+    private static List<int[]> search(Context context, int anchorX, int anchorZ, int radius, List<int[]> taken,
+                                      int maxRelief) {
+        List<double[]> scored = new ArrayList<>();
         for (int dx = -radius; dx <= radius; dx += STEP) {
             for (int dz = -radius; dz <= radius; dz += STEP) {
                 int x = anchorX + dx;
@@ -120,13 +154,42 @@ final class RestHouseSites {
                     continue;
                 }
                 double score = relief * RELIEF_WEIGHT + Math.sqrt((double) dx * dx + (double) dz * dz);
-                if (score < bestScore) {
-                    bestScore = score;
-                    best = new int[]{x, z};
+                scored.add(new double[]{score, x, z});
+            }
+        }
+        scored.sort((a, b) -> Double.compare(a[0], b[0]));
+        List<int[]> result = new ArrayList<>();
+        for (double[] candidate : scored) {
+            int x = (int) candidate[1];
+            int z = (int) candidate[2];
+            if (dryOnDenseGrid(context, x, z)) {
+                result.add(new int[]{x, z});
+                if (result.size() == MAX_CANDIDATES) {
+                    break;
                 }
             }
         }
-        return best;
+        return result;
+    }
+
+    /**
+     * Whether the noise shows no water anywhere on a grid of
+     * {@link #DENSE_STEP} blocks over the whole footprint and its ring. The
+     * coarse samples of {@link #relief} can fall either side of a pond.
+     */
+    private static boolean dryOnDenseGrid(Context context, int x, int z) {
+        Direction facing = RestHouses.doorFacing(x, z);
+        for (int lx = -DENSE_MARGIN; lx <= TEMPLATE_X + DENSE_MARGIN; lx += DENSE_STEP) {
+            for (int lz = -DENSE_MARGIN; lz <= TEMPLATE_Z + DENSE_MARGIN; lz += DENSE_STEP) {
+                BlockPos column = RestHouseBuilder.column(x, z, facing, lx, lz);
+                int surface = context.height(column, Heightmap.Types.WORLD_SURFACE_WG);
+                int ground = context.height(column, Heightmap.Types.OCEAN_FLOOR_WG);
+                if (surface != ground || ground <= context.seaLevel) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     /**
@@ -140,7 +203,7 @@ final class RestHouseSites {
         int high = Integer.MIN_VALUE;
         for (int lx : SAMPLE_X) {
             for (int lz : SAMPLE_Z) {
-                BlockPos column = RestHouseBuilder.rotate(x, z, facing, lx, lz);
+                BlockPos column = RestHouseBuilder.column(x, z, facing, lx, lz);
                 if (ParkBoundary.isOutside(column.getX(), column.getZ())) {
                     return -1;
                 }

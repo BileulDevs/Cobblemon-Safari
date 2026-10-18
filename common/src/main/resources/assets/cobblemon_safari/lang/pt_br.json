@@ -24,6 +24,7 @@
   "cobblemon_safari.command.time.changed": "%1$s agora tem %2$s restantes.",
   "cobblemon_safari.command.reload.success": "Configuração do Safári recarregada.",
   "cobblemon_safari.message.protected": "Você não pode alterar nada na Zona Safári.",
+  "cobblemon_safari.message.shelf_locked": "Estes TMs fazem parte da decoração da casa de descanso.",
   "biome.cobblemon_safari.grassland": "Campina Safári",
   "biome.cobblemon_safari.savanna": "Savana Safári",
   "biome.cobblemon_safari.dunes": "Dunas Safári",

@@ -1,0 +1,38 @@
+{
+  "configVersion": 6,
+  "hudEnabled": true,
+  "hudAnchor": "TOP_RIGHT",
+  "hudOffsetX": -24,
+  "hudOffsetY": 24,
+  "lowTimeSeconds": 60,
+  "criticalTimeSeconds": 10,
+  "board": {
+    "useSprites": true,
+    "backgroundImage": true,
+    "panelOpacity": 0.6,
+    "colors": {
+      "bezel": "#1A1C22",
+      "background": "#0A1220",
+      "header": "#13213B",
+      "title": "#7CFC00",
+      "cell": "#CC111D33",
+      "text": "#FFFFFF",
+      "muted": "#8C9BB5",
+      "star": "#FFD700",
+      "liveOn": "#FF3B3B",
+      "liveOff": "#5A1A1A",
+      "barBackground": "#1E2B45",
+      "barRotation": "#35C8E8",
+      "barSessionOk": "#4CD964",
+      "barSessionLow": "#FFC04D",
+      "barSessionCritical": "#FF5555",
+      "rarityCommon": "#FFFFFF",
+      "rarityUncommon": "#55FF55",
+      "rarityRare": "#55FFFF",
+      "rarityUltraRare": "#FF55FF",
+      "scanline": "#12FFFFFF",
+      "shimmer": "#50FFFFFF",
+      "flash": "#90FFFFFF"
+    }
+  }
+}

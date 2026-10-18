@@ -43,7 +43,8 @@ import java.util.Set;
  *
  * <p>Interactions that do not change blocks stay allowed on purpose: opening
  * doors and chests, Cobblemon's PC, healing machine and Poké Pot, sitting,
- * riding.
+ * riding. The exception is Cobblemon's disc shelf, whose Technical Machines
+ * are decoration of the rest houses, not loot.
  */
 public final class SafariProtection {
 
@@ -63,6 +64,15 @@ public final class SafariProtection {
             COBBLEMON_SOUL_CAMPFIRE,
             ResourceLocation.fromNamespaceAndPath("cobblemon", "pc"),
             ResourceLocation.fromNamespaceAndPath("cobblemon", "healing_machine"));
+
+    /**
+     * Cobblemon's disc shelf, which holds Technical Machines: the rest houses
+     * display some on theirs. Right-clicking takes a disc out, so in the
+     * Safari any click on it is refused, which also keeps players from
+     * filling it.
+     */
+    private static final ResourceLocation COBBLEMON_DISC_SHELF =
+            ResourceLocation.fromNamespaceAndPath("cobblemon", "disc_shelf");
 
     private SafariProtection() {
     }
@@ -110,6 +120,10 @@ public final class SafariProtection {
      * @param clicked the block right-clicked
      */
     public static boolean shouldBlockUseOn(Player player, ItemStack stack, BlockState clicked) {
+        if (isDiscShelf(clicked) && isTerrainProtectedFor(player)) {
+            player.displayClientMessage(Component.translatable(CobblemonSafari.MOD_ID + ".message.shelf_locked"), true);
+            return true;
+        }
         if (isStation(clicked) && isTerrainProtectedFor(player)) {
             if (player.isSecondaryUseActive() && isCampfire(clicked)) {
                 return deny(player, true);
@@ -125,6 +139,11 @@ public final class SafariProtection {
         boolean placeable = stack.getItem() instanceof BlockItem blockItem
                 && isPlaceable(player, blockItem.getBlock());
         return deny(player, !placeable && isTerrainChanging(stack.getItem()) && isTerrainProtectedFor(player));
+    }
+
+    /** Whether a block is Cobblemon's disc shelf. */
+    private static boolean isDiscShelf(BlockState state) {
+        return COBBLEMON_DISC_SHELF.equals(BuiltInRegistries.BLOCK.getKey(state.getBlock()));
     }
 
     /** Whether a block is one of {@link #STATIONS}. */

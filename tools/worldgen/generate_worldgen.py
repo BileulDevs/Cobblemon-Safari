@@ -79,10 +79,17 @@ ARRIVAL_SPREAD = 16
 # entrance, this many blocks north of the arrival point so players land in
 # front of it; moving it farther makes new players walk to find it.
 ENTRANCE_HOUSE_NORTH_OF_ARRIVAL = 14
-# The others stand east, south and west of the centre, at this fraction of
-# the radius (the arrival's ring): inland, past the rocky ring, before the
-# coast. Toward 1 they end up on beaches, toward 0 on the central summit.
+# The others stand around the centre at this fraction of the radius (the
+# arrival's ring): inland, past the rocky ring, before the coast. Toward 1
+# they end up on beaches, toward 0 on the central summit.
 REST_HOUSE_RING = ARRIVAL_NORTH
+# Directions of the other houses around the ring, in degrees clockwise from
+# north (the entrance's side). East, south and west come first: anchors
+# identify built houses in the world state, so the first three keep their
+# place. Eight houses in all put one within about 330 blocks of any point of
+# the ring; fewer made them rare on the 1.5x island. Each one more costs a
+# site search and a build at the start of each map.
+REST_HOUSE_BEARINGS = [90, 180, 270, 45, 135, 225, 315]
 
 # Java class holding the park geometry the mod uses at runtime (border,
 # boundary, arrival), written from the values above so code and terrain
@@ -1521,12 +1528,12 @@ def write_park_geometry():
     border = round(ISLAND_RADIUS * (1 + BORDER_MARGIN))
     arrival_z = ISLAND_CENTER_Z - round(ISLAND_RADIUS * ARRIVAL_NORTH)
     ring = round(ISLAND_RADIUS * REST_HOUSE_RING)
-    houses = [
-        (ISLAND_CENTER_X, arrival_z - ENTRANCE_HOUSE_NORTH_OF_ARRIVAL),
-        (ISLAND_CENTER_X + ring, ISLAND_CENTER_Z),
-        (ISLAND_CENTER_X, ISLAND_CENTER_Z + ring),
-        (ISLAND_CENTER_X - ring, ISLAND_CENTER_Z),
-    ]
+    houses = [(ISLAND_CENTER_X, arrival_z - ENTRANCE_HOUSE_NORTH_OF_ARRIVAL)]
+    for bearing in REST_HOUSE_BEARINGS:
+        # Clockwise from north: north is -Z, east is +X.
+        angle = math.radians(bearing)
+        houses.append((ISLAND_CENTER_X + round(ring * math.sin(angle)),
+                       ISLAND_CENTER_Z - round(ring * math.cos(angle))))
     house_lines = ",\n".join(f"            new Column({x}, {z})" for x, z in houses)
     source = f"""package dev.darcosse.common.cobblemonsafari.park;
 

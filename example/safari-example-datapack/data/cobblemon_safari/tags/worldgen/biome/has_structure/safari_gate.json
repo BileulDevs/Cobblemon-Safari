@@ -1,0 +1,11 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:taiga",
+    "minecraft:cherry_grove",
+    {
+      "id": "#c:is_forest",
+      "required": false
+    }
+  ]
+}

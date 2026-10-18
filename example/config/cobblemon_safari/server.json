@@ -1,0 +1,161 @@
+{
+  "configVersion": 22,
+  "maxDurationSeconds": 3600,
+  "allowedBalls": [
+    "cobblemon:safari_ball",
+    "cobblemon:master_ball",
+    "cobblemon:premier_ball"
+  ],
+  "pauseTimeWhileOffline": true,
+  "allowBattles": true,
+  "battleGraceSeconds": 120,
+  "exitDestination": "WORLD_SPAWN",
+  "exemptCreativeAndSpectator": true,
+  "warningThresholdsSeconds": [
+    300,
+    60,
+    30,
+    10
+  ],
+  "protection": {
+    "invulnerablePlayers": true,
+    "protectBlocks": true,
+    "placeableBlocks": [
+      "cobblemon:poke_cake",
+      "cobblemon:poke_snack",
+      "minecraft:torch"
+    ]
+  },
+  "loan": {
+    "count": 30,
+    "ballItem": "cobblemon:safari_ball"
+  },
+  "capture": {
+    "safariBallOutOfBattleMultiplier": 3.0
+  },
+  "reset": {
+    "enabled": true,
+    "hour": 4,
+    "timeZone": "Europe/Paris"
+  },
+  "ticket": {
+    "defaultDurationSeconds": 1800,
+    "minAddedSeconds": 1200,
+    "extendsActiveSession": true,
+    "maxCreditSeconds": 14400,
+    "refundUnusedTimeOnLeave": true,
+    "allowStartCommand": false
+  },
+  "ticketLoot": {
+    "enabled": true,
+    "sources": [
+      {
+        "table": "minecraft:chests/village/village_plains_house",
+        "chance": 0.05
+      },
+      {
+        "table": "minecraft:chests/village/village_savanna_house",
+        "chance": 0.08
+      },
+      {
+        "table": "minecraft:chests/village/village_desert_house",
+        "chance": 0.05
+      },
+      {
+        "table": "minecraft:chests/village/village_taiga_house",
+        "chance": 0.05
+      },
+      {
+        "table": "minecraft:chests/village/village_snowy_house",
+        "chance": 0.05
+      },
+      {
+        "table": "minecraft:chests/desert_pyramid",
+        "chance": 0.1
+      },
+      {
+        "table": "minecraft:chests/jungle_temple",
+        "chance": 0.1
+      },
+      {
+        "table": "cobblemon:ruins/common/",
+        "chance": 0.15
+      },
+      {
+        "table": "minecraft:chests/shipwreck_treasure",
+        "chance": 0.2
+      }
+    ]
+  },
+  "gate": {
+    "allowEntry": true,
+    "spawnWarden": true,
+    "companions": [
+      "kangaskhan level=30",
+      "tauros level=30",
+      "chansey level=30",
+      "scyther level=30 shiny=yes"
+    ],
+    "roamRadius": 8
+  },
+  "points": {
+    "enabled": true,
+    "common": 10,
+    "uncommon": 20,
+    "rare": 50,
+    "ultraRare": 120,
+    "featuredBonus": 50,
+    "shinyBonus": 250
+  },
+  "escapeRope": {
+    "enabled": true
+  },
+  "bounties": {
+    "enabled": true,
+    "count": 4,
+    "typeRewardPerCatch": 30,
+    "speciesReward": 120,
+    "featuredReward": 250,
+    "allDoneBonus": 200
+  },
+  "spawns": {
+    "nativeSpawns": true,
+    "legendary": {
+      "allowSpawn": true,
+      "maxSpawnPerPokemon": 1
+    },
+    "mythical": {
+      "allowSpawn": false,
+      "maxSpawnPerPokemon": 1
+    },
+    "ultraBeast": {
+      "allowSpawn": false,
+      "maxSpawnPerPokemon": 1
+    },
+    "paradox": {
+      "allowSpawn": true,
+      "maxSpawnPerPokemon": 0
+    },
+    "excludedSpecies": [
+      "cobblemon:ditto"
+    ],
+    "maxSameSpeciesNearby": 4,
+    "spawnRateMultiplier": 2.0,
+    "pokemonPerChunkMultiplier": 2.0,
+    "caughtSpeciesWeight": 0.4
+  },
+  "featured": {
+    "enabled": true,
+    "rotationMinutes": 1440,
+    "uncommonSlots": 1,
+    "rareSlots": 2,
+    "ultraRareSlots": 3,
+    "weightUncommon": 10,
+    "weightRare": 4,
+    "weightUltraRare": 1,
+    "spawnIntervalSeconds": 15,
+    "spawnChance": 0.35,
+    "maxNearbyPerPlayer": 2,
+    "announceOnEntry": true
+  }
+}

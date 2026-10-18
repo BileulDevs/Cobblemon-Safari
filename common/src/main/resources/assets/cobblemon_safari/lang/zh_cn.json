@@ -24,6 +24,7 @@
   "cobblemon_safari.command.time.changed": "%1$s现在还剩%2$s。",
   "cobblemon_safari.command.reload.success": "狩猎地带配置已重新加载。",
   "cobblemon_safari.message.protected": "你不能改动狩猎地带内的任何东西。",
+  "cobblemon_safari.message.shelf_locked": "这些招式学习器是休息屋的装饰。",
   "biome.cobblemon_safari.grassland": "狩猎草原",
   "biome.cobblemon_safari.savanna": "狩猎热带草原",
   "biome.cobblemon_safari.dunes": "狩猎沙丘",

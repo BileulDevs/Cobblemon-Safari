@@ -1,0 +1,25 @@
+{
+  "music.center": {
+    "replace": true,
+    "sounds": [
+      {
+        "name": "minecraft:music/menu/moog_city_2",
+        "stream": true
+      }
+    ]
+  },
+  "ambient.badlands": {
+    "replace": true,
+    "subtitle": "subtitles.cobblemon_safari.ambient.pokemon",
+    "sounds": [
+      {
+        "name": "cobblemon:pokemon/sandshrew/sandshrew_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/bramblin/bramblin_cry",
+        "volume": 0.3
+      }
+    ]
+  }
+}

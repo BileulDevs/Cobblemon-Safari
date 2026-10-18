@@ -24,6 +24,7 @@
   "cobblemon_safari.command.time.changed": "%1$s ma teraz %2$s.",
   "cobblemon_safari.command.reload.success": "Konfiguracja Safari przeładowana.",
   "cobblemon_safari.message.protected": "W Strefie Safari nie możesz niczego zmieniać.",
+  "cobblemon_safari.message.shelf_locked": "Te TM-y są częścią wystroju domu odpoczynku.",
   "biome.cobblemon_safari.grassland": "Łąki Safari",
   "biome.cobblemon_safari.savanna": "Sawanna Safari",
   "biome.cobblemon_safari.dunes": "Wydmy Safari",

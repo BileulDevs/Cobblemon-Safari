@@ -24,6 +24,7 @@
   "cobblemon_safari.command.time.changed": "%1$s hat jetzt noch %2$s.",
   "cobblemon_safari.command.reload.success": "Safari-Konfiguration neu geladen.",
   "cobblemon_safari.message.protected": "Du kannst in der Safari-Zone nichts verändern.",
+  "cobblemon_safari.message.shelf_locked": "Diese TMs gehören zur Einrichtung des Rasthauses.",
   "biome.cobblemon_safari.grassland": "Safari-Grasland",
   "biome.cobblemon_safari.savanna": "Safari-Savanne",
   "biome.cobblemon_safari.dunes": "Safari-Dünen",

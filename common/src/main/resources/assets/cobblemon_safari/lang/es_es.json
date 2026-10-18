@@ -24,6 +24,7 @@
   "cobblemon_safari.command.time.changed": "A %1$s le quedan ahora %2$s.",
   "cobblemon_safari.command.reload.success": "Configuración del Safari recargada.",
   "cobblemon_safari.message.protected": "No puedes modificar nada en la Zona Safari.",
+  "cobblemon_safari.message.shelf_locked": "Estas MT forman parte de la decoración de la casa de descanso.",
   "biome.cobblemon_safari.grassland": "Pradera Safari",
   "biome.cobblemon_safari.savanna": "Sabana Safari",
   "biome.cobblemon_safari.dunes": "Dunas Safari",

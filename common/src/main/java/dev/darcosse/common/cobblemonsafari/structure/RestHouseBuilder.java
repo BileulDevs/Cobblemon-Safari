@@ -1,65 +1,108 @@
 package dev.darcosse.common.cobblemonsafari.structure;
 
-import com.cobblemon.mod.common.block.entity.CampfireBlockEntity;
-import com.cobblemon.mod.common.block.entity.HealingMachineBlockEntity;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.util.Surface;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.SectionPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
+import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.HorizontalDirectionalBlock;
-import net.minecraft.world.level.block.SlabBlock;
-import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.Mirror;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
-import net.minecraft.world.level.block.state.properties.SlabType;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureProcessor;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureProcessorType;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.Set;
 
 /**
- * Builds one rest house: an 11×11 Pokémon Center with a front plaza.
+ * Builds one rest house: the Safari Pokémon Center, placed from the
+ * structure template {@code data/cobblemon_safari/structure/safari_pokecenter.nbt}.
  *
- * <p>Inside: a tiled floor with a red carpet to the counter, the Healing
- * Machine on the counter, a PC, a cooking corner with a Cobblemon Poké Pot
- * on its campfire, and a seating corner. Outside: a stepped red roof with a
- * Poké Ball band over the glass front, lanterns and flower beds.
+ * <p>The template holds everything: the building, its ground layer, the
+ * front steps, the counter with two Healing Machines (saved infinite), the
+ * PC, the cooking corner with its Poké Pot, the TM shelves, the fossil
+ * corner and the wall screens. This class only finds the floor height, fills
+ * a foundation under the template, clears the volume above it (trees, hill)
+ * and places it turned so that its door faces the requested direction.
  *
- * <p>Layout is written in local coordinates where the door is on the +Z
- * side ("front") and local +X is {@link #localEast()}; {@link #at} rotates
- * everything to the requested facing. The floor sits at the median
- * ground height, a stone foundation fills whatever is below, and the volume
- * above is cleared, so the house stands level on any terrain.
+ * <p>Template coordinates ("local"): x 0 to 19, y 0 to 10, z 0 to 18. Layer
+ * y 0 is the ground (dirt and grass), y 1 the floor. The door is on the
+ * west side (local -X), in the middle (z 9), up three steps. Every position
+ * this class gives out (clerk, arrival, site samples) goes through
+ * {@link #column}, the same transform Minecraft applies to the template, so
+ * they always match what was placed.
  */
 final class RestHouseBuilder {
 
-    /** Local extent of the house itself: x and z from 0 to this value. Must match {@link RestHouses#HALF_SIZE}. */
-    private static final int SIZE = RestHouses.HALF_SIZE * 2;
+    /** The Pokémon Center template. Renaming the file means changing this id. */
+    private static final ResourceLocation TEMPLATE_ID = CobblemonSafari.id("safari_pokecenter");
 
-    /** Interior height between floor and ceiling. 4 fits a player on a ridden Pokémon. */
-    private static final int INTERIOR_HEIGHT = 4;
+    /**
+     * Template cell the house turns around, and which stands on the house's
+     * centre column. The middle of the 20 × 19 template; RestHouses.HALF_SIZE
+     * is the distance from it to the farthest wall.
+     */
+    private static final BlockPos PIVOT = new BlockPos(10, 0, 9);
 
-    /** Front plaza, in local z, in front of the front wall (z = SIZE). Holds the lanterns and flower beds. */
-    private static final int PLAZA_FIRST_Z = SIZE + 1;
-    private static final int PLAZA_LAST_Z = SIZE + 4;
-    /** The plaza and the cleared volume reach this far beyond the house sides. */
-    private static final int SIDE_MARGIN = 2;
+    /** Direction the template's door faces as saved: west. Must follow the template if it is turned. */
+    private static final Direction TEMPLATE_DOOR = Direction.WEST;
+
+    /** Template size, as saved; checked against the file at build time, logged if it differs. */
+    private static final int SIZE_X = 20;
+    private static final int SIZE_Y = 11;
+    private static final int SIZE_Z = 19;
+
+    /** Template cell, on its floor, where the clerk stands: behind the counter, between the two Healing Machines. */
+    static final int CLERK_X = 17;
+    static final int CLERK_Z = 9;
+
+    /**
+     * Template column where arriving players stand: the grass in front of
+     * the steps, on the door's axis. One block further in, the awning over
+     * the entrance would be taken for the ground.
+     */
+    private static final int ARRIVAL_X = 0;
+    private static final int ARRIVAL_Z = 9;
+
+    /**
+     * Air cleared above the template, on top of its own height: room for
+     * the trunks and crowns of trees cut by the house. More costs block
+     * changes at each build (once per map).
+     */
+    private static final int CLEAR_ABOVE = 4;
+
+    /**
+     * Ring cleared around the template, in blocks, so a hill or a tree is
+     * not left touching the walls.
+     */
+    private static final int CLEAR_MARGIN = 1;
+
+    /**
+     * Blocks around the template also checked for water by
+     * {@link #wetColumns}: the cleared ring plus one, so no pond touches the
+     * cleared space and flows in once a block next to it is updated.
+     */
+    private static final int WATER_CHECK_MARGIN = CLEAR_MARGIN + 1;
 
     /**
      * Deepest the foundation goes. Over a deep lagoon it stops here and the
      * house stands on a pillar of this height; deeper would only waste blocks.
      */
     private static final int MAX_FOUNDATION_DEPTH = 24;
-
-    /** Air cleared above the floor: roof (three steps) plus a margin for cut tree trunks. */
-    private static final int CLEAR_HEIGHT = 11;
 
     /**
      * Only clients are told about the changes; neighbours are not updated.
@@ -69,447 +112,264 @@ final class RestHouseBuilder {
     private static final int PLACE_FLAGS = Block.UPDATE_CLIENTS;
 
     /**
-     * Where the clerk stands: behind the counter (local z 2), between the
-     * shelves (x 1-2 and SIZE-2 to SIZE-1), next to the Healing Machine.
-     * Must stay a free cell of {@link #interior}; RestHouseClerk finds the
-     * floor there by looking for the gap under the ceiling.
+     * Cobblemon's fossil machine blocks. The template stores their
+     * multiblock links as absolute positions of the world it was saved in;
+     * placed anywhere else they point at unrelated blocks. They are placed
+     * unlinked instead (see {@link TemplateFixer}).
      */
-    static final int CLERK_X = SIZE / 2 - 2;
-    static final int CLERK_Z = 1;
+    private static final Set<ResourceLocation> FOSSIL_BLOCKS = Set.of(
+            ResourceLocation.fromNamespaceAndPath("cobblemon", "fossil_analyzer"),
+            ResourceLocation.fromNamespaceAndPath("cobblemon", "restoration_tank"),
+            ResourceLocation.fromNamespaceAndPath("cobblemon", "monitor"));
 
-    /** Cobblemon blocks and items, looked up by id so no Kotlin object accessor is involved. */
-    private static final ResourceLocation HEALING_MACHINE_ID = cobblemon("healing_machine");
-    private static final ResourceLocation PC_ID = cobblemon("pc");
-    private static final ResourceLocation CAMPFIRE_ID = cobblemon("campfire");
-    private static final ResourceLocation POT_ITEM_ID = cobblemon("campfire_pot_red");
+    /** Block entity keys holding those links (Cobblemon's DataKeys values, as found in the template). */
+    private static final String[] FOSSIL_LINK_KEYS = {"ControllerBlock", "MultiblockStore"};
+    private static final String FOSSIL_FORMED_KEY = "Formed";
 
-    private final ServerLevel level;
-    private final int centerX;
-    private final int centerZ;
-    private final Direction facing;
-    private int floorY;
-
-    private RestHouseBuilder(ServerLevel level, int centerX, int centerZ, Direction facing) {
-        this.level = level;
-        this.centerX = centerX;
-        this.centerZ = centerZ;
-        this.facing = facing;
+    private RestHouseBuilder() {
     }
 
     /**
      * Builds a rest house centred on the given column.
      *
      * @param facing direction the door opens toward
+     * @return false (logged) when the template is missing, nothing being built
      */
-    static void build(ServerLevel level, int centerX, int centerZ, Direction facing) {
-        RestHouseBuilder builder = new RestHouseBuilder(level, centerX, centerZ, facing);
-        builder.floorY = builder.findFloorY();
-        builder.foundation();
-        builder.clear();
-        builder.plaza();
-        builder.shell();
-        builder.roof();
-        builder.interior();
-    }
-
-    // ---- Ground ----------------------------------------------------------
-
-    /**
-     * Median of the ground height over nine points of the footprint. The median,
-     * not the mean: one tree stump or one river cell must not lift or sink the
-     * whole house.
-     */
-    private int findFloorY() {
-        int[] heights = new int[9];
-        int i = 0;
-        for (int lx = 0; lx <= SIZE; lx += SIZE / 2) {
-            for (int lz = 0; lz <= SIZE; lz += SIZE / 2) {
-                BlockPos column = at(lx, 0, lz);
-                // First free block minus one: the floor replaces the top ground block.
-                heights[i++] = Surface.forced(level, column.getX(), column.getZ()).getY() - 1;
-            }
+    static boolean build(ServerLevel level, int centerX, int centerZ, Direction facing) {
+        Optional<StructureTemplate> found = level.getStructureManager().get(TEMPLATE_ID);
+        if (found.isEmpty()) {
+            CobblemonSafari.LOGGER.error("Structure template {} is missing; no rest house built at {}, {}",
+                    TEMPLATE_ID, centerX, centerZ);
+            return false;
         }
-        Arrays.sort(heights);
-        int median = heights[heights.length / 2];
-        int ceiling = level.getMaxBuildHeight() - CLEAR_HEIGHT - 1;
-        return Math.max(level.getMinBuildHeight() + MAX_FOUNDATION_DEPTH, Math.min(ceiling, median));
-    }
-
-    /** Fills from just below the floor down to solid ground, under the house and its plaza. */
-    private void foundation() {
-        for (int lx = -SIDE_MARGIN; lx <= SIZE + SIDE_MARGIN; lx++) {
-            for (int lz = 0; lz <= PLAZA_LAST_Z; lz++) {
-                for (int depth = 1; depth <= MAX_FOUNDATION_DEPTH; depth++) {
-                    BlockPos pos = at(lx, -depth, lz);
-                    BlockState existing = level.getBlockState(pos);
-                    boolean solidGround = existing.getFluidState().isEmpty()
-                            && existing.isFaceSturdy(level, pos, Direction.UP);
-                    if (solidGround) {
-                        break;
-                    }
-                    set(pos, Blocks.STONE_BRICKS.defaultBlockState());
-                }
-            }
+        StructureTemplate template = found.get();
+        if (template.getSize().getX() != SIZE_X || template.getSize().getY() != SIZE_Y
+                || template.getSize().getZ() != SIZE_Z) {
+            // Positions of the clerk and the arrival are written for this size.
+            CobblemonSafari.LOGGER.warn("Structure template {} is {} instead of {}x{}x{}; check RestHouseBuilder",
+                    TEMPLATE_ID, template.getSize(), SIZE_X, SIZE_Y, SIZE_Z);
         }
-    }
-
-    /** Empties the volume of the house, a ring around it for the eaves, and the plaza. */
-    private void clear() {
-        BlockState air = Blocks.AIR.defaultBlockState();
-        for (int lx = -SIDE_MARGIN - 1; lx <= SIZE + SIDE_MARGIN + 1; lx++) {
-            for (int lz = -1; lz <= PLAZA_LAST_Z + 1; lz++) {
-                for (int y = 1; y <= CLEAR_HEIGHT; y++) {
-                    set(at(lx, y, lz), air);
-                }
-            }
-        }
-    }
-
-    /**
-     * Stone plaza in front of the house, a path to the door, flower beds
-     * along the front wall and lantern posts on each side of the doorway.
-     */
-    private void plaza() {
-        int door = SIZE / 2;
-        for (int lx = -SIDE_MARGIN; lx <= SIZE + SIDE_MARGIN; lx++) {
-            for (int lz = PLAZA_FIRST_Z; lz <= PLAZA_LAST_Z; lz++) {
-                boolean border = lx == -SIDE_MARGIN || lx == SIZE + SIDE_MARGIN || lz == PLAZA_LAST_Z;
-                boolean path = Math.abs(lx - door) <= 1;
-                set(at(lx, 0, lz), border ? Blocks.STONE_BRICKS.defaultBlockState()
-                        : path ? Blocks.POLISHED_ANDESITE.defaultBlockState()
-                        : Blocks.SMOOTH_STONE.defaultBlockState());
-            }
-        }
-        // Flower beds along the front wall, either side of the path.
-        Block[] flowers = {Blocks.POPPY, Blocks.DANDELION, Blocks.AZURE_BLUET, Blocks.OXEYE_DAISY};
-        int flower = 0;
-        for (int lx = 0; lx <= SIZE; lx++) {
-            if (Math.abs(lx - door) <= 2) {
-                continue;
-            }
-            set(at(lx, 0, PLAZA_FIRST_Z), Blocks.MOSS_BLOCK.defaultBlockState());
-            set(at(lx, 1, PLAZA_FIRST_Z), flowers[flower++ % flowers.length].defaultBlockState());
-        }
-        // Lantern posts flanking the path.
-        for (int lx : new int[]{door - 2, door + 2}) {
-            set(at(lx, 0, PLAZA_FIRST_Z), Blocks.POLISHED_ANDESITE.defaultBlockState());
-            set(at(lx, 1, PLAZA_FIRST_Z), Blocks.POLISHED_ANDESITE.defaultBlockState());
-            set(at(lx, 2, PLAZA_FIRST_Z), Blocks.LANTERN.defaultBlockState());
-        }
-    }
-
-    // ---- Building ----------------------------------------------------------
-
-    /** Tiled floor, white walls with quartz corners, red band, windows, glass front and doorway. */
-    private void shell() {
-        BlockState white = Blocks.WHITE_CONCRETE.defaultBlockState();
-        BlockState red = Blocks.RED_CONCRETE.defaultBlockState();
-        BlockState pillar = Blocks.QUARTZ_PILLAR.defaultBlockState();
-        BlockState tileA = Blocks.SMOOTH_QUARTZ.defaultBlockState();
-        BlockState tileB = Blocks.LIGHT_GRAY_CONCRETE.defaultBlockState();
-        BlockState glass = Blocks.LIGHT_BLUE_STAINED_GLASS.defaultBlockState();
-        BlockState air = Blocks.AIR.defaultBlockState();
-
-        for (int lx = 0; lx <= SIZE; lx++) {
-            for (int lz = 0; lz <= SIZE; lz++) {
-                // Checkerboard tiles, the usual Pokémon Center floor.
-                set(at(lx, 0, lz), (lx + lz) % 2 == 0 ? tileA : tileB);
-                boolean sideX = lx == 0 || lx == SIZE;
-                boolean sideZ = lz == 0 || lz == SIZE;
-                if (sideX || sideZ) {
-                    for (int y = 1; y <= INTERIOR_HEIGHT; y++) {
-                        set(at(lx, y, lz), sideX && sideZ ? pillar : white);
-                    }
-                    set(at(lx, INTERIOR_HEIGHT + 1, lz), sideX && sideZ ? pillar : red);
-                } else {
-                    // Ceiling, lit by sea lanterns in a grid.
-                    boolean lamp = lx % 3 == 2 && lz % 3 == 2;
-                    set(at(lx, INTERIOR_HEIGHT + 1, lz), lamp
-                            ? Blocks.SEA_LANTERN.defaultBlockState() : white);
-                }
-            }
-        }
-        // Side windows are offset so they never sit behind the PC (right wall,
-        // near the counter) or the cooking corner (left wall, near the door).
-        for (int y = 2; y <= 3; y++) {
-            for (int lz = 2; lz <= 4; lz++) {
-                set(at(0, y, lz), glass);
-            }
-            for (int lz = 6; lz <= 8; lz++) {
-                set(at(SIZE, y, lz), glass);
-            }
-            for (int lx : new int[]{3, 4, 6, 7}) {
-                set(at(lx, y, 0), glass);
-            }
-        }
-        // Glass front, three high, with a three-wide doorway in the middle and
-        // no door block, so nothing can be closed on a ridden Pokémon.
-        int door = SIZE / 2;
-        for (int lx = 1; lx < SIZE; lx++) {
-            for (int y = 1; y <= 3; y++) {
-                set(at(lx, y, SIZE), Math.abs(lx - door) <= 1 ? air : glass);
-            }
-        }
-        // A Poké Ball above the doorway: red over a black button between white.
-        set(at(door, INTERIOR_HEIGHT, SIZE), Blocks.BLACK_CONCRETE.defaultBlockState());
-        set(at(door - 1, INTERIOR_HEIGHT, SIZE), white);
-        set(at(door + 1, INTERIOR_HEIGHT, SIZE), white);
-    }
-
-    /** Stepped red roof with eaves overhanging the walls by one block, white trim and a white cap. */
-    private void roof() {
-        BlockState red = Blocks.RED_CONCRETE.defaultBlockState();
-        BlockState trim = Blocks.SMOOTH_QUARTZ_SLAB.defaultBlockState().setValue(SlabBlock.TYPE, SlabType.BOTTOM);
-        int base = INTERIOR_HEIGHT + 2;
-        for (int lx = -1; lx <= SIZE + 1; lx++) {
-            for (int lz = -1; lz <= SIZE + 1; lz++) {
-                boolean eave = lx == -1 || lx == SIZE + 1 || lz == -1 || lz == SIZE + 1;
-                set(at(lx, base, lz), eave ? trim : red);
-            }
-        }
-        for (int lx = 1; lx <= SIZE - 1; lx++) {
-            for (int lz = 1; lz <= SIZE - 1; lz++) {
-                set(at(lx, base + 1, lz), red);
-            }
-        }
-        for (int lx = 3; lx <= SIZE - 3; lx++) {
-            for (int lz = 3; lz <= SIZE - 3; lz++) {
-                set(at(lx, base + 2, lz), Blocks.WHITE_CONCRETE.defaultBlockState());
-            }
-        }
-    }
-
-    /**
-     * Counter with the Healing Machine, red carpet from the door, PC,
-     * cooking corner with the Poké Pot, and seating.
-     */
-    private void interior() {
-        int door = SIZE / 2;
-        BlockState counter = Blocks.SMOOTH_QUARTZ.defaultBlockState();
-        for (int lx = 2; lx <= SIZE - 2; lx++) {
-            if (lx != door) {
-                set(at(lx, 1, 2), counter);
-            }
-        }
-        placeHealingMachine(at(door, 1, 2));
-        // Behind the counter: shelves against the back wall.
-        for (int lx : new int[]{1, 2, SIZE - 2, SIZE - 1}) {
-            set(at(lx, 1, 1), Blocks.BOOKSHELF.defaultBlockState());
-            set(at(lx, 2, 1), Blocks.BOOKSHELF.defaultBlockState());
-        }
-        // Red carpet from the doorway to the counter.
-        for (int lz = 3; lz < SIZE; lz++) {
-            set(at(door, 1, lz), Blocks.RED_CARPET.defaultBlockState());
-        }
-
-        // PC against the right wall, screen toward the room. Like every
-        // Cobblemon station, its "facing" is the direction its placer LOOKED
-        // (see placePc): a player in the room looks east at it.
-        placePc(at(SIZE - 1, 1, 4), localDirection(Direction.EAST));
-
-        // Cooking corner on the left wall, near the door, away from the counter queue.
-        // Same convention: a player in the room looks west at the campfire.
-        placePokePot(at(1, 1, 7), localDirection(Direction.WEST));
-        set(at(1, 1, 6), Blocks.BARREL.defaultBlockState());
-        set(at(1, 1, 8), Blocks.SMOKER.defaultBlockState().setValue(HorizontalDirectionalBlock.FACING,
-                localDirection(Direction.EAST)));
-
-        // Seating corner by the right windows: two benches around a small table.
-        BlockState seat = Blocks.SPRUCE_SLAB.defaultBlockState().setValue(SlabBlock.TYPE, SlabType.BOTTOM);
-        set(at(SIZE - 1, 1, 6), seat);
-        set(at(SIZE - 1, 1, 8), seat);
-        set(at(SIZE - 1, 1, 7), Blocks.SPRUCE_FENCE.defaultBlockState());
-        set(at(SIZE - 1, 2, 7), Blocks.WHITE_CARPET.defaultBlockState());
-
-        // Plants by the doorway.
-        set(at(1, 1, SIZE - 1), Blocks.POTTED_FERN.defaultBlockState());
-        set(at(SIZE - 1, 1, SIZE - 1), Blocks.POTTED_AZALEA.defaultBlockState());
-    }
-
-    // ---- Cobblemon blocks ---------------------------------------------------
-
-    /**
-     * Places Cobblemon's Healing Machine and makes it infinite. A machine
-     * placed by code starts empty and recharges slowly; in a timed park, a
-     * player waiting for the charge is a player losing hunting time. The flag
-     * is the same one Cobblemon sets for creative-placed machines.
-     */
-    private void placeHealingMachine(BlockPos pos) {
-        BlockState state = cobblemonBlock(HEALING_MACHINE_ID);
-        if (state == null) {
-            return;
-        }
-        if (state.hasProperty(HorizontalDirectionalBlock.FACING)) {
-            // Cobblemon stores the direction its placer was looking; a player
-            // standing at the door looks toward the back of the house.
-            state = state.setValue(HorizontalDirectionalBlock.FACING, facing.getOpposite());
-        }
-        set(pos, state);
-        BlockEntity blockEntity = level.getBlockEntity(pos);
-        if (blockEntity instanceof HealingMachineBlockEntity healingMachine) {
-            healingMachine.setInfinite(true);
-            healingMachine.setChanged();
-        }
-    }
-
-    /**
-     * Places Cobblemon's PC, both halves: Cobblemon adds the top half in
-     * {@code setPlacedBy}, which a block placed by code never calls.
-     *
-     * @param placerLook direction a player placing it by hand would look in:
-     *                   {@code PCBlock.getStateForPlacement} stores that, and
-     *                   the screen faces the other way, toward the player.
-     *                   Passing the screen direction (as a first version did)
-     *                   turns the PC to the wall.
-     */
-    private void placePc(BlockPos pos, Direction placerLook) {
-        BlockState bottom = cobblemonBlock(PC_ID);
-        if (bottom == null) {
-            return;
-        }
-        bottom = with(bottom, "facing", placerLook.getSerializedName());
-        set(pos, with(bottom, "part", "bottom"));
-        set(pos.above(), with(bottom, "part", "top"));
-    }
-
-    /**
-     * Places Cobblemon's campfire with a Poké Pot (campfire pot) on it, ready
-     * to cook. The pot is the block entity's item, as when a player puts one
-     * on a campfire.
-     *
-     * @param placerLook direction a player placing it by hand would look in,
-     *                   which {@code CampfireBlock.getStateForPlacement} stores
-     *                   in both {@code facing} and {@code item_facing}
-     */
-    private void placePokePot(BlockPos pos, Direction placerLook) {
-        BlockState campfire = cobblemonBlock(CAMPFIRE_ID);
-        if (campfire == null) {
-            return;
-        }
-        campfire = with(with(campfire, "facing", placerLook.getSerializedName()), "item_facing",
-                placerLook.getSerializedName());
-        set(pos, campfire);
-        Item pot = BuiltInRegistries.ITEM.get(POT_ITEM_ID);
-        BlockEntity blockEntity = level.getBlockEntity(pos);
-        if (pot == Items.AIR || !(blockEntity instanceof CampfireBlockEntity campfireEntity)) {
-            CobblemonSafari.LOGGER.error("Could not put a {} on the rest house campfire", POT_ITEM_ID);
-            return;
-        }
-        campfireEntity.setPotItem(new ItemStack(pot));
-        campfireEntity.setChanged();
-    }
-
-    /** Default state of a Cobblemon block, or null (logged) when Cobblemon no longer has it. */
-    private static BlockState cobblemonBlock(ResourceLocation id) {
-        Block block = BuiltInRegistries.BLOCK.get(id);
-        // The block registry is defaulted: a missing Cobblemon block yields air.
-        if (block == Blocks.AIR) {
-            CobblemonSafari.LOGGER.error("Block {} not found; rest house built without it", id);
-            return null;
-        }
-        return block.defaultBlockState();
-    }
-
-    /**
-     * A state with one property set by name and value name. Used for
-     * Cobblemon's own properties (PC part, campfire facing), whose Kotlin
-     * enum types are not worth binding to; unknown names leave the state as is.
-     */
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    private static BlockState with(BlockState state, String name, String value) {
-        Property property = state.getBlock().getStateDefinition().getProperty(name);
-        if (property == null) {
-            return state;
-        }
-        Optional<Comparable> parsed = property.getValue(value);
-        return parsed.isPresent() ? state.setValue(property, parsed.get()) : state;
-    }
-
-    private static ResourceLocation cobblemon(String path) {
-        return ResourceLocation.fromNamespaceAndPath("cobblemon", path);
+        Rotation rotation = rotationFor(facing);
+        // Template y 0 is ground: it goes one below the floor, where the old ground was.
+        int groundY = findFloorY(level, centerX, centerZ, rotation) - 1;
+        BlockPos origin = new BlockPos(centerX - PIVOT.getX(), groundY, centerZ - PIVOT.getZ());
+        foundation(level, origin, rotation);
+        clear(level, origin, rotation);
+        StructurePlaceSettings settings = new StructurePlaceSettings()
+                .setRotation(rotation)
+                .setRotationPivot(PIVOT)
+                .setIgnoreEntities(true)
+                .addProcessor(TemplateFixer.INSTANCE);
+        template.placeInWorld(level, origin, origin, settings, level.getRandom(), PLACE_FLAGS);
+        return true;
     }
 
     // ---- Coordinates ----------------------------------------------------------
 
     /**
-     * World direction of a local one: local SOUTH is the door side ({@link #facing}),
-     * local EAST is {@link #localEast()}.
+     * World column (at y 0) of a template cell of a house centred on
+     * (centerX, centerZ) with its door toward {@code facing}: exactly where
+     * {@link #build} places that cell.
      */
-    private Direction localDirection(Direction local) {
-        return switch (local) {
-            case SOUTH -> facing;
-            case NORTH -> facing.getOpposite();
-            case EAST -> localEast();
-            case WEST -> localEast().getOpposite();
-            default -> local;
-        };
-    }
-
-    /** World direction of local +X, i.e. the facing turned a quarter counter-clockwise. */
-    private Direction localEast() {
-        return switch (facing) {
-            case SOUTH -> Direction.EAST;
-            case NORTH -> Direction.WEST;
-            case EAST -> Direction.NORTH;
-            default -> Direction.SOUTH;
-        };
-    }
-
-    /**
-     * World position of a local cell. Local (HALF, HALF) is the centre column;
-     * the rotation keeps handedness, so the layout is turned, never mirrored.
-     */
-    private BlockPos at(int lx, int y, int lz) {
-        return rotate(centerX, centerZ, facing, lx, lz).atY(floorY + y);
-    }
-
-    /**
-     * World column (at y 0) of a local cell of a house centred on
-     * (centerX, centerZ) with its door toward {@code facing}. Static so that
-     * code outside the build (the clerk's upkeep) finds the same cells.
-     */
-    static BlockPos rotate(int centerX, int centerZ, Direction facing, int lx, int lz) {
-        int dx = lx - RestHouses.HALF_SIZE;
-        int dz = lz - RestHouses.HALF_SIZE;
-        int wx;
-        int wz;
-        switch (facing) {
-            case NORTH -> {
-                wx = -dx;
-                wz = -dz;
-            }
-            case EAST -> {
-                wx = dz;
-                wz = -dx;
-            }
-            case WEST -> {
-                wx = -dz;
-                wz = dx;
-            }
-            default -> {
-                wx = dx;
-                wz = dz;
-            }
-        }
-        return new BlockPos(centerX + wx, 0, centerZ + wz);
-    }
-
-    /**
-     * World column where arriving players stand: on the path across the
-     * plaza, one block before its outer border, facing the doorway. On the
-     * plaza rather than past it, so the ground is the house's own stone.
-     */
-    static BlockPos arrivalColumn(int centerX, int centerZ, Direction facing) {
-        return rotate(centerX, centerZ, facing, SIZE / 2, PLAZA_LAST_Z - 1);
+    static BlockPos column(int centerX, int centerZ, Direction facing, int lx, int lz) {
+        return world(centerX, centerZ, rotationFor(facing), lx, lz);
     }
 
     /** World column where the clerk stands, behind the counter; see {@link #CLERK_X}. */
     static BlockPos clerkColumn(int centerX, int centerZ, Direction facing) {
-        return rotate(centerX, centerZ, facing, CLERK_X, CLERK_Z);
+        return column(centerX, centerZ, facing, CLERK_X, CLERK_Z);
     }
 
-    /** Places one block with the builder's update flags. */
-    private void set(BlockPos pos, BlockState state) {
-        level.setBlock(pos, state, PLACE_FLAGS);
+    /** World column where arriving players stand, in front of the steps; see {@link #ARRIVAL_X}. */
+    static BlockPos arrivalColumn(int centerX, int centerZ, Direction facing) {
+        return column(centerX, centerZ, facing, ARRIVAL_X, ARRIVAL_Z);
+    }
+
+    /** The rotation that turns the template's door ({@link #TEMPLATE_DOOR}) toward {@code facing}. */
+    private static Rotation rotationFor(Direction facing) {
+        for (Rotation rotation : Rotation.values()) {
+            if (rotation.rotate(TEMPLATE_DOOR) == facing) {
+                return rotation;
+            }
+        }
+        return Rotation.NONE;
+    }
+
+    // ---- Ground ----------------------------------------------------------
+
+    /**
+     * Columns, under the template and within {@link #WATER_CHECK_MARGIN} of
+     * it, whose top block is water or waterlogged, read from the real
+     * terrain (the chunks are generated if needed). 0 means the house can be
+     * built there without standing in water or having water flow into the
+     * cleared ring.
+     */
+    static int wetColumns(ServerLevel level, int centerX, int centerZ, Direction facing) {
+        Rotation rotation = rotationFor(facing);
+        int wet = 0;
+        for (int lx = -WATER_CHECK_MARGIN; lx < SIZE_X + WATER_CHECK_MARGIN; lx++) {
+            for (int lz = -WATER_CHECK_MARGIN; lz < SIZE_Z + WATER_CHECK_MARGIN; lz++) {
+                BlockPos column = world(centerX, centerZ, rotation, lx, lz);
+                LevelChunk chunk = level.getChunk(SectionPos.blockToSectionCoord(column.getX()),
+                        SectionPos.blockToSectionCoord(column.getZ()));
+                // WORLD_SURFACE counts water (unlike the ground heightmaps): its top block is the water itself.
+                int top = chunk.getHeight(Heightmap.Types.WORLD_SURFACE, column.getX() & 15, column.getZ() & 15);
+                if (!chunk.getFluidState(column.atY(top)).isEmpty()) {
+                    wet++;
+                }
+            }
+        }
+        return wet;
+    }
+
+    /**
+     * Median of the ground height over nine points of the footprint. The
+     * median, not the mean: one tree stump or one river cell must not lift or
+     * sink the whole house. The floor replaces the top ground block.
+     */
+    private static int findFloorY(ServerLevel level, int centerX, int centerZ, Rotation rotation) {
+        int[] heights = new int[9];
+        int i = 0;
+        for (int lx : new int[]{0, SIZE_X / 2, SIZE_X - 1}) {
+            for (int lz : new int[]{0, SIZE_Z / 2, SIZE_Z - 1}) {
+                BlockPos column = world(centerX, centerZ, rotation, lx, lz);
+                heights[i++] = Surface.forced(level, column.getX(), column.getZ()).getY() - 1;
+            }
+        }
+        Arrays.sort(heights);
+        int median = heights[heights.length / 2];
+        int ceiling = level.getMaxBuildHeight() - SIZE_Y - CLEAR_ABOVE - 1;
+        return Math.max(level.getMinBuildHeight() + MAX_FOUNDATION_DEPTH, Math.min(ceiling, median));
+    }
+
+    /** World column of a template cell, for a rotation already chosen; see {@link #column}. */
+    private static BlockPos world(int centerX, int centerZ, Rotation rotation, int lx, int lz) {
+        BlockPos relative = StructureTemplate.transform(new BlockPos(lx, 0, lz), Mirror.NONE, rotation, PIVOT);
+        return new BlockPos(centerX - PIVOT.getX() + relative.getX(), 0, centerZ - PIVOT.getZ() + relative.getZ());
+    }
+
+    /**
+     * Fills with dirt from just below the template's ground layer down to
+     * solid ground, under the whole template: on a slope or over a hollow
+     * the house would otherwise stand on air.
+     */
+    private static void foundation(ServerLevel level, BlockPos origin, Rotation rotation) {
+        BlockState dirt = Blocks.DIRT.defaultBlockState();
+        for (int lx = 0; lx < SIZE_X; lx++) {
+            for (int lz = 0; lz < SIZE_Z; lz++) {
+                BlockPos column = local(origin, rotation, lx, lz);
+                for (int depth = 1; depth <= MAX_FOUNDATION_DEPTH; depth++) {
+                    BlockPos pos = column.atY(origin.getY() - depth);
+                    BlockState existing = level.getBlockState(pos);
+                    if (existing.getFluidState().isEmpty() && existing.isFaceSturdy(level, pos, Direction.UP)) {
+                        break;
+                    }
+                    level.setBlock(pos, dirt, PLACE_FLAGS);
+                }
+            }
+        }
+    }
+
+    /**
+     * Empties the volume above the template's ground layer, a ring of
+     * {@link #CLEAR_MARGIN} around it and {@link #CLEAR_ABOVE} blocks above
+     * it. The template then places its own blocks and air inside.
+     */
+    private static void clear(ServerLevel level, BlockPos origin, Rotation rotation) {
+        BlockState air = Blocks.AIR.defaultBlockState();
+        for (int lx = -CLEAR_MARGIN; lx < SIZE_X + CLEAR_MARGIN; lx++) {
+            for (int lz = -CLEAR_MARGIN; lz < SIZE_Z + CLEAR_MARGIN; lz++) {
+                BlockPos column = local(origin, rotation, lx, lz);
+                for (int y = 1; y < SIZE_Y + CLEAR_ABOVE; y++) {
+                    level.setBlock(column.atY(origin.getY() + y), air, PLACE_FLAGS);
+                }
+            }
+        }
+    }
+
+    /** World column of a template cell, from the template's placement origin. */
+    private static BlockPos local(BlockPos origin, Rotation rotation, int lx, int lz) {
+        return world(origin.getX() + PIVOT.getX(), origin.getZ() + PIVOT.getZ(), rotation, lx, lz);
+    }
+
+    // ---- Placement ----------------------------------------------------------
+
+    /**
+     * Fixes, as each template block is placed, what Minecraft's template
+     * rotation gets wrong for Cobblemon's blocks. Everything else passes
+     * through unchanged.
+     * <ul>
+     *   <li><b>Orientation.</b> Minecraft turns a block by asking the block
+     *       ({@code Block.rotate}); a block that does not answer keeps its
+     *       saved facing. Cobblemon's disc shelf, TM machine and fossil
+     *       machine do not (checked in the 1.8.0 sources), so in a turned
+     *       house they faced the walls. For such blocks (rotation a no-op,
+     *       yet a horizontal direction property), every horizontal direction
+     *       property is turned here instead. Minecraft applies its own
+     *       rotation after this processor, which leaves them as set.</li>
+     *   <li><b>Fossil machine links</b> (see {@link #FOSSIL_BLOCKS}): dropped,
+     *       so the blocks stand as an unformed machine, a decoration, instead
+     *       of pointing at positions of another world. Without them
+     *       Cobblemon's {@code FossilMultiblockEntity} has neither structure
+     *       nor master (checked in its {@code loadAdditional}).</li>
+     * </ul>
+     *
+     * <p>Used only in code, never read from a file: its type is therefore
+     * never serialised, and NOP stands in for a registered one.
+     */
+    private static final class TemplateFixer extends StructureProcessor {
+
+        static final TemplateFixer INSTANCE = new TemplateFixer();
+
+        @Nullable
+        @Override
+        public StructureTemplate.StructureBlockInfo processBlock(LevelReader level, BlockPos offset, BlockPos pivot,
+                                                                 StructureTemplate.StructureBlockInfo original,
+                                                                 StructureTemplate.StructureBlockInfo placed,
+                                                                 StructurePlaceSettings settings) {
+            BlockState state = turnIfIgnored(placed.state(), settings.getRotation());
+            CompoundTag nbt = placed.nbt();
+            if (nbt != null && FOSSIL_BLOCKS.contains(BuiltInRegistries.BLOCK.getKey(state.getBlock()))) {
+                nbt = nbt.copy();
+                for (String key : FOSSIL_LINK_KEYS) {
+                    nbt.remove(key);
+                }
+                nbt.putBoolean(FOSSIL_FORMED_KEY, false);
+            }
+            if (state == placed.state() && nbt == placed.nbt()) {
+                return placed;
+            }
+            return new StructureTemplate.StructureBlockInfo(placed.pos(), state, nbt);
+        }
+
+        /**
+         * The state with its horizontal direction properties turned, when the
+         * block itself ignores rotation; the state unchanged otherwise.
+         */
+        @SuppressWarnings("unchecked")
+        private static BlockState turnIfIgnored(BlockState state, Rotation rotation) {
+            if (rotation == Rotation.NONE || state.rotate(rotation) != state) {
+                return state;
+            }
+            BlockState turned = state;
+            for (Property<?> property : state.getProperties()) {
+                if (property.getValueClass() != Direction.class) {
+                    continue;
+                }
+                Property<Direction> directionProperty = (Property<Direction>) property;
+                Direction value = state.getValue(directionProperty);
+                Direction rotated = rotation.rotate(value);
+                // Up and down stay; a property that cannot hold the turned value is left alone.
+                if (value.getAxis().isHorizontal() && directionProperty.getPossibleValues().contains(rotated)) {
+                    turned = turned.setValue(directionProperty, rotated);
+                }
+            }
+            return turned;
+        }
+
+        @Override
+        protected StructureProcessorType<?> getType() {
+            return StructureProcessorType.NOP;
+        }
     }
 }

@@ -24,6 +24,7 @@
   "cobblemon_safari.command.time.changed": "%1$sの残り時間は%2$sになりました。",
   "cobblemon_safari.command.reload.success": "サファリの設定を再読み込みしました。",
   "cobblemon_safari.message.protected": "サファリゾーンでは何も変更できません。",
+  "cobblemon_safari.message.shelf_locked": "これらのわざマシンは休憩所の飾りです。",
   "biome.cobblemon_safari.grassland": "サファリの草原",
   "biome.cobblemon_safari.savanna": "サファリのサバンナ",
   "biome.cobblemon_safari.dunes": "サファリの砂丘",

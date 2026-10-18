@@ -24,6 +24,7 @@
   "cobblemon_safari.command.time.changed": "Il reste maintenant %2$s à %1$s.",
   "cobblemon_safari.command.reload.success": "Configuration du Safari rechargée.",
   "cobblemon_safari.message.protected": "Vous ne pouvez rien modifier dans le Parc Safari.",
+  "cobblemon_safari.message.shelf_locked": "Ces CT font partie de la décoration du refuge.",
   "biome.cobblemon_safari.grassland": "Prairie Safari",
   "biome.cobblemon_safari.savanna": "Savane Safari",
   "biome.cobblemon_safari.dunes": "Dunes Safari",

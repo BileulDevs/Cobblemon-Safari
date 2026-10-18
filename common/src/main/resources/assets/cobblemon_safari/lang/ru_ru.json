@@ -24,6 +24,7 @@
   "cobblemon_safari.command.time.changed": "У %1$s теперь осталось %2$s.",
   "cobblemon_safari.command.reload.success": "Конфигурация Сафари перезагружена.",
   "cobblemon_safari.message.protected": "В Сафари-зоне ничего нельзя изменять.",
+  "cobblemon_safari.message.shelf_locked": "Эти ТМ — часть убранства дома отдыха.",
   "biome.cobblemon_safari.grassland": "Сафари: луга",
   "biome.cobblemon_safari.savanna": "Сафари: саванна",
   "biome.cobblemon_safari.dunes": "Сафари: дюны",

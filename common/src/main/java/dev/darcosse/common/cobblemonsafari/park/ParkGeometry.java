@@ -34,7 +34,11 @@ public final class ParkGeometry {
             new Column(0, -436),
             new Column(422, 0),
             new Column(0, 422),
-            new Column(-422, 0)
+            new Column(-422, 0),
+            new Column(298, -298),
+            new Column(298, 298),
+            new Column(-298, 298),
+            new Column(-298, -298)
     );
 
     /** A column of the park, x and z in blocks. */

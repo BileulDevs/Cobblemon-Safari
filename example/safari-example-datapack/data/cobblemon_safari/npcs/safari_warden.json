@@ -1,0 +1,32 @@
+{
+  "hitbox": "player",
+  "names": [
+    "cobblemon_safari.npc.safari_warden.name"
+  ],
+  "interaction": {
+    "type": "dialogue",
+    "dialogue": "cobblemon_safari:safari_warden"
+  },
+  "canDespawn": false,
+  "isInvulnerable": true,
+  "isMovable": false,
+  "isLeashable": false,
+  "allowProjectileHits": false,
+  "behaviours": [
+    {
+      "type": "apply_behaviours",
+      "behaviours": [
+        "cobblemon:core",
+        "cobblemon:looks_at_players",
+        "cobblemon:wanders"
+      ]
+    },
+    {
+      "type": "cobblemon:set_variables",
+      "variableValues": {
+        "horizontal_wander_range": "8",
+        "vertical_wander_range": "2"
+      }
+    }
+  ]
+}

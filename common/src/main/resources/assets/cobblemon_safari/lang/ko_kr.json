@@ -24,6 +24,7 @@
   "cobblemon_safari.command.time.changed": "%1$s님의 남은 시간은 이제 %2$s입니다.",
   "cobblemon_safari.command.reload.success": "사파리 설정을 다시 불러왔습니다.",
   "cobblemon_safari.message.protected": "사파리존에서는 아무것도 바꿀 수 없습니다.",
+  "cobblemon_safari.message.shelf_locked": "이 기술머신들은 휴게소 장식입니다.",
   "biome.cobblemon_safari.grassland": "사파리 초원",
   "biome.cobblemon_safari.savanna": "사파리 사바나",
   "biome.cobblemon_safari.dunes": "사파리 사구",

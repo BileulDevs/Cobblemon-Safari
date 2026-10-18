@@ -21,27 +21,30 @@ import java.util.List;
  * place to heal and the shop's counter inside the park.
  *
  * <p>Like the rest houses of the original Safari Zones, they are the only
- * place to heal inside the park. Built from code rather than from a structure
- * file so that the Healing Machine can be flagged infinite (see
- * {@link RestHouseBuilder}) and the building can adapt its foundation to
- * whatever terrain the seed produced.
+ * place to heal inside the park. Each is the Safari Pokémon Center
+ * template, placed by code at server start rather than generated as a
+ * world structure, so that it stands at a spot chosen for it, levelled on a
+ * foundation fitted to whatever terrain the seed produced (see
+ * {@link RestHouseBuilder}).
  */
 public final class RestHouses {
 
     /**
-     * Half the side of the building: houses are 11x11, centred on their
-     * site. Changing it resizes the whole layout of
-     * {@link RestHouseBuilder}, which is written relative to it.
+     * Distance from a house's centre column to its farthest block, front
+     * steps included: the Pokémon Center template is 20 × 19, centred on its
+     * cell (10, 9). Used as a square half-side ("inside a house") by the
+     * client's music, the clerk search and the shop. Must follow the
+     * template if its size changes.
      */
-    public static final int HALF_SIZE = 5;
+    public static final int HALF_SIZE = 10;
 
     /**
      * Distance from the centre to the farthest block a house touches: the
-     * front plaza and the cleared ring around it. Everything that must keep
+     * template and the cleared ring around it. Everything that must keep
      * away from a house (arrivals, specials) measures from this, not from the
-     * walls, or a special could pop up on the plaza in front of the door.
+     * walls, or a special could pop up on the steps in front of the door.
      */
-    public static final int FOOTPRINT_REACH = HALF_SIZE + 5;
+    public static final int FOOTPRINT_REACH = HALF_SIZE + 2;
 
     /**
      * How far from its anchor a house may move to find a good
@@ -106,14 +109,53 @@ public final class RestHouses {
             // The first house is the entrance: it is searched for closer to its anchor.
             boolean entrance = i == 0;
             int radius = entrance ? ENTRANCE_SEARCH_RADIUS : SEARCH_RADIUS;
-            int[] site = RestHouseSites.find(safari, position.x(), position.z(), radius, taken);
-            RestHouseBuilder.build(safari, site[0], site[1], doorFacing(site[0], site[1]));
+            int[] site = pickDrySite(safari, position, radius, taken);
+            if (!RestHouseBuilder.build(safari, site[0], site[1], doorFacing(site[0], site[1]))) {
+                // Template missing: not marked built, so the next start tries again.
+                continue;
+            }
             state.markHouseBuilt(position.x(), position.z(), site[0], site[1]);
             taken.add(site);
             CobblemonSafari.LOGGER.info("Built Safari rest house at {}, {} (anchor {}, {})",
                     site[0], site[1], position.x(), position.z());
         }
         refreshSites(state);
+    }
+
+    /**
+     * The first candidate of the site search with no water on the real
+     * terrain under the house and around it. The search reads the noise,
+     * which can miss a pond between its samples or misjudge water near sea
+     * level; the real blocks cannot. When every candidate is wet (or there
+     * is none), the driest one, or the anchor as a last resort, logged.
+     *
+     * <p>Cost: each candidate checked generates the few chunks under it, at
+     * most {@link RestHouseSites#MAX_CANDIDATES} per house, once per map.
+     */
+    private static int[] pickDrySite(ServerLevel level, ParkGeometry.Column anchor, int radius, List<int[]> taken) {
+        int[] driest = null;
+        int driestWet = Integer.MAX_VALUE;
+        for (int[] candidate : RestHouseSites.candidates(level, anchor.x(), anchor.z(), radius, taken)) {
+            int wet = RestHouseBuilder.wetColumns(level, candidate[0], candidate[1],
+                    doorFacing(candidate[0], candidate[1]));
+            if (wet == 0) {
+                return candidate;
+            }
+            CobblemonSafari.LOGGER.info("Rest house spot {}, {} has water on {} columns; trying the next one",
+                    candidate[0], candidate[1], wet);
+            if (wet < driestWet) {
+                driestWet = wet;
+                driest = candidate;
+            }
+        }
+        if (driest != null) {
+            CobblemonSafari.LOGGER.warn("Every spot found for the rest house near {}, {} has water; using the driest",
+                    anchor.x(), anchor.z());
+            return driest;
+        }
+        CobblemonSafari.LOGGER.warn("No spot found for the rest house near {}, {}; building it on that position",
+                anchor.x(), anchor.z());
+        return new int[]{anchor.x(), anchor.z()};
     }
 
     /** Rebuilds the in-memory list of built houses from the world state. */
@@ -161,8 +203,8 @@ public final class RestHouses {
     }
 
     /**
-     * Where players arrive in the Safari: on the plaza of the entrance house,
-     * in front of its doorway.
+     * Where players arrive in the Safari: on the grass in front of the
+     * entrance house's steps, on the axis of its door.
      *
      * @param column the column to stand on (y 0: the caller finds the ground)
      * @param yaw    the rotation that faces the doorway
