@@ -53,15 +53,13 @@ public final class SafariCreativeTab {
 
     /**
      * Every item of the mod, in tab order: the hunt (ticket, Escape Rope),
-     * the gate and the boards for building, then the decor.
+     * the gate and the wall screen for building, then the decor.
      */
     public static List<Item> items() {
         List<Item> items = new ArrayList<>();
         items.add(SafariItems.safariTicket());
         items.add(SafariItems.escapeRope());
         items.add(SafariItems.safariGate());
-        items.add(SafariItems.safariBoard());
-        items.add(SafariItems.safariBoardFrame());
         items.add(SafariItems.safariWallScreen());
         items.addAll(SafariDecor.items());
         return items;

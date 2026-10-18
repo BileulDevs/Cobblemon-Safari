@@ -14,7 +14,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture
 import net.minecraft.resources.ResourceLocation
 
 /**
- * Draws animated Cobblemon models on the Safari Board screens.
+ * Draws animated Cobblemon models on the wall screens.
  *
  * Follows what Cobblemon's own `PokemonItemRenderer` does for item frames
  * (same render context, same profile pose, same layers) with two
@@ -134,7 +134,7 @@ object BoardPokemonModels {
             return true
         } catch (e: RuntimeException) {
             failed.add(species)
-            CobblemonSafari.LOGGER.warn("Safari Board: could not draw the model of {}; showing its name only", species, e)
+            CobblemonSafari.LOGGER.warn("Wall screen: could not draw the model of {}; showing its name only", species, e)
             return false
         } finally {
             poseStack.popPose()

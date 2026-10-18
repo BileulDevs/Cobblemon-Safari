@@ -7,7 +7,7 @@ import java.util.List;
 
 /**
  * The client's copy of today's missions and of the local player's progress,
- * for the Safari Board. Holds no client-only types, so payload handlers
+ * for the wall screens. Holds no client-only types, so payload handlers
  * registered on both dists can call it.
  */
 public final class BountyClientState {

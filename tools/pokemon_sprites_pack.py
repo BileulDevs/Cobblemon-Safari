@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Installs the Pokémon sprites used by the Safari Board's sprite mode
+Installs the Pokémon sprites used by the wall screens' sprite mode
 (board.pokemonDisplay = SPRITE in the client config), into the mod's own
 resources or as a separate resource pack.
 
@@ -17,7 +17,7 @@ then overrides the mod's sprites of the same name.
 becomes hooh, porygon-z porygonz), which is what PokemonSprites looks up.
 
 Only the base sprite of each species is installed (<species>.png): forms,
-megas, gigantamax and shiny sprites are left out, the board then showing the
+megas, gigantamax and shiny sprites are left out, the screens then showing the
 base sprite for them. Add --all-forms to install every sprite instead.
 
 Usage (from the repository root):
@@ -105,7 +105,7 @@ def write_pack(source, names, output):
     with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as pack:
         meta = {"pack": {"pack_format": PACK_FORMAT, "description": {
             "translate": "cobblemon_safari.pack.sprites",
-            "fallback": "Cobblemon Safari: Pokémon sprites for the Safari Board"}}}
+            "fallback": "Cobblemon Safari: Pokémon sprites for the wall screens"}}}
         info = zipfile.ZipInfo("pack.mcmeta", ZIP_DATE)
         pack.writestr(info, json.dumps(meta, indent=2, ensure_ascii=False) + "\n", zipfile.ZIP_DEFLATED)
         for name in sorted(names):

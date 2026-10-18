@@ -1,7 +1,6 @@
 package dev.darcosse.common.cobblemonsafari.mixin.client;
 
 import dev.darcosse.common.cobblemonsafari.block.SafariBlocks;
-import dev.darcosse.common.cobblemonsafari.client.gate.GateAmbience;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.client.sounds.SoundManager;
@@ -11,9 +10,10 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
 /**
- * Plays the Safari Gate's chime instead of the nether portal's whoosh when
- * the player steps into a gate pane. Vanilla plays that whoosh for any
- * portal with the confusion transition, which the gate uses for its overlay.
+ * Mutes the nether portal's whoosh when the player steps into a Safari Gate
+ * pane: the gate makes no sound. Vanilla plays that whoosh for any portal
+ * with the confusion transition, which the gate uses for its overlay; other
+ * portals keep it.
  */
 @Mixin(LocalPlayer.class)
 public abstract class LocalPlayerPortalSoundMixin {
@@ -28,10 +28,12 @@ public abstract class LocalPlayerPortalSoundMixin {
                     target = "Lnet/minecraft/client/sounds/SoundManager;play("
                             + "Lnet/minecraft/client/resources/sounds/SoundInstance;)V"),
             require = 0)
-    private void cobblemonSafari$gateChime(SoundManager soundManager, SoundInstance whoosh) {
+    private void cobblemonSafari$muteGateWhoosh(SoundManager soundManager, SoundInstance whoosh) {
         LocalPlayer self = (LocalPlayer) (Object) this;
         boolean inGate = self.portalProcess != null
                 && self.portalProcess.isSamePortal((Portal) SafariBlocks.safariGate());
-        soundManager.play(inGate ? GateAmbience.chime() : whoosh);
+        if (!inGate) {
+            soundManager.play(whoosh);
+        }
     }
 }

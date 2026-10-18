@@ -11,7 +11,7 @@ import net.minecraft.resources.ResourceLocation;
 import org.joml.Matrix4f;
 
 /**
- * Drawing primitives for one frame of one Safari Board screen, in canvas
+ * Drawing primitives for one frame of one wall screen picture, in canvas
  * coordinates: x to the right, y DOWN, z toward the viewer, one unit per
  * canvas pixel. Mirrors the conventions of GUI drawing so the layout code
  * reads like a screen, not like world geometry.

@@ -1,21 +1,4 @@
 {
-  "block.safari_gate.ambient": {
-    "subtitle": "subtitles.cobblemon_safari.block.safari_gate.ambient",
-    "sounds": [
-      {
-        "name": "cobblemon_safari:gate/ambience",
-        "stream": true
-      }
-    ]
-  },
-  "block.safari_gate.chime": {
-    "subtitle": "subtitles.cobblemon_safari.block.safari_gate.chime",
-    "sounds": [
-      {
-        "name": "cobblemon_safari:gate/chime"
-      }
-    ]
-  },
   "music.plains": {
     "sounds": [
       {

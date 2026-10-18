@@ -17,7 +17,7 @@ import java.util.TreeSet;
 
 /**
  * Keeps every client's copy of the special Pokémon of the day current, so the
- * Safari Board screens never show a stale list.
+ * wall screens never show a stale list.
  *
  * <p>Pushes on join, then whenever {@link FeaturedRotation#revision()}
  * changes: new rotation, data reload, config reload, or the first successful

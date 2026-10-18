@@ -6,7 +6,6 @@ import dev.darcosse.common.cobblemonsafari.client.BountyClientState;
 import dev.darcosse.common.cobblemonsafari.client.FeaturedClientState;
 import dev.darcosse.common.cobblemonsafari.client.SafariClient;
 import dev.darcosse.common.cobblemonsafari.client.SafariClientState;
-import dev.darcosse.common.cobblemonsafari.client.board.SafariBoardRenderer;
 import dev.darcosse.common.cobblemonsafari.client.board.SafariWallScreenRenderer;
 import dev.darcosse.common.cobblemonsafari.client.hud.SafariTimerHud;
 import dev.darcosse.common.cobblemonsafari.client.sky.SafariSkyEffects;
@@ -69,7 +68,6 @@ public class CobblemonSafariFabricClient implements ClientModInitializer {
 
         HudRenderCallback.EVENT.register(SafariTimerHud::render);
         // Vanilla registry, made public by Fabric's transitive access widener.
-        BlockEntityRenderers.register(SafariBlockEntities.safariBoard(), SafariBoardRenderer::new);
         BlockEntityRenderers.register(SafariBlockEntities.safariWallScreen(), SafariWallScreenRenderer::new);
         BlockEntityRenderers.register(SafariBlockEntities.safariBanner(), SafariBannerRenderer::new);
 

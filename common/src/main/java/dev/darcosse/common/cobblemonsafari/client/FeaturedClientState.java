@@ -6,7 +6,7 @@ import java.util.List;
 
 /**
  * What the client knows about the special Pokémon of the day, for the
- * Safari Board screens.
+ * wall screens.
  *
  * <p>Same constraints as {@link SafariClientState}: no client-only imports
  * (NeoForge registers payload handlers on both sides), main thread only.

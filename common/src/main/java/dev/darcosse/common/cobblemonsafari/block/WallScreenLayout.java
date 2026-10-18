@@ -16,10 +16,6 @@ import net.minecraft.world.level.block.state.BlockState;
  * leftmost block of a group is its anchor: it draws the whole group and its
  * tilt is the group's tilt.
  *
- * <p>Kept separate from {@link ScreenLayout} on purpose: the two blocks must
- * never merge with each other, and the board's rectangle search would only
- * get in the way of a one-row rule.
- *
  * @param anchorPos position of the group's leftmost block
  * @param width     number of blocks in the group, 1 to {@link #MAX_WIDTH}
  * @param index     position of the queried block in the group, 0 for the anchor
@@ -41,6 +37,16 @@ public record WallScreenLayout(BlockPos anchorPos, int width, int index) {
      * costs one more block read per screen per layout refresh.
      */
     private static final int MAX_ROW_SCAN = 48;
+
+    /**
+     * The reader's right-hand side for a screen facing the given way. The
+     * reader looks against the facing, so their right is the facing turned a
+     * quarter counter-clockwise (facing south, the reader looks north, right
+     * is east).
+     */
+    public static Direction rightOf(Direction facing) {
+        return facing.getCounterClockWise();
+    }
 
     /** Whether this block is the anchor, i.e. the one that draws the group. */
     public boolean anchor() {
@@ -64,7 +70,7 @@ public record WallScreenLayout(BlockPos anchorPos, int width, int index) {
             return single(pos);
         }
         Direction facing = state.getValue(HorizontalDirectionalBlock.FACING);
-        Direction right = ScreenLayout.rightOf(facing);
+        Direction right = rightOf(facing);
         Direction left = right.getOpposite();
         int fromRowStart = 0;
         while (fromRowStart < MAX_ROW_SCAN && isPart(level, pos.relative(left, fromRowStart + 1), facing)) {

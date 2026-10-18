@@ -3,8 +3,6 @@ package dev.darcosse.common.cobblemonsafari.structure;
 import com.cobblemon.mod.common.block.entity.CampfireBlockEntity;
 import com.cobblemon.mod.common.block.entity.HealingMachineBlockEntity;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
-import dev.darcosse.common.cobblemonsafari.block.SafariBlocks;
-import dev.darcosse.common.cobblemonsafari.block.SafariBoardFrameBlock;
 import dev.darcosse.common.cobblemonsafari.util.Surface;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -23,9 +21,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.block.state.properties.SlabType;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -34,8 +30,7 @@ import java.util.Optional;
  * <p>Inside: a tiled floor with a red carpet to the counter, the Healing
  * Machine on the counter, a PC, a cooking corner with a Cobblemon Poké Pot
  * on its campfire, and a seating corner. Outside: a stepped red roof with a
- * Poké Ball band over the glass front, lanterns, flower beds, and (entrance
- * house only) a framed Safari Board standing on the plaza.
+ * Poké Ball band over the glass front, lanterns and flower beds.
  *
  * <p>Layout is written in local coordinates where the door is on the +Z
  * side ("front") and local +X is {@link #localEast()}; {@link #at} rotates
@@ -51,7 +46,7 @@ final class RestHouseBuilder {
     /** Interior height between floor and ceiling. 4 fits a player on a ridden Pokémon. */
     private static final int INTERIOR_HEIGHT = 4;
 
-    /** Front plaza, in local z, in front of the front wall (z = SIZE). Holds the board and lanterns. */
+    /** Front plaza, in local z, in front of the front wall (z = SIZE). Holds the lanterns and flower beds. */
     private static final int PLAZA_FIRST_Z = SIZE + 1;
     private static final int PLAZA_LAST_Z = SIZE + 4;
     /** The plaza and the cleared volume reach this far beyond the house sides. */
@@ -72,18 +67,6 @@ final class RestHouseBuilder {
      * flow into the freshly cleared space, which is exactly what is not wanted.
      */
     private static final int PLACE_FLAGS = Block.UPDATE_CLIENTS;
-
-    /**
-     * Framed Safari Board of the entrance house, on the plaza to the left of
-     * the porch: screen columns (local x), its two rows (local y) and the
-     * local z it stands on. Frames surround it, their bottom row on the
-     * plaza so the frame grows feet.
-     */
-    private static final int BOARD_FIRST_X = 0;
-    private static final int BOARD_LAST_X = 2;
-    private static final int BOARD_BOTTOM_Y = 2;
-    private static final int BOARD_TOP_Y = 3;
-    private static final int BOARD_Z = SIZE + 3;
 
     /**
      * Where the clerk stands: behind the counter (local z 2), between the
@@ -116,10 +99,9 @@ final class RestHouseBuilder {
     /**
      * Builds a rest house centred on the given column.
      *
-     * @param facing   direction the door opens toward
-     * @param entrance whether to add the Safari Board (the entrance house only)
+     * @param facing direction the door opens toward
      */
-    static void build(ServerLevel level, int centerX, int centerZ, Direction facing, boolean entrance) {
+    static void build(ServerLevel level, int centerX, int centerZ, Direction facing) {
         RestHouseBuilder builder = new RestHouseBuilder(level, centerX, centerZ, facing);
         builder.floorY = builder.findFloorY();
         builder.foundation();
@@ -128,9 +110,6 @@ final class RestHouseBuilder {
         builder.shell();
         builder.roof();
         builder.interior();
-        if (entrance) {
-            builder.board();
-        }
     }
 
     // ---- Ground ----------------------------------------------------------
@@ -345,36 +324,6 @@ final class RestHouseBuilder {
         // Plants by the doorway.
         set(at(1, 1, SIZE - 1), Blocks.POTTED_FERN.defaultBlockState());
         set(at(SIZE - 1, 1, SIZE - 1), Blocks.POTTED_AZALEA.defaultBlockState());
-    }
-
-    /**
-     * Framed Safari Board standing on the plaza, screen toward the front so
-     * players walking up to the house read it. Frames are placed first, then
-     * each one is given the connections, planks and feet the frame block
-     * would compute itself when placed by hand.
-     */
-    private void board() {
-        Direction screenFacing = facing;
-        BlockState screen = SafariBlocks.safariBoard().defaultBlockState()
-                .setValue(HorizontalDirectionalBlock.FACING, screenFacing);
-        BlockState frame = SafariBlocks.safariBoardFrame().defaultBlockState()
-                .setValue(HorizontalDirectionalBlock.FACING, screenFacing);
-        List<BlockPos> frames = new ArrayList<>();
-        for (int lx = BOARD_FIRST_X - 1; lx <= BOARD_LAST_X + 1; lx++) {
-            for (int y = BOARD_BOTTOM_Y - 1; y <= BOARD_TOP_Y + 1; y++) {
-                BlockPos pos = at(lx, y, BOARD_Z);
-                boolean inside = lx >= BOARD_FIRST_X && lx <= BOARD_LAST_X && y >= BOARD_BOTTOM_Y && y <= BOARD_TOP_Y;
-                if (inside) {
-                    set(pos, screen);
-                } else {
-                    set(pos, frame);
-                    frames.add(pos);
-                }
-            }
-        }
-        for (BlockPos pos : frames) {
-            set(pos, SafariBoardFrameBlock.connect(level, pos, level.getBlockState(pos)));
-        }
     }
 
     // ---- Cobblemon blocks ---------------------------------------------------

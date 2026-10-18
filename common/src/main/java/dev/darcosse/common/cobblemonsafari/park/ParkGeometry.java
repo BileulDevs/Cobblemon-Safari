@@ -25,7 +25,7 @@ public final class ParkGeometry {
     public static final int ARRIVAL_SPREAD = 16;
 
     /**
-     * Anchors of the rest houses, entrance first (it holds the Safari Board):
+     * Anchors of the rest houses, entrance first:
      * each house is built at the best spot near its anchor. The anchor also
      * identifies the house in the saved world state, so changing one builds
      * a new house there on the next map.

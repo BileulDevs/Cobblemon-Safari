@@ -16,7 +16,7 @@ import java.util.Locale;
  * rename, or screens already placed change content or reset to the default.
  */
 public enum WallScreenContent implements StringRepresentable {
-    /** The special Pokémon of the day, like the Safari Board. */
+    /** The special Pokémon of the day. */
     FEATURED,
     /** The viewer's lifetime Safari record and points. */
     STATS,

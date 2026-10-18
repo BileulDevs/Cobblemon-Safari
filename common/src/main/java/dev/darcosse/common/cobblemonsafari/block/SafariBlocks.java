@@ -21,12 +21,6 @@ import java.util.function.BiConsumer;
  */
 public final class SafariBlocks {
 
-    /** Id of the Safari Board; also its model, loot table and translation path. */
-    public static final ResourceLocation SAFARI_BOARD_ID = CobblemonSafari.id("safari_board");
-
-    /** Id of the Safari Board Frame; also its models, loot table and translation path. */
-    public static final ResourceLocation SAFARI_BOARD_FRAME_ID = CobblemonSafari.id("safari_board_frame");
-
     /** Id of the Safari Wall Screen; also its models, loot table and translation path. */
     public static final ResourceLocation SAFARI_WALL_SCREEN_ID = CobblemonSafari.id("safari_wall_screen");
 
@@ -46,13 +40,8 @@ public final class SafariBlocks {
     private static final float BLAST_PROOF = 3_600_000.0F;
 
     /** Mining time like a wooden sign: easy to move, not broken by a stray punch. */
-    private static final float BOARD_STRENGTH = 1.0F;
+    private static final float WALL_SCREEN_STRENGTH = 1.0F;
 
-    /** Like a fence: sturdy enough not to break by accident, quick with an axe. */
-    private static final float FRAME_STRENGTH = 2.0F;
-
-    private static Block safariBoard;
-    private static Block safariBoardFrame;
     private static Block safariWallScreen;
     private static Block safariGate;
 
@@ -61,23 +50,11 @@ public final class SafariBlocks {
 
     /** Creates every block and hands it to the loader's registrar. Call exactly once. */
     public static void register(BiConsumer<ResourceLocation, Block> registrar) {
-        safariBoard = new SafariBoardBlock(BlockBehaviour.Properties.of()
-                .mapColor(MapColor.WOOD)
-                .sound(SoundType.WOOD)
-                .strength(BOARD_STRENGTH)
-                .noOcclusion());
-        registrar.accept(SAFARI_BOARD_ID, safariBoard);
-        safariBoardFrame = new SafariBoardFrameBlock(BlockBehaviour.Properties.of()
-                .mapColor(MapColor.PODZOL)
-                .sound(SoundType.WOOD)
-                .strength(FRAME_STRENGTH)
-                .noOcclusion());
-        registrar.accept(SAFARI_BOARD_FRAME_ID, safariBoardFrame);
-        // Same feel as the board it derives from: a wooden-sounding screen, easy to move.
+        // A wooden-sounding screen, easy to move.
         safariWallScreen = new SafariWallScreenBlock(BlockBehaviour.Properties.of()
                 .mapColor(MapColor.WOOD)
                 .sound(SoundType.WOOD)
-                .strength(BOARD_STRENGTH)
+                .strength(WALL_SCREEN_STRENGTH)
                 .noOcclusion());
         registrar.accept(SAFARI_WALL_SCREEN_ID, safariWallScreen);
         safariGate = new SafariGateBlock(BlockBehaviour.Properties.of()
@@ -115,29 +92,5 @@ public final class SafariBlocks {
             throw new IllegalStateException("SafariBlocks.register was never called");
         }
         return safariWallScreen;
-    }
-
-    /**
-     * The Safari Board Frame.
-     *
-     * @throws IllegalStateException before registration, which means a loader entry point is wired wrong
-     */
-    public static Block safariBoardFrame() {
-        if (safariBoardFrame == null) {
-            throw new IllegalStateException("SafariBlocks.register was never called");
-        }
-        return safariBoardFrame;
-    }
-
-    /**
-     * The Safari Board.
-     *
-     * @throws IllegalStateException before registration, which means a loader entry point is wired wrong
-     */
-    public static Block safariBoard() {
-        if (safariBoard == null) {
-            throw new IllegalStateException("SafariBlocks.register was never called");
-        }
-        return safariBoard;
     }
 }

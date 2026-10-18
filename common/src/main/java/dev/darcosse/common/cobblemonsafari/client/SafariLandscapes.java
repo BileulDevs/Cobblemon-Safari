@@ -8,7 +8,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * The pixel-art safari landscapes drawn by tools/gui_assets.py, each in three
  * lights (morning, dusk, night), and which light matches the time of day.
- * The shop, the Safari Board and each wall screen page have their own
+ * The shop and each wall screen page have their own
  * scene but share the time rule, so all change light together.
  *
  * <p>Free of client-only imports, but only used by client code.
@@ -40,7 +40,7 @@ public final class SafariLandscapes {
     public static final Scene SHOP = scene("shop_background_", 300, 232, 0.58F);
 
     /**
-     * Behind the Safari Board screens, cropped to each screen's shape. Size
+     * Behind the FEATURED page of the wall screens, cropped to each screen's shape. Size
      * and horizon must match BOARD_WIDTH, BOARD_HEIGHT and BOARD_HORIZON in
      * tools/gui_assets.py.
      */

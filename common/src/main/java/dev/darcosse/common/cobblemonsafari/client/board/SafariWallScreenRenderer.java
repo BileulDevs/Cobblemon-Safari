@@ -6,7 +6,6 @@ import com.mojang.math.Axis;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.block.SafariWallScreenBlock;
 import dev.darcosse.common.cobblemonsafari.block.SafariWallScreenBlockEntity;
-import dev.darcosse.common.cobblemonsafari.block.ScreenLayout;
 import dev.darcosse.common.cobblemonsafari.block.WallScreenLayout;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -23,39 +22,37 @@ import org.joml.Matrix4f;
 
 /**
  * Draws a Safari Wall Screen group: the wall plate and arm, the tilted panel
- * and, on it, the page the group shows (the Safari Board's specials, the
- * viewer's record or today's missions).
+ * and, on it, the page the group shows (today's specials, the viewer's
+ * record or today's missions).
  *
- * <p>The picture itself is painted by a {@link SafariBoardRenderer} kept
- * inside, through {@link SafariBoardRenderer#paintScreen}: the wall screen
- * only adds the hardware and the tilt, so both screens share one look and
- * one layout code.
+ * <p>The picture itself is painted by a {@link SafariScreenPainter} kept
+ * inside, through {@link SafariScreenPainter#paintScreen}: this class only
+ * adds the hardware and the tilt.
  *
  * <p>The panel and arm are drawn here rather than by a block model because
  * the panel turns by 5° steps around a hinge, which baked models cannot do
  * (their element rotations are limited to 22.5° steps).
  *
- * <p>Cost per visible group per frame: the board picture (see
- * {@link SafariBoardRenderer}) plus about 60 quads of hardware. Screens that
+ * <p>Cost per visible group per frame: the picture (see
+ * {@link SafariScreenPainter}) plus about 60 quads of hardware. Screens that
  * are not anchors return after one cached lookup.
  *
  * CLIENT ONLY.
  */
 public class SafariWallScreenRenderer implements BlockEntityRenderer<SafariWallScreenBlockEntity> {
 
-    /** Texture of the panel's back and edges, the arm and the plate: the board's own casing. */
+    /** Texture of the panel's back and edges, the arm and the plate (named after the removed Safari Board, kept to avoid a rename). */
     private static final ResourceLocation CASING_TEXTURE = CobblemonSafari.id("textures/block/safari_board_frame.png");
 
-    /** Texture of the panel's front, under the picture: the board's screen face. */
+    /** Texture of the panel's front, under the picture (named after the removed Safari Board). */
     private static final ResourceLocation SCREEN_TEXTURE = CobblemonSafari.id("textures/block/safari_board_screen.png");
 
     /** Pixels per block, for converting the block's pixel constants. */
     private static final float PIXELS_PER_BLOCK = 16.0F;
 
     /**
-     * Gap between the panel's front and the picture, in pixels. Same value as
-     * the board's (0.008 block): smaller z-fights with the panel, larger
-     * floats visibly.
+     * Gap between the panel's front and the picture, in pixels (0.008
+     * block): smaller z-fights with the panel, larger floats visibly.
      */
     private static final float SURFACE_GAP_PIXELS = 0.008F * PIXELS_PER_BLOCK;
 
@@ -85,7 +82,7 @@ public class SafariWallScreenRenderer implements BlockEntityRenderer<SafariWallS
     private static final float SHADE_FRONT_BACK = 0.8F;
     private static final float SHADE_SIDES = 0.6F;
 
-    /** Draw distance in blocks, same as the board's. */
+    /** Draw distance in blocks; vanilla's default (64) cuts a screen seen across a big hall too early. */
     private static final int VIEW_DISTANCE = 96;
 
     /** Blocks added around a group's bounds for models popping out of the picture. */
@@ -103,12 +100,12 @@ public class SafariWallScreenRenderer implements BlockEntityRenderer<SafariWallS
     private static final int FACE_BOTTOM = 1 << 5;
     private static final int ALL_FACES = FACE_FRONT | FACE_BACK | FACE_LEFT | FACE_RIGHT | FACE_TOP | FACE_BOTTOM;
 
-    /** Paints the picture; never registered itself, only used for {@link SafariBoardRenderer#paintScreen}. */
-    private final SafariBoardRenderer picture;
+    /** Paints the picture, through {@link SafariScreenPainter#paintScreen}. */
+    private final SafariScreenPainter picture;
 
     /** Created by the loader's renderer registry. */
     public SafariWallScreenRenderer(BlockEntityRendererProvider.Context context) {
-        this.picture = new SafariBoardRenderer(context);
+        this.picture = new SafariScreenPainter(context.getFont());
     }
 
     /**
@@ -140,7 +137,7 @@ public class SafariWallScreenRenderer implements BlockEntityRenderer<SafariWallS
         if (!layout.anchor() || !state.hasProperty(HorizontalDirectionalBlock.FACING)) {
             return new AABB(pos);
         }
-        Direction right = ScreenLayout.rightOf(state.getValue(HorizontalDirectionalBlock.FACING));
+        Direction right = WallScreenLayout.rightOf(state.getValue(HorizontalDirectionalBlock.FACING));
         BlockPos far = pos.relative(right, layout.width() - 1);
         return AABB.encapsulatingFullBlocks(pos, far).inflate(BOUNDS_MARGIN);
     }
@@ -169,7 +166,7 @@ public class SafariWallScreenRenderer implements BlockEntityRenderer<SafariWallS
 
         poseStack.pushPose();
         // Block centre, then turn so +X is the reader's right, +Y up and +Z out
-        // of the screen, like the board; then back to the bottom-left corner
+        // of the screen; then back to the bottom-left corner
         // against the wall, and pixel units.
         poseStack.translate(0.5F, 0.5F, 0.5F);
         poseStack.mulPose(Axis.YP.rotationDegrees(-facing.toYRot()));

@@ -33,7 +33,7 @@ import java.util.Set;
  * request, never in the middle of a tick that did not ask for it.
  *
  * <p>{@link #revision()} changes every time the list may have changed, which
- * is what {@link FeaturedSync} watches to push the Safari Board screens.
+ * is what {@link FeaturedSync} watches to push the wall screens.
  */
 public final class FeaturedRotation {
 

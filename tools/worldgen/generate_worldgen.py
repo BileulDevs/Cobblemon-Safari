@@ -252,13 +252,6 @@ MUSIC_MIN_DELAY = 1200
 MUSIC_MAX_DELAY = 3600
 MUSIC_ZONES = ["plains", "forest", "arid", "snow", "caves", "center"]
 MUSIC_DIR = os.path.join(ROOT, "common", "src", "main", "resources", "assets", MOD_ID, "sounds", "music")
-GATE_SOUND_DIR = os.path.join(ROOT, "common", "src", "main", "resources", "assets", MOD_ID, "sounds", "gate")
-# event id: (file under sounds/gate, subtitle key suffix, streamed). The
-# 25-second loop is streamed like music; the short chime is loaded whole.
-GATE_SOUNDS = {
-    "block.safari_gate.ambient": ("ambience", "block.safari_gate.ambient", True),
-    "block.safari_gate.chime": ("chime", "block.safari_gate.chime", False),
-}
 
 # Calls of wild Pokemon heard now and then (the biome's "additions" sound):
 # chance per tick, so 0.004 is one call every ~12 seconds on average. Played
@@ -324,16 +317,8 @@ def write_sounds():
     if missing_tracks:
         sys.exit(f"Missing music tracks {missing_tracks}: run tools/music/compose_safari_music.py first")
     events = {}
-    # The Safari Gate's own sounds (tools/music/compose_safari_music.py, "gate"):
-    # its relaxed tune, looped by the client near a gate (GateAmbience), and the
-    # chime played when a player steps into the pane. Mirrored by GateSounds.
-    for event, (file, subtitle, stream) in GATE_SOUNDS.items():
-        if not os.path.exists(os.path.join(GATE_SOUND_DIR, f"{file}.ogg")):
-            sys.exit(f"Missing gate sound {file}.ogg: run tools/music/compose_safari_music.py gate first")
-        entry = {"name": f"{MOD_ID}:gate/{file}"}
-        if stream:
-            entry["stream"] = True
-        events[event] = {"subtitle": f"subtitles.{MOD_ID}.{subtitle}", "sounds": [entry]}
+    # The Safari Gate is silent: no loop near it, no sound when stepping in
+    # (LocalPlayerPortalSoundMixin mutes the nether portal's whoosh there).
     for zone in MUSIC_ZONES:
         # stream: music is read from disk while it plays instead of being
         # decoded whole into memory, as vanilla does for its own music.
@@ -1239,7 +1224,7 @@ public final class ParkGeometry {{
     public static final int ARRIVAL_SPREAD = {ARRIVAL_SPREAD};
 
     /**
-     * Anchors of the rest houses, entrance first (it holds the Safari Board):
+     * Anchors of the rest houses, entrance first:
      * each house is built at the best spot near its anchor. The anchor also
      * identifies the house in the saved world state, so changing one builds
      * a new house there on the next map.

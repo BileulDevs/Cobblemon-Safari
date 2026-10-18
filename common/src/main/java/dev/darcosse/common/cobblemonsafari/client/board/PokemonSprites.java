@@ -14,7 +14,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * Finds the flat sprite of a Pokémon, for the Safari Board's sprite mode.
+ * Finds the flat sprite of a Pokémon, for the wall screens' sprite mode.
  * The mod ships only the base sprite of each species, at
  * {@code assets/cobblemon_safari/textures/pokemon_sprites/<species>.png}; a
  * resource pack can override them or add forms and shiny sprites as

@@ -13,7 +13,7 @@ import java.util.List;
 
 /**
  * Server-to-client snapshot of the special Pokémon of the day, for the
- * Safari Board screens.
+ * wall screens.
  *
  * <p>The server owns the draw; clients only display it. Sent on join, when a
  * rotation starts, and after a data or config reload changed the list.

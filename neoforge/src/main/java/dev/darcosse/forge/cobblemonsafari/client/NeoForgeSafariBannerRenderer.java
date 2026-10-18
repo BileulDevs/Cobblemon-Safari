@@ -9,7 +9,7 @@ import net.neoforged.neoforge.client.extensions.IBlockEntityRendererExtension;
 /**
  * The banner renderer with NeoForge's culling box.
  *
- * <p>Same reason as {@link NeoForgeSafariBoardRenderer}: NeoForge culls block
+ * <p>Same reason as {@link NeoForgeSafariWallScreenRenderer}: NeoForge culls block
  * entity renderers against the block alone by default, and a banner reaches
  * into the block above (standing) or below (on a wall), which would vanish
  * as soon as the banner's own block leaves the view. Implements the

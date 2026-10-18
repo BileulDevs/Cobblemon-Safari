@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Text of the Safari Board, of {@code /safari today} and of the entry
+ * Text of the specials list: {@code /safari today} and the entry
  * announcement. Everything is a translatable component resolved on each
  * client, so species and habitat names appear in the reader's language.
  */

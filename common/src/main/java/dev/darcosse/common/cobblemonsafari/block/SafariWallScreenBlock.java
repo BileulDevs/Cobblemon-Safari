@@ -36,13 +36,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * The Safari Wall Screen: the Safari Board's picture on a panel held off the
+ * The Safari Wall Screen: the Safari's live display on a panel held off the
  * wall by a single arm, tilted toward the floor like a TV mounted high, or
  * toward the ceiling like a screen mounted low.
  *
  * <p>Up to {@link WallScreenLayout#MAX_WIDTH} screens side by side, facing the
  * same way, merge into one wider panel with one arm at its centre. They never
- * merge with Safari Boards, and never vertically.
+ * merge vertically.
  *
  * <p>Right-click with an empty hand opens a settings screen choosing what the
  * group shows ({@link WallScreenContent}) and its tilt, when the player may
@@ -85,7 +85,7 @@ public class SafariWallScreenBlock extends HorizontalDirectionalBlock implements
      */
     public static final BooleanProperty UPWARD = BooleanProperty.create("upward");
 
-    /** What the screen shows. New screens show the specials, like the Safari Board. */
+    /** What the screen shows. New screens show the specials. */
     public static final EnumProperty<WallScreenContent> CONTENT = EnumProperty.create("content", WallScreenContent.class);
 
     /**
@@ -143,7 +143,7 @@ public class SafariWallScreenBlock extends HorizontalDirectionalBlock implements
     }
 
     /**
-     * Placed facing the player like the Safari Board, so its back lands
+     * Placed facing the player, so its back lands
      * against the wall that was clicked. Takes the tilt and content of a
      * screen it joins, so a group never shows two settings at once: the left
      * neighbour wins, as it is the closer one to the group's anchor.
@@ -152,7 +152,7 @@ public class SafariWallScreenBlock extends HorizontalDirectionalBlock implements
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext ctx) {
         Direction facing = ctx.getHorizontalDirection().getOpposite();
-        Direction right = ScreenLayout.rightOf(facing);
+        Direction right = WallScreenLayout.rightOf(facing);
         BlockState placed = defaultBlockState().setValue(FACING, facing);
         for (Direction side : new Direction[]{right.getOpposite(), right}) {
             BlockState neighbour = ctx.getLevel().getBlockState(ctx.getClickedPos().relative(side));
@@ -241,7 +241,7 @@ public class SafariWallScreenBlock extends HorizontalDirectionalBlock implements
                 double angle = Math.toRadians(tiltDegrees(tilt));
                 double sin = Math.sin(angle);
                 double cos = Math.cos(angle);
-                // The first slice seeds the union, as in SafariBoardFrameBlock, instead
+                // The first slice seeds the union instead
                 // of an empty-shape helper the project does not otherwise rely on.
                 VoxelShape shape = null;
                 double sliceHeight = PANEL_HEIGHT_PIXELS / HITBOX_SLICES;

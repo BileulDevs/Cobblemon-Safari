@@ -243,7 +243,7 @@ def ground(put):
 def gatehouse(put, leaves, lantern):
     """
     The gate itself: the pane between two square towers of acacia and mud
-    brick, a three-deep lintel, a 3 x 2 Safari Board on each face, and a
+    brick, a three-deep lintel, a planked panel above it, and a
     thatched roof over the whole span with a leafy fringe.
     """
     # The pane: three wide, four high, along X. The towers are its frame.
@@ -271,14 +271,13 @@ def gatehouse(put, leaves, lantern):
                 put(dx, 5, dz, "minecraft:orange_wall_banner" if abs(dx) == 3 else "minecraft:yellow_wall_banner",
                     facing=facing)
 
-    # Lintel over the doorway, then the boards' backing and the boards.
+    # Lintel over the doorway, then a planked panel above it (it held the
+    # Safari Boards, removed from the mod).
     for dx in range(-1, 2):
         for dz in (-1, 0, 1):
             put(dx, 5, dz, LOG, axis="x")
         for y in (6, 7):
             put(dx, y, 0, PLANKS)
-            put(dx, y, 1, "cobblemon_safari:safari_board", facing="south")
-            put(dx, y, -1, "cobblemon_safari:safari_board", facing="north")
 
     # Thatch: three courses stepping in, a leafy fringe across the faces
     # (leaves, not thatch, so no Pokémon can be placed up there).

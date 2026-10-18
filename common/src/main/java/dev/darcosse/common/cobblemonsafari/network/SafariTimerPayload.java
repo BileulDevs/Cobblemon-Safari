@@ -19,7 +19,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
  * @param catches        Pokémon caught so far this session
  * @param ballsLoaned    Safari Balls lent at the entrance; 0 hides the ball counter
  * @param grantedTicks   total time granted over the session, additions included;
- *                       the denominator of the Safari Board's progress bar
+ *                       the denominator of the wall screens' progress bar
  */
 public record SafariTimerPayload(boolean active, int remainingTicks, boolean running, int catches, int ballsLoaned,
                                  int grantedTicks)

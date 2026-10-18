@@ -1,7 +1,7 @@
 package dev.darcosse.common.cobblemonsafari.config;
 
 /**
- * How the Safari Board screens draw a Pokémon. In common because the client
+ * How the wall screens draw a Pokémon. In common because the client
  * config is parsed by common code; it carries no client-only type.
  */
 public enum PokemonDisplay {

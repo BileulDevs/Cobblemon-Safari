@@ -1,12 +1,8 @@
 package dev.darcosse.common.cobblemonsafari.client.board;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.client.SafariLandscapes;
-import dev.darcosse.common.cobblemonsafari.block.SafariBoardBlock;
-import dev.darcosse.common.cobblemonsafari.block.SafariBoardBlockEntity;
-import dev.darcosse.common.cobblemonsafari.block.ScreenLayout;
 import dev.darcosse.common.cobblemonsafari.block.WallScreenContent;
 import dev.darcosse.common.cobblemonsafari.bounty.Bounty;
 import dev.darcosse.common.cobblemonsafari.client.BountyClientState;
@@ -24,42 +20,33 @@ import dev.darcosse.common.cobblemonsafari.util.Ticks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
-import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.HorizontalDirectionalBlock;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.AABB;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 
 /**
- * Draws the Safari Board screen: a station-style display of the special
- * Pokémon of the day with their animated models
- * and a progress bar for the time that matters to the viewer (their own
- * hunt if they have a session, otherwise the time until the next rotation).
+ * Paints the picture of a wall screen: a station-style display of the
+ * special Pokémon of the day with their animated models (FEATURED page), the
+ * hunter's numbers (STATS) or the missions (BOUNTIES), with a header, a
+ * footer and a progress bar for the time that matters to the viewer (their
+ * own hunt if they have a session, otherwise the time until the next
+ * rotation).
  *
- * <p>Also paints the STATS and BOUNTIES pages of the wall screens (see
- * {@link #paintScreen}), with the same header, footer and effects.
+ * <p>Not a block entity renderer itself: {@code SafariWallScreenRenderer}
+ * places and tilts the pose, then calls {@link #paintScreen}. Everything is
+ * laid out on a virtual canvas whose shorter side is
+ * {@link #CANVAS_SHORT_SIDE} pixels, so a bigger screen shows the same
+ * layout, bigger.
  *
- * <p>Only the bottom-left block of a screen draws; it draws the whole
- * rectangle. Everything is laid out on a virtual canvas whose shorter side is
- * {@link #CANVAS_SHORT_SIDE} pixels, so a bigger wall shows the same layout,
- * bigger.
+ * <p>Cost per painted screen per frame: a few dozen quads and strings, plus
+ * one Cobblemon model per special on the current page.
  *
- * <p>Cost per visible screen per frame: a few dozen quads and strings, plus
- * one Cobblemon model per special on the current page. Boards that are not
- * anchors return after one cached lookup.
- *
- * CLIENT ONLY.
+ * CLIENT ONLY, render thread.
  */
-public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlockEntity> {
+public class SafariScreenPainter {
 
     // ---- Geometry -------------------------------------------------------
 
@@ -69,33 +56,6 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
      * screen (more room, smaller text); lowering it the opposite.
      */
     private static final float CANVAS_SHORT_SIDE = 120.0F;
-
-    /** Depth of the panel's front face from the block centre, in blocks: see {@link SafariBoardBlock#PANEL_THICKNESS_PIXELS}. */
-    private static final float PANEL_FRONT_Z = -0.5F + SafariBoardBlock.PANEL_THICKNESS_PIXELS / 16.0F;
-
-    /**
-     * Gap between the panel and the picture, in blocks. Too small would
-     * z-fight with the block face, too large floats visibly. 0.008 (an
-     * eighth of a texture pixel) is a comfortable margin; the border flicker
-     * once blamed on this gap came from two layers of the picture itself,
-     * see the depth layers below.
-     */
-    private static final float SURFACE_GAP = 0.008F;
-
-    /** Draw distance in blocks; vanilla's default (64) cuts big station walls too early. */
-    private static final int VIEW_DISTANCE = 96;
-
-    /**
-     * How far the picture spreads over a frame on each framed side, in blocks.
-     * The frame has 6 px of planks between screen and beam (beam from 6 to
-     * 10 px in {@code SafariBoardFrameBlock}); spreading 4 px leaves a 2 px
-     * band of wood around the picture. 6 would hide the planks entirely, more
-     * would draw over the beam.
-     */
-    private static final float FRAME_OVERLAP = 4.0F / 16.0F;
-
-    /** Blocks added around a screen's bounds for models popping out of it. */
-    private static final double BOUNDS_MARGIN = 1.0D;
 
     // ---- Layout (canvas pixels) ------------------------------------------
 
@@ -196,7 +156,7 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
 
     // ---- Animation ----------------------------------------------------------
 
-    /** One full turn of the models. Shorter feels hectic on a board meant to be read. */
+    /** One full turn of the models. Shorter feels hectic on a screen meant to be read. */
     private static final long SPIN_PERIOD_MS = 12_000L;
     /** Angle between neighbouring models, so they do not turn in lockstep. */
     private static final float SPIN_PHASE_DEGREES = 47.0F;
@@ -260,7 +220,7 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
     private final Font font;
     /**
      * Colours of the frame being drawn, read from the client config once per
-     * screen. Render thread only, like everything in a block entity renderer.
+     * screen. Render thread only, like everything that draws in the world.
      */
     private BoardPalette pal = SafariClientConfigManager.palette();
     /** Whether this frame draws the landscape, and the panels' alpha over it (from the client config). */
@@ -269,88 +229,19 @@ public class SafariBoardRenderer implements BlockEntityRenderer<SafariBoardBlock
     private boolean spriteMode;
     private int panelAlpha = ALPHA_MAX;
 
-    /** Created by the loader's renderer registry. */
-    public SafariBoardRenderer(BlockEntityRendererProvider.Context context) {
-        this.font = context.getFont();
-    }
-
-    /**
-     * Rendered even when the anchor block itself is off-screen: on a big wall
-     * the bottom-left corner can be out of view while the rest is in plain
-     * sight. Vanilla then renders it without a frustum check; NeoForge still
-     * culls with {@link #screenBounds}.
-     */
-    @Override
-    public boolean shouldRenderOffScreen(SafariBoardBlockEntity blockEntity) {
-        return true;
-    }
-
-    /** See {@link #VIEW_DISTANCE}. */
-    @Override
-    public int getViewDistance() {
-        return VIEW_DISTANCE;
-    }
-
-    /**
-     * World box covering the whole screen drawn by this block, models
-     * included; just the block for boards that do not draw. Used by the
-     * NeoForge subclass for frustum culling.
-     */
-    protected AABB screenBounds(SafariBoardBlockEntity blockEntity) {
-        BlockPos pos = blockEntity.getBlockPos();
-        ScreenLayout layout = blockEntity.layout();
-        BlockState state = blockEntity.getBlockState();
-        if (!layout.anchor() || !state.hasProperty(HorizontalDirectionalBlock.FACING)) {
-            return new AABB(pos);
-        }
-        Direction right = ScreenLayout.rightOf(state.getValue(HorizontalDirectionalBlock.FACING));
-        BlockPos far = pos.relative(right, layout.width() - 1).above(layout.height() - 1);
-        return AABB.encapsulatingFullBlocks(pos, far).inflate(BOUNDS_MARGIN);
-    }
-
-    /** Draws the screen if this block is the anchor of one. */
-    @Override
-    public void render(SafariBoardBlockEntity blockEntity, float partialTick, PoseStack poseStack,
-                       MultiBufferSource buffers, int packedLight, int packedOverlay) {
-        Level level = blockEntity.getLevel();
-        BlockState state = blockEntity.getBlockState();
-        if (level == null || !state.hasProperty(HorizontalDirectionalBlock.FACING)) {
-            return;
-        }
-        ScreenLayout layout = blockEntity.layout();
-        if (!layout.anchor()) {
-            return;
-        }
-        Direction facing = state.getValue(HorizontalDirectionalBlock.FACING);
-        // Framed sides: the picture covers the frame's planks up to its beam.
-        float growLeft = layout.framedLeft() ? FRAME_OVERLAP : 0.0F;
-        float growRight = layout.framedRight() ? FRAME_OVERLAP : 0.0F;
-        float growTop = layout.framedTop() ? FRAME_OVERLAP : 0.0F;
-        float growBottom = layout.framedBottom() ? FRAME_OVERLAP : 0.0F;
-        float widthBlocks = layout.width() + growLeft + growRight;
-        float heightBlocks = layout.height() + growTop + growBottom;
-
-        poseStack.pushPose();
-        // Block centre, then turn so +X is the reader's right, +Y up and +Z out
-        // of the screen (toYRot: south 0, west 90, north 180, east 270).
-        poseStack.translate(0.5F, 0.5F, 0.5F);
-        poseStack.mulPose(Axis.YP.rotationDegrees(-facing.toYRot()));
-        // Top-left corner of the whole screen, just in front of the panel.
-        poseStack.translate(-0.5F - growLeft, -0.5F + layout.height() + growTop, PANEL_FRONT_Z + SURFACE_GAP);
-        paintScreen(poseStack, buffers, widthBlocks, heightBlocks, level.getGameTime(), WallScreenContent.FEATURED);
-        poseStack.popPose();
+    /** Painter drawing its text with the given font (the block entity renderer context's). */
+    public SafariScreenPainter(Font font) {
+        this.font = font;
     }
 
     /**
      * Draws the whole picture of a screen of the given size, in blocks. The
      * pose must already sit at the screen's top-left corner, on its surface,
      * with +X to the reader's right, +Y up and +Z toward the reader; the pose
-     * is left as it was found.
+     * is left as it was found. {@code SafariWallScreenRenderer} tilts the
+     * pose before calling this.
      *
-     * <p>Shared with {@code SafariWallScreenRenderer}, which tilts the pose
-     * first: one layout code for both screens, so they always look alike.
-     *
-     * @param content which page to show; the Safari Board always shows {@link WallScreenContent#FEATURED}
+     * @param content which page to show
      */
     void paintScreen(PoseStack poseStack, MultiBufferSource buffers, float widthBlocks, float heightBlocks,
                      long gameTime, WallScreenContent content) {

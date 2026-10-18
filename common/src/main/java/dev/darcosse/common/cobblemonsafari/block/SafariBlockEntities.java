@@ -20,7 +20,6 @@ import java.util.function.BiFunction;
  */
 public final class SafariBlockEntities {
 
-    private static BlockEntityType<SafariBoardBlockEntity> safariBoard;
     private static BlockEntityType<SafariGateBlockEntity> safariGate;
     private static BlockEntityType<SafariWallScreenBlockEntity> safariWallScreen;
     private static BlockEntityType<SafariBannerBlockEntity> safariBanner;
@@ -57,9 +56,6 @@ public final class SafariBlockEntities {
     @SuppressWarnings("unchecked")
     public static void register(TypeFactory factory, BiConsumer<ResourceLocation, BlockEntityType<?>> registrar) {
         // Safe: each type was built from the constructor of exactly that block entity class.
-        safariBoard = (BlockEntityType<SafariBoardBlockEntity>) factory.create(SafariBoardBlockEntity::new,
-                SafariBlocks.safariBoard());
-        registrar.accept(SafariBlocks.SAFARI_BOARD_ID, safariBoard);
         safariGate = (BlockEntityType<SafariGateBlockEntity>) factory.create(SafariGateBlockEntity::new,
                 SafariBlocks.safariGate());
         registrar.accept(SafariBlocks.SAFARI_GATE_ID, safariGate);
@@ -108,15 +104,4 @@ public final class SafariBlockEntities {
         return safariGate;
     }
 
-    /**
-     * Type of the Safari Board's block entity.
-     *
-     * @throws IllegalStateException before registration, which means a loader entry point is wired wrong
-     */
-    public static BlockEntityType<SafariBoardBlockEntity> safariBoard() {
-        if (safariBoard == null) {
-            throw new IllegalStateException("SafariBlockEntities.register was never called");
-        }
-        return safariBoard;
-    }
 }

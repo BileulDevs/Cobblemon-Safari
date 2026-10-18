@@ -11,7 +11,7 @@ import java.util.List;
 
 /**
  * Server-to-client missions of the day and the receiving player's progress,
- * for the bounty page of the Safari Board. Sent on join, when the missions
+ * for the BOUNTIES page of the wall screens. Sent on join, when the missions
  * change, and when the player's progress moves.
  *
  * @param enabled      whether missions are switched on; when false the board skips their page

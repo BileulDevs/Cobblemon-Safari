@@ -126,7 +126,7 @@ public class SafariConfig {
     /** The Escape Rope lent at the entrance, to get out of caves. */
     public EscapeRope escapeRope = new EscapeRope();
 
-    /** Daily missions shown on the Safari Board, paid in Safari points. */
+    /** Daily missions shown on the wall screens, paid in Safari points. */
     public Bounties bounties = new Bounties();
 
     /** Which Pokémon may appear in the Safari, whoever spawns them. */
@@ -339,7 +339,7 @@ public class SafariConfig {
         public int rare = 50;
         public int ultraRare = 120;
 
-        /** Extra points when the species is one of today's specials on the Safari Board. */
+        /** Extra points when the species is one of today's specials. */
         public int featuredBonus = 50;
 
         /** Extra points for a shiny. */
@@ -401,7 +401,7 @@ public class SafariConfig {
     /**
      * Special Pokémon of the day: a handful of uncommon, rare and ultra-rare
      * species drawn from what is installed (Cobblemon and datapacks), shown on
-     * the Safari Board and spawned in their habitat by the mod itself.
+     * the wall screens and spawned in their habitat by the mod itself.
      */
     public static class Featured {
         /** Master switch for the rotation, the board content and the special spawner. */

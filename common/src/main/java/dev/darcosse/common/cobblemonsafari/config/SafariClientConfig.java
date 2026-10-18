@@ -38,11 +38,11 @@ public class SafariClientConfig {
     /** Below this many seconds the timer turns red and pulses, and the ball rocks faster. */
     public int criticalTimeSeconds = 10;
 
-    /** Look of the Safari Board screens. */
+    /** Look of the wall screens (the section keeps its old name, "board", so existing files still load). */
     public Board board = new Board();
 
     /**
-     * How the Safari Board screens look. The few real choices come first;
+     * How the wall screens look. The few real choices come first;
      * the colours, many and rarely touched, have their own section.
      */
     public static class Board {
@@ -72,7 +72,7 @@ public class SafariClientConfig {
     }
 
     /**
-     * Colours of the Safari Board screens, as {@code "#RRGGBB"} or
+     * Colours of the wall screens, as {@code "#RRGGBB"} or
      * {@code "#AARRGGBB"} (the alpha matters for the overlay effects only).
      * An invalid value is replaced by its default and the file is rewritten.
      *

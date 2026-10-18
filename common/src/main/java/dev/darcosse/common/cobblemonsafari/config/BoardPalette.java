@@ -8,7 +8,7 @@ import java.lang.reflect.Modifier;
 import java.util.Locale;
 
 /**
- * The Safari Board colours, parsed once from {@link SafariClientConfig.BoardColors}
+ * The wall screens' colours, parsed once from {@link SafariClientConfig.BoardColors}
  * into ARGB ints so the renderer never parses strings per frame.
  *
  * <p>Free of client-only imports: it only reads the client config file.

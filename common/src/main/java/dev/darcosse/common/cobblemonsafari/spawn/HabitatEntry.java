@@ -33,7 +33,7 @@ public record HabitatEntry(Species species, Set<ResourceKey<Biome>> landHabitats
     }
 
     /**
-     * The habitat shown on the Safari Board: the first land habitat in the
+     * The habitat shown on the wall screens: the first land habitat in the
      * Safari's canonical order, or the first water one.
      */
     @Nullable

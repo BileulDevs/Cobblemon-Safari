@@ -111,7 +111,7 @@ public final class WallScreenSettings {
             return;
         }
         WallScreenLayout layout = WallScreenLayout.compute(level, pos, state);
-        Direction right = ScreenLayout.rightOf(state.getValue(HorizontalDirectionalBlock.FACING));
+        Direction right = WallScreenLayout.rightOf(state.getValue(HorizontalDirectionalBlock.FACING));
         for (int i = 0; i < layout.width(); i++) {
             BlockPos part = layout.anchorPos().relative(right, i);
             BlockState partState = level.getBlockState(part);

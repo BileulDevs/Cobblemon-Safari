@@ -2,7 +2,6 @@ package dev.darcosse.common.cobblemonsafari.block;
 
 import com.mojang.serialization.MapCodec;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
-import dev.darcosse.common.cobblemonsafari.gate.GateClientHooks;
 import dev.darcosse.common.cobblemonsafari.gate.SafariGate;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -232,13 +231,11 @@ public class SafariGateBlock extends Block implements EntityBlock, Portal {
     }
 
     /**
-     * Spore blossom spores and petals, and the gate's relaxed tune (in place of the nether portal's
-     * hum), so the gate reads as active from a distance. The tune is a loop
-     * the client keeps once per gate; this only makes sure it is playing.
+     * Spore blossom spores and petals, so the gate reads as active from a
+     * distance. No sound: unlike the nether portal, the gate does not hum.
      */
     @Override
     public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
-        GateClientHooks.onPaneAnimated(level, pos);
         if (random.nextInt(SPORE_ONE_IN) == 0) {
             // Spread across the pane's plane only, so the spores hang in front
             // of and behind the doorway rather than inside the posts.

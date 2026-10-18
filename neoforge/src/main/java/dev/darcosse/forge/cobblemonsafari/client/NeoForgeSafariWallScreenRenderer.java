@@ -9,10 +9,15 @@ import net.neoforged.neoforge.client.extensions.IBlockEntityRendererExtension;
 /**
  * The wall screen renderer with NeoForge's culling box.
  *
- * <p>Same reason as {@link NeoForgeSafariBoardRenderer}: NeoForge culls block
- * entity renderers against the block alone by default, so a group of screens
- * would vanish as soon as its leftmost block leaves the view. Implements the
- * extension interface explicitly for the same bridge-method reason.
+ * <p>NeoForge culls block entity renderers against a box that defaults to
+ * the block itself, so a group of screens would vanish as soon as its
+ * leftmost block leaves the view. The box returned here covers the whole
+ * group.
+ *
+ * <p>Implements {@link IBlockEntityRendererExtension} explicitly instead of
+ * relying on it being injected into {@code BlockEntityRenderer}: either way
+ * javac then emits the bridge method the game calls at runtime, which a plain
+ * method compiled without the interface in sight would not get.
  *
  * CLIENT ONLY.
  */

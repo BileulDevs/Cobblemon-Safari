@@ -43,9 +43,8 @@ public final class NeoForgeClientSetup {
         event.register(SafariDimensions.EFFECTS_ID, new SafariSkyEffects());
     }
 
-    /** Mod-bus handler: the board, wall screen and banner renderers, with NeoForge's culling box. */
+    /** Mod-bus handler: the wall screen and banner renderers, with NeoForge's culling box. */
     private static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
-        event.registerBlockEntityRenderer(SafariBlockEntities.safariBoard(), NeoForgeSafariBoardRenderer::new);
         event.registerBlockEntityRenderer(SafariBlockEntities.safariWallScreen(),
                 NeoForgeSafariWallScreenRenderer::new);
         event.registerBlockEntityRenderer(SafariBlockEntities.safariBanner(), NeoForgeSafariBannerRenderer::new);

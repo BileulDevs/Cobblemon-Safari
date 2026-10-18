@@ -31,8 +31,6 @@ public final class SafariItems {
     private static final int TICKET_STACK_SIZE = 16;
 
     private static Item safariTicket;
-    private static Item safariBoard;
-    private static Item safariBoardFrame;
     private static Item safariWallScreen;
     private static Item safariGate;
     private static Item escapeRope;
@@ -52,10 +50,6 @@ public final class SafariItems {
         // ticket, its length set by ticket.defaultDurationSeconds.
         safariTicket = new SafariTicketItem(new Item.Properties().stacksTo(TICKET_STACK_SIZE).rarity(Rarity.UNCOMMON));
         registrar.accept(SAFARI_TICKET_ID, safariTicket);
-        safariBoard = new BlockItem(SafariBlocks.safariBoard(), new Item.Properties());
-        registrar.accept(SafariBlocks.SAFARI_BOARD_ID, safariBoard);
-        safariBoardFrame = new BlockItem(SafariBlocks.safariBoardFrame(), new Item.Properties());
-        registrar.accept(SafariBlocks.SAFARI_BOARD_FRAME_ID, safariBoardFrame);
         safariWallScreen = new BlockItem(SafariBlocks.safariWallScreen(), new Item.Properties());
         registrar.accept(SafariBlocks.SAFARI_WALL_SCREEN_ID, safariWallScreen);
         // Epic like other blocks only operators can get (command blocks, structure blocks).
@@ -92,18 +86,6 @@ public final class SafariItems {
     }
 
     /**
-     * The Safari Board Frame, as an item.
-     *
-     * @throws IllegalStateException before registration
-     */
-    public static Item safariBoardFrame() {
-        if (safariBoardFrame == null) {
-            throw new IllegalStateException("SafariItems.register was never called");
-        }
-        return safariBoardFrame;
-    }
-
-    /**
      * The Safari Wall Screen, as an item.
      *
      * @throws IllegalStateException before registration
@@ -113,18 +95,6 @@ public final class SafariItems {
             throw new IllegalStateException("SafariItems.register was never called");
         }
         return safariWallScreen;
-    }
-
-    /**
-     * The Safari Board, as an item.
-     *
-     * @throws IllegalStateException before registration
-     */
-    public static Item safariBoard() {
-        if (safariBoard == null) {
-            throw new IllegalStateException("SafariItems.register was never called");
-        }
-        return safariBoard;
     }
 
     /**

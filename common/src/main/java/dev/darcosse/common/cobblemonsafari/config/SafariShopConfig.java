@@ -177,7 +177,7 @@ public class SafariShopConfig {
 
         /**
          * Leaves out the specials of the current rotation, so the shop never
-         * sells what players are hunting on the Safari Board.
+         * sells what players are hunting today.
          */
         public boolean excludeSpecials = true;
 

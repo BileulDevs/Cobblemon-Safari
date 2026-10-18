@@ -43,3 +43,5 @@ replay_*.log
 tools/worldgen/.vanilla_cache/
 /A_LIRE.md
 /afaire.txt
+
+*.salive

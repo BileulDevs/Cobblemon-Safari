@@ -18,7 +18,7 @@ public enum Rarity {
 
     /** Cobblemon spawn bucket name this rarity stands for. */
     public final String bucket;
-    /** Colour of the rarity name on the Safari Board. */
+    /** Colour of the rarity name on the wall screens. */
     public final ChatFormatting color;
 
     Rarity(String bucket, ChatFormatting color) {

@@ -411,7 +411,7 @@ public final class SafariCommands {
         return stats.totalCatches();
     }
 
-    /** Prints the same list as the Safari Board. */
+    /** Prints the same list as the wall screens' FEATURED page. */
     private static int showToday(CommandContext<CommandSourceStack> ctx) {
         for (Component line : FeaturedBoard.lines(ctx.getSource().getServer())) {
             ctx.getSource().sendSuccess(() -> line, false);

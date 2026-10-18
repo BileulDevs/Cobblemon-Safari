@@ -37,7 +37,7 @@ public final class RestHouses {
      * Distance from the centre to the farthest block a house touches: the
      * front plaza and the cleared ring around it. Everything that must keep
      * away from a house (arrivals, specials) measures from this, not from the
-     * walls, or a special could pop up on the plaza in front of the board.
+     * walls, or a special could pop up on the plaza in front of the door.
      */
     public static final int FOOTPRINT_REACH = HALF_SIZE + 5;
 
@@ -63,7 +63,7 @@ public final class RestHouses {
      *
      * @param x        centre column
      * @param z        centre column
-     * @param entrance whether it is the entrance house (the one with the board)
+     * @param entrance whether it is the entrance house (the one nearest the arrival point)
      */
     public record HouseSite(int x, int z, boolean entrance) {
     }
@@ -101,11 +101,11 @@ public final class RestHouses {
             if (state.isHouseBuilt(position.x(), position.z())) {
                 continue;
             }
-            // The first house is the entrance: it also gets the Safari Board.
+            // The first house is the entrance: it is searched for closer to its anchor.
             boolean entrance = i == 0;
             int radius = entrance ? ENTRANCE_SEARCH_RADIUS : SEARCH_RADIUS;
             int[] site = RestHouseSites.find(safari, position.x(), position.z(), radius, taken);
-            RestHouseBuilder.build(safari, site[0], site[1], doorFacing(site[0], site[1]), entrance);
+            RestHouseBuilder.build(safari, site[0], site[1], doorFacing(site[0], site[1]));
             state.markHouseBuilt(position.x(), position.z(), site[0], site[1]);
             taken.add(site);
             CobblemonSafari.LOGGER.info("Built Safari rest house at {}, {} (anchor {}, {})",
