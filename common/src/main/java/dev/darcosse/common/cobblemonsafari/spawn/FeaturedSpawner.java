@@ -149,7 +149,7 @@ public final class FeaturedSpawner {
         BlockPos spawnPos = water ? feet.below() : feet;
         Holder<Biome> biome = level.getBiome(spawnPos);
 
-        HabitatEntry entry = pick(specials, biome, water, nearbySpecials, level, player.getServer(), random);
+        HabitatEntry entry = pick(specials, biome, water, spawnPos, nearbySpecials, level, player.getServer(), random);
         if (entry == null) {
             return;
         }
@@ -158,22 +158,26 @@ public final class FeaturedSpawner {
 
     /**
      * Weighted pick among the specials living in that biome, leaving out
-     * species already present around the player, legendary-class species
+     * those whose natural spawns refuse the hour or the light at that spot
+     * (a nocturnal species by day, a Gastly in daylight), species already
+     * present around the player, legendary-class species
      * already roaming the park and those that used up their appearances for
      * this rotation.
      */
     @Nullable
     private static HabitatEntry pick(List<HabitatEntry> specials, Holder<Biome> biome, boolean water,
-                                     List<PokemonEntity> nearbySpecials, ServerLevel level, MinecraftServer server,
+                                     BlockPos spawnPos, List<PokemonEntity> nearbySpecials, ServerLevel level, MinecraftServer server,
                                      RandomSource random) {
         List<HabitatEntry> candidates = new ArrayList<>();
         int totalWeight = 0;
         for (HabitatEntry entry : specials) {
             boolean livesHere = (water ? entry.waterHabitats() : entry.landHabitats()).stream().anyMatch(key -> biome.is(key));
+            // Cheap checks first: the window check reads light, the others are lookups.
             if (!livesHere || !SpeciesRules.isAllowed(entry.species())
                     || isPresent(nearbySpecials, entry)
                     || (SpeciesRules.isSpecial(entry.species()) && isRoamingAnywhere(level, entry))
-                    || !SpecialSpawnCounter.canSpawn(server, entry.species())) {
+                    || !SpecialSpawnCounter.canSpawn(server, entry.species())
+                    || !entry.canSpawnAt(level, spawnPos, biome, water)) {
                 continue;
             }
             int weight = weight(entry.rarity());

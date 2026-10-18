@@ -55,6 +55,8 @@ public class SafariConfig {
      * Version 21: spawns.allowLegendary, allowMythical, allowUltraBeast and
      * allowParadox became the sections spawns.legendary, mythical, ultraBeast
      * and paradox ({allowSpawn, maxSpawnPerPokemon}); the old values move in.
+     * Version 22: loan.count 30 to 0, players bring their own balls (the shop
+     * gives free Safari Balls once a day); a file still on 30 follows.
      */
     public int configVersion = SafariConfigManager.CURRENT_CONFIG_VERSION;
 
@@ -455,15 +457,17 @@ public class SafariConfig {
 
     /**
      * Safari Balls handed out on entry and taken back on exit, like the 30 balls
-     * of the original Safari Zones.
+     * of the original Safari Zones. Off by default: players bring their own
+     * allowed balls, and the shop gives free Safari Balls once a day; kept for
+     * servers that want the games' rule.
      *
      * <p>Loaned balls carry a marker, cannot be thrown outside the Safari, and
      * are removed from the inventory as soon as the player is outside: they
      * can never be farmed by entering and leaving repeatedly.
      */
     public static class Loan {
-        /** Balls handed out per session. 0 disables the loan; players then bring their own allowed balls. */
-        public int count = 30;
+        /** Balls handed out per session. 0 (the default) disables the loan; players then bring their own allowed balls. */
+        public int count = 0;
 
         /**
          * Item id of the loaned ball. It is always usable inside the Safari,

@@ -4,9 +4,11 @@ import dev.darcosse.common.cobblemonsafari.park.ParkGeometry;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
 import dev.darcosse.common.cobblemonsafari.world.SafariWorldState;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -156,6 +158,35 @@ public final class RestHouses {
             }
         }
         return false;
+    }
+
+    /**
+     * Where players arrive in the Safari: on the plaza of the entrance house,
+     * in front of its doorway.
+     *
+     * @param column the column to stand on (y 0: the caller finds the ground)
+     * @param yaw    the rotation that faces the doorway
+     */
+    public record Arrival(BlockPos column, float yaw) {
+    }
+
+    /**
+     * The arrival in front of the entrance house, or null when no entrance
+     * house is known (the Safari level is missing). Before the first build of
+     * this server run it uses the entrance anchor, where the house will
+     * stand only if the anchor was a good spot; callers check the ground.
+     */
+    @Nullable
+    public static Arrival entranceArrival() {
+        for (HouseSite site : sites()) {
+            if (site.entrance()) {
+                Direction facing = doorFacing(site.x(), site.z());
+                // Looking back at the house: the opposite of where its door opens.
+                return new Arrival(RestHouseBuilder.arrivalColumn(site.x(), site.z(), facing),
+                        facing.getOpposite().toYRot());
+            }
+        }
+        return null;
     }
 
     /**

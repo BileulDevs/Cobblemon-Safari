@@ -52,12 +52,14 @@ OUT = os.path.join(ROOT, "common", "src", "main", "resources", "data", MOD_ID)
 ISLAND_CENTER_X = 0
 ISLAND_CENTER_Z = 0
 
-# Radius, in blocks, of the island's shape. Land ends around 0.85 of it (see
-# SHORE_START / COAST_STEEPEN_*), so 512 gives about 900 blocks of land across.
+# Radius, in blocks, of the island's shape. Land ends around 0.9 of it (the
+# coast point of CONTINENT_PROFILE), so 768 gives about 1400 blocks of land
+# across (it was 512, about 900 blocks). The daily map reset regenerates the
+# island, so a bigger radius means a longer first visit after each reset.
 # Everything below scales with it, so changing it keeps the same layout at
 # another size. The mod reads the matching park geometry (border, arrival)
 # from park/ParkGeometry.java, which this script writes.
-ISLAND_RADIUS = 512
+ISLAND_RADIUS = 768
 
 # The world border is a square of half-side ISLAND_RADIUS * (1 + BORDER_MARGIN):
 # it encloses the whole island plus a strip of lagoon, and its corners are
@@ -88,25 +90,24 @@ REST_HOUSE_RING = ARRIVAL_NORTH
 PARK_GEOMETRY_JAVA = os.path.join(ROOT, "common", "src", "main", "java", "dev", "darcosse", "common",
                                   "cobblemonsafari", "park", "ParkGeometry.java")
 
-# Continentalness at the centre, and the fraction of the radius where the coast
-# begins (continentalness -0.11, vanilla "coast" threshold). The slope follows.
-# Raising SHORE_START moves beaches outward and shrinks the lagoon ring.
-CONTINENT_AT_CENTER = 0.5
-SHORE_START = 0.85
-CONTINENT_SLOPE = (CONTINENT_AT_CENTER - (-0.11)) / SHORE_START
+# Radial profiles of the terrain, as (fraction of the radius, value) points
+# joined by a smooth curve (a spline over the distance to the centre). Noise
+# is added on top so borders and heights wander.
+#
+# Continentalness decides how high the land sits; vanilla's terrain spline
+# keeps land near sea level below about 0, raises plateaus around 0.25 and
+# mountains beyond. The island used to climb straight from the coast to 0.5
+# at the centre: flat shores and one huge central mountain. Now it holds a
+# broad mid-inland plateau almost to the coast, so the relief is spread
+# evenly, then drops to the coast (-0.11, vanilla's "coast" threshold) at
+# about 0.9 radius and to the sea floor beyond. Raising the plateau values
+# lifts the whole island; moving the coast points changes the land radius.
+CONTINENT_PROFILE = [(0.0, 0.1), (0.25, 0.18), (0.6, 0.22), (0.82, 0.14), (0.9, -0.11), (1.0, -0.5), (1.15, -1.0)]
 
-# Beyond COAST_STEEPEN_FROM (fraction of the radius) the slope is multiplied
-# by COAST_STEEPEN_FACTOR. The beach band width is 0.08 / slope radii, so it
-# grows with ISLAND_RADIUS: at 512 and factor 2 it was ~30 blocks and the
-# largest habitat of the island; at 3.5 it is ~16 blocks and land ends at
-# about 0.85 radius.
-COAST_STEEPEN_FROM = 0.8
-COAST_STEEPEN_FACTOR = 3.5
-
-# Amplitude of the coastline wobble. 0.12 moves the shore by about
-# 0.12 / CONTINENT_SLOPE = 17% of the radius: bays and capes without islets.
-# Above ~0.25 the island breaks into an archipelago.
-COAST_NOISE = 0.12
+# Amplitude of the coastline wobble, in continentalness. 0.1 moves the shore
+# by about a tenth of the radius: bays and capes without islets. Above ~0.25
+# the island breaks into an archipelago.
+COAST_NOISE = 0.1
 
 # Lowest continentalness, reached in the open sea around the island.
 # Vanilla's terrain spline RAISES the sea floor again below -1.02 (that is
@@ -117,14 +118,15 @@ COAST_NOISE = 0.12
 # back; higher makes the open sea shallower.
 CONTINENT_FLOOR = -1.0
 
-# Erosion goes from sharp relief at the centre (a central mountain) to flat
-# lowlands on the coast. With these values: peaks within ~15% of the radius,
-# rocky ring to ~35%, rolling hills to ~74%, flat lowlands beyond. The centre
-# starts below -1 (clamped) so the summit survives the erosion noise; a
-# gentler slope widens the rocky ring until it becomes the dominant habitat.
-EROSION_AT_CENTER = -1.1
-EROSION_SLOPE = 2.1
-EROSION_NOISE = 0.25
+# Erosion: low means rugged (vanilla's mountains below -0.78), high means
+# flat. A small summit at the centre (peaks inside ~8% of the radius, the
+# rocky ring with the volcano to ~22%), then rolling hills over most of the
+# island and flat lowlands by the coast. The summit is kept small on purpose:
+# it holds the peaks and volcano habitats, but no longer dominates the island.
+# Lowering the first values grows the summit; raising the middle ones flattens
+# the hills.
+EROSION_PROFILE = [(0.0, -0.78), (0.1, -0.7), (0.26, -0.4), (0.45, -0.2), (0.72, 0.0), (0.86, 0.3), (1.0, 0.55)]
+EROSION_NOISE = 0.2
 
 # Noise added to the direction vector before the nearest-sector lookup. 0.15
 # swings sector borders by about 9 degrees each way (~45 blocks at mid-radius):
@@ -233,9 +235,18 @@ BIOMES = {
     "lake":           {"models": ["ocean"], "base": "ocean"},
     "river":          {"models": ["river"], "base": "river"},
     "shore":          {"models": ["beach"], "base": "beach"},
-    # Underground.
-    "cavern":         {"models": ["dripstone_caves"], "base": "dripstone_caves"},
+    # Underground. The cavern keeps the dripstone caves' look (ores, lichen,
+    # springs) without their dripstone: players found caves bristling with
+    # spikes everywhere.
+    "cavern":         {"models": ["dripstone_caves"], "base": "dripstone_caves",
+                       "excluded_features": ["minecraft:large_dripstone", "minecraft:dripstone_cluster",
+                                             "minecraft:pointed_dripstone"]},
     "lush_grotto":    {"models": ["lush_caves"], "base": "lush_caves"},
+    # The giant cavern under the summit (see GIANT_CAVERN) and the deep caves
+    # around it: the Safari's Deep Dark. Sculk veins on the walls, but no
+    # sculk patches: their shriekers would summon wardens.
+    "deep_cavern":    {"models": ["deep_dark"], "base": "deep_dark",
+                       "excluded_features": ["minecraft:sculk_patch_deep_dark"]},
 }
 
 # ---------------------------------------------------------------------------
@@ -286,6 +297,8 @@ HABITAT_SOUNDS = {
     "shore":          ("plains", ["krabby", "wimpod", "slowpoke", "crabrawler", "staryu"]),
     "cavern":         ("caves",  ["zubat", "geodude", "onix", "roggenrola", "lunatone"]),
     "lush_grotto":    ("caves",  ["ferroseed", "shuckle", "morelull", "goomy", "venipede"]),
+    # Cobblemon has no common Deep Dark spawn: these are its uncommon ones.
+    "deep_cavern":    ("caves",  ["zubat", "noibat", "whismur", "roggenrola", "mawile"]),
 }
 
 SOUNDS_OUT = os.path.join(ROOT, "common", "src", "main", "resources", "assets", MOD_ID, "sounds.json")
@@ -365,8 +378,9 @@ TAGS = {
     "safari_lake": ["lake"],
     "safari_river": ["river"],
     "safari_beach": ["shore"],
-    "safari_cave": ["cavern", "lush_grotto"],
+    "safari_cave": ["cavern", "lush_grotto", "deep_cavern"],
     "safari_lush_cave": ["lush_grotto"],
+    "safari_deep_cave": ["deep_cavern"],
     # Aggregates, for Pokemon that roam several habitats.
     "safari_grassland": ["grassland", "savanna", "flower_meadow"],
     "safari_wooded": ["woodland", "deep_forest", "taiga", "jungle"],
@@ -417,8 +431,15 @@ COBBLEMON_TAG_BRIDGE = {
     "mushroom_grove": ["is_mushroom", "is_magical"],
     "peaks":          ["is_peak", "is_mountain"],
     # is_badlands: the rocky, arid fauna of the volcano's slopes; the volcanic
-    # tags alone give 18 species.
-    "volcanic":       ["is_volcanic", "is_thermal", "is_badlands"],
+    # tags alone give 18 species. The nether/* tags bring the Nether's ashen
+    # and fiery fauna (basalt deltas, wastes, soul sand valleys: Onix,
+    # Litleo, Ponyta, Litwick, Duskull...). Deliberately NOT minecraft:is_nether:
+    # vanilla's nether fortresses and nether ruined portals generate in every
+    # biome of that tag, in any dimension. The crimson, warped, fungus,
+    # forest, frozen and overgrowth Nether tags are left out too: forest,
+    # mushroom and ice fauna do not belong on a volcano.
+    "volcanic":       ["is_volcanic", "is_thermal", "is_badlands", "nether/is_basalt", "nether/is_wasteland",
+                       "nether/is_mountain", "nether/is_soul_fire", "nether/is_soul_sand"],
     "lake":           ["is_ocean", "is_warm_ocean"],
     "river":          ["is_river", "is_freshwater"],
     "shore":          ["is_beach", "is_coast"],
@@ -429,6 +450,11 @@ COBBLEMON_TAG_BRIDGE = {
     # any cave of a normal Cobblemon world gets, surface strays included.
     "cavern":         ["is_cave", "is_dripstone", "is_overworld"],
     "lush_grotto":    ["is_cave", "is_lush"],
+    # Only the Deep Dark tag: Cobblemon's ordinary cave spawns often exclude
+    # it, so the deep cavern keeps a fauna of its own (Zubat line, Noibat,
+    # Sableye, Whismur, Roggenrola, Deino...). It must not be bridged to the
+    # cavern: those exclusions would empty the ordinary caves.
+    "deep_cavern":    ["is_deep_dark"],
 }
 
 # Biome tags shipped by Cobblemon 1.8.0. A bridged tag missing from this list
@@ -444,6 +470,10 @@ COBBLEMON_KNOWN_BIOME_TAGS = {
     "is_sky", "is_snowy", "is_snowy_forest", "is_snowy_taiga", "is_spooky", "is_stony_beach",
     "is_swamp", "is_taiga", "is_temperate", "is_temperate_ocean", "is_thermal", "is_tropical_island",
     "is_tundra", "is_volcanic", "is_warm_ocean",
+    # Nested tags of Cobblemon's Nether spawns (data/cobblemon/tags/worldgen/biome/nether/).
+    "nether/is_basalt", "nether/is_crimson", "nether/is_desert", "nether/is_forest", "nether/is_frozen",
+    "nether/is_fungus", "nether/is_mountain", "nether/is_overgrowth", "nether/is_quartz", "nether/is_soul_fire",
+    "nether/is_soul_sand", "nether/is_toxic", "nether/is_warped", "nether/is_wasteland",
 }
 
 # Where the bridge files go: Cobblemon's namespace, merged into its tags
@@ -497,8 +527,8 @@ C_COAST_AND_INLAND = [-0.19, 1.0]
 
 # Erosion bands, driven by the distance to the centre (see EROSION_*).
 E_ALL = [-1.0, 1.0]
-E_PEAK = [-1.0, -0.78]
-E_ROCKY = [-0.78, -0.375]
+E_PEAK = [-1.0, -0.68]
+E_ROCKY = [-0.68, -0.375]
 E_ROLLING = [-0.375, 0.45]
 E_FLAT = [0.45, 1.0]
 E_NOT_STEEP = [-0.375, 1.0]
@@ -514,6 +544,17 @@ ANY = [-2.0, 2.0]
 # Underground: vanilla convention, depth 0 is the surface, 0.2+ is below it.
 D_SURFACE = 0.0
 D_UNDERGROUND = [0.2, 1.0]
+# Deep underground, from about 30 blocks below the surface: under the summit
+# (erosion below E_DEEP_CAVERN_MAX) it is the deep cavern, elsewhere the
+# ordinary caves go on. Raising D_DEEP_FROM keeps the deep cavern lower down.
+D_DEEP_FROM = 0.25
+D_SHALLOW = [0.2, D_DEEP_FROM]
+D_DEEP = [D_DEEP_FROM, 1.0]
+# Erosion under which deep caves belong to the deep cavern: the summit and
+# the inner rocky ring, wider than the giant cavern itself.
+E_DEEP_CAVERN_MAX = -0.55
+E_DEEP_CAVERN = [-1.0, E_DEEP_CAVERN_MAX]
+E_NOT_DEEP_CAVERN = [E_DEEP_CAVERN_MAX, 1.0]
 # Humidity above which caves are lush: the southern sectors (direction_z > 0.5).
 LUSH_HUMIDITY = 0.5 * CLIMATE_SCALE
 
@@ -543,9 +584,14 @@ def climate_points():
         point("peaks", ANY, ANY, c=C_COAST_AND_INLAND, e=E_PEAK),
         # Rivers only on valley floors of non-steep inland terrain.
         point("river", ANY, ANY, c=C_INLAND, e=E_NOT_STEEP, w=W_VALLEY),
-        # Caves under the island (not under the sea).
-        point("cavern", ANY, [-2.0, LUSH_HUMIDITY], c=C_COAST_AND_INLAND, depth=D_UNDERGROUND),
-        point("lush_grotto", ANY, [LUSH_HUMIDITY, 2.0], c=C_COAST_AND_INLAND, depth=D_UNDERGROUND),
+        # Caves under the island (not under the sea). Shallow caves follow
+        # the humidity; deep ones too, except under the summit, which is the
+        # deep cavern. The ranges never overlap, so no point ties another.
+        point("cavern", ANY, [-2.0, LUSH_HUMIDITY], c=C_COAST_AND_INLAND, depth=D_SHALLOW),
+        point("lush_grotto", ANY, [LUSH_HUMIDITY, 2.0], c=C_COAST_AND_INLAND, depth=D_SHALLOW),
+        point("cavern", ANY, [-2.0, LUSH_HUMIDITY], c=C_COAST_AND_INLAND, e=E_NOT_DEEP_CAVERN, depth=D_DEEP),
+        point("lush_grotto", ANY, [LUSH_HUMIDITY, 2.0], c=C_COAST_AND_INLAND, e=E_NOT_DEEP_CAVERN, depth=D_DEEP),
+        point("deep_cavern", ANY, ANY, c=C_COAST_AND_INLAND, e=E_DEEP_CAVERN, depth=D_DEEP),
     ]
     for biome, angle in ROCKY_RING:
         t, h = on_circle(angle)
@@ -643,6 +689,7 @@ def build_biome(name, spec, orders):
         for model in spec["models"]:
             union.update(vanilla(f"worldgen/biome/{model}")["features"][step])
         union -= EXCLUDED_FEATURES
+        union -= set(spec.get("excluded_features", []))
         for extra in spec.get("extra_features", []):
             if extra in orders[step]:
                 union.add(extra)
@@ -686,6 +733,86 @@ def build_biome(name, spec, orders):
     return biome
 
 
+
+# ---------------------------------------------------------------------------
+# Caverns
+# ---------------------------------------------------------------------------
+# Two places where the caves grow into great natural caverns, each reached
+# from the surface by a winding passage. They are not dug as shapes: inside
+# a cavern zone the noise router adds a second set of "cheese" caves (the
+# large, pillared caves of the Caves & Cliffs update, same formula as
+# vanilla's) with a much lower threshold, so the caves there merge into big
+# chambers with pillars, ledges and pockets, and fade back into ordinary
+# rock towards the edge of the zone. Positions are in blocks. Water is kept
+# out of them (see caverns_dry): vanilla's aquifers would otherwise fill such
+# large spaces with underground lakes.
+#
+# The noise of the caverns: vanilla's cave_cheese without its two widest
+# octaves. Those octaves make whole regions of the world solid or hollow;
+# without them a cavern zone holds big caves on any seed instead of only
+# on some. The finer octaves, which give the walls their shape, are kept.
+CAVERN_NOISE = "cavern"
+CAVERN_NOISE_DATA = {"firstOctave": -6, "amplitudes": [2.0, 1.0, 2.0, 1.0, 0.0, 2.0, 0.0]}
+
+# The giant cavern, under the summit: the Safari's Deep Dark (deep_cavern
+# biome there). "radius" is the zone's horizontal radius, "center_y" and
+# "half_height" its vertical extent (kept large: a thin zone would give its
+# caves the flat floor and ceiling of its own shape); "boost" how much lower
+# than vanilla the cave threshold is inside it (0 = vanilla's caves; 0.3 =
+# about half of the rock hollowed out, in large chambers between pillars;
+# more than about 0.6 merges them into one bare hole).
+GIANT_CAVERN = {"x": 0, "z": 0, "radius": 120, "center_y": 24, "half_height": 60, "boost": 0.3}
+# Its passage starts on the far (east) side of the cavern and runs through
+# its centre, so it crosses several of its caves whatever the seed, then
+# climbs west and opens on the western slopes of the summit. It climbs
+# gently (a quarter block per block) so the stretch inside the cavern stays
+# at the height of its caves.
+GIANT_CAVERN_TUNNEL = {"name": "giant_cavern_passage", "x": 90, "z": 0, "y": 10, "direction": -1, "slope": 0.25, "length": 420,
+                       "half_width": 4.0, "half_height": 3.5}
+# The lush cavern, in the humid south (so its biome is the lush grotto):
+# moss, azaleas, glow berries and dripleaves over a whole cave system. Its
+# passage starts on its far (west) side, crosses it, then climbs east and
+# opens between the southern and eastern rest houses. Like vanilla's cheese
+# caves, its caves stay a dozen blocks under the ground (the sloped_cheese
+# guard in cavern_df), river beds included, so no river pours into them.
+LUSH_CAVERN_Z = round(0.35 * ISLAND_RADIUS)
+LUSH_CAVERN = {"x": 0, "z": LUSH_CAVERN_Z, "radius": 80, "center_y": 30, "half_height": 45, "boost": 0.35}
+LUSH_CAVERN_TUNNEL = {"name": "lush_cavern_passage", "x": -60, "z": LUSH_CAVERN_Z, "y": 14, "direction": 1, "slope": 0.25, "length": 320,
+                      "half_width": 4.0, "half_height": 3.5}
+# How much of vanilla's cave layering (cave_layer, which flattens cheese
+# caves into horizontal sheets) is removed at a cavern's centre: 0 keeps
+# vanilla's flat caves, 1 lets the caverns grow as tall as the zone.
+CAVERN_LAYER_CUT = 0.85
+# Rock added at the edge of a cavern zone, fading to none inside it.
+# High enough that the caves close before the zone ends (above 1.23,
+# what clamped noise can cancel), so its edge needs no cut;
+# much higher would make the fade steep and the cavern's outline round.
+CAVERN_FADE = 1.3
+# Share of the zone (in squared radius, from its edge inwards) over which
+# that rock fades; inside it the caves are as open as at the centre. Small
+# values give a wide open zone with a sharp, round edge, 1 a gradual fade
+# that leaves only the centre open.
+CAVERN_EDGE = 0.5
+# How far the passages wind sideways and up and down, in blocks, and how
+# long a bend is (higher scale = tighter bends). 0 gives a straight tube.
+TUNNEL_WIGGLE = 10.0
+TUNNEL_RISE_WIGGLE = 3.0
+TUNNEL_WIGGLE_SCALE = 3.0
+# Each passage widens into a cave room over its first ROOM_LENGTH blocks,
+# ROOM_SCALE times as wide and high at its far end: whatever the seed, the
+# passage then leads somewhere, even where the cavern's own caves are small.
+ROOM_LENGTH = 24.0
+ROOM_SCALE = 3.0
+# Roughness of the passage walls, as a share of their radius: the passage
+# narrows and widens by about this much. More than about 0.5 can close it.
+TUNNEL_WALL_NOISE = 0.35
+# Water is kept out of a cavern zone up to this many radii from its centre
+# (squared distance), and out of a passage up to this many radii from its
+# axis. Aquifer cells are about 16 blocks wide, so the dry zone reaches past
+# the walls.
+CAVERN_DRY_REACH = 1.3
+TUNNEL_DRY_REACH = 3.0
+
 # ---------------------------------------------------------------------------
 # Island density functions
 # ---------------------------------------------------------------------------
@@ -718,17 +845,39 @@ def flat_cache(x):
     return {"type": "minecraft:flat_cache", "argument": x}
 
 
+# Distance to the centre in radii, as its own density function so the
+# terrain profiles below can use it as a spline coordinate.
+RADIAL_DF = f"{MOD_ID}:safari/island_radial"
+
+
+def radial_profile(points):
+    """
+    A smooth curve through (radius fraction, value) points: a vanilla spline
+    over the distance to the centre. Each point's slope is the mean of its two
+    segments (the end points take their own segment's), so the curve passes
+    through every point without overshooting much; beyond the last point it
+    stays flat.
+    """
+    out = []
+    for k, (x, y) in enumerate(points):
+        slopes = []
+        if k > 0:
+            slopes.append((y - points[k - 1][1]) / (x - points[k - 1][0]))
+        if k < len(points) - 1:
+            slopes.append((points[k + 1][1] - y) / (points[k + 1][0] - x))
+        derivative = 0.0 if k == len(points) - 1 else sum(slopes) / len(slopes)
+        out.append({"location": x, "value": y, "derivative": round(derivative, 5)})
+    return {"type": "minecraft:spline", "spline": {"coordinate": RADIAL_DF, "points": out}}
+
+
 def continents_df():
-    radial = island("radial")
-    beyond = {"type": "minecraft:max", "argument1": df_add(radial, -COAST_STEEPEN_FROM), "argument2": 0.0}
-    extra_slope = CONTINENT_SLOPE * (COAST_STEEPEN_FACTOR - 1.0)
-    shape = df_add(df_add(CONTINENT_AT_CENTER, df_mul(-CONTINENT_SLOPE, radial)), df_mul(-extra_slope, beyond))
+    shape = radial_profile(CONTINENT_PROFILE)
     return flat_cache(df_clamp(df_add(shape, df_mul(COAST_NOISE, noise_df("continentalness"))),
                                CONTINENT_FLOOR, 1.0))
 
 
 def erosion_df():
-    shape = df_add(EROSION_AT_CENTER, df_mul(EROSION_SLOPE, island("radial")))
+    shape = radial_profile(EROSION_PROFILE)
     return flat_cache(df_clamp(df_add(shape, df_mul(EROSION_NOISE, noise_df("erosion"))), -1.0, 1.0))
 
 
@@ -739,6 +888,176 @@ def temperature_df():
 def humidity_df():
     return df_mul(CLIMATE_SCALE, df_add(island("direction_z"), df_mul(CLIMATE_NOISE, noise_df("vegetation"))))
 
+
+
+CARVED_CAVES_DF = f"{MOD_ID}:safari/carved_caves"
+CAVES_DRY_DF = f"{MOD_ID}:safari/carved_caves_dry"
+# Exact block coordinates as density functions (island_coordinate offsets with
+# a radius of one block, and a gradient that returns y itself).
+WIDE_LIMIT = 100000.0
+Y_DF = {"type": "minecraft:y_clamped_gradient", "from_y": -64, "to_y": 320, "from_value": -64.0, "to_value": 320.0}
+# Vanilla's cheese cave threshold: noise above -0.27 is rock.
+VANILLA_CHEESE_OFFSET = 0.27
+
+
+def offset_df(mode, center_x=0, center_z=0, radius=1.0):
+    return {"type": f"{MOD_ID}:island_coordinate", "mode": mode, "center_x": center_x, "center_z": center_z,
+            "radius": radius, "limit": WIDE_LIMIT}
+
+
+def df_square(x):
+    return {"type": "minecraft:square", "argument": x}
+
+
+def df_max(a, b):
+    return {"type": "minecraft:max", "argument1": a, "argument2": b}
+
+
+def df_min(a, b):
+    return {"type": "minecraft:min", "argument1": a, "argument2": b}
+
+
+def noise3(noise, xz_scale, y_scale):
+    return {"type": "minecraft:noise", "noise": noise, "xz_scale": xz_scale, "y_scale": y_scale}
+
+
+def zone_distance(c):
+    """Squared distance to a cavern zone's centre, in zone radii: 0 at the centre, 1 on its edge."""
+    horizontal = df_square({"type": f"{MOD_ID}:island_coordinate", "mode": "radial", "center_x": c["x"],
+                            "center_z": c["z"], "radius": c["radius"]})
+    # A gradient over twice the half height each way, so it is not clamped
+    # within the zone and its fade.
+    vertical = df_square({"type": "minecraft:y_clamped_gradient", "from_y": c["center_y"] - 2 * c["half_height"],
+                          "to_y": c["center_y"] + 2 * c["half_height"], "from_value": -2.0, "to_value": 2.0})
+    return df_add(horizontal, vertical)
+
+
+def cavern_df(c):
+    """
+    Cheese caves of a cavern zone: negative where they are hollow. Vanilla's
+    own formula (4 * cave_layer^2 + clamp(0.27 + cheese) + the surface guard
+    from sloped_cheese), with a lower threshold, less layering towards the
+    centre, and rock added towards the edge (CAVERN_FADE), so it is solid
+    everywhere outside the zone.
+    """
+    # 1 over the inner part of the zone, falling to 0 on its edge and outside.
+    weight = df_clamp(df_mul(1.0 / CAVERN_EDGE, df_add(1.0, df_mul(-1.0, zone_distance(c)))), 0.0, 1.0)
+    layer = df_mul(4.0, df_square(noise3("minecraft:cave_layer", 1.0, 8.0)))
+    layer = df_mul(layer, df_add(1.0, df_mul(-CAVERN_LAYER_CUT, weight)))
+    cheese = df_clamp(df_add(VANILLA_CHEESE_OFFSET - c["boost"],
+                             noise3(f"{MOD_ID}:{CAVERN_NOISE}", 1.0, 0.6666666666666666)), -1.0, 1.0)
+    # Vanilla's guard keeping cheese caves about a dozen blocks under the
+    # surface, so the caverns never open into the sky by themselves.
+    guard = df_clamp(df_add(1.5, df_mul(-0.64, f"{MOD_ID}:safari/sloped_cheese")), 0.0, 0.5)
+    fade = df_mul(CAVERN_FADE, df_add(1.0, df_mul(-1.0, weight)))
+    return df_add(df_add(layer, cheese), df_add(guard, fade))
+
+
+def tunnel_along(t):
+    """Blocks from the passage's start along X, outward: negative behind it."""
+    return df_mul(t["direction"], offset_df("x", center_x=t["x"]))
+
+
+def tunnel_along_ref(t):
+    """The same, as the density function file main() writes: a spline's coordinate is given by reference."""
+    return f"{MOD_ID}:safari/{t['name']}_along"
+
+
+def tunnel_axis(t):
+    """Blocks from the passage's start along X (outward), and its sideways and vertical offsets from the axis."""
+    along = tunnel_along_ref(t)
+    # 2D noises (y_scale 0): the bends depend on the position along the
+    # passage only, so its cross-section keeps its size.
+    wiggle_z = df_mul(TUNNEL_WIGGLE, noise3("minecraft:spaghetti_2d_elevation", TUNNEL_WIGGLE_SCALE, 0.0))
+    wiggle_y = df_mul(TUNNEL_RISE_WIGGLE, noise3("minecraft:cave_layer", TUNNEL_WIGGLE_SCALE, 0.0))
+    across = df_add(offset_df("z", center_z=t["z"]), df_mul(-1.0, wiggle_z))  # blocks from the axis, sideways
+    rise = df_add(df_add(df_add(Y_DF, df_mul(-t["slope"], along)), -t["y"]), df_mul(-1.0, wiggle_y))
+    return along, across, rise
+
+
+def tunnel_section(t):
+    """Squared distance to the passage's axis in passage radii (1 on its wall), without wall noise."""
+    _, across, rise = tunnel_axis(t)
+    return df_add(df_square(df_mul(1.0 / t["half_width"], across)), df_square(df_mul(1.0 / t["half_height"], rise)))
+
+
+def tunnel_df(t):
+    """
+    Negative inside a winding passage running along X from (x, y, z) in the
+    given direction, climbing `slope` blocks per block, for `length` blocks.
+    Where it climbs out of the ground it cuts a sloping cave mouth.
+    """
+    along, _, _ = tunnel_axis(t)
+    walls = df_mul(TUNNEL_WALL_NOISE, noise3(f"{MOD_ID}:{CAVERN_NOISE}", 2.0, 2.0))
+    # Density functions cannot divide: the room's larger radius is a smaller
+    # factor on the squared distance, 1 / ROOM_SCALE^2 at the start, 1 past
+    # the room, along a spline over the distance from the start.
+    room = {"type": "minecraft:spline", "spline": {"coordinate": tunnel_along_ref(t), "points": [
+        {"location": 0.0, "value": 1.0 / ROOM_SCALE ** 2, "derivative": 0.0},
+        {"location": ROOM_LENGTH, "value": 1.0, "derivative": 0.0}]}}
+    tube = df_add(df_add(df_mul(tunnel_section(t), room), -1.0), walls)
+    # Closed at both ends: solid behind the start and past the length.
+    behind = df_mul(-0.25, along)
+    beyond = df_mul(0.25, df_add(along, -t["length"]))
+    return df_max(df_max(tube, behind), beyond)
+
+
+# Value given outside a cavern zone or a passage's span, where nothing is
+# carved: any positive number (rock) does.
+OUTSIDE = 1.0
+
+
+def only_within(selector, lo, hi, inner):
+    """
+    `inner` where `selector` lies in [lo, hi), OUTSIDE elsewhere. range_choice
+    evaluates only the branch it picks, so the noises of a cavern or passage
+    cost nothing in the rest of the world, which is nearly all of it.
+    """
+    return {"type": "minecraft:range_choice", "input": selector, "min_inclusive": lo, "max_exclusive": hi,
+            "when_in_range": inner, "when_out_of_range": OUTSIDE}
+
+
+def carved_caves_df():
+    """Every cavern and passage, negative where hollow; each computed only within its own zone or span."""
+    def cavern(c):
+        # Its edge (distance 1) is rock already (CAVERN_FADE), so the cut there leaves no seam.
+        return only_within(zone_distance(c), 0.0, 1.0, cavern_df(c))
+
+    def passage(t):
+        return only_within(tunnel_along_ref(t), 0.0, float(t["length"]), tunnel_df(t))
+
+    giant = df_min(cavern(GIANT_CAVERN), passage(GIANT_CAVERN_TUNNEL))
+    lush = df_min(cavern(LUSH_CAVERN), passage(LUSH_CAVERN_TUNNEL))
+    return df_min(giant, lush)
+
+
+def carved_caves_dry_df():
+    """Negative where water must be kept out: within CAVERN_DRY_REACH of a zone or TUNNEL_DRY_REACH of a passage."""
+    zones = df_min(df_add(zone_distance(GIANT_CAVERN), -CAVERN_DRY_REACH),
+                   df_add(zone_distance(LUSH_CAVERN), -CAVERN_DRY_REACH))
+    passages = df_min(df_add(tunnel_section(GIANT_CAVERN_TUNNEL), -TUNNEL_DRY_REACH ** 2),
+                      df_add(tunnel_section(LUSH_CAVERN_TUNNEL), -TUNNEL_DRY_REACH ** 2))
+    return df_min(zones, passages)
+
+
+def carved_final_density(vanilla_final):
+    """
+    Vanilla's final density with the caverns and passages added: air
+    wherever they are negative. Interpolated like vanilla's terrain, so they
+    cost a few operations and noise samples per 4x8x4 cell corner rather
+    than per block.
+    """
+    return df_min(vanilla_final, {"type": "minecraft:interpolated", "argument": CARVED_CAVES_DF})
+
+
+def carved_caves_dry(vanilla_floodedness):
+    """
+    Aquifer floodedness forced to -1 in and around the caverns and passages
+    (no water at all there, see Aquifer.computeSurfaceLevel), vanilla's
+    elsewhere.
+    """
+    mask = df_clamp(df_mul(4.0, CAVES_DRY_DF), -1.0, 1.0)
+    return df_min(vanilla_floodedness, mask)
 
 # ---------------------------------------------------------------------------
 # Surface rule
@@ -1096,7 +1415,10 @@ def write_cobblemon_bridge():
     shutil.rmtree(COBBLEMON_TAG_OUT, ignore_errors=True)
     os.makedirs(COBBLEMON_TAG_OUT)
     for tag, values in sorted(by_tag.items()):
-        with open(os.path.join(COBBLEMON_TAG_OUT, f"{tag}.json"), "w", encoding="utf-8", newline="\n") as f:
+        # Nested tags (nether/is_basalt) live in subfolders.
+        path = os.path.join(COBBLEMON_TAG_OUT, *f"{tag}.json".split("/"))
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8", newline="\n") as f:
             json.dump({"replace": False, "values": sorted(values)}, f, indent=2)
             f.write("\n")
     return len(by_tag)
@@ -1126,6 +1448,7 @@ def main():
         data["firstOctave"] = octave
         write(f"worldgen/noise/{noise}.json", data, written)
 
+    write("worldgen/density_function/safari/island_radial.json", flat_cache(island("radial")), written)
     for df in CLIMATE_DENSITY_FUNCTIONS:
         if df == "continents":
             data = continents_df()
@@ -1136,6 +1459,14 @@ def main():
         write(f"worldgen/density_function/safari/{df}.json", data, written)
 
     settings = rename_refs(vanilla("worldgen/noise_settings/overworld"))
+    write(f"worldgen/noise/{CAVERN_NOISE}.json", CAVERN_NOISE_DATA, written)
+    for passage in (GIANT_CAVERN_TUNNEL, LUSH_CAVERN_TUNNEL):
+        write(f"worldgen/density_function/safari/{passage['name']}_along.json", tunnel_along(passage), written)
+    write("worldgen/density_function/safari/carved_caves.json", carved_caves_df(), written)
+    write("worldgen/density_function/safari/carved_caves_dry.json", carved_caves_dry_df(), written)
+    settings["noise_router"]["final_density"] = carved_final_density(settings["noise_router"]["final_density"])
+    settings["noise_router"]["fluid_level_floodedness"] = carved_caves_dry(
+        settings["noise_router"]["fluid_level_floodedness"])
     settings["noise_router"]["temperature"] = temperature_df()
     settings["noise_router"]["vegetation"] = humidity_df()
     settings["surface_rule"] = surface_rule(vanilla("worldgen/noise_settings/overworld")["surface_rule"])

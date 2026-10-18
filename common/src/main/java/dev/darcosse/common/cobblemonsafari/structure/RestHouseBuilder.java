@@ -494,6 +494,15 @@ final class RestHouseBuilder {
         return new BlockPos(centerX + wx, 0, centerZ + wz);
     }
 
+    /**
+     * World column where arriving players stand: on the path across the
+     * plaza, one block before its outer border, facing the doorway. On the
+     * plaza rather than past it, so the ground is the house's own stone.
+     */
+    static BlockPos arrivalColumn(int centerX, int centerZ, Direction facing) {
+        return rotate(centerX, centerZ, facing, SIZE / 2, PLAZA_LAST_Z - 1);
+    }
+
     /** World column where the clerk stands, behind the counter; see {@link #CLERK_X}. */
     static BlockPos clerkColumn(int centerX, int centerZ, Direction facing) {
         return rotate(centerX, centerZ, facing, CLERK_X, CLERK_Z);

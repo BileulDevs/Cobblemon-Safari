@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -61,8 +62,17 @@ public final class SafariShopConfigManager {
     /** The version that added the cooking tab; older files get it and its ingredients once. */
     private static final int COOKING_VERSION = 11;
 
+    /** The version that added the free daily Safari Balls; older files get them once. */
+    private static final int FREE_BALLS_VERSION = 12;
+
+    /**
+     * Longest wait an entry may ask, in hours: a year. Beyond it the entry
+     * can in practice be bought once, which limitPerRotation 0 says better.
+     */
+    private static final int MAX_COOLDOWN_HOURS = 24 * 365;
+
     /** Version written by this build. */
-    public static final int CURRENT_VERSION = 11;
+    public static final int CURRENT_VERSION = 12;
 
     /**
      * Most random Pokémon per rotation. Each one is built for the screen
@@ -151,6 +161,9 @@ public final class SafariShopConfigManager {
         }
         if (c.configVersion < COOKING_VERSION) {
             addCookingTab(c);
+        }
+        if (c.configVersion < FREE_BALLS_VERSION) {
+            addFreeBalls(c);
         }
         if (c.configVersion != CURRENT_VERSION) {
             c.configVersion = CURRENT_VERSION;
@@ -273,6 +286,14 @@ public final class SafariShopConfigManager {
             entry.limitPerRotation = 0;
             corrected = true;
         }
+        if (entry.cooldownHours != null) {
+            // 0 or less means no wait: dropped so the file shows none.
+            Integer hours = entry.cooldownHours <= 0 ? null : Math.min(MAX_COOLDOWN_HOURS, entry.cooldownHours);
+            if (!Objects.equals(hours, entry.cooldownHours)) {
+                entry.cooldownHours = hours;
+                corrected = true;
+            }
+        }
         return corrected;
     }
 
@@ -316,6 +337,28 @@ public final class SafariShopConfigManager {
         }
         defaults.entries.stream().filter(SafariShopConfig.Entry::hasCost).forEach(c.entries::add);
         CobblemonSafari.LOGGER.info("Added the default ticket trades to {}", FILE_NAME);
+    }
+
+    /**
+     * Adds the free daily Safari Balls, first among the ball entries, unless
+     * the file already has them (same item, free, with a wait). The entry
+     * goes to the balls tab like any id ending in "_ball".
+     */
+    private static void addFreeBalls(SafariShopConfig c) {
+        if (c.entries == null || c.entries.stream().anyMatch(entry -> entry != null && entry.isFreeBalls())) {
+            return;
+        }
+        // First in the balls: before the first ball entry, else at the end.
+        int at = c.entries.size();
+        for (int i = 0; i < c.entries.size(); i++) {
+            SafariShopConfig.Entry entry = c.entries.get(i);
+            if (entry != null && !entry.isPokemon() && entry.item != null && entry.item.endsWith(BALL_SUFFIX)) {
+                at = i;
+                break;
+            }
+        }
+        c.entries.add(at, SafariShopConfig.Entry.freeBalls());
+        CobblemonSafari.LOGGER.info("Added the free daily Safari Balls to {}", FILE_NAME);
     }
 
     /**

@@ -96,7 +96,8 @@ object SafariHabitatIndex {
             // lateinit in Cobblemon: a broken spawn file can leave it unset.
             val positionType = runCatching { detail.spawnablePositionType.name }.getOrNull()
             val water = positionType in WATER_POSITION_TYPES
-            builders.getOrPut(species.resourceIdentifier) { EntryBuilder(species) }.add(detail, matched, water)
+            val windows = windowsOf(detail, habitats, water)
+            builders.getOrPut(species.resourceIdentifier) { EntryBuilder(species) }.add(detail, matched, water, windows)
         }
 
         val index = TreeMap<ResourceLocation, HabitatEntry>()
@@ -124,6 +125,23 @@ object SafariHabitatIndex {
         return included && detail.anticonditions.none { condition -> fitsBiome(condition, holder) }
     }
 
+    /**
+     * The time and light conditions of a spawn detail, one window per
+     * condition that names Safari biomes: each condition of a detail is an
+     * alternative (Gastly: in the dark anywhere underground, or in a spooky
+     * forest at night), so each keeps its own biomes.
+     */
+    private fun windowsOf(detail: PokemonSpawnDetail, habitats: List<Pair<ResourceKey<Biome>, Holder<Biome>>>,
+                          water: Boolean): List<SpawnWindow> =
+        detail.conditions.mapNotNull { condition ->
+            val biomes = habitats.filter { (_, holder) ->
+                fitsBiome(condition, holder) && detail.anticonditions.none { fitsBiome(it, holder) }
+            }.map { it.first }.toSet()
+            if (biomes.isEmpty()) null
+            else SpawnWindow.of(biomes, water, condition.timeRange?.ranges?.map { intArrayOf(it.first, it.last) } ?: emptyList(),
+                condition.minLight, condition.maxLight, condition.minSkyLight, condition.maxSkyLight, condition.canSeeSky)
+        }
+
     private fun fitsBiome(condition: SpawningCondition<*>, holder: Holder<Biome>): Boolean =
         condition.biomes?.any { it.fits(holder) } == true
 
@@ -147,7 +165,7 @@ object SafariHabitatIndex {
         // No natural spawn usually means a legendary, a starter-like species or
         // a datapack addition: rare is the honest default, special labels go higher.
         val rarity = if (SpeciesRules.isSpecial(species)) Rarity.ULTRA_RARE else Rarity.RARE
-        return HabitatEntry(species, land, water, rarity, null, 0, 0, false)
+        return HabitatEntry(species, land, water, rarity, null, 0, 0, false, emptyList())
     }
 
     /** Accumulates every natural spawn detail of one species. */
@@ -156,9 +174,12 @@ object SafariHabitatIndex {
         private val water = LinkedHashSet<ResourceKey<Biome>>()
         private var rarity: Rarity? = null
         private var best: PokemonSpawnDetail? = null
+        private val windows = ArrayList<SpawnWindow>()
 
-        fun add(detail: PokemonSpawnDetail, biomes: List<ResourceKey<Biome>>, inWater: Boolean) {
+        fun add(detail: PokemonSpawnDetail, biomes: List<ResourceKey<Biome>>, inWater: Boolean,
+                detailWindows: List<SpawnWindow>) {
             if (inWater) water.addAll(biomes) else land.addAll(biomes)
+            windows.addAll(detailWindows)
             // In the published Cobblemon 1.8.0 the bucket is a plain String
             // (`var bucket = ""` in SpawnDetail). Cobblemon's later main branch
             // turned it into a SpawnBucket object, which is what `.name` assumed.
@@ -176,7 +197,7 @@ object SafariHabitatIndex {
             val finalRarity = if (special) Rarity.ULTRA_RARE else rarity ?: Rarity.RARE
             val range = best?.levelRange
             return HabitatEntry(species, land, water, finalRarity, best?.pokemon?.copy(),
-                range?.first ?: 0, range?.last ?: 0, true)
+                range?.first ?: 0, range?.last ?: 0, true, windows.toList())
         }
     }
 }

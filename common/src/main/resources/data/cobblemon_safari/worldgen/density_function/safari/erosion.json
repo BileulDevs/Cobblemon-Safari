@@ -5,23 +5,51 @@
     "input": {
       "type": "minecraft:add",
       "argument1": {
-        "type": "minecraft:add",
-        "argument1": -1.1,
-        "argument2": {
-          "type": "minecraft:mul",
-          "argument1": 2.1,
-          "argument2": {
-            "type": "cobblemon_safari:island_coordinate",
-            "mode": "radial",
-            "center_x": 0,
-            "center_z": 0,
-            "radius": 512
-          }
+        "type": "minecraft:spline",
+        "spline": {
+          "coordinate": "cobblemon_safari:safari/island_radial",
+          "points": [
+            {
+              "location": 0.0,
+              "value": -0.78,
+              "derivative": 0.8
+            },
+            {
+              "location": 0.1,
+              "value": -0.7,
+              "derivative": 1.3375
+            },
+            {
+              "location": 0.26,
+              "value": -0.4,
+              "derivative": 1.46382
+            },
+            {
+              "location": 0.45,
+              "value": -0.2,
+              "derivative": 0.89669
+            },
+            {
+              "location": 0.72,
+              "value": 0.0,
+              "derivative": 1.4418
+            },
+            {
+              "location": 0.86,
+              "value": 0.3,
+              "derivative": 1.96429
+            },
+            {
+              "location": 1.0,
+              "value": 0.55,
+              "derivative": 0.0
+            }
+          ]
         }
       },
       "argument2": {
         "type": "minecraft:mul",
-        "argument1": 0.25,
+        "argument1": 0.2,
         "argument2": {
           "type": "minecraft:shifted_noise",
           "noise": "cobblemon_safari:erosion",

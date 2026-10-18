@@ -3,6 +3,7 @@ package dev.darcosse.common.cobblemonsafari.session;
 import com.cobblemon.mod.common.battles.BattleRegistry;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.access.EntryResult;
+import dev.darcosse.common.cobblemonsafari.capture.BallRules;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
@@ -132,14 +133,20 @@ public final class SafariSessionManager {
         // Lent after the teleport: anything that does not fit is dropped at the
         // arrival point, inside the Safari, where the reclaim rules still apply.
         int lent = LoanedBalls.lend(player, ballsLoaned);
-        boolean ropeLent = EscapeRopes.lend(player);
+        EscapeRopes.Lent rope = EscapeRopes.lend(player);
         SafariNetwork.sendTimer(player, session, true);
         player.sendSystemMessage(Component.translatable(key("message.entered"), Ticks.format(ticks)));
         if (lent > 0) {
             player.sendSystemMessage(Component.translatable(key("message.balls_lent"), lent));
+        } else if (!BallRules.carriesAllowed(player, SafariConfigManager.allowedBalls())) {
+            // Without the loan, a player who came empty-handed would only find
+            // out at the first throw; told now, while the gate's shop is near.
+            player.sendSystemMessage(Component.translatable(key("message.no_allowed_balls")));
         }
-        if (ropeLent) {
+        if (rope == EscapeRopes.Lent.GIVEN) {
             player.sendSystemMessage(Component.translatable(key("message.rope_lent")));
+        } else if (rope == EscapeRopes.Lent.DROPPED) {
+            player.sendSystemMessage(Component.translatable(key("message.rope_dropped")));
         }
         if (SafariConfigManager.get().featured.announceOnEntry) {
             Component specials = FeaturedBoard.summary(player.getServer());

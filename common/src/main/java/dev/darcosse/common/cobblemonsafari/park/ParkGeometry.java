@@ -15,11 +15,11 @@ public final class ParkGeometry {
     public static final int CENTER_Z = 0;
 
     /** Half the side of the square world border: the island plus a strip of lagoon. */
-    public static final int BORDER_HALF_SIZE = 579;
+    public static final int BORDER_HALF_SIZE = 868;
 
     /** Arrival point: in the grassland north of the centre, like the entrance of the games' Safari Zones. */
     public static final int ARRIVAL_X = 0;
-    public static final int ARRIVAL_Z = -282;
+    public static final int ARRIVAL_Z = -422;
 
     /** Arrivals are spread this far around the arrival point, so a group does not land on one block. */
     public static final int ARRIVAL_SPREAD = 16;
@@ -31,10 +31,10 @@ public final class ParkGeometry {
      * a new house there on the next map.
      */
     public static final List<Column> REST_HOUSES = List.of(
-            new Column(0, -296),
-            new Column(282, 0),
-            new Column(0, 282),
-            new Column(-282, 0)
+            new Column(0, -436),
+            new Column(422, 0),
+            new Column(0, 422),
+            new Column(-422, 0)
     );
 
     /** A column of the park, x and z in blocks. */

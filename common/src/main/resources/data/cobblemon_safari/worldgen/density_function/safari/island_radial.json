@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:flat_cache",
+  "argument": {
+    "type": "cobblemon_safari:island_coordinate",
+    "mode": "radial",
+    "center_x": 0,
+    "center_z": 0,
+    "radius": 768
+  }
+}

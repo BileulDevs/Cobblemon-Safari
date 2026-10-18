@@ -2,6 +2,7 @@ package dev.darcosse.common.cobblemonsafari.client.shop;
 
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.client.SafariLandscapes;
+import dev.darcosse.common.cobblemonsafari.item.SafariEscapeRopeItem;
 import dev.darcosse.common.cobblemonsafari.network.SafariClientNetwork;
 import dev.darcosse.common.cobblemonsafari.network.SafariShopBuyPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariShopPayload;
@@ -254,11 +255,41 @@ public class SafariShopScreen extends Screen {
             buyButton.setMessage(tr("shop.select"));
             buyButton.active = false;
         } else {
-            buyButton.setMessage(entry.cost().isEmpty() ? tr("shop.buy", SafariPointsIcon.amount(entry.price()))
-                    : tr("shop.trade"));
+            buyButton.setMessage(buyLabel(entry));
             buyButton.active = !awaitingServer && entry.kind() != SafariShopPayload.KIND_UNAVAILABLE
-                    && entry.remaining() != 0 && data.points() >= entry.price() && hasCostItems(entry);
+                    && entry.remaining() != 0 && data.points() >= entry.price() && hasCostItems(entry)
+                    && !alreadyCarried(entry);
         }
+    }
+
+    /** "Buy (200)", "Trade", "Take" for a free entry, or the wait left when it is not ready yet. */
+    private static Component buyLabel(SafariShopPayload.Entry entry) {
+        if (entry.waitSeconds() > 0) {
+            return tr("shop.wait_badge", waitText(entry.waitSeconds()));
+        }
+        if (!entry.cost().isEmpty()) {
+            return tr("shop.trade");
+        }
+        return isFree(entry) ? tr("shop.take") : tr("shop.buy", SafariPointsIcon.amount(entry.price()));
+    }
+
+    /** Whether an entry costs nothing at all: no points, no items. */
+    private static boolean isFree(SafariShopPayload.Entry entry) {
+        return entry.price() == 0 && entry.cost().isEmpty();
+    }
+
+    /**
+     * "5 h 12" or "38 min", rounded up to the minute, as the server words the
+     * same wait. Shown as sent when the screen opened: it does not count down
+     * while the screen stays open, and refreshes with the next purchase or
+     * reopening.
+     */
+    private static Component waitText(int seconds) {
+        int minutes = Math.max(1, (seconds + 59) / 60);
+        if (minutes < 60) {
+            return tr("shop.wait_minutes", minutes);
+        }
+        return tr("shop.wait_hours", minutes / 60, String.format("%02d", minutes % 60));
     }
 
     private void turnPage(int delta) {
@@ -629,14 +660,21 @@ public class SafariShopScreen extends Screen {
 
         drawName(graphics, name(entry), x, pictureBottom + 2, entry.shiny() ? GOLD : TEXT_COLOR);
         int priceY = pictureBottom + 2 + font.lineHeight + 2;
-        if (entry.cost().isEmpty()) {
+        if (isFree(entry)) {
+            Component free = tr("shop.free");
+            graphics.drawString(font, free, x + (CARD_WIDTH - font.width(free)) / 2, priceY, PRICE_COLOR);
+        } else if (entry.cost().isEmpty()) {
             Component price = tr("shop.price_short", SafariPointsIcon.amount(entry.price()));
             graphics.drawString(font, price, x + (CARD_WIDTH - font.width(price)) / 2, priceY,
                     data.points() >= entry.price() ? PRICE_COLOR : PRICE_TOO_HIGH);
         } else {
             drawCost(graphics, entry, x, priceY);
         }
-        if (entry.remaining() != SafariShopPayload.UNLIMITED) {
+        if (alreadyCarried(entry)) {
+            drawBadge(graphics, tr("shop.carried"), MUTED_COLOR, x1, y);
+        } else if (entry.waitSeconds() > 0) {
+            drawBadge(graphics, tr("shop.wait_badge", waitText(entry.waitSeconds())), PRICE_TOO_HIGH, x1, y);
+        } else if (entry.remaining() != SafariShopPayload.UNLIMITED) {
             drawRemaining(graphics, entry.remaining(), x1, y);
         }
     }
@@ -713,10 +751,15 @@ public class SafariShopScreen extends Screen {
     /** "2 left" (or "Sold out") in the top right corner of a limited card, small like the level badge. */
     private void drawRemaining(GuiGraphics graphics, int remaining, int right, int y) {
         Component text = remaining > 0 ? tr("shop.remaining", remaining) : tr("shop.sold_out");
+        drawBadge(graphics, text, remaining > 0 ? MUTED_COLOR : PRICE_TOO_HIGH, right, y);
+    }
+
+    /** A small text in the top right corner of a card, like the level badge. */
+    private void drawBadge(GuiGraphics graphics, Component text, int colour, int right, int y) {
         graphics.pose().pushPose();
         graphics.pose().translate(right - 3 - font.width(text) * BADGE_SCALE, y + 3, 200.0F);
         graphics.pose().scale(BADGE_SCALE, BADGE_SCALE, 1.0F);
-        graphics.drawString(font, text, 0, 0, remaining > 0 ? MUTED_COLOR : PRICE_TOO_HIGH);
+        graphics.drawString(font, text, 0, 0, colour);
         graphics.pose().popPose();
     }
 
@@ -730,6 +773,18 @@ public class SafariShopScreen extends Screen {
     }
 
     /** How many of a cost's items the local player carries, all kinds together. Client-side guess; the server counts again. */
+    /**
+     * Whether the entry gives the Escape Rope and the player already carries
+     * one: the server refuses a second, so the card says so and the button
+     * stays grey. Read from the client's own inventory, so it is right as
+     * soon as the rope is picked up, without a refresh.
+     */
+    private boolean alreadyCarried(SafariShopPayload.Entry entry) {
+        return entry.kind() == SafariShopPayload.KIND_ITEM && entry.item().getItem() instanceof SafariEscapeRopeItem
+                && minecraft != null && minecraft.player != null
+                && minecraft.player.getInventory().countItem(entry.item().getItem()) > 0;
+    }
+
     private int carried(SafariShopPayload.Cost cost) {
         if (minecraft == null || minecraft.player == null) {
             return 0;

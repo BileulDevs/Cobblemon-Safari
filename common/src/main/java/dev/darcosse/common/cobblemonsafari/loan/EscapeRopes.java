@@ -18,22 +18,37 @@ import net.minecraft.world.item.ItemStack;
  */
 public final class EscapeRopes {
 
+    /** What {@link #lend} did. */
+    public enum Lent {
+        /** Nothing: ropes are not lent, or the player already has one. */
+        NONE,
+        /** The rope went into the inventory. */
+        GIVEN,
+        /** The inventory was full: the rope lies at the player's feet. */
+        DROPPED
+    }
+
     private EscapeRopes() {
     }
 
     /**
      * Gives one rope if the config lends them and the player has none yet
-     * (a rope dropped on death inside stays where it fell).
-     *
-     * @return whether a rope was given
+     * (a rope dropped on death inside stays where it fell). With a full
+     * inventory the rope is dropped at the player's feet, inside the Safari,
+     * and the caller says so: before, the player was told they had a rope
+     * they did not carry.
      */
-    public static boolean lend(Player player) {
+    public static Lent lend(Player player) {
         if (!SafariConfigManager.get().escapeRope.enabled || count(player) > 0) {
-            return false;
+            return Lent.NONE;
         }
-        // Cobblemon's helper: inserts, or drops at the player's feet when full.
-        PlayerExtensionsKt.giveOrDropItemStack(player, new ItemStack(SafariItems.escapeRope()), true);
-        return true;
+        ItemStack rope = new ItemStack(SafariItems.escapeRope());
+        if (player.getInventory().add(rope)) {
+            return Lent.GIVEN;
+        }
+        // Cobblemon's helper: tries the inventory once more, then drops at the player's feet.
+        PlayerExtensionsKt.giveOrDropItemStack(player, rope, true);
+        return Lent.DROPPED;
     }
 
     /**
@@ -56,8 +71,8 @@ public final class EscapeRopes {
         return taken;
     }
 
-    /** How many ropes the player carries. */
-    private static int count(Player player) {
+    /** How many ropes the player carries, in any slot. Reads the whole inventory: not for every tick. */
+    public static int count(Player player) {
         Inventory inventory = player.getInventory();
         int total = 0;
         for (int slot = 0; slot < inventory.getContainerSize(); slot++) {

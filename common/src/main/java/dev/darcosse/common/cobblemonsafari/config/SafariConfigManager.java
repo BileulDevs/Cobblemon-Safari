@@ -60,7 +60,7 @@ public final class SafariConfigManager {
     private static final int MAX_BOUNTIES = 8;
 
     /** Version written by this build. Raise it together with a new step in {@link #migrate}. */
-    public static final int CURRENT_CONFIG_VERSION = 21;
+    public static final int CURRENT_CONFIG_VERSION = 22;
 
     /**
      * Default length of a featured rotation, in minutes: four hours, so the
@@ -87,6 +87,12 @@ public final class SafariConfigManager {
      */
     public static final double DEFAULT_CAUGHT_SPECIES_WEIGHT = 0.4;
     private static final double LEGACY_CAUGHT_SPECIES_WEIGHT = 0.25;
+
+    /** First version without a ball loan by default; a file still lending the old 30 follows. */
+    private static final int NO_LOAN_VERSION = 22;
+
+    /** Balls lent per session by default up to version 21. */
+    private static final int LEGACY_LOAN_COUNT = 30;
 
     /** First version with one section per special category instead of the allow* flags. */
     private static final int SPECIAL_CATEGORIES_VERSION = 21;
@@ -270,6 +276,11 @@ public final class SafariConfigManager {
         }
         if (c.configVersion < SPECIAL_CATEGORIES_VERSION && c.spawns != null) {
             moveLegacyAllowFlags(c.spawns);
+        }
+        // Exact comparison: a server that chose its own number keeps its loan.
+        if (c.configVersion < NO_LOAN_VERSION && c.loan != null && c.loan.count == LEGACY_LOAN_COUNT) {
+            c.loan.count = 0;
+            CobblemonSafari.LOGGER.info("Migrated {}: the ball loan is now off (loan.count 0)", FILE_NAME);
         }
         CobblemonSafari.LOGGER.info("Migrated {} from version {} to {}", FILE_NAME, c.configVersion,
                 CURRENT_CONFIG_VERSION);

@@ -45,6 +45,8 @@ public final class SafariBiomeTags {
     public static final TagKey<Biome> BEACH = tag("safari_beach");
     public static final TagKey<Biome> CAVE = tag("safari_cave");
     public static final TagKey<Biome> LUSH_CAVE = tag("safari_lush_cave");
+    /** The deep cavern under the summit (its giant cavern included). */
+    public static final TagKey<Biome> DEEP_CAVE = tag("safari_deep_cave");
 
     /* Aggregates, for Pokémon that roam several habitats. */
     public static final TagKey<Biome> GRASSLAND = tag("safari_grassland");

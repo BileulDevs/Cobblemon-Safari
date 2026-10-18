@@ -49,7 +49,9 @@ public final class SafariTeleporter {
     }
 
     /**
-     * Sends a player to a dry spot near the configured arrival point.
+     * Sends a player into the Safari: in front of the entrance house's door,
+     * facing it, or when that spot is not safe (the house not built yet, a
+     * player-made obstacle), to a dry spot near the arrival point as before.
      *
      * @return false when the Safari level is missing or no safe spot was found;
      *         the player has not moved in that case
@@ -60,6 +62,15 @@ public final class SafariTeleporter {
             CobblemonSafari.LOGGER.error("Safari dimension {} does not exist; check 'dimension' in the config",
                     SafariDimensions.key().location());
             return false;
+        }
+        RestHouses.Arrival front = RestHouses.entranceArrival();
+        if (front != null) {
+            BlockPos feet = surface(safari, front.column().getX(), front.column().getZ());
+            if (isSafe(safari, feet)) {
+                // Level gaze: the player sees the house, not the sky or their feet.
+                teleport(player, safari, feet.getX() + 0.5, feet.getY(), feet.getZ() + 0.5, front.yaw(), 0.0F);
+                return true;
+            }
         }
         BlockPos arrival = findArrival(safari);
         if (arrival == null) {

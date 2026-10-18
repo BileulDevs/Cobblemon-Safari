@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:mul",
+  "argument1": -1,
+  "argument2": {
+    "type": "cobblemon_safari:island_coordinate",
+    "mode": "x",
+    "center_x": 90,
+    "center_z": 0,
+    "radius": 1.0,
+    "limit": 100000.0
+  }
+}

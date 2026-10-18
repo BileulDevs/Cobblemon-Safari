@@ -35,8 +35,9 @@ public record SafariShopPayload(boolean refresh, int points, long rotation, List
      * v3: rotation, after points.
      * v4: each entry's cost (items taken in exchange) and remaining purchases, after the price.
      * v5: a cost carries every item it accepts (an item tag) and its name.
+     * v6: each entry's wait in seconds (cooldownHours), after the remaining purchases.
      */
-    public static final int WIRE_VERSION = 5;
+    public static final int WIRE_VERSION = 6;
 
     /** Value of {@link Entry#remaining} for an entry without a purchase limit. */
     public static final int UNLIMITED = -1;
@@ -84,8 +85,9 @@ public record SafariShopPayload(boolean refresh, int points, long rotation, List
      * @param shiny     whether the Pokémon is shiny
      * @param cost      items taken in exchange, besides the price; empty for a plain purchase
      * @param remaining purchases the player has left this rotation, or {@link #UNLIMITED}
+     * @param waitSeconds seconds before the player may buy it again (an entry with a wait), 0 when they may now
      */
-    public record Entry(int tab, int kind, int price, List<Cost> cost, int remaining, ItemStack item,
+    public record Entry(int tab, int kind, int price, List<Cost> cost, int remaining, int waitSeconds, ItemStack item,
                         ResourceLocation species, List<String> aspects, int level, boolean shiny) {
     }
 
@@ -128,6 +130,7 @@ public record SafariShopPayload(boolean refresh, int points, long rotation, List
             }
             // +1: varints are cheapest for small non-negative numbers, and UNLIMITED is -1.
             buf.writeVarInt(entry.remaining() + 1);
+            buf.writeVarInt(entry.waitSeconds());
             if (entry.kind() == KIND_ITEM) {
                 ItemStack.STREAM_CODEC.encode(buf, entry.item());
             } else if (entry.kind() == KIND_POKEMON) {
@@ -188,8 +191,9 @@ public record SafariShopPayload(boolean refresh, int points, long rotation, List
                 cost.add(new Cost(List.copyOf(items), amount, name));
             }
             int remaining = buf.readVarInt() - 1;
+            int wait = buf.readVarInt();
             if (kind == KIND_ITEM) {
-                entries.add(new Entry(tab, kind, price, List.copyOf(cost), remaining, ItemStack.STREAM_CODEC.decode(buf),
+                entries.add(new Entry(tab, kind, price, List.copyOf(cost), remaining, wait, ItemStack.STREAM_CODEC.decode(buf),
                         null, List.of(), 0, false));
             } else if (kind == KIND_POKEMON) {
                 ResourceLocation species = buf.readResourceLocation();
@@ -203,10 +207,10 @@ public record SafariShopPayload(boolean refresh, int points, long rotation, List
                 }
                 int level = buf.readVarInt();
                 boolean shiny = buf.readBoolean();
-                entries.add(new Entry(tab, kind, price, List.copyOf(cost), remaining, ItemStack.EMPTY, species,
+                entries.add(new Entry(tab, kind, price, List.copyOf(cost), remaining, wait, ItemStack.EMPTY, species,
                         List.copyOf(aspects), level, shiny));
             } else {
-                entries.add(new Entry(tab, KIND_UNAVAILABLE, price, List.copyOf(cost), remaining, ItemStack.EMPTY, null,
+                entries.add(new Entry(tab, KIND_UNAVAILABLE, price, List.copyOf(cost), remaining, wait, ItemStack.EMPTY, null,
                         List.of(), 0, false));
             }
         }

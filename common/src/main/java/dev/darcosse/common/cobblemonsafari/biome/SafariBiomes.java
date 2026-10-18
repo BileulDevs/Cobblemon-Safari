@@ -39,6 +39,8 @@ public final class SafariBiomes {
     public static final ResourceKey<Biome> SHORE = key("shore");
     public static final ResourceKey<Biome> CAVERN = key("cavern");
     public static final ResourceKey<Biome> LUSH_GROTTO = key("lush_grotto");
+    /** The giant cavern under the summit and the deep caves around it: the Safari's Deep Dark. */
+    public static final ResourceKey<Biome> DEEP_CAVERN = key("deep_cavern");
 
     /**
      * Biomes found on the surface, where the mod itself spawns special Pokémon.

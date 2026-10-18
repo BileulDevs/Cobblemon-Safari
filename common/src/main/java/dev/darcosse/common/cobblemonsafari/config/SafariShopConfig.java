@@ -35,6 +35,8 @@ public class SafariShopConfig {
      * rotatingItems and rotatingBalls.
      * Version 11: added the cooking tab and its default ingredients (added to
      * existing files once).
+     * Version 12: added Entry.cooldownHours and the free daily Safari Balls
+     * (added to existing files once), which replace the ball loan.
      */
     public int configVersion = SafariShopConfigManager.CURRENT_VERSION;
 
@@ -81,6 +83,7 @@ public class SafariShopConfig {
             Entry.item("cobblemon:rare_candy", 1, 60),
             Entry.item("cobblemon:exp_candy_m", 3, 40),
             Entry.item("cobblemon:ability_capsule", 1, 400),
+            Entry.freeBalls(),
             Entry.item("cobblemon:poke_ball", 10, 20),
             Entry.item("cobblemon:great_ball", 5, 40),
             Entry.item("cobblemon:ultra_ball", 5, 80),
@@ -104,6 +107,16 @@ public class SafariShopConfig {
      * same item RestHouseBuilder puts on their campfire.
      */
     static final String COOKING_ICON = "cobblemon:campfire_pot_red";
+
+    /**
+     * The free Safari Balls: what the loan used to lend, now the player's to
+     * keep, once every FREE_BALLS_COOLDOWN_HOURS hours (real time). A day
+     * keeps them a daily help rather than a supply; fewer hours or more balls
+     * make Poké Balls bought in the shop pointless.
+     */
+    static final String FREE_BALLS_ITEM = "cobblemon:safari_ball";
+    static final int FREE_BALLS_COUNT = 30;
+    static final int FREE_BALLS_COOLDOWN_HOURS = 24;
 
     /** The Safari Ticket's item id, what ticket trades give. */
     public static final String TICKET_ITEM = "cobblemon_safari:safari_ticket";
@@ -470,6 +483,14 @@ public class SafariShopConfig {
         public Integer limitPerRotation;
 
         /**
+         * Hours each player must wait after buying this entry before buying
+         * it again, counted in real time (the wait goes on while the player
+         * or the server is offline); null for no wait. Independent of the
+         * rotations, unlike {@link #limitPerRotation}; both may apply.
+         */
+        public Integer cooldownHours;
+
+        /**
          * Id of the tab showing this entry (see {@link SafariShopConfig#tabs}).
          * Empty picks one from the type: {@code pokemon} for Pokémon,
          * {@code balls} for items whose id ends in {@code _ball}, {@code items}
@@ -517,6 +538,18 @@ public class SafariShopConfig {
             Entry entry = item(id, count, price);
             entry.tab = Tab.COOKING;
             return entry;
+        }
+
+        /** The free Safari Balls, once every {@link #FREE_BALLS_COOLDOWN_HOURS} hours per player. */
+        static Entry freeBalls() {
+            Entry entry = item(FREE_BALLS_ITEM, FREE_BALLS_COUNT, 0);
+            entry.cooldownHours = FREE_BALLS_COOLDOWN_HOURS;
+            return entry;
+        }
+
+        /** Whether this is the default free Safari Balls entry, whatever its count and wait. */
+        boolean isFreeBalls() {
+            return !isPokemon() && FREE_BALLS_ITEM.equals(item) && price == 0 && cooldownHours != null;
         }
 
         /** A trade of overworld goods for one Safari Ticket, limited per rotation. */
@@ -571,6 +604,7 @@ public class SafariShopConfig {
             copy.price = resolvedPrice;
             copy.cost = cost;
             copy.limitPerRotation = limitPerRotation;
+            copy.cooldownHours = cooldownHours;
             copy.tab = tab;
             return copy;
         }

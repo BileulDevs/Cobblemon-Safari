@@ -6,10 +6,13 @@ import com.cobblemon.mod.common.api.pokemon.PokemonProperties;
 import com.cobblemon.mod.common.pokemon.Pokemon;
 import com.cobblemon.mod.common.util.PlayerExtensionsKt;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
+import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.config.SafariShopConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariShopConfigManager;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
 import dev.darcosse.common.cobblemonsafari.gate.SafariGate;
+import dev.darcosse.common.cobblemonsafari.item.SafariItems;
+import dev.darcosse.common.cobblemonsafari.loan.EscapeRopes;
 import dev.darcosse.common.cobblemonsafari.network.SafariNetwork;
 import dev.darcosse.common.cobblemonsafari.network.SafariShopBuyPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariShopPayload;
@@ -46,6 +49,9 @@ public final class SafariShop {
 
     /** Shop entries already reported as broken, to log each once. */
     private static final Set<String> REPORTED = new HashSet<>();
+
+    /** Milliseconds in an hour, for cooldownHours. */
+    private static final long MILLIS_PER_HOUR = 3_600_000L;
 
     private SafariShop() {
     }
@@ -105,7 +111,7 @@ public final class SafariShop {
         // screen holds an older period and a purchase is refused, never wrong.
         long rotation = RotatingShop.period();
         for (SafariShopConfig.Entry entry : catalogue(player)) {
-            out.add(describe(entry, costs(entry), remaining(player, entry, rotation)));
+            out.add(describe(entry, costs(entry), remaining(player, entry, rotation), waitSeconds(player, entry)));
         }
         return new SafariShopPayload(refresh, SafariPoints.balance(player), rotation, tabs, out);
     }
@@ -127,7 +133,34 @@ public final class SafariShop {
         }
         all.addAll(rotating);
         all.addAll(RotatingItems.entries(server));
+        // Last, so the indices of everything else do not depend on where the shop is.
+        SafariShopConfig.Entry rope = escapeRopeEntry(player);
+        if (rope != null) {
+            all.add(rope);
+        }
         return all;
+    }
+
+    /**
+     * A free Escape Rope, for a player who lost or dropped the one lent on
+     * entry. Only in the Safari's shops (the rest houses): ropes are taken
+     * back outside the Safari every second, so one taken at a gate would
+     * vanish at once. Built in memory, never written to the shop file;
+     * refused at purchase to a player who already carries one.
+     */
+    @Nullable
+    private static SafariShopConfig.Entry escapeRopeEntry(ServerPlayer player) {
+        if (!SafariConfigManager.get().escapeRope.enabled || !SafariDimensions.isSafari(player.level())) {
+            return null;
+        }
+        return SafariShopConfig.Entry.rotatingItem(BuiltInRegistries.ITEM.getKey(SafariItems.escapeRope()).toString(),
+                1, 0, SafariShopConfig.Tab.ITEMS);
+    }
+
+    /** Whether an entry gives the Escape Rope. */
+    private static boolean isEscapeRope(SafariShopConfig.Entry entry) {
+        return !entry.isPokemon()
+                && BuiltInRegistries.ITEM.getKey(SafariItems.escapeRope()).toString().equals(entry.item);
     }
 
     /**
@@ -170,25 +203,27 @@ public final class SafariShop {
      *
      * @param costs     its cost items, null when one of them does not exist
      * @param remaining purchases left to the player this rotation, or UNLIMITED
+     * @param wait      seconds before the player may buy it again, 0 when they may now
      */
     private static SafariShopPayload.Entry describe(SafariShopConfig.Entry entry,
-                                                    @Nullable List<SafariShopPayload.Cost> costs, int remaining) {
+                                                    @Nullable List<SafariShopPayload.Cost> costs, int remaining,
+                                                    int wait) {
         int tab = SafariShopConfigManager.tabIndex(entry.tab);
         List<SafariShopPayload.Cost> shownCosts = costs == null ? List.of() : costs;
         if (costs != null && entry.isPokemon()) {
             Pokemon pokemon = preview(entry);
             if (pokemon != null) {
                 return new SafariShopPayload.Entry(tab, SafariShopPayload.KIND_POKEMON, entry.price, shownCosts,
-                        remaining, ItemStack.EMPTY, pokemon.getSpecies().getResourceIdentifier(),
+                        remaining, wait, ItemStack.EMPTY, pokemon.getSpecies().getResourceIdentifier(),
                         List.copyOf(pokemon.getAspects()), pokemon.getLevel(), pokemon.getShiny());
             }
         } else if (costs != null && SafariShopConfigManager.itemExists(entry)) {
             ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.get(ResourceLocation.parse(entry.item)), entry.count);
             return new SafariShopPayload.Entry(tab, SafariShopPayload.KIND_ITEM, entry.price, shownCosts, remaining,
-                    stack, null, List.of(), 0, false);
+                    wait, stack, null, List.of(), 0, false);
         }
         return new SafariShopPayload.Entry(tab, SafariShopPayload.KIND_UNAVAILABLE, entry.price, shownCosts, remaining,
-                ItemStack.EMPTY, null, List.of(), 0, false);
+                wait, ItemStack.EMPTY, null, List.of(), 0, false);
     }
 
     /**
@@ -240,13 +275,45 @@ public final class SafariShop {
                 "#" + tag);
     }
 
-    /** Purchases of an entry the player has left this rotation, or UNLIMITED. */
+    /** Purchases of an entry the player has left this rotation, or UNLIMITED; 0 while its wait runs. */
     private static int remaining(ServerPlayer player, SafariShopConfig.Entry entry, long rotation) {
+        if (waitSeconds(player, entry) > 0) {
+            return 0;
+        }
         if (entry.limitPerRotation == null) {
             return SafariShopPayload.UNLIMITED;
         }
         int bought = ShopLimitStore.get(player.getServer()).bought(player.getUUID(), rotation, limitKey(entry));
         return Math.max(0, entry.limitPerRotation - bought);
+    }
+
+    /**
+     * Seconds before the player may buy an entry with a wait again, rounded
+     * up; 0 when it has no wait or the wait is over. Real time, so the wait
+     * runs while the player or the server is offline.
+     */
+    private static int waitSeconds(ServerPlayer player, SafariShopConfig.Entry entry) {
+        if (entry.cooldownHours == null) {
+            return 0;
+        }
+        long last = ShopLimitStore.get(player.getServer()).lastPurchase(player.getUUID(), limitKey(entry));
+        long left = last + entry.cooldownHours * MILLIS_PER_HOUR - System.currentTimeMillis();
+        // A clock set back after a purchase could make the wait longer than
+        // the entry's own: never more than that.
+        left = Math.min(left, entry.cooldownHours * MILLIS_PER_HOUR);
+        return left <= 0 ? 0 : (int) ((left + 999L) / 1000L);
+    }
+
+    /**
+     * "5 h 12" or "38 min": a wait as the player reads it, rounded up to the
+     * minute. The shop screen formats the same keys the same way.
+     */
+    private static Component waitText(int seconds) {
+        int minutes = Math.max(1, (seconds + 59) / 60);
+        if (minutes < 60) {
+            return Component.translatable(key("shop.wait_minutes"), minutes);
+        }
+        return Component.translatable(key("shop.wait_hours"), minutes / 60, String.format("%02d", minutes % 60));
     }
 
     /**
@@ -333,6 +400,16 @@ public final class SafariShop {
             player.displayClientMessage(Component.translatable(key("message.shop_failed")), true);
             return;
         }
+        if (isEscapeRope(entry) && EscapeRopes.count(player) > 0) {
+            // One rope is all a hunter needs; more would only clutter the inventory.
+            player.displayClientMessage(Component.translatable(key("shop.rope_already")), true);
+            return;
+        }
+        int wait = waitSeconds(player, entry);
+        if (wait > 0) {
+            player.displayClientMessage(Component.translatable(key("shop.wait_needed"), waitText(wait)), true);
+            return;
+        }
         if (remaining(player, entry, rotation) == 0) {
             player.displayClientMessage(Component.translatable(key("shop.limit_reached")), true);
             return;
@@ -362,7 +439,13 @@ public final class SafariShop {
         if (entry.limitPerRotation != null) {
             ShopLimitStore.get(player.getServer()).record(player.getUUID(), rotation, limitKey(entry));
         }
-        if (costs.isEmpty()) {
+        if (entry.cooldownHours != null) {
+            ShopLimitStore.get(player.getServer()).recordPurchaseTime(player.getUUID(), limitKey(entry),
+                    System.currentTimeMillis());
+        }
+        if (costs.isEmpty() && entry.price == 0) {
+            player.sendSystemMessage(Component.translatable(key("message.shop_claimed"), bought));
+        } else if (costs.isEmpty()) {
             player.sendSystemMessage(Component.translatable(key("message.shop_bought"), bought,
                     SafariPointsIcon.amount(entry.price), SafariPointsIcon.amount(SafariPoints.balance(player))));
         } else {

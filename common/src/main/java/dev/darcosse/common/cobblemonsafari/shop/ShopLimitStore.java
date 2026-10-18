@@ -12,8 +12,9 @@ import java.util.UUID;
 
 /**
  * How many times each player bought each limited shop entry during the
- * current rotation, saved with the world so a restart does not reset the
- * limits.
+ * current rotation, and when each player last bought each entry that has a
+ * wait (cooldownHours), saved with the world so a restart does not reset
+ * either.
  *
  * <p>Counts belong to one rotation: a player whose stored rotation is not the
  * current one has bought nothing yet. Old rotations are overwritten lazily,
@@ -41,6 +42,13 @@ final class ShopLimitStore extends SavedData {
 
     private final Map<UUID, Purchases> players = new HashMap<>();
 
+    /**
+     * Per player, the real time (epoch milliseconds) of the last purchase of
+     * each entry with a wait. Kept across rotations, unlike the counts; a
+     * few dozen bytes per player and entry, never pruned.
+     */
+    private final Map<UUID, Map<String, Long>> lastPurchases = new HashMap<>();
+
     /** The store of the given server, created on first access. */
     static ShopLimitStore get(MinecraftServer server) {
         return server.overworld().getDataStorage().computeIfAbsent(FACTORY, DATA_NAME);
@@ -63,7 +71,19 @@ final class ShopLimitStore extends SavedData {
         setDirty();
     }
 
-    /** Writes every player's counts, keyed by UUID string. */
+    /** Real time (epoch milliseconds) of a player's last purchase of an entry, or 0 if never. */
+    long lastPurchase(UUID playerId, String key) {
+        Map<String, Long> times = lastPurchases.get(playerId);
+        return times == null ? 0L : times.getOrDefault(key, 0L);
+    }
+
+    /** Remembers when a player bought an entry with a wait. */
+    void recordPurchaseTime(UUID playerId, String key, long epochMillis) {
+        lastPurchases.computeIfAbsent(playerId, id -> new HashMap<>()).put(key, epochMillis);
+        setDirty();
+    }
+
+    /** Writes every player's counts and purchase times, keyed by UUID string. */
     @Override
     public CompoundTag save(CompoundTag nbt, HolderLookup.Provider registries) {
         CompoundTag all = new CompoundTag();
@@ -76,10 +96,17 @@ final class ShopLimitStore extends SavedData {
             all.put(id.toString(), tag);
         });
         nbt.put("players", all);
+        CompoundTag times = new CompoundTag();
+        lastPurchases.forEach((id, entries) -> {
+            CompoundTag tag = new CompoundTag();
+            entries.forEach(tag::putLong);
+            times.put(id.toString(), tag);
+        });
+        nbt.put("last_purchases", times);
         return nbt;
     }
 
-    /** Reads what {@link #save} wrote, skipping keys that are not UUIDs. */
+    /** Reads what {@link #save} wrote, skipping keys that are not UUIDs. A file without purchase times has none. */
     private static ShopLimitStore load(CompoundTag nbt, HolderLookup.Provider registries) {
         ShopLimitStore store = new ShopLimitStore();
         CompoundTag all = nbt.getCompound("players");
@@ -94,6 +121,20 @@ final class ShopLimitStore extends SavedData {
                 store.players.put(UUID.fromString(key), purchases);
             } catch (IllegalArgumentException e) {
                 CobblemonSafari.LOGGER.warn("Skipping Safari shop limits with an invalid player id '{}'", key);
+            }
+        }
+        CompoundTag times = nbt.getCompound("last_purchases");
+        for (String key : times.getAllKeys()) {
+            try {
+                UUID id = UUID.fromString(key);
+                CompoundTag tag = times.getCompound(key);
+                Map<String, Long> entries = new HashMap<>();
+                for (String entry : tag.getAllKeys()) {
+                    entries.put(entry, tag.getLong(entry));
+                }
+                store.lastPurchases.put(id, entries);
+            } catch (IllegalArgumentException e) {
+                CobblemonSafari.LOGGER.warn("Skipping Safari shop purchase times with an invalid player id '{}'", key);
             }
         }
         return store;

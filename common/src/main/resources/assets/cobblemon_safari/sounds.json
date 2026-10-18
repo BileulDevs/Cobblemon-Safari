@@ -97,6 +97,31 @@
       }
     ]
   },
+  "ambient.deep_cavern": {
+    "subtitle": "subtitles.cobblemon_safari.ambient.pokemon",
+    "sounds": [
+      {
+        "name": "cobblemon:pokemon/zubat/zubat_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/noibat/noibat_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/whismur/whismur_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/roggenrola/roggenrola_cry",
+        "volume": 0.3
+      },
+      {
+        "name": "cobblemon:pokemon/mawile/mawile_cry",
+        "volume": 0.3
+      }
+    ]
+  },
   "ambient.deep_forest": {
     "subtitle": "subtitles.cobblemon_safari.ambient.pokemon",
     "sounds": [

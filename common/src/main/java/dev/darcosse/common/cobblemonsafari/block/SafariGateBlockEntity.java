@@ -64,6 +64,16 @@ public class SafariGateBlockEntity extends BlockEntity {
     private static final int WARMUP_TICKS = 200;
 
     /**
+     * Ticks between two attempts to start a generated gate's tree clearing,
+     * while its tree flag is set. Kept apart from the resident check, which
+     * waits {@link #WARMUP_TICKS} for entities: trees are blocks and can go
+     * at once, and a player arriving at a new gate saw the cut crowns float
+     * for 10 to 15 seconds. Each attempt reads two blocks (only on blocks
+     * still flagged); lower starts sooner once the area is loaded.
+     */
+    private static final int CLEARING_CHECK_TICKS = 10;
+
+    /**
      * Longest gate side scanned when finding the corner, the middle and the
      * warden flag, along the axis and upward. Real gates are 2 to 4 wide and
      * up to 5 high; larger costs up to this squared block reads per check.
@@ -138,6 +148,11 @@ public class SafariGateBlockEntity extends BlockEntity {
                 finishClearing(level, pos, state);
             }
         }
+        if (gate.clearTrees && gate.clearing == null && level instanceof ServerLevel clearLevel
+                && Math.floorMod(gate.ticksLoaded + pos.hashCode(), CLEARING_CHECK_TICKS) == 0
+                && isCorner(level, pos, state)) {
+            startClearing(clearLevel, pos, state, gate);
+        }
         if (gate.ticksLoaded < WARMUP_TICKS
                 // Offset by position so that the gates of a loaded area do not all work on the same tick.
                 || Math.floorMod(gate.ticksLoaded + pos.hashCode(), CHECK_INTERVAL_TICKS) != 0
@@ -151,9 +166,21 @@ public class SafariGateBlockEntity extends BlockEntity {
         BlockPos middle = pos.relative(along, width / 2);
         List<SafariGateBlockEntity> blocks = gateBlocks(level, pos, along, width);
         if (gate.clearing == null && blocks.stream().anyMatch(block -> block.clearTrees)) {
+            // A gate whose flag sits on another block than the corner (widened by hand, or set with /data).
             gate.clearing = new GateClearing(serverLevel, middle);
         }
         GateResidents.maintain(serverLevel, middle, axis, blocks.stream().anyMatch(block -> block.keepsWarden));
+    }
+
+    /**
+     * Starts the tree clearing of the gate whose corner this is, right away
+     * rather than after the residents' warm-up. The job then waits by itself
+     * until the whole area is loaded ({@link GateClearing#step}).
+     */
+    private static void startClearing(ServerLevel level, BlockPos corner, BlockState state, SafariGateBlockEntity gate) {
+        Direction.Axis axis = state.getValue(SafariGateBlock.AXIS);
+        Direction along = Direction.fromAxisAndDirection(axis, Direction.AxisDirection.POSITIVE);
+        gate.clearing = new GateClearing(level, corner.relative(along, widthOf(level, corner, axis) / 2));
     }
 
     /** Drops the tree flag from every block of the gate once its clearing is done, so it never runs again. */
