@@ -1,4 +1,5 @@
 {
+  "itemGroup.cobblemon_safari": "Cobblemon Safari",
   "cobblemon_safari.hud.time_up": "시간 종료!",
   "cobblemon_safari.message.entered": "사파리존에 오신 것을 환영합니다! %s 동안 최대한 많은 포켓몬을 잡아 보세요.",
   "cobblemon_safari.message.time_warning": "사파리존: %s 남았습니다.",

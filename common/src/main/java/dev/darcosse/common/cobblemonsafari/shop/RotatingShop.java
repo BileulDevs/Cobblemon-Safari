@@ -30,7 +30,9 @@ import java.util.Set;
  *
  * <p>Deterministic like the specials: same world, same rotation, same data,
  * same Pokémon, for every player and across restarts. Cached until the
- * rotation, the specials' data or the shop file changes. Server side.
+ * rotation, the specials' data or the shop file changes. A Pokémon the shop
+ * file already sells (same species and form) is never drawn, so it is not
+ * listed twice; another form of that species still can be. Server side.
  */
 public final class RotatingShop {
 
@@ -109,7 +111,7 @@ public final class RotatingShop {
             // Not cached: Cobblemon is still loading, the next opening retries.
             return List.of();
         }
-        List<SafariShopConfig.Entry> drawn = draw(index, specials, config.rotating, period,
+        List<SafariShopConfig.Entry> drawn = draw(index, specials, fixedForms(config), config.rotating, period,
                 SafariWorldState.get(server).rotationSalt());
         cached = drawn;
         cachedPeriod = period;
@@ -120,14 +122,80 @@ public final class RotatingShop {
         return drawn;
     }
 
-    /** Picks the species of one rotation and turns them into entries, most common first. */
+    /**
+     * Showdown ids (species and form, e.g. {@code vulpixalola}) of the
+     * Pokémon the shop file sells. Read from the Pokémon each entry builds,
+     * because the properties may name the species and form by any alias
+     * Cobblemon accepts; the level and other properties do not matter. An
+     * entry that fails to build is skipped here: the shop already lists it as
+     * unavailable and logs it. Built once per draw (a rotation or a shop file
+     * change), not per opening.
+     */
+    private static Set<String> fixedForms(SafariShopConfig config) {
+        Set<String> sold = new HashSet<>();
+        for (SafariShopConfig.Entry entry : config.entries) {
+            if (!entry.isPokemon() || entry.pokemon == null) {
+                continue;
+            }
+            String form = formOf(entry.pokemon);
+            if (form != null) {
+                sold.add(form);
+            }
+        }
+        return sold;
+    }
+
+    /**
+     * Showdown id of the species and form a properties string builds, or null
+     * when it does not build. Cobblemon's FormData compares by this same id.
+     */
+    @Nullable
+    private static String formOf(String properties) {
+        try {
+            return PokemonProperties.Companion.parse(properties).create().getForm().showdownId();
+        } catch (RuntimeException e) {
+            // Reported by SafariShop when an entry is shown; nothing to compare.
+            return null;
+        }
+    }
+
+    /**
+     * Whether a candidate of the draw is a Pokémon the shop file already
+     * sells. Only candidates whose species id starts one of the sold ids are
+     * built, so the draw builds a handful of Pokémon at most, not the whole
+     * pool.
+     */
+    private static boolean alreadySold(HabitatEntry entry, Set<String> sold) {
+        if (sold.isEmpty()) {
+            return false;
+        }
+        String species = entry.species().showdownId();
+        boolean candidate = false;
+        for (String id : sold) {
+            if (id.startsWith(species)) {
+                candidate = true;
+                break;
+            }
+        }
+        if (!candidate) {
+            return false;
+        }
+        String form = formOf(properties(entry, level(entry)));
+        return form != null && sold.contains(form);
+    }
+
+    /**
+     * Picks the species of one rotation and turns them into entries, most
+     * common first, never a species and form of {@code sold} (the shop
+     * file's own Pokémon).
+     */
     private static List<SafariShopConfig.Entry> draw(Map<ResourceLocation, HabitatEntry> index,
-                                                     List<HabitatEntry> specials, SafariShopConfig.Rotating config,
-                                                     long period, long salt) {
-        Set<Species> hunted = new HashSet<>();
+                                                     List<HabitatEntry> specials, Set<String> sold,
+                                                     SafariShopConfig.Rotating config, long period, long salt) {
+        Set<Species> excluded = new HashSet<>();
         if (config.excludeSpecials) {
             for (HabitatEntry special : specials) {
-                hunted.add(special.species());
+                excluded.add(special.species());
             }
         }
         // The index is sorted by species id: the pool is built in a stable
@@ -139,7 +207,8 @@ public final class RotatingShop {
                     || !config.rarities.contains(entry.rarity().bucket)
                     || config.excludedSpecies.contains(species.getResourceIdentifier().toString())
                     || (!config.allowSpecialSpecies && SpeciesRules.isSpecial(species))
-                    || hunted.contains(species)) {
+                    || excluded.contains(species)
+                    || alreadySold(entry, sold)) {
                 continue;
             }
             pool.add(entry);

@@ -26,7 +26,6 @@ public class CobblemonSafariNeoForge {
         modEventBus.addListener(NeoForgeSafariNetworking::register);
         modEventBus.addListener(NeoForgeWorldgenRegistration::onRegister);
         modEventBus.addListener(NeoForgeItemRegistration::onRegister);
-        modEventBus.addListener(NeoForgeItemRegistration::onBuildCreativeTab);
 
         NeoForge.EVENT_BUS.addListener(NeoForgeServerEvents::onServerAboutToStart);
         NeoForge.EVENT_BUS.addListener(NeoForgeServerEvents::onServerStarted);

@@ -1,4 +1,5 @@
 {
+  "itemGroup.cobblemon_safari": "Cobblemon Safari",
   "cobblemon_safari.hud.time_up": "タイムアップ！",
   "cobblemon_safari.message.entered": "サファリゾーンへようこそ！制限時間は%s、できるだけたくさんのポケモンを捕まえよう。",
   "cobblemon_safari.message.time_warning": "サファリゾーン：残り%s。",

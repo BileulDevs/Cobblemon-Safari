@@ -2,18 +2,16 @@ package dev.darcosse.forge.cobblemonsafari;
 
 import dev.darcosse.common.cobblemonsafari.block.SafariBlockEntities;
 import dev.darcosse.common.cobblemonsafari.block.SafariBlocks;
-import dev.darcosse.common.cobblemonsafari.decor.SafariDecor;
+import dev.darcosse.common.cobblemonsafari.item.SafariCreativeTab;
 import dev.darcosse.common.cobblemonsafari.item.SafariItems;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.world.item.CreativeModeTabs;
-import net.minecraft.world.item.Item;
+import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
 
 /**
- * Registers the Safari blocks, block entity types and items on NeoForge and
- * lists the items in a creative tab.
+ * Registers the Safari blocks, block entity types, items and creative tab on
+ * NeoForge.
  */
 public final class NeoForgeItemRegistration {
 
@@ -36,20 +34,9 @@ public final class NeoForgeItemRegistration {
         event.register(Registries.BLOCK_ENTITY_TYPE, helper -> SafariBlockEntities.register(
                 (constructor, block) -> BlockEntityType.Builder.of(constructor::apply, block).build(null),
                 helper::register));
-    }
-
-    /** Mod-bus handler; same tab as on Fabric so both loaders look alike. */
-    static void onBuildCreativeTab(BuildCreativeModeTabContentsEvent event) {
-        if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
-            event.accept(SafariItems.safariTicket());
-            event.accept(SafariItems.safariBoard());
-            event.accept(SafariItems.safariBoardFrame());
-            event.accept(SafariItems.safariWallScreen());
-            event.accept(SafariItems.safariGate());
-            // A loop rather than a method reference: accept is overloaded.
-            for (Item item : SafariDecor.items()) {
-                event.accept(item);
-            }
-        }
+        // Vanilla's builder: NeoForge places modded tabs on its own pages,
+        // whatever row and column the builder is given.
+        event.register(Registries.CREATIVE_MODE_TAB, helper -> helper.register(SafariCreativeTab.ID,
+                SafariCreativeTab.build(CreativeModeTab.builder(CreativeModeTab.Row.TOP, 0))));
     }
 }

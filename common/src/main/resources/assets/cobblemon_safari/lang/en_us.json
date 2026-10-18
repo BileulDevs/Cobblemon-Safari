@@ -1,4 +1,5 @@
 {
+  "itemGroup.cobblemon_safari": "Cobblemon Safari",
   "cobblemon_safari.hud.time_up": "Time's up!",
   "cobblemon_safari.message.entered": "Welcome to the Safari Zone! You have %s to catch as many Pokémon as you can.",
   "cobblemon_safari.message.time_warning": "Safari Zone: %s left.",

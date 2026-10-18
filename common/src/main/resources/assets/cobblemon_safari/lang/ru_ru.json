@@ -1,4 +1,5 @@
 {
+  "itemGroup.cobblemon_safari": "Cobblemon Safari",
   "cobblemon_safari.hud.time_up": "Время вышло!",
   "cobblemon_safari.message.entered": "Добро пожаловать в Сафари-зону! У вас есть %s, чтобы поймать как можно больше покемонов.",
   "cobblemon_safari.message.time_warning": "Сафари-зона: осталось %s.",

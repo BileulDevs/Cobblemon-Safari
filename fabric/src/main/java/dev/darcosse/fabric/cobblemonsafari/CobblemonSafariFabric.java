@@ -4,7 +4,7 @@ import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.event.SafariServerEvents;
 import dev.darcosse.common.cobblemonsafari.block.SafariBlockEntities;
 import dev.darcosse.common.cobblemonsafari.block.SafariBlocks;
-import dev.darcosse.common.cobblemonsafari.decor.SafariDecor;
+import dev.darcosse.common.cobblemonsafari.item.SafariCreativeTab;
 import dev.darcosse.common.cobblemonsafari.item.SafariItems;
 import dev.darcosse.common.cobblemonsafari.loot.TicketLoot;
 import dev.darcosse.common.cobblemonsafari.worldgen.SafariWorldgen;
@@ -17,7 +17,7 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
-import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
+import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.fabricmc.fabric.api.loot.v3.LootTableEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.core.Registry;
@@ -26,8 +26,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.item.CreativeModeTabs;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 /**
@@ -57,17 +55,9 @@ public class CobblemonSafariFabric implements ModInitializer {
                 (constructor, block) -> BlockEntityType.Builder.of(constructor::apply, block).build(null),
                 (id, type) -> Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id, type));
         SafariItems.register((id, item) -> Registry.register(BuiltInRegistries.ITEM, id, item));
-        ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.TOOLS_AND_UTILITIES).register(entries -> {
-            entries.accept(SafariItems.safariTicket());
-            entries.accept(SafariItems.safariBoard());
-            entries.accept(SafariItems.safariBoardFrame());
-            entries.accept(SafariItems.safariWallScreen());
-            entries.accept(SafariItems.safariGate());
-            // A loop rather than a method reference: accept is overloaded.
-            for (Item item : SafariDecor.items()) {
-                entries.accept(item);
-            }
-        });
+        // The mod's own tab, after the items it lists.
+        Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, SafariCreativeTab.ID,
+                SafariCreativeTab.build(FabricItemGroup.builder()));
         FabricSafariNetworking.registerPayloadTypes();
 
         // STARTING fires before the levels load, which the map reset needs.

@@ -1,4 +1,5 @@
 {
+  "itemGroup.cobblemon_safari": "Cobblemon Safari",
   "cobblemon_safari.hud.time_up": "¡Se acabó el tiempo!",
   "cobblemon_safari.message.entered": "¡Bienvenido a la Zona Safari! Tienes %s para capturar todos los Pokémon que puedas.",
   "cobblemon_safari.message.time_warning": "Zona Safari: quedan %s.",
