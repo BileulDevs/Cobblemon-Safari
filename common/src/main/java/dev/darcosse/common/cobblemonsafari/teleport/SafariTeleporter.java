@@ -51,7 +51,7 @@ public final class SafariTeleporter {
     /**
      * Sends a player into the Safari: in front of the entrance house's door,
      * facing it, or when that spot is not safe (the house not built yet, a
-     * player-made obstacle), to a dry spot near the arrival point as before.
+     * player-made obstacle), to a dry spot near the arrival point.
      *
      * @return false when the Safari level is missing or no safe spot was found;
      *         the player has not moved in that case

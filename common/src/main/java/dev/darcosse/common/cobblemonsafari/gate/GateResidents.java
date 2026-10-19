@@ -220,7 +220,7 @@ public final class GateResidents {
         }
         Vec3 centre = Vec3.atBottomCenterOf(spot);
         Mob warden = wardens.get(0);
-        // Wardens spawned before he carried a ball get one on the next round.
+        // A warden whose ball was taken (or a copy pasted without it) gets it back.
         if (warden.getMainHandItem().isEmpty()) {
             equipSafariBall(warden);
         }
@@ -412,10 +412,11 @@ public final class GateResidents {
      * <p>Not the column's surface from a heightmap: anything "motion
      * blocking" above the ground hides the ground. Banners and signs count
      * (vanilla forces them solid although they have no collision), so a
-     * banner over the warden's spot gave a "surface" on top of the banner,
-     * where nobody can stand, and the warden never spawned. Roofs, awnings
-     * and tree trunks did the same, or put a Pokémon on a roof. Searching
-     * around the floor level finds the plaza under all of them.
+     * banner over the warden's spot would give a "surface" on top of the
+     * banner, where nobody can stand, and the warden would never spawn.
+     * Roofs, awnings and tree trunks would do the same, or put a Pokémon on a
+     * roof. Searching around the floor level finds the plaza under all of
+     * them.
      */
     @Nullable
     private static BlockPos standingSpot(ServerLevel level, BlockPos column, int floorY) {
@@ -443,8 +444,8 @@ public final class GateResidents {
      * <p>Ground is "has a collision box reaching at least half a block up",
      * not {@code isFaceSturdy}: a sturdy face must reach the very top of the
      * block, which dirt paths (15/16 high), farmland, soul sand and mud do
-     * not. The gate's plaza is made of dirt paths, so a sturdy-face test found
-     * no spot at all for the warden.
+     * not. The gate's plaza is made of dirt paths, so a sturdy-face test
+     * would find no spot at all for the warden.
      */
     private static boolean canStand(ServerLevel level, BlockPos pos) {
         BlockPos below = pos.below();

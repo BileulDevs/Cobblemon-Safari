@@ -38,8 +38,9 @@ import java.util.Set;
  * The Safari Warden's shop: Pokémon and items bought with Safari points,
  * listed in {@code config/cobblemon_safari/shop.json}, plus random Pokémon
  * that change with each rotation ({@link RotatingShop}). Opened from the
- * warden's dialogue (through {@code /safari shop}); the screen itself is
- * client-side ({@code SafariShopScreen}) and only sends purchase requests.
+ * NPCs' dialogues ({@code q.player.safari_shop()}), or by operators with
+ * {@code /safari shop}; the screen itself is client-side
+ * ({@code SafariShopScreen}) and only sends purchase requests.
  * Server side.
  */
 public final class SafariShop {
@@ -119,8 +120,8 @@ public final class SafariShop {
     /**
      * Everything for sale, in the order the screen and purchases index it:
      * the fixed entries of the shop file, then the random Pokémon, items and
-     * balls of the rotation. Prices are resolved here, the one place every reader of a
-     * price (screen, purchase check, payment, limits) goes through, so
+     * balls of the rotation. Prices are resolved here, the one place every
+     * reader of a price (screen, purchase check, payment, limits) goes through, so
      * {@code "auto"} never reaches them as a number.
      */
     private static List<SafariShopConfig.Entry> catalogue(ServerPlayer player) {
@@ -177,7 +178,7 @@ public final class SafariShop {
     /**
      * Whether a player may use the shop where they stand: operators anywhere,
      * others at a Safari Gate (the warden) or in a rest house of the Safari
-     * (the clerk). Checked by {@code /safari shop} and again at each purchase.
+     * (the clerk). Checked when the shop opens and again at each purchase.
      */
     public static boolean canShopHere(ServerPlayer player) {
         if (player.hasPermissions(OP_LEVEL) || SafariGate.isNearGate(player)) {

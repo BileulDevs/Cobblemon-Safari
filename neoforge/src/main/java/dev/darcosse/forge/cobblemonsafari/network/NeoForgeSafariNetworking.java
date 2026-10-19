@@ -29,9 +29,9 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 /**
  * Registers the Safari payloads on NeoForge.
  *
- * <p>Registered as REQUIRED (no {@code optional()}), unlike JEC: the Safari
- * relies on the client to pre-check Poké Ball use, so a client without the mod
- * would see its ball count desync. NeoForge refuses such clients at login.
+ * <p>Registered as REQUIRED (no {@code optional()}): the Safari relies on the
+ * client to pre-check Poké Ball use, so a client without the mod would see
+ * its ball count desync. NeoForge refuses such clients at login.
  * The handlers are registered on both dists; they only touch the client
  * state holders and the client bridges, which have no client-only imports.
  */

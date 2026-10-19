@@ -15,10 +15,10 @@ import java.util.function.Predicate;
  * {@code safari_gate()}, {@code safari_leave()}, {@code safari_status()},
  * {@code safari_today()} and {@code safari_balls()}.
  *
- * <p>Why not commands: the dialogues used to run {@code /safari shop} and the
- * like in the player's name ({@code q.player.run_command}), which had to stay
- * commands every player could type. Functions are only reachable from
- * dialogues, so players see a single {@code /safari}.
+ * <p>Why not commands: a dialogue running a command in the player's name
+ * ({@code q.player.run_command}) needs a command every player may type.
+ * Functions are only reachable from dialogues, so players see a single
+ * {@code /safari}.
  *
  * <p>Added to Cobblemon's {@code PlayerMoLangFunctions.custom}, the list it
  * merges into every player's MoLang struct (checked in the Cobblemon 1.8.0

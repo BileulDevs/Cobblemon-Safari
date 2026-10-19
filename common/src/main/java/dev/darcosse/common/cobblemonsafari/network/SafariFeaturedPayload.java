@@ -28,10 +28,10 @@ public record SafariFeaturedPayload(boolean enabled, long millisUntilRotation, l
                                     List<Entry> entries) implements CustomPacketPayload {
 
     /**
-     * Wire format version. The format is positional: add, remove or reorder a
-     * field (here or in {@link Entry}) and a client of another build reads
-     * garbage without an error. Bump on EVERY change to write/read.
-     * v1: first version.
+     * Wire format version, checked before anything else is read. The format
+     * is positional: adding, removing or reordering a field (or changing what
+     * one means) without raising this makes a peer of another build read
+     * garbage without an error. Raise it on every change to write/read.
      */
     public static final int WIRE_VERSION = 1;
 
@@ -139,7 +139,7 @@ public record SafariFeaturedPayload(boolean enabled, long millisUntilRotation, l
         return count;
     }
 
-    /** Payload type used by both loaders to route this packet. */
+    /** Type under which each loader registers this payload. */
     @Override
     public CustomPacketPayload.Type<SafariFeaturedPayload> type() {
         return TYPE;

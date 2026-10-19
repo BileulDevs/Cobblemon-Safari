@@ -8,8 +8,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * The pixel-art safari landscapes drawn by tools/gui_assets.py, each in three
  * lights (morning, dusk, night), and which light matches the time of day.
- * The shop and each wall screen page have their own
- * scene but share the time rule, so all change light together.
+ * The shop and each wall screen page have their own scene but share the time
+ * rule, so all change light together.
  *
  * <p>Free of client-only imports, but only used by client code.
  */
@@ -23,7 +23,10 @@ public final class SafariLandscapes {
     public record Scene(ResourceLocation morning, ResourceLocation dusk, ResourceLocation night,
                         int width, int height, float horizon) {
 
-        /** The texture for the time of day of a level (see the bounds in {@link SafariLandscapes}); morning without a level. */
+        /**
+         * The texture for the time of day of a level (see the bounds in
+         * {@link SafariLandscapes}); morning without a level.
+         */
         public ResourceLocation forTime(@Nullable Level level) {
             return switch (light(level)) {
                 case NIGHT -> night;
@@ -40,21 +43,21 @@ public final class SafariLandscapes {
     public static final Scene SHOP = scene("shop_background_", 300, 232, 0.58F);
 
     /**
-     * Behind the FEATURED page of the wall screens, cropped to each screen's shape. Size
-     * and horizon must match BOARD_WIDTH, BOARD_HEIGHT and BOARD_HORIZON in
-     * tools/gui_assets.py.
+     * Behind the FEATURED page of the wall screens, cropped to each screen's
+     * shape. Size and horizon must match BOARD_WIDTH, BOARD_HEIGHT and
+     * BOARD_HORIZON in tools/gui_assets.py.
      */
     public static final Scene BOARD = scene("board_background_", 384, 192, 0.52F);
 
     /**
      * Behind the wall screens' STATS page: the rangers' camp. Same size and
-     * horizon as the board's, matching record_background in tools/gui_assets.py.
+     * horizon as {@link #BOARD}, matching record_background in tools/gui_assets.py.
      */
     public static final Scene RECORD = scene("record_background_", 384, 192, 0.52F);
 
     /**
      * Behind the wall screens' BOUNTIES page: the expedition trail. Same size
-     * and horizon as the board's, matching missions_background in tools/gui_assets.py.
+     * and horizon as {@link #BOARD}, matching missions_background in tools/gui_assets.py.
      */
     public static final Scene MISSIONS = scene("missions_background_", 384, 192, 0.52F);
 
@@ -100,6 +103,7 @@ public final class SafariLandscapes {
                 width, height, horizon);
     }
 
+    /** Id of one light of a scene. */
     private static ResourceLocation texture(String prefix, String light) {
         return CobblemonSafari.id("textures/gui/" + prefix + light + ".png");
     }

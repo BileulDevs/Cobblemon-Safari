@@ -22,7 +22,12 @@ import java.util.List;
 public record SafariBountiesPayload(boolean enabled, List<Bounty> bounties, List<Integer> progress,
                                     int allDoneBonus) implements CustomPacketPayload {
 
-    /** Wire format version. Bump on EVERY change to write/read. v1: first version. */
+    /**
+     * Wire format version, checked before anything else is read. The format
+     * is positional: adding, removing or reordering a field (or changing what
+     * one means) without raising this makes a peer of another build read
+     * garbage without an error. Raise it on every change to write/read.
+     */
     public static final int WIRE_VERSION = 1;
 
     /** Guard against corrupted or hostile packets announcing huge lists. */
@@ -78,6 +83,7 @@ public record SafariBountiesPayload(boolean enabled, List<Bounty> bounties, List
         return new SafariBountiesPayload(enabled, List.copyOf(bounties), List.copyOf(progress), allDoneBonus);
     }
 
+    /** Type under which each loader registers this payload. */
     @Override
     public CustomPacketPayload.Type<SafariBountiesPayload> type() {
         return TYPE;

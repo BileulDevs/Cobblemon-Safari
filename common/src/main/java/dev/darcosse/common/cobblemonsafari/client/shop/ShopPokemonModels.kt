@@ -36,7 +36,7 @@ object ShopPokemonModels {
     /**
      * Facing of the model at rest: three-quarter front, Cobblemon's PC angle.
      * The model sways around it instead of turning a full circle: a full
-     * turn showed every Pokémon from behind half of the time, all at once.
+     * turn would show every Pokémon from behind half of the time, all at once.
      */
     private const val FRONT_YAW_DEGREES = 35F
 

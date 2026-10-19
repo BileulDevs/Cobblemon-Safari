@@ -79,12 +79,11 @@ public final class SafariSessionManager {
     private static final Map<UUID, ReturnPoint> LAST_OUTSIDE = new HashMap<>();
 
     /**
-     * Players who asked to leave (the clerk's dialogue),
-     * handled at the start of the next server tick ({@link #processLeaves}).
-     * The clerk's answer runs from inside Cobblemon's dialogue handling,
-     * where a cross-dimension teleport was seen ending the session without
-     * moving the player; on the next tick nothing of the dialogue is on the
-     * stack any more. Concurrent because nothing guarantees the dialogue
+     * Players who asked to leave (the clerk's dialogue), handled at the start
+     * of the next server tick ({@link #processLeaves}). The clerk's answer
+     * runs from inside Cobblemon's dialogue handling, where a cross-dimension
+     * teleport ends the session without moving the player; on the next tick
+     * nothing of the dialogue is on the stack any more. Concurrent because nothing guarantees the dialogue
      * runs its actions on the server thread.
      */
     private static final Queue<UUID> PENDING_LEAVES = new ConcurrentLinkedQueue<>();
@@ -258,7 +257,7 @@ public final class SafariSessionManager {
      * exemption is for builders who chose to go in, and logging in is not a
      * choice. Without this, a creative player whose session ended while
      * offline (or a single-player world opened with another account, which
-     * inherits the host's position) stayed inside with no clock. A builder
+     * inherits the host's position) would stay inside with no clock. A builder
      * who relogs simply teleports back in.
      */
     public static void settleJoined(ServerPlayer player) {
@@ -402,8 +401,8 @@ public final class SafariSessionManager {
     /**
      * Reconciles the world with the session store: keeps the Safari border in
      * place, evicts players inside without a session back to where they last
-     * stood outside, ends sessions of players
-     * who got out by other means, and brings back anyone outside the border.
+     * stood outside, ends sessions of players who got out by other means, and
+     * brings back anyone outside the border.
      */
     private static void enforceConsistency(MinecraftServer server, SafariSessionStore store) {
         SafariBorder.enforce(server);

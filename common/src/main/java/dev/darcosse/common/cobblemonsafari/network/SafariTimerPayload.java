@@ -15,7 +15,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
  * @param active         whether the player currently has a session
  * @param remainingTicks remaining time when the snapshot was taken
  * @param running        whether the clock is counting down right now; false
- *                       freezes the display (grace period, future pause mechanics)
+ *                       freezes the display (outside the Safari, battle grace period)
  * @param catches        Pokémon caught so far this session
  * @param ballsLoaned    Safari Balls lent at the entrance; 0 hides the ball counter
  * @param grantedTicks   total time granted over the session, additions included;
@@ -26,13 +26,12 @@ public record SafariTimerPayload(boolean active, int remainingTicks, boolean run
         implements CustomPacketPayload {
 
     /**
-     * Wire format version. The format is positional: add, remove or reorder a
-     * field and a client of another build reads garbage without an error.
-     * Bump on EVERY change to write/read.
-     * v2: added catches and ballsLoaned.
-     * v3: added grantedTicks.
+     * Wire format version, checked before anything else is read. The format
+     * is positional: adding, removing or reordering a field (or changing what
+     * one means) without raising this makes a peer of another build read
+     * garbage without an error. Raise it on every change to write/read.
      */
-    public static final int WIRE_VERSION = 3;
+    public static final int WIRE_VERSION = 1;
 
     public static final CustomPacketPayload.Type<SafariTimerPayload> TYPE =
             new CustomPacketPayload.Type<>(CobblemonSafari.id("timer"));
@@ -78,7 +77,7 @@ public record SafariTimerPayload(boolean active, int remainingTicks, boolean run
         return new SafariTimerPayload(active, remainingTicks, running, catches, ballsLoaned, grantedTicks);
     }
 
-    /** Payload type used by both loaders to route this packet. */
+    /** Type under which each loader registers this payload. */
     @Override
     public CustomPacketPayload.Type<SafariTimerPayload> type() {
         return TYPE;

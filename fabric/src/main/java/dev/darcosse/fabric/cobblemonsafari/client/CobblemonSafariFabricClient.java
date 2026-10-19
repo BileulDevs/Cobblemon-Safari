@@ -34,7 +34,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 
 /**
- * Fabric client entry point: payload receivers, HUD, board and wall screens, sky
+ * Fabric client entry point: payload receivers, HUD, wall screens, banners, sky
  * effects, the gate's render layer and disconnect cleanup.
  */
 public class CobblemonSafariFabricClient implements ClientModInitializer {

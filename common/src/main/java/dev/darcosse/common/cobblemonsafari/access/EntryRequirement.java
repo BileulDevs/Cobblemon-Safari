@@ -16,6 +16,9 @@ import org.jetbrains.annotations.Nullable;
 public interface EntryRequirement {
 
     /**
+     * Tells whether the player meets the requirement right now, without
+     * taking anything from them.
+     *
      * @return null when the player may enter, otherwise the reason shown to them
      */
     @Nullable

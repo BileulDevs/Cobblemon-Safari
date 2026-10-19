@@ -127,8 +127,9 @@ public class SafariShopScreen extends Screen {
      */
     private static final long COST_ICON_CYCLE_MS = 1_000L;
     /**
-     * Card names wider than the card scroll back and forth, like the Safari
-     * Board's: speed in GUI pixels per second, and the pause at each end.
+     * Card names wider than the card scroll back and forth, like the lines
+     * of the wall screens: speed in GUI pixels per second, and the pause at
+     * each end.
      */
     private static final float NAME_SCROLL_SPEED = 20.0F;
     private static final long NAME_SCROLL_PAUSE_MS = 1_200L;
@@ -139,7 +140,7 @@ public class SafariShopScreen extends Screen {
 
     /**
      * Colours, ARGB. Safari greens framed with wood and a gold accent, like
-     * the gate and the board. Boxes are translucent so the landscape shows
+     * the gate and the wall screens. Boxes are translucent so the landscape shows
      * through, but dark enough to keep white text readable over the sky.
      */
     private static final int PANEL_BORDER = 0xFF7A5A2E;
@@ -292,6 +293,7 @@ public class SafariShopScreen extends Screen {
         return tr("shop.wait_hours", minutes / 60, String.format("%02d", minutes % 60));
     }
 
+    /** Moves {@code delta} pages forward or back within the open tab, clamped to its pages. */
     private void turnPage(int delta) {
         page = Math.max(0, Math.min(pageCount() - 1, page + delta));
         refreshButtons();
@@ -476,10 +478,7 @@ public class SafariShopScreen extends Screen {
      * normal tabs with icon and name; tight tabs with icon and name (see
      * {@link #TAB_PADDING_TIGHT}); tight tabs with their name alone; then the
      * row scrolls, names alone, with arrows at both ends, keeping the open
-     * tab in view.
-     *
-     * <p>Before, tabs past the box's width were simply not drawn, so a fifth
-     * tab silently hid the last one (the tickets).
+     * tab in view. No tab is ever left out of the row.
      */
     private List<TabSlot> tabLayout() {
         List<Integer> shown = new ArrayList<>();
@@ -547,9 +546,9 @@ public class SafariShopScreen extends Screen {
     /**
      * The tab row, as folder tabs on the content box: each tab with an icon
      * then its name (the icon gives way only when the row is very crowded,
-     * see {@link #tabLayout}). The open
-     * tab is taller, gold-edged, and melts into the box (same colour, no line
-     * between them); the others sit lower, darker.
+     * see {@link #tabLayout}). The open tab is taller, gold-edged, and melts
+     * into the box (same colour, no line between them); the others sit lower,
+     * darker.
      */
     private void drawTabs(GuiGraphics graphics, int mouseX, int mouseY) {
         int bottom = top + CONTENT_TOP;
@@ -649,8 +648,8 @@ public class SafariShopScreen extends Screen {
         graphics.disableScissor();
 
         if (entry.kind() == SafariShopPayload.KIND_POKEMON) {
-            // Level as a small badge in the corner: the name line then holds the
-            // whole species name, which "Name (Lv. 12)" used to cut.
+            // Level as a small badge in the corner, so the name line holds the
+            // whole species name rather than "Name (Lv. 12)" cut short.
             graphics.pose().pushPose();
             graphics.pose().translate(x + 3, y + 3, 200.0F);
             graphics.pose().scale(BADGE_SCALE, BADGE_SCALE, 1.0F);
@@ -682,7 +681,7 @@ public class SafariShopScreen extends Screen {
     /**
      * A card's name, centred when it fits; otherwise clipped to the card and
      * scrolled back and forth with a pause at each end, so the whole name
-     * can be read (it used to be cut off).
+     * can be read.
      */
     private void drawName(GuiGraphics graphics, Component name, int x, int y, int colour) {
         int available = CARD_WIDTH - 2 * NAME_MARGIN;
@@ -772,7 +771,6 @@ public class SafariShopScreen extends Screen {
         return cost.items().get(index);
     }
 
-    /** How many of a cost's items the local player carries, all kinds together. Client-side guess; the server counts again. */
     /**
      * Whether the entry gives the Escape Rope and the player already carries
      * one: the server refuses a second, so the card says so and the button
@@ -785,6 +783,10 @@ public class SafariShopScreen extends Screen {
                 && minecraft.player.getInventory().countItem(entry.item().getItem()) > 0;
     }
 
+    /**
+     * How many of a cost's items the local player carries, all kinds
+     * together. A client-side guess for the display; the server counts again.
+     */
     private int carried(SafariShopPayload.Cost cost) {
         if (minecraft == null || minecraft.player == null) {
             return 0;
@@ -827,7 +829,7 @@ public class SafariShopScreen extends Screen {
         graphics.pose().popPose();
         if (stack.getCount() > 1) {
             // Not renderItemDecorations: under the icon's scale the count
-            // grew with it and covered half the item. Drawn at text size
+            // would grow with it and cover half the item. Drawn at text size
             // instead, tucked into the icon's bottom-right corner.
             String count = "×" + stack.getCount();
             float right = x + (CARD_WIDTH + size) / 2.0F + COUNT_OVERHANG;
@@ -916,6 +918,7 @@ public class SafariShopScreen extends Screen {
         return top + CONTENT_TOP + CONTENT_PADDING + (slot / COLUMNS) * (CARD_HEIGHT + CARD_GAP);
     }
 
+    /** Pages the open tab needs, at {@link #PER_PAGE} cards each. */
     private int pageCount() {
         return (visible.size() + PER_PAGE - 1) / PER_PAGE;
     }

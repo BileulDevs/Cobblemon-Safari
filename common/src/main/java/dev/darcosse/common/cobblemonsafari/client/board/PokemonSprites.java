@@ -53,8 +53,8 @@ public final class PokemonSprites {
 
     /**
      * The sprite for a species with its aspects, or null when neither the
-     * mod nor a loaded pack has one. Tries the most specific name first: each form aspect, shiny
-     * then plain, then the bare species.
+     * mod nor a loaded pack has one. Tries the most specific name first:
+     * each form aspect, shiny then plain, then the bare species.
      */
     @Nullable
     public static ResourceLocation find(ResourceLocation species, Set<String> aspects) {
@@ -69,11 +69,6 @@ public final class PokemonSprites {
         ResourceLocation texture = lookup(species.getPath(), sorted);
         CACHE.put(key, new Cached(texture, now + CACHE_TTL_MS));
         return texture;
-    }
-
-    /** Drops every cached answer, e.g. when the board leaves sprite mode. */
-    public static void clear() {
-        CACHE.clear();
     }
 
     /** Walks the candidate names in order and returns the first that exists. */

@@ -116,8 +116,8 @@ public class SafariScreenPainter {
     private static final float MIN_MODEL_SHARE = 0.45F;
     /**
      * Share of the model area the model's height fills. Cobblemon's profile
-     * sizes are only roughly uniform, so this leaves room: at 0.85 many
-     * models overflowed their cell.
+     * sizes are only roughly uniform, so this leaves room: around 0.85 many
+     * models overflow their cell.
      */
     private static final float MODEL_FILL = 0.62F;
     /**
@@ -133,9 +133,9 @@ public class SafariScreenPainter {
 
     // Every pair of fills that can overlap must sit on different layers: two
     // overlapping quads at the same depth z-fight, flickering as the camera
-    // turns. The rarity strip and the glowing frame of special cells shared
-    // Z_DETAIL, which made the top border of those cells flicker. Layers are
-    // at least 0.1 canvas pixel apart (about 0.0017 block on a 3x2 screen),
+    // turns (the rarity strip and the glowing frame of special cells, for
+    // instance, cross on the top border of those cells). Layers are at least
+    // 0.1 canvas pixel apart (about 0.0017 block on a 3x2 screen),
     // far above depth buffer precision at reading distance.
 
     private static final float Z_BACKGROUND = 0.0F;
@@ -897,12 +897,11 @@ public class SafariScreenPainter {
         return builder.toString();
     }
 
-    /** Text centred between two x positions at scale 1. */
     /**
-     * The board's safari landscape, in the light of the time of day, behind the whole screen,
-     * cropped to the screen's shape (centred on the horizon, so a long flat
-     * board shows the horizon line) and dimmed so text stays readable.
-     * Drawn before every fill: the translucent panels blend over it.
+     * A page's safari landscape, in the light of the time of day, behind the
+     * whole screen, cropped to the screen's shape (centred on the horizon, so
+     * a long flat screen shows the horizon line) and dimmed so text stays
+     * readable. Drawn before every fill: the translucent panels blend over it.
      */
     private void drawLandscape(BoardPainter p, float left, float top, float right, float bottom,
                                SafariLandscapes.Scene scene) {
@@ -939,6 +938,7 @@ public class SafariScreenPainter {
         return (panelAlpha << ALPHA_SHIFT) | (colour & RGB_MASK);
     }
 
+    /** Text centred between two x positions at scale 1, cut with an ellipsis when too long. */
     private void drawCentered(BoardPainter p, String text, float x0, float x1, float y, int color) {
         String fitted = p.fit(text, x1 - x0);
         p.text(fitted, x0 + (x1 - x0 - p.width(fitted)) / 2.0F, y, Z_TEXT, 1.0F, color);

@@ -25,7 +25,7 @@ import java.util.Set;
  *
  * <p>Only the conditions that depend on the spot and the hour are kept;
  * everything else in the spawn file (weather, moon phase, structures, bait)
- * is ignored, as it always was for specials. A null bound means "no limit".
+ * is ignored. A null bound means "no limit".
  *
  * @param biomes      Safari biomes where this spawn applies
  * @param water       whether it is a water spawn (submerged, surface, fishing)

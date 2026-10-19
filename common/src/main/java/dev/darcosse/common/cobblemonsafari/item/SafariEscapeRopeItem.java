@@ -26,8 +26,9 @@ import java.util.List;
  * The Escape Rope: used in a cave of the Safari, it brings the player back to
  * the open air right above them, as in the games.
  *
- * <p>Lent on entry and taken back on exit ({@code dev.darcosse.common.cobblemonsafari.loan.EscapeRopes});
- * it never wears out and only works inside the Safari. Any copy found outside
+ * <p>Lent on entry and taken back on exit
+ * ({@code dev.darcosse.common.cobblemonsafari.loan.EscapeRopes}); it never
+ * wears out and only works inside the Safari. Any copy found outside
  * the Safari is removed, so it cannot become a free teleport elsewhere.
  */
 public class SafariEscapeRopeItem extends Item {

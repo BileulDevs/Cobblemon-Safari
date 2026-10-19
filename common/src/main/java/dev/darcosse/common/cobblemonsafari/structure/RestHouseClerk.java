@@ -107,8 +107,8 @@ public final class RestHouseClerk {
     /**
      * The floor of the house at a column: going down from the top, through
      * the roof and ceiling, then through the air of the room, to the first
-     * block below. Null when the column has no such room (a house of an older
-     * layout, whose wall stands there), so nobody is put on a roof.
+     * block below. Null when the column has no such room (a wall stands
+     * there), so nobody is put on a roof.
      */
     @Nullable
     private static BlockPos floorUnderRoof(ServerLevel level, BlockPos column) {

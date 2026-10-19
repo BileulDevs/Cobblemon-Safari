@@ -93,7 +93,7 @@ public final class SafariMapReset {
 
         State state = read(stateFile);
         if (state == null) {
-            // First start with this feature: keep the existing map, start counting from today.
+            // No state file yet (a new world): keep the map as generated, start counting from today.
             state = new State();
             state.day = today;
             state.salt = 0L;

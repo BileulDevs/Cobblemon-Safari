@@ -19,10 +19,12 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 public record SafariShopBuyPayload(int index, int expectedPrice, long rotation) implements CustomPacketPayload {
 
     /**
-     * Wire format version. Bump on EVERY change to write/read.
-     * v1: first version. v2: rotation.
+     * Wire format version, checked before anything else is read. The format
+     * is positional: adding, removing or reordering a field (or changing what
+     * one means) without raising this makes a peer of another build read
+     * garbage without an error. Raise it on every change to write/read.
      */
-    public static final int WIRE_VERSION = 2;
+    public static final int WIRE_VERSION = 1;
 
     public static final CustomPacketPayload.Type<SafariShopBuyPayload> TYPE =
             new CustomPacketPayload.Type<>(CobblemonSafari.id("shop_buy"));
@@ -52,6 +54,7 @@ public record SafariShopBuyPayload(int index, int expectedPrice, long rotation) 
         return new SafariShopBuyPayload(index, expectedPrice, rotation);
     }
 
+    /** Type under which each loader registers this payload. */
     @Override
     public CustomPacketPayload.Type<SafariShopBuyPayload> type() {
         return TYPE;

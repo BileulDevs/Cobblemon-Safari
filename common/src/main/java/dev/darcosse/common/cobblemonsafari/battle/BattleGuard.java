@@ -27,6 +27,7 @@ public final class BattleGuard {
         CobblemonEvents.BATTLE_STARTED_PRE.subscribe(Priority.HIGHEST, BattleGuard::onBattleStart);
     }
 
+    /** Cancels a battle involving a player inside the Safari, when the config forbids battles there. */
     private static void onBattleStart(BattleStartedEvent.Pre event) {
         if (SafariConfigManager.get().allowBattles) {
             return;

@@ -37,6 +37,7 @@ public final class SafariSessionStore extends SavedData {
         return server.overworld().getDataStorage().computeIfAbsent(FACTORY, DATA_NAME);
     }
 
+    /** The session of a player, or null. */
     @Nullable
     SafariSession get(UUID playerId) {
         return sessions.get(playerId);
@@ -47,15 +48,18 @@ public final class SafariSessionStore extends SavedData {
         return Collections.unmodifiableCollection(sessions.values());
     }
 
+    /** Whether no session is running, so the per-tick loop can stop early. */
     boolean isEmpty() {
         return sessions.isEmpty();
     }
 
+    /** Adds or replaces a player's session and marks the store for saving. */
     void put(SafariSession session) {
         sessions.put(session.playerId(), session);
         setDirty();
     }
 
+    /** Removes a player's session, marking the store for saving; returns it, or null when there was none. */
     @Nullable
     SafariSession remove(UUID playerId) {
         SafariSession removed = sessions.remove(playerId);
@@ -65,6 +69,7 @@ public final class SafariSessionStore extends SavedData {
         return removed;
     }
 
+    /** Writes every session as a list of compounds. */
     @Override
     public CompoundTag save(CompoundTag nbt, HolderLookup.Provider registries) {
         ListTag list = new ListTag();
@@ -75,6 +80,7 @@ public final class SafariSessionStore extends SavedData {
         return nbt;
     }
 
+    /** Reads what {@link #save} wrote, skipping unreadable sessions. */
     private static SafariSessionStore load(CompoundTag nbt, HolderLookup.Provider registries) {
         SafariSessionStore store = new SafariSessionStore();
         ListTag list = nbt.getList("sessions", Tag.TAG_COMPOUND);

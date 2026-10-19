@@ -25,8 +25,8 @@ public final class Surface {
      * the canopy. Loads (and if needed generates) the chunk.
      *
      * <p>{@code Level#getHeight} would NOT load it: for a chunk that is not
-     * loaded it returns the bottom of the world. That was the cause of the
-     * "no safe arrival" bug of 0.1.0.
+     * loaded it returns the bottom of the world, and no arrival spot would
+     * ever look safe.
      */
     public static BlockPos forced(ServerLevel level, int x, int z) {
         LevelChunk chunk = level.getChunk(SectionPos.blockToSectionCoord(x), SectionPos.blockToSectionCoord(z));

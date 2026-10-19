@@ -94,7 +94,7 @@ public final class GateClearing {
      * physics) and without reshaping its neighbours: a reshaped neighbour
      * that loses its support breaks, and Minecraft forces its drop
      * (Level.setBlock clears UPDATE_SUPPRESS_DROPS for neighbours), which
-     * left cocoa beans and petals on the ground.
+     * would leave cocoa beans and petals on the ground.
      */
     private static final int PLACE_FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
 
@@ -179,8 +179,8 @@ public final class GateClearing {
             // instead of at the top of the scan: most of the area is open
             // sky. WORLD_SURFACE, not MOTION_BLOCKING: vines block no
             // motion, so a column holding only vines hanging beside a crown
-            // ended at the ground, and those vines were never seen (they
-            // stayed hanging in the air once the crown was removed).
+            // would end at the ground, and those vines would never be seen
+            // (left hanging in the air once the crown is removed).
             int top = Math.min(scan.maxY, level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z) - 1);
             for (int y = scan.minY; y <= top; y++) {
                 BlockState state = level.getBlockState(cursor.set(x, y, z));
@@ -258,8 +258,8 @@ public final class GateClearing {
      * dropped, and a vine left with no face becomes air. Top down, so a vine
      * hanging from one that just went loses its hold in turn, as vanilla's
      * chain of updates would. Without this, the vines of a cut jungle tree
-     * stayed hanging in the air: blocks are removed without updating their
-     * neighbours.
+     * would stay hanging in the air: blocks are removed without updating
+     * their neighbours.
      *
      * <p>The new shape comes from {@code Block.updateFromNeighbourShapes},
      * the vine's own rules; nothing drops (set without updates).

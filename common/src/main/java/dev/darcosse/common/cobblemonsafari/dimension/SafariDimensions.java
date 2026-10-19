@@ -16,8 +16,7 @@ import org.jetbrains.annotations.Nullable;
  * ({@code data/cobblemon_safari/dimension/safari.json}); no Java registration is
  * needed on either loader. It is always the mod's own dimension: the
  * terrain generation, the daily map reset, the rest houses and the border
- * are all made for it (a "use another dimension" setting used to exist, and
- * broke all of them).
+ * are all made for it.
  */
 public final class SafariDimensions {
 

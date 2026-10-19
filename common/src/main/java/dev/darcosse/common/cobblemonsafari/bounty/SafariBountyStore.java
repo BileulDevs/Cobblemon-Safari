@@ -31,6 +31,7 @@ public final class SafariBountyStore extends SavedData {
         int[] counts;
         boolean bonusPaid;
 
+        /** Fresh progress, nothing caught yet, for a rotation with the given number of missions. */
         Progress(long period, int missions) {
             this.period = period;
             this.counts = new int[missions];

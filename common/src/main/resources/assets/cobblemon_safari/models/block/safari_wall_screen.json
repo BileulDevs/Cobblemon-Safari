@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:block/block",
   "textures": {
-    "particle": "cobblemon_safari:block/safari_board_frame"
+    "particle": "cobblemon_safari:block/safari_wall_screen_frame"
   }
 }

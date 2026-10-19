@@ -1,10 +1,6 @@
 package dev.darcosse.common.cobblemonsafari.config;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
-
-import java.lang.reflect.Field;
 
 /**
  * Owns the client display preferences.
@@ -16,76 +12,28 @@ public final class SafariClientConfigManager {
 
     /** Path under the config directory: the mod's folder keeps its files together. */
     private static final String FILE_NAME = CobblemonSafari.MOD_ID + "/client.json";
-    /** Where the file lived before the mod had its own config folder; moved into it on load. */
-    private static final String LEGACY_FILE_NAME = CobblemonSafari.MOD_ID + "-client.json";
 
     /**
-     * Version written by this build. Version 2 added showBalls and showCatches,
-     * version 3 the board colours, version 4 the board's landscape and panel
-     * opacity; Gson fills new fields with their defaults, the bump only
-     * forces a rewrite so they appear in existing files. Version 5: the
-     * timer became a Safari Ball with the time under it (showLabel,
-     * showBalls and showCatches removed, the offset now places the ball's
-     * centre) and the board got pokemonDisplay. Version 6: the board
-     * colours moved into board.colors and pokemonDisplay became useSprites
-     * (see {@link #upgrade}). Version 7: the timer is in the bottom left
-     * corner. Version 8: the time is back under the stopwatch. Version 9:
-     * the default sits 4 px higher; a file on the version 6, 7 or 8 default
-     * position follows.
+     * Format version written to the file. Raise it when a field changes
+     * meaning and add the conversion to {@link #load}; a field added or
+     * removed needs no bump, Gson fills new fields with their defaults and
+     * ignores unknown keys.
      */
-    public static final int CURRENT_CONFIG_VERSION = 9;
+    public static final int CURRENT_CONFIG_VERSION = 1;
 
     /**
      * Default timer position, see {@link SafariClientConfig#hudOffsetX}: 20
      * puts the middle of the timer far enough from the left edge for a time
      * like 19:59 (about 30 px wide) to keep a few pixels of margin; -16
      * leaves 5 px between the 22 px widget and the bottom of the screen.
-     * Closer (-12, version 8), the time looked glued to the edge.
+     * Closer to the edge, the time looks glued to it.
      */
     public static final HudAnchor DEFAULT_HUD_ANCHOR = HudAnchor.BOTTOM_LEFT;
     public static final int DEFAULT_HUD_OFFSET_X = 20;
     public static final int DEFAULT_HUD_OFFSET_Y = -16;
 
-    /** Default position up to version 6: left of the hotbar, the time under the ball. */
-    private static final HudAnchor V6_HUD_ANCHOR = HudAnchor.BOTTOM_CENTER;
-    private static final int V6_HUD_OFFSET_X = -136;
-    private static final int V6_HUD_OFFSET_Y = -28;
-    /** Default position of version 7: bottom left, on one line. */
-    private static final int V7_HUD_OFFSET_X = 10;
-    private static final int V7_HUD_OFFSET_Y = -11;
-    /** Default position of version 8: bottom left, stacked, against the bottom edge. */
-    private static final int V8_HUD_OFFSET_X = 20;
-    private static final int V8_HUD_OFFSET_Y = -12;
-    /** The version whose default position is the current one. */
-    private static final int RAISED_TIMER_VERSION = 9;
-
-    /**
-     * Offsets written by default before version 5 (a panel above the action
-     * bar). A file still holding them never moved the timer: it gets the new
-     * defaults, since the old ones would put the ball over the action bar.
-     */
-    private static final int LEGACY_HUD_OFFSET_X = 0;
-    private static final int LEGACY_HUD_OFFSET_Y = -84;
-    private static final int TIMER_REWORK_VERSION = 5;
-    /** The version that moved the board colours into board.colors and made the sprite choice a boolean. */
-    private static final int BOARD_SECTIONS_VERSION = 6;
-
-    /** Version 5 key of the sprite choice and its value meaning sprites; read by {@link #upgrade} only. */
-    private static final String LEGACY_DISPLAY_KEY = "pokemonDisplay";
-    private static final String LEGACY_SPRITE_VALUE = "SPRITE";
-
-    /**
-     * JSON keys {@link #upgrade} works on. They must match the field names
-     * of SafariClientConfig (Gson maps keys to fields by name): renaming one
-     * of those fields means updating its key here.
-     */
-    private static final String VERSION_KEY = "configVersion";
-    private static final String BOARD_KEY = "board";
-    private static final String COLORS_KEY = "colors";
-    private static final String USE_SPRITES_KEY = "useSprites";
-
-    private static final JsonConfigFile<SafariClientConfig> FILE = new JsonConfigFile<>(FILE_NAME, LEGACY_FILE_NAME,
-            SafariClientConfig.class, SafariClientConfig::new, SafariClientConfigManager::upgrade);
+    private static final JsonConfigFile<SafariClientConfig> FILE =
+            new JsonConfigFile<>(FILE_NAME, SafariClientConfig.class, SafariClientConfig::new);
 
     private static SafariClientConfig config = new SafariClientConfig();
     private static BoardPalette palette = BoardPalette.from(new SafariClientConfig.BoardColors());
@@ -93,30 +41,12 @@ public final class SafariClientConfigManager {
     private SafariClientConfigManager() {
     }
 
-    /** Reads the file and repairs out-of-range values. */
+    /** Reads the file and repairs out-of-range values, rewriting it when anything was corrected. */
     public static void load() {
         SafariClientConfig loaded = FILE.read();
         boolean corrected = false;
-        if (loaded.configVersion < TIMER_REWORK_VERSION
-                && loaded.hudOffsetX == LEGACY_HUD_OFFSET_X && loaded.hudOffsetY == LEGACY_HUD_OFFSET_Y) {
-            loaded.hudOffsetX = DEFAULT_HUD_OFFSET_X;
-            loaded.hudOffsetY = DEFAULT_HUD_OFFSET_Y;
-            loaded.hudAnchor = DEFAULT_HUD_ANCHOR;
-        }
-        // Exact comparison: a player who moved the timer keeps their place.
-        boolean v6Default = loaded.hudAnchor == V6_HUD_ANCHOR
-                && loaded.hudOffsetX == V6_HUD_OFFSET_X && loaded.hudOffsetY == V6_HUD_OFFSET_Y;
-        boolean v7Default = loaded.hudAnchor == DEFAULT_HUD_ANCHOR
-                && loaded.hudOffsetX == V7_HUD_OFFSET_X && loaded.hudOffsetY == V7_HUD_OFFSET_Y;
-        boolean v8Default = loaded.hudAnchor == DEFAULT_HUD_ANCHOR
-                && loaded.hudOffsetX == V8_HUD_OFFSET_X && loaded.hudOffsetY == V8_HUD_OFFSET_Y;
-        if (loaded.configVersion < RAISED_TIMER_VERSION && (v6Default || v7Default || v8Default)) {
-            loaded.hudAnchor = DEFAULT_HUD_ANCHOR;
-            loaded.hudOffsetX = DEFAULT_HUD_OFFSET_X;
-            loaded.hudOffsetY = DEFAULT_HUD_OFFSET_Y;
-        }
-        if (loaded.configVersion < CURRENT_CONFIG_VERSION) {
-            // The removed keys (showLabel...) are ignored by Gson and dropped by this rewrite.
+        if (loaded.configVersion != CURRENT_CONFIG_VERSION) {
+            // The rewrite also drops keys Gson ignored, so the file shows what is read.
             loaded.configVersion = CURRENT_CONFIG_VERSION;
             corrected = true;
         }
@@ -152,53 +82,6 @@ public final class SafariClientConfigManager {
         }
         config = loaded;
         palette = BoardPalette.from(loaded.board.colors);
-    }
-
-    /**
-     * Converts the board section of a version 5 or older file to the version
-     * 6 layout, on the raw JSON before it becomes a SafariClientConfig:
-     * <ul>
-     *   <li>the colours move from {@code board} into {@code board.colors};</li>
-     *   <li>{@code board.pokemonDisplay} ({@code "MODEL"} / {@code "SPRITE"})
-     *       becomes {@code board.useSprites}.</li>
-     * </ul>
-     * Without this, Gson would ignore the keys at their old place and the
-     * player's colours and sprite choice would silently reset. Current files
-     * pass through untouched.
-     */
-    private static JsonObject upgrade(JsonObject json) {
-        if (fileVersion(json) >= BOARD_SECTIONS_VERSION || !json.has(BOARD_KEY) || !json.get(BOARD_KEY).isJsonObject()) {
-            return json;
-        }
-        JsonObject board = json.getAsJsonObject(BOARD_KEY);
-        JsonObject colors = new JsonObject();
-        for (Field field : SafariClientConfig.BoardColors.class.getFields()) {
-            JsonElement value = board.remove(field.getName());
-            if (value != null) {
-                colors.add(field.getName(), value);
-            }
-        }
-        if (!colors.isEmpty()) {
-            board.add(COLORS_KEY, colors);
-        }
-        JsonElement display = board.remove(LEGACY_DISPLAY_KEY);
-        if (display != null && display.isJsonPrimitive()) {
-            // Anything but SPRITE, including a typo, was drawn as models: keep it that way.
-            board.addProperty(USE_SPRITES_KEY, LEGACY_SPRITE_VALUE.equalsIgnoreCase(display.getAsString()));
-        }
-        return json;
-    }
-
-    /**
-     * The configVersion of a raw file, 0 when missing or not a number (then
-     * every migration runs, which is what a file that old needs).
-     */
-    private static int fileVersion(JsonObject json) {
-        JsonElement version = json.get(VERSION_KEY);
-        if (version == null || !version.isJsonPrimitive() || !version.getAsJsonPrimitive().isNumber()) {
-            return 0;
-        }
-        return version.getAsInt();
     }
 
     /** Board colours parsed from the current preferences. */

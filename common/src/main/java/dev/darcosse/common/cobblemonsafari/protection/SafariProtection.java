@@ -208,6 +208,10 @@ public final class SafariProtection {
                 || item instanceof AxeItem;
     }
 
+    /**
+     * Whether the terrain rules apply to this player where they stand: inside
+     * the Safari, protection on, and not an exempt creative or spectator.
+     */
     private static boolean isTerrainProtectedFor(Player player) {
         Level level = player.level();
         boolean protectBlocks;
@@ -232,6 +236,7 @@ public final class SafariProtection {
         return protectBlocks && !exempt;
     }
 
+    /** Passes a decision through, telling the player on the action bar when it is a refusal. */
     private static boolean deny(Player player, boolean denied) {
         if (denied) {
             player.displayClientMessage(

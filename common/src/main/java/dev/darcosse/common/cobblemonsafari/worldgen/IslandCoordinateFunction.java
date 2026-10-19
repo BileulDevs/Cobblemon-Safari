@@ -76,6 +76,7 @@ public record IslandCoordinateFunction(Mode mode, double centerX, double centerZ
         };
     }
 
+    /** Distance from the centre, softened near it by {@link #DIRECTION_SOFTENING}; never 0. */
     private double softenedDistance(double dx, double dz) {
         double softening = radius * DIRECTION_SOFTENING;
         return Math.sqrt(dx * dx + dz * dz + softening * softening);

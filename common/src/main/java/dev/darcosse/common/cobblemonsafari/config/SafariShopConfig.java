@@ -17,26 +17,9 @@ import java.util.List;
 public class SafariShopConfig {
 
     /**
-     * Bumped when a field changes meaning, so old files can be migrated.
-     * Version 1: first version. Version 2: added tabs and Entry.tab.
-     * Version 3: added the rotating section (no existing value changes).
-     * Version 4: the default Pokémon list became a single Tauros; files still
-     * holding the five old default Pokémon get it too.
-     * Version 5: added Entry.cost and Entry.limitPerRotation, the tickets tab
-     * and the default ticket trades (added to existing files once).
-     * Version 6: costs accept item tags; the version 5 default trades (red
-     * apricorns, oran berries, a fire stone) become any apricorn, berry and
-     * evolution stone.
-     * Version 7: the default Tauros costs 200 points instead of 1500.
-     * Version 8: rotating.level removed; the random Pokémon come at their
-     * natural Safari level and their price grows with their evolution stage.
-     * Version 9: rotating.rarePrice 1000 to 500; a file still on 1000 follows.
-     * Version 10: rotating.count 4 to 15 (a file still on 4 follows); added
-     * rotatingItems and rotatingBalls.
-     * Version 11: added the cooking tab and its default ingredients (added to
-     * existing files once).
-     * Version 12: added Entry.cooldownHours and the free daily Safari Balls
-     * (added to existing files once), which replace the ball loan.
+     * Format version of the file, see
+     * {@link SafariShopConfigManager#CURRENT_VERSION}. Not a setting: the
+     * manager rewrites it.
      */
     public int configVersion = SafariShopConfigManager.CURRENT_VERSION;
 
@@ -63,15 +46,11 @@ public class SafariShopConfig {
     static final int DEFAULT_POKEMON_PRICE = 200;
 
     /**
-     * Base price of a rare random Pokémon, and the one before version 9. At
-     * 1000, twice the uncommon price, rarity outweighed strength: a second
-     * stage Kirlia cost four times a Centiskorch.
+     * Base price of a rare random Pokémon. Kept close to the uncommon price:
+     * at twice it, rarity would outweigh strength and a second-stage Kirlia
+     * would cost four times a Centiskorch.
      */
     static final int RARE_PRICE = 500;
-    static final int OLD_RARE_PRICE = 1000;
-
-    /** Its price in versions 4 to 6; a file still asking that much gets the new one. */
-    static final int OLD_DEFAULT_POKEMON_PRICE = 1500;
 
     /**
      * What is for sale, in display order within each tab (8 per page). By
@@ -109,10 +88,10 @@ public class SafariShopConfig {
     static final String COOKING_ICON = "cobblemon:campfire_pot_red";
 
     /**
-     * The free Safari Balls: what the loan used to lend, now the player's to
-     * keep, once every FREE_BALLS_COOLDOWN_HOURS hours (real time). A day
-     * keeps them a daily help rather than a supply; fewer hours or more balls
-     * make Poké Balls bought in the shop pointless.
+     * The free Safari Balls, the player's to keep, once every
+     * FREE_BALLS_COOLDOWN_HOURS hours (real time). A day keeps them a daily help
+     * rather than a supply; fewer hours or more balls make Poké Balls bought in
+     * the shop pointless.
      */
     static final String FREE_BALLS_ITEM = "cobblemon:safari_ball";
     static final int FREE_BALLS_COUNT = 30;
@@ -125,9 +104,10 @@ public class SafariShopConfig {
      * Default ticket trades: overworld goods the warden takes for one
      * ticket, each once per player and rotation (TRADE_LIMIT), any kind
      * of each (Cobblemon's item tags). Apricorns and berries are farmed,
-     * evolution stones are mined: three ways in for three play styles. With 3 trades and a 4 h rotation, trading alone gives up
-     * to 1 h 30 of Safari time per rotation; raise the counts or lower the
-     * limit to make tickets scarcer.
+     * evolution stones are mined: three ways in for three play styles. With
+     * 3 trades and a 4 h rotation, trading alone gives up to 1 h 30 of
+     * Safari time per rotation; raise the counts or lower the limit to make
+     * tickets scarcer.
      */
     static final int TRADE_APRICORNS = 16;
     static final int TRADE_BERRIES = 24;
@@ -154,9 +134,8 @@ public class SafariShopConfig {
     /** Poké Balls drawn at random for each rotation, sold in the balls tab; Safari Balls always. */
     public RotatingGoods rotatingBalls = RotatingGoods.balls();
 
-    /** Default number of random Pokémon per rotation, and the one before version 10. */
+    /** Default number of random Pokémon per rotation: a few pages of the shop screen. */
     static final int ROTATING_POKEMON = 15;
-    static final int OLD_ROTATING_POKEMON = 4;
 
     /** Settings of the random Pokémon of the shop. */
     public static class Rotating {
@@ -341,6 +320,7 @@ public class SafariShopConfig {
             return ResourceLocation.tryParse(isTag() ? item.substring(Cost.TAG_PREFIX.length()) : item);
         }
 
+        /** A rule with the given item or tag, stack and price, for the defaults. */
         static PriceRule of(String item, int count, int price) {
             PriceRule rule = new PriceRule();
             rule.item = item;
@@ -382,6 +362,7 @@ public class SafariShopConfig {
             return ResourceLocation.tryParse(isTag() ? item.substring(TAG_PREFIX.length()) : item);
         }
 
+        /** A cost of the given item or tag and count, for the defaults. */
         static Cost of(String item, int count) {
             Cost cost = new Cost();
             cost.item = item;
@@ -545,11 +526,6 @@ public class SafariShopConfig {
             Entry entry = item(FREE_BALLS_ITEM, FREE_BALLS_COUNT, 0);
             entry.cooldownHours = FREE_BALLS_COOLDOWN_HOURS;
             return entry;
-        }
-
-        /** Whether this is the default free Safari Balls entry, whatever its count and wait. */
-        boolean isFreeBalls() {
-            return !isPokemon() && FREE_BALLS_ITEM.equals(item) && price == 0 && cooldownHours != null;
         }
 
         /** A trade of overworld goods for one Safari Ticket, limited per rotation. */

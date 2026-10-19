@@ -27,9 +27,8 @@ import java.util.List;
  * {@link #CLEAR_TREES_KEY}: set by the structure file only, it asks the
  * corner to remove once the trees the structure cut through
  * ({@link GateClearing}, spread over a few ticks), then is cleared on
- * every block. Residents themselves are
- * found again by their entity tags, so a gate rebuilt or moved by an
- * operator simply adopts or respawns them.
+ * every block. Residents themselves are found again by their entity tags,
+ * so a gate rebuilt or moved by an operator simply adopts or respawns them.
  */
 public class SafariGateBlockEntity extends BlockEntity {
 
@@ -44,8 +43,8 @@ public class SafariGateBlockEntity extends BlockEntity {
 
     /**
      * Save key of {@link #clearTrees}. Only structure/safari_gate.nbt sets
-     * it; missing reads as false, so neither a hand-placed gate nor a gate
-     * of an older world ever has blocks around it removed.
+     * it; missing reads as false, so a hand-placed gate never has blocks
+     * around it removed.
      */
     public static final String CLEAR_TREES_KEY = "clear_trees";
 
@@ -67,9 +66,10 @@ public class SafariGateBlockEntity extends BlockEntity {
      * Ticks between two attempts to start a generated gate's tree clearing,
      * while its tree flag is set. Kept apart from the resident check, which
      * waits {@link #WARMUP_TICKS} for entities: trees are blocks and can go
-     * at once, and a player arriving at a new gate saw the cut crowns float
-     * for 10 to 15 seconds. Each attempt reads two blocks (only on blocks
-     * still flagged); lower starts sooner once the area is loaded.
+     * at once, while waiting for the warm-up would leave the cut crowns
+     * floating for 10 to 15 seconds in front of a player arriving at a new
+     * gate. Each attempt reads two blocks (only on blocks still flagged);
+     * lower starts sooner once the area is loaded.
      */
     private static final int CLEARING_CHECK_TICKS = 10;
 
@@ -105,10 +105,10 @@ public class SafariGateBlockEntity extends BlockEntity {
     }
 
     /**
-     * Reads the warden flag. A saved block without the key keeps a warden:
-     * that is every gate block of a world from before the flag existed, all
-     * of which had one, and a structure saved without the key. A block placed
-     * by hand never goes through here before being saved with false.
+     * Reads both flags. A saved block without the warden key keeps a warden:
+     * only a structure file can hold a gate block without it, and every
+     * structure gate has one. A block placed by hand never goes through here
+     * before being saved with false.
      */
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {

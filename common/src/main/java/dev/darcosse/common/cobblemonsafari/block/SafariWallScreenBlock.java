@@ -79,9 +79,8 @@ public class SafariWallScreenBlock extends HorizontalDirectionalBlock implements
     /**
      * Whether the panel faces up (bottom away from the wall) instead of down
      * (top away from the wall). A separate flag rather than a signed TILT
-     * range: TILT keeps its values 0 to 6 with their old meaning, so the
-     * screens of existing worlds keep their angle. Meaningless at tilt 0;
-     * read the angle through {@link #signedTilt}.
+     * range: block state integer properties cannot hold negative values.
+     * Meaningless at tilt 0; read the angle through {@link #signedTilt}.
      */
     public static final BooleanProperty UPWARD = BooleanProperty.create("upward");
 
@@ -143,9 +142,8 @@ public class SafariWallScreenBlock extends HorizontalDirectionalBlock implements
     }
 
     /**
-     * Placed facing the player, so its back lands
-     * against the wall that was clicked. Takes the tilt and content of a
-     * screen it joins, so a group never shows two settings at once: the left
+     * Placed facing the player, so its back lands against the wall that was
+     * clicked. Takes the tilt and content of a screen it joins, so a group never shows two settings at once: the left
      * neighbour wins, as it is the closer one to the group's anchor.
      */
     @Nullable
@@ -241,8 +239,7 @@ public class SafariWallScreenBlock extends HorizontalDirectionalBlock implements
                 double angle = Math.toRadians(tiltDegrees(tilt));
                 double sin = Math.sin(angle);
                 double cos = Math.cos(angle);
-                // The first slice seeds the union instead
-                // of an empty-shape helper the project does not otherwise rely on.
+                // The first slice seeds the union, so no empty shape is merged in.
                 VoxelShape shape = null;
                 double sliceHeight = PANEL_HEIGHT_PIXELS / HITBOX_SLICES;
                 for (int slice = 0; slice < HITBOX_SLICES; slice++) {

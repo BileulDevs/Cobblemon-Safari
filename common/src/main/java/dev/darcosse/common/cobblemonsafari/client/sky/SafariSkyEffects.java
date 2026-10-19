@@ -14,9 +14,8 @@ import org.jetbrains.annotations.Nullable;
  * lower clouds that wrap the central summit, and a fog that keeps a golden
  * tint as the light fades instead of turning grey-blue like the overworld.
  *
- * <p>The sky geometry is still the vanilla one (sun, moon, stars). A fully
- * custom sky means a renderer, which is loader- and version-specific; it can
- * be layered on top of this later without touching the rest.
+ * <p>The sky geometry is the vanilla one (sun, moon, stars): a fully custom
+ * sky would need a renderer, which is loader- and version-specific.
  */
 public final class SafariSkyEffects extends DimensionSpecialEffects {
 
