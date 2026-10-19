@@ -10,7 +10,9 @@ architectury {
 loom {
     silentMojangMappingsLicense()
     mixin {
-        // Must match "refmap" in cobblemon_safari.mixins.json; same setup as Cobblemon Marks.
+        // Must match "refmap" in cobblemon_safari.mixins.json. The refmap maps the mixin
+        // targets to intermediary names, which only Fabric uses at runtime: the NeoForge
+        // build strips it from its jar and disables it in dev (see neoforge/build.gradle.kts).
         defaultRefmapName.set("cobblemon_safari-refmap.json")
     }
 }
