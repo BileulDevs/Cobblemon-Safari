@@ -18,9 +18,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Picks where a rest house is built: the best spot near its configured
- * position (its anchor), since a fixed position lands in a lake, on a cliff
- * or half in the sea on many maps.
+ * Picks where a rest house is built: the best spot near its anchor
+ * ({@code park.ParkGeometry}), since a fixed position lands in a lake, on a
+ * cliff or half in the sea on many maps.
  *
  * <p>Candidates on a grid around the anchor are judged on the terrain the
  * generator would produce, read from the noise ({@link ChunkGenerator#getBaseHeight})
@@ -116,8 +116,8 @@ final class RestHouseSites {
      *
      * <p>The search widens when it finds nothing: first the given radius with
      * the strict relief, then the relaxed relief, then twice and four times
-     * the radius. It used to give up after the given radius and build on the
-     * anchor itself, which put an entrance house in a lake.
+     * the radius, rather than falling back to the anchor itself, which may
+     * lie in a lake.
      *
      * @param radius how far from the anchor to look first, in blocks
      * @param taken  centres of the houses already placed on this map

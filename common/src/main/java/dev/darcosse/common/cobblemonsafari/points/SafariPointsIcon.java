@@ -9,7 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 /**
  * The Safari points logo, as a text glyph: a character of the mod's own font
  * ({@code assets/cobblemon_safari/font/icons.json}), so it shows anywhere
- * text does (chat, action bar, screens, the board) with no rendering code.
+ * text does (chat, action bar, screens, the wall screens) with no rendering code.
  *
  * <p>Safe on both sides: it only builds components. The server may put it
  * in messages, since clients always have the mod's resources.

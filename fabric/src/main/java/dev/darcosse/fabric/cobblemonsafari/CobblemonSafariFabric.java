@@ -47,7 +47,7 @@ public class CobblemonSafariFabric implements ModInitializer {
         // Same constraint: the gate, ruin and tower structures use this type.
         SafariWorldgen.registerStructureTypes((id, type) ->
                 Registry.register(BuiltInRegistries.STRUCTURE_TYPE, id, type));
-        // Blocks first: the board's block item wraps the block.
+        // Blocks first: the block items wrap the blocks.
         SafariBlocks.register((id, block) -> Registry.register(BuiltInRegistries.BLOCK, id, block));
         // Built here, not in common: BlockEntitySupplier is only public through
         // Fabric's transitive access widener (see SafariBlockEntities.TypeFactory).
@@ -88,7 +88,7 @@ public class CobblemonSafariFabric implements ModInitializer {
                 !SafariServerEvents.onIncomingDamage(entity, source));
 
         // Server side, when the block would actually break. Mining itself is not
-        // refused (no AttackBlockCallback): refusing every left click spammed
+        // refused (no AttackBlockCallback): refusing every left click would spam
         // the warning each time a player hit a block, e.g. to punch a Pokémon
         // standing in front of it. The player sees the cracks, then the block
         // stays and the warning shows once.

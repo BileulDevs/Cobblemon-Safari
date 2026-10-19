@@ -48,12 +48,13 @@ import java.util.WeakHashMap;
  * mechanism: a thin pane spanning one horizontal axis, with no collision;
  * standing in it plays the swirling screen effect, and only when the effect
  * completes does the gate try to let the player in. Players without banked
- * time simply stay where they are, with the reason on the action bar. It cannot be mined in survival, so a gate found in the
- * wild cannot be carried home; operators place their own with the creative
- * item. Every gate block has a block entity, but only the bottom corner of a
- * gate (see {@link SafariGateBlockEntity}) looks after its roaming Pokémon,
- * and after its warden only for a generated gate: a block placed by hand
- * brings no warden.
+ * time simply stay where they are, with the reason on the action bar. It
+ * cannot be mined in survival, so a gate found in the wild cannot be carried
+ * home; operators place their own with the creative item. Every gate block
+ * has a block entity, but only the bottom corner of a gate (see
+ * {@link SafariGateBlockEntity}) looks after its roaming Pokémon, and after
+ * its warden only for a generated gate: a block placed by hand brings no
+ * warden.
  */
 public class SafariGateBlock extends Block implements EntityBlock, Portal {
 

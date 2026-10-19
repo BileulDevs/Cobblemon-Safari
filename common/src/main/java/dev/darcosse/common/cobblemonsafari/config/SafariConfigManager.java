@@ -8,10 +8,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.lang.reflect.Field;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -26,8 +24,6 @@ public final class SafariConfigManager {
 
     /** Path under the config directory: the mod's folder keeps its files together. */
     private static final String FILE_NAME = CobblemonSafari.MOD_ID + "/server.json";
-    /** Where the file lived before the mod had its own config folder; moved into it on load. */
-    private static final String LEGACY_FILE_NAME = CobblemonSafari.MOD_ID + ".json";
 
     /** Last valid hour of the day for reset.hour. */
     private static final int LAST_HOUR = 23;
@@ -59,8 +55,13 @@ public final class SafariConfigManager {
      */
     private static final int MAX_BOUNTIES = 8;
 
-    /** Version written by this build. Raise it together with a new step in {@link #migrate}. */
-    public static final int CURRENT_CONFIG_VERSION = 24;
+    /**
+     * Format version written to the file. Raise it when a field changes
+     * meaning and add the conversion to {@link #load}; a field added or
+     * removed needs no bump, Gson fills new fields with their defaults and
+     * ignores unknown keys.
+     */
+    public static final int CURRENT_CONFIG_VERSION = 1;
 
     /**
      * Default length of a featured rotation, in minutes: four hours, so the
@@ -69,66 +70,11 @@ public final class SafariConfigManager {
     public static final int DEFAULT_ROTATION_MINUTES = 240;
 
     /**
-     * The default before version 13 (one day). A file holding exactly this
-     * value is taken as never customised and moved to the new default; any
-     * other value was chosen by the admin and is kept.
-     */
-    private static final int LEGACY_DEFAULT_ROTATION_MINUTES = 1440;
-
-    /** First version whose default rotation is DEFAULT_ROTATION_MINUTES. */
-    private static final int SHORT_ROTATION_VERSION = 13;
-
-    /** First version whose default special slots are 1/2/3. */
-    private static final int REVERSED_SLOTS_VERSION = 14;
-
-    /**
-     * Default spawns.caughtSpeciesWeight, and the one of version 19. At 0.25
-     * a caught species was rare enough to feel gone from the Safari.
+     * Default spawns.caughtSpeciesWeight. Lower, a caught species is rare
+     * enough to feel gone from the Safari; higher, the novelty push is
+     * barely noticeable.
      */
     public static final double DEFAULT_CAUGHT_SPECIES_WEIGHT = 0.4;
-    private static final double LEGACY_CAUGHT_SPECIES_WEIGHT = 0.25;
-
-    /** First version warning at 15 and 10 minutes too; a file still on the old list follows. */
-    private static final int LONGER_WARNINGS_VERSION = 23;
-
-    /** Default warning times, in seconds, up to version 22. */
-    private static final List<Integer> LEGACY_WARNING_THRESHOLDS = List.of(300, 60, 30, 10);
-
-    /** First version without a ball loan by default; a file still lending the old 30 follows. */
-    private static final int NO_LOAN_VERSION = 22;
-
-    /** Balls lent per session by default up to version 21. */
-    private static final int LEGACY_LOAN_COUNT = 30;
-
-    /** First version with one section per special category instead of the allow* flags. */
-    private static final int SPECIAL_CATEGORIES_VERSION = 21;
-
-    /** First version whose default caughtSpeciesWeight is 0.4. */
-    private static final int GENTLER_NOVELTY_VERSION = 20;
-
-    /** First version whose default capture points and bounty rewards are about five times higher. */
-    private static final int RICHER_REWARDS_VERSION = 18;
-
-    /**
-     * Capture points and bounty rewards by default before version 18, by
-     * field name. A value still equal to its old default was never chosen
-     * by the admin and follows the new one; any other value is kept. Field
-     * names are the JSON keys, so a renamed field must be renamed here too.
-     */
-    private static final Map<String, Integer> LEGACY_POINTS = Map.of(
-            "common", 2, "uncommon", 5, "rare", 12, "ultraRare", 30,
-            "featuredBonus", 10, "shinyBonus", 50);
-    private static final Map<String, Integer> LEGACY_BOUNTY_REWARDS = Map.of(
-            "typeRewardPerCatch", 12, "speciesReward", 40, "featuredReward", 80, "allDoneBonus", 50);
-
-    /**
-     * Special slots by default before version 14. A file holding exactly
-     * these never changed them and gets the new defaults; any other mix was
-     * chosen by the admin and is kept.
-     */
-    private static final int LEGACY_UNCOMMON_SLOTS = 3;
-    private static final int LEGACY_RARE_SLOTS = 2;
-    private static final int LEGACY_ULTRA_RARE_SLOTS = 1;
 
     /**
      * Upper bound on loaned balls. A full inventory holds 36 stacks; beyond a
@@ -140,9 +86,8 @@ public final class SafariConfigManager {
     /** Shortest session accepted. Zero would expire on the very tick it starts. */
     private static final int MIN_DURATION_SECONDS = 1;
 
-
     private static final JsonConfigFile<SafariConfig> FILE =
-            new JsonConfigFile<>(FILE_NAME, LEGACY_FILE_NAME, SafariConfig.class, SafariConfig::new);
+            new JsonConfigFile<>(FILE_NAME, SafariConfig.class, SafariConfig::new);
 
     private static SafariConfig config = new SafariConfig();
     private static Set<ResourceLocation> allowedBalls = Set.of();
@@ -157,8 +102,10 @@ public final class SafariConfigManager {
     /** Reads the file, fixes invalid values, and rewrites it if anything was corrected. */
     public static void load() {
         SafariConfig loaded = FILE.read();
-        boolean migrated = migrate(loaded);
-        if (validate(loaded) || migrated) {
+        boolean outdated = loaded.configVersion != CURRENT_CONFIG_VERSION;
+        // The rewrite also drops keys Gson ignored, so the file shows what is read.
+        loaded.configVersion = CURRENT_CONFIG_VERSION;
+        if (validate(loaded) || outdated) {
             FILE.write(loaded);
         }
         config = loaded;
@@ -214,7 +161,7 @@ public final class SafariConfigManager {
         }
         loanedBallItem = config.loan.count > 0 ? ResourceLocation.tryParse(config.loan.ballItem) : null;
         // The loaned ball must always work inside: an admin removing safari_ball
-        // from allowedBalls would otherwise hand out 30 balls nobody can throw.
+        // from allowedBalls would otherwise hand out balls nobody can throw.
         // Ball ids and item ids coincide for every Cobblemon ball.
         if (loanedBallItem != null) {
             balls.add(loanedBallItem);
@@ -243,90 +190,6 @@ public final class SafariConfigManager {
     }
 
     /**
-     * Upgrades a file written by an older build. Only changes of meaning or
-     * of default need a step here: a field added or removed needs none, Gson
-     * fills new fields with their defaults, ignores removed ones, and the
-     * rewrite that follows a version bump shows the result in the file.
-     *
-     * @return true if the file must be rewritten
-     */
-    private static boolean migrate(SafariConfig c) {
-        if (c.configVersion >= CURRENT_CONFIG_VERSION) {
-            return false;
-        }
-        // Defaults that changed: a value still equal to the old default was
-        // never chosen by the admin, so it follows the new one.
-        if (c.configVersion < SHORT_ROTATION_VERSION && c.featured != null
-                && c.featured.rotationMinutes == LEGACY_DEFAULT_ROTATION_MINUTES) {
-            c.featured.rotationMinutes = DEFAULT_ROTATION_MINUTES;
-        }
-        if (c.configVersion < REVERSED_SLOTS_VERSION && c.featured != null && c.featured.uncommonSlots == LEGACY_UNCOMMON_SLOTS
-                && c.featured.rareSlots == LEGACY_RARE_SLOTS && c.featured.ultraRareSlots == LEGACY_ULTRA_RARE_SLOTS) {
-            SafariConfig.Featured defaults = new SafariConfig.Featured();
-            c.featured.uncommonSlots = defaults.uncommonSlots;
-            c.featured.rareSlots = defaults.rareSlots;
-            c.featured.ultraRareSlots = defaults.ultraRareSlots;
-        }
-        if (c.configVersion < RICHER_REWARDS_VERSION) {
-            if (c.points != null) {
-                followNewDefaults(c.points, new SafariConfig.Points(), LEGACY_POINTS);
-            }
-            if (c.bounties != null) {
-                followNewDefaults(c.bounties, new SafariConfig.Bounties(), LEGACY_BOUNTY_REWARDS);
-            }
-        }
-        // Exact comparison on purpose: only the untouched old default follows.
-        if (c.configVersion < GENTLER_NOVELTY_VERSION && c.spawns != null
-                && c.spawns.caughtSpeciesWeight == LEGACY_CAUGHT_SPECIES_WEIGHT) {
-            c.spawns.caughtSpeciesWeight = DEFAULT_CAUGHT_SPECIES_WEIGHT;
-        }
-        if (c.configVersion < SPECIAL_CATEGORIES_VERSION && c.spawns != null) {
-            moveLegacyAllowFlags(c.spawns);
-        }
-        // Exact comparison: a server that chose its own number keeps its loan.
-        if (c.configVersion < NO_LOAN_VERSION && c.loan != null && c.loan.count == LEGACY_LOAN_COUNT) {
-            c.loan.count = 0;
-            CobblemonSafari.LOGGER.info("Migrated {}: the ball loan is now off (loan.count 0)", FILE_NAME);
-        }
-        // Exact comparison: a server that chose its own times keeps them.
-        if (c.configVersion < LONGER_WARNINGS_VERSION && LEGACY_WARNING_THRESHOLDS.equals(c.warningThresholdsSeconds)) {
-            c.warningThresholdsSeconds = new SafariConfig().warningThresholdsSeconds;
-            CobblemonSafari.LOGGER.info("Migrated {}: warnings now also at 15 and 10 minutes", FILE_NAME);
-        }
-        CobblemonSafari.LOGGER.info("Migrated {} from version {} to {}", FILE_NAME, c.configVersion,
-                CURRENT_CONFIG_VERSION);
-        c.configVersion = CURRENT_CONFIG_VERSION;
-        return true;
-    }
-
-    /**
-     * Carries the version 20 allow* flags into the category sections, then
-     * clears them so the rewrite drops their keys. A flag missing from the
-     * file keeps the section's default (not allowed).
-     */
-    private static void moveLegacyAllowFlags(SafariConfig.Spawns spawns) {
-        // Runs before validate(), which would otherwise create missing sections:
-        // a hand-written "legendary": null must not swallow the old flag.
-        ensureCategories(spawns);
-        if (spawns.allowLegendary != null) {
-            spawns.legendary.allowSpawn = spawns.allowLegendary;
-        }
-        if (spawns.allowMythical != null) {
-            spawns.mythical.allowSpawn = spawns.allowMythical;
-        }
-        if (spawns.allowUltraBeast != null) {
-            spawns.ultraBeast.allowSpawn = spawns.allowUltraBeast;
-        }
-        if (spawns.allowParadox != null) {
-            spawns.paradox.allowSpawn = spawns.allowParadox;
-        }
-        spawns.allowLegendary = null;
-        spawns.allowMythical = null;
-        spawns.allowUltraBeast = null;
-        spawns.allowParadox = null;
-    }
-
-    /**
      * Replaces missing category sections with defaults.
      *
      * @return true if one was missing
@@ -351,26 +214,6 @@ public final class SafariConfigManager {
             missing = true;
         }
         return missing;
-    }
-
-    /**
-     * Moves each int field of a config section still holding its old default
-     * to the current default (read from a fresh instance), field by field.
-     * Reflection keeps the old defaults a plain table instead of one if per
-     * field; an unknown name in the table is a programming error, logged.
-     */
-    private static void followNewDefaults(Object section, Object defaults, Map<String, Integer> legacy) {
-        for (Map.Entry<String, Integer> old : legacy.entrySet()) {
-            try {
-                Field field = section.getClass().getField(old.getKey());
-                if (field.getInt(section) == old.getValue()) {
-                    field.setInt(section, field.getInt(defaults));
-                }
-            } catch (ReflectiveOperationException | IllegalArgumentException e) {
-                CobblemonSafari.LOGGER.error("Cannot migrate {}.{} in {}: {}",
-                        section.getClass().getSimpleName(), old.getKey(), FILE_NAME, e.toString());
-            }
-        }
     }
 
     /**

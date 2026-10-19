@@ -19,50 +19,9 @@ import java.util.List;
 public class SafariConfig {
 
     /**
-     * Bumped when a field changes meaning, so {@link SafariConfigManager} can
-     * migrate old files. Version 3: the island grew and the boundary became a
-     * square world border, so older park sections no longer match the terrain.
-     * Version 4: added the loan and ticket sections (no existing value changes).
-     * Version 5: added the spawns, featured and restHouses sections (no existing value changes).
-     * Version 6: featured.rotationHours became featured.rotationMinutes.
-     * Version 7: added ticket credit settings, the capture section and spawn
-     * rate multipliers (no existing value changes).
-     * Version 8: added the reset section (no existing value changes).
-     * Version 9: removed the top-level defaultDurationSeconds (no entry path
-     * grants free time any more) and added the gate section.
-     * Version 10: added the points and escapeRope sections (no existing value
-     * changes). The shop itself lives in cobblemon_safari/shop.json.
-     * Version 11: added protection.placeableBlocks (no existing value changes).
-     * Version 12: added the bounties section (no existing value changes).
-     * Version 14: added ticket.minAddedSeconds (no existing value changes);
-     * the default specials went from 3 uncommon, 2 rare, 1 ultra-rare to
-     * 1, 2, 3, and files still on the old defaults follow.
-     * Version 15: added the ticketLoot section (no existing value changes).
-     * Version 13: the default rotation went from 1440 to 240 minutes; files
-     * still on the old default follow it.
-     * Version 16: removed dimension, park, featured.rotationHours and the
-     * fine-tuning values (now constants), capture.safariBallItem (the bonus
-     * follows loan.ballItem) and protection.preventFireSpread /
-     * preventExplosionBlockDamage (both follow protectBlocks). Their keys are
-     * dropped from the file on the next rewrite.
-     * Version 17: removed the restHouses section; the houses are always
-     * built, at anchors generated with the terrain (park.ParkGeometry).
-     * Version 18: capture points and bounty rewards about five times higher,
-     * so an hour of hunting buys a Pokémon of the shop; values still on the
-     * old defaults follow.
-     * Version 19: added spawns.caughtSpeciesWeight (no existing value changes).
-     * Version 20: caughtSpeciesWeight 0.25 to 0.4; a file still on 0.25 follows.
-     * Version 21: spawns.allowLegendary, allowMythical, allowUltraBeast and
-     * allowParadox became the sections spawns.legendary, mythical, ultraBeast
-     * and paradox ({allowSpawn, maxSpawnPerPokemon}); the old values move in.
-     * Version 22: loan.count 30 to 0, players bring their own balls (the shop
-     * gives free Safari Balls once a day); a file still on 30 follows.
-     * Version 23: warningThresholdsSeconds gains 15 and 10 minutes (900, 600,
-     * 300, 60, 30, 10); a file still on the old 300, 60, 30, 10 follows.
-     * featured.announceOnEntry removed (the specials are no longer listed on
-     * entry; the wall screens and /safari today show them).
-     * Version 24: ticket.allowStartCommand removed with /safari start: players
-     * enter through a Safari Gate (or an operator's /safari enter).
+     * Format version of the file, see
+     * {@link SafariConfigManager#CURRENT_CONFIG_VERSION}. Not a setting:
+     * the manager rewrites it.
      */
     public int configVersion = SafariConfigManager.CURRENT_CONFIG_VERSION;
 
@@ -185,20 +144,6 @@ public class SafariConfig {
          */
         public SpecialCategory paradox = SpecialCategory.of(PARADOX_DEFAULT_ALLOWED, PARADOX_DEFAULT_CAP);
 
-        /**
-         * Settings of version 20 and older, replaced by the sections above.
-         * Read once by the version 21 migration, then cleared: Gson leaves
-         * null fields out, so they disappear from the file on the rewrite.
-         * Never read anywhere else.
-         */
-        public Boolean allowLegendary;
-        /** See {@link #allowLegendary}. */
-        public Boolean allowMythical;
-        /** See {@link #allowLegendary}. */
-        public Boolean allowUltraBeast;
-        /** See {@link #allowLegendary}. */
-        public Boolean allowParadox;
-
         /** Species ids that never appear in the Safari, e.g. {@code cobblemon:ditto}. */
         public List<String> excludedSpecies = new ArrayList<>();
 
@@ -224,13 +169,14 @@ public class SafariConfig {
         public double pokemonPerChunkMultiplier = 2.0;
 
         /**
-         * Weight, in Cobblemon's natural spawns around a player, of the
-         * species that player has already caught in the Safari, against 1
-         * for species they have not: 0.4 makes a new species two and a half
-         * times as likely as a caught one of the same weight. Caught species
-         * still appear, only less often; lower values make them feel gone. 1 turns it off; 0 stops them entirely
-         * while anything else can spawn. Acts within Cobblemon's rarity
-         * buckets, so a habitat whose species are all caught looks the same.
+         * Weight, in Cobblemon's natural spawns around a player, of the species
+         * that player has already caught in the Safari, against 1 for species
+         * they have not: 0.4 makes a new species two and a half times as likely
+         * as a caught one of the same weight. Caught species still appear, only
+         * less often; lower values make them feel gone. 1 turns it off; 0 stops
+         * them entirely while anything else can spawn. Acts within Cobblemon's
+         * rarity buckets, so a habitat whose species are all caught looks the
+         * same.
          */
         public double caughtSpeciesWeight = SafariConfigManager.DEFAULT_CAUGHT_SPECIES_WEIGHT;
     }
@@ -401,12 +347,12 @@ public class SafariConfig {
     /** Catch rate adjustments inside the Safari. */
     public static class Capture {
         /**
-         * Multiplies the species catch rate when the loaned ball
-         * ({@link Loan#ballItem}) hits a wild Pokémon that is NOT in a
-         * battle, inside the Safari only. Cobblemon
-         * halves every capture made outside a battle, so 3 means the Safari
-         * Ball out of battle works 1.5 times as well as a normal throw in
-         * battle (before Cobblemon's own 1.5 Safari Ball bonus). 1 disables it.
+         * Multiplies the species catch rate when the loaned ball ({@link
+         * Loan#ballItem}) hits a wild Pokémon that is NOT in a battle, inside the
+         * Safari only. Cobblemon halves every capture made outside a battle, so 3
+         * means the Safari Ball out of battle works 1.5 times as well as a normal
+         * throw in battle (before Cobblemon's own 1.5 Safari Ball bonus). 1
+         * disables it.
          */
         public double safariBallOutOfBattleMultiplier = 3.0;
     }
@@ -457,8 +403,8 @@ public class SafariConfig {
 
         /**
          * Special Pokémon allowed around one player at once (within
-         * FeaturedSpawner.NEARBY_RADIUS). Also caps each
-         * species to one around the player, so no special takes over.
+         * FeaturedSpawner.NEARBY_RADIUS). Also caps each species to one around
+         * the player, so no special takes over.
          */
         public int maxNearbyPerPlayer = 2;
 
@@ -525,6 +471,7 @@ public class SafariConfig {
             public Source() {
             }
 
+            /** A source with the given table and chance, for the defaults. */
             static Source of(String table, double chance) {
                 Source source = new Source();
                 source.table = table;

@@ -23,11 +23,12 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 public record SafariWallScreenSetPayload(BlockPos pos, int contentOrdinal, int tilt) implements CustomPacketPayload {
 
     /**
-     * Wire format version. Bump on EVERY change to write/read. v1: first
-     * version. v2: tilt is signed (negative faces the ceiling); same fields,
-     * new meaning, so a v1 peer must be refused.
+     * Wire format version, checked before anything else is read. The format
+     * is positional: adding, removing or reordering a field (or changing what
+     * one means) without raising this makes a peer of another build read
+     * garbage without an error. Raise it on every change to write/read.
      */
-    public static final int WIRE_VERSION = 2;
+    public static final int WIRE_VERSION = 1;
 
     public static final CustomPacketPayload.Type<SafariWallScreenSetPayload> TYPE =
             new CustomPacketPayload.Type<>(CobblemonSafari.id("wall_screen_set"));
@@ -59,6 +60,7 @@ public record SafariWallScreenSetPayload(BlockPos pos, int contentOrdinal, int t
         return new SafariWallScreenSetPayload(pos, contentOrdinal, tilt);
     }
 
+    /** Type under which each loader registers this payload. */
     @Override
     public CustomPacketPayload.Type<SafariWallScreenSetPayload> type() {
         return TYPE;

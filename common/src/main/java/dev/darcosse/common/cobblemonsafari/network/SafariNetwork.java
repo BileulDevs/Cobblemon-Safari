@@ -25,20 +25,11 @@ public final class SafariNetwork {
 
     /**
      * Network protocol version announced to NeoForge's channel negotiation.
-     * Bumped whenever a payload is added or changes format, so that a client
-     * of another build is refused at login with a clear message instead of
-     * failing on the first packet.
-     * 2: featured payload added, timer payload v3.
-     * 3: rules payload v3 (placeable blocks).
-     * 4: shop and shop purchase payloads added.
-     * 5: bounties payload added.
-     * 6: rules payload v4 (rest house columns).
-     * 7: shop payload v2 (tabs).
-     * 8: stats, wall screen open and wall screen settings payloads added.
-     * 9: wall screen open and settings payloads v2 (signed tilt).
-     * 10: banner open and banner set payloads added.
+     * Raise it whenever a payload is added, removed or changes its wire
+     * version, so that a client of another build is refused at login with a
+     * clear message instead of failing on the first packet.
      */
-    public static final String PROTOCOL_VERSION = "10";
+    public static final String PROTOCOL_VERSION = "1.0.0";
 
     private SafariNetwork() {
     }
@@ -127,8 +118,8 @@ public final class SafariNetwork {
 
     /**
      * Centre columns of the rest houses where they stand or will stand,
-     * built or not yet (the site search may move them from their configured
-     * positions); none when the Safari level is missing.
+     * built or not yet (the site search may move them from their generated
+     * anchors); none when the Safari level is missing.
      */
     private static List<SafariRulesPayload.HouseColumn> restHouseColumns() {
         List<SafariRulesPayload.HouseColumn> columns = new ArrayList<>();

@@ -25,7 +25,7 @@ public final class StatsClientState {
         stats = null;
     }
 
-    /** The local player's record, or null while none was received (old server, or still logging in). */
+    /** The local player's record, or null until the server's first snapshot arrives. */
     public static SafariStatsPayload stats() {
         return stats;
     }

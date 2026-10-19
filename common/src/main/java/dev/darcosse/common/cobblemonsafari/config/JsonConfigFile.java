@@ -3,7 +3,6 @@ package dev.darcosse.common.cobblemonsafari.config;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
@@ -16,15 +15,14 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.function.Supplier;
-import java.util.function.UnaryOperator;
 
 /**
  * Reads and writes one JSON configuration file in the mod's folder of the
  * loader's config directory ({@code config/cobblemon_safari/}).
  *
- * <p>Shared by the server and client configurations so that both follow the same
- * recovery policy: a missing, empty or malformed file never prevents the game
- * from starting, it falls back to defaults and says so in the log.
+ * <p>Shared by the server, shop and client configurations so that all follow
+ * the same recovery policy: a missing, empty or malformed file never prevents
+ * the game from starting, it falls back to defaults and says so in the log.
  */
 final class JsonConfigFile<T> {
 
@@ -35,20 +33,8 @@ final class JsonConfigFile<T> {
 
     /** Path of the file under the config directory, with forward slashes (Java accepts them on Windows too). */
     private final String fileName;
-    /**
-     * Where the file lived before the mod's config folder existed, directly
-     * in the config directory. Moved into the folder on first read, so
-     * existing servers keep their settings.
-     */
-    private final String legacyFileName;
     private final Class<T> type;
     private final Supplier<T> defaults;
-    /**
-     * Rewrites the raw JSON of an old file before Gson maps it. Needed when
-     * a key moves or changes type: Gson silently ignores a key it does not
-     * know, so a moved setting would be lost instead of migrated.
-     */
-    private final UnaryOperator<JsonObject> upgrader;
     /**
      * Whether the last {@link #read()} could not parse the file. While set,
      * {@link #write} does nothing: the managers validate what read returned
@@ -57,22 +43,11 @@ final class JsonConfigFile<T> {
      */
     private boolean unreadable;
 
-    /** Describes a config file whose keys never move; nothing is read until {@link #read()}. */
-    JsonConfigFile(String fileName, String legacyFileName, Class<T> type, Supplier<T> defaults) {
-        this(fileName, legacyFileName, type, defaults, UnaryOperator.identity());
-    }
-
-    /**
-     * Describes a config file with a raw-JSON migration step, applied to
-     * every file read (it must leave current files unchanged).
-     */
-    JsonConfigFile(String fileName, String legacyFileName, Class<T> type, Supplier<T> defaults,
-                   UnaryOperator<JsonObject> upgrader) {
+    /** Describes a config file; nothing is read until {@link #read()}. */
+    JsonConfigFile(String fileName, Class<T> type, Supplier<T> defaults) {
         this.fileName = fileName;
-        this.legacyFileName = legacyFileName;
         this.type = type;
         this.defaults = defaults;
-        this.upgrader = upgrader;
     }
 
     /**
@@ -84,7 +59,6 @@ final class JsonConfigFile<T> {
      */
     T read() {
         Path path = path();
-        moveLegacyFile(path);
         unreadable = false;
         if (!Files.exists(path)) {
             T fresh = defaults.get();
@@ -97,10 +71,11 @@ final class JsonConfigFile<T> {
                 // An empty file, or one containing literally "null".
                 return defaults.get();
             }
-            T parsed = GSON.fromJson(upgrader.apply(tree.getAsJsonObject()), type);
+            T parsed = GSON.fromJson(tree, type);
             return parsed != null ? parsed : defaults.get();
         } catch (IOException | JsonParseException | IllegalStateException e) {
-            // IllegalStateException: a key the upgrader expects holds another JSON type.
+            // IllegalStateException: a value of the wrong JSON type (an object
+            // where a list is expected) must not stop the game from starting.
             CobblemonSafari.LOGGER.error("Could not read config/{}, using defaults until it is fixed: {}",
                     fileName, e.getMessage());
             unreadable = true;
@@ -128,28 +103,8 @@ final class JsonConfigFile<T> {
         }
     }
 
+    /** Absolute path of the file, resolved against the loader's config directory on each call. */
     private Path path() {
         return Platform.get().getConfigDir().resolve(fileName);
-    }
-
-    /**
-     * Moves the file from its old place into the mod's folder, when only the
-     * old one exists. On failure (permissions, a locked file on Windows) the
-     * old file is left alone and logged: the defaults are then written to the
-     * new place, and the admin can move their file by hand.
-     */
-    private void moveLegacyFile(Path path) {
-        Path legacy = Platform.get().getConfigDir().resolve(legacyFileName);
-        if (Files.exists(path) || !Files.exists(legacy)) {
-            return;
-        }
-        try {
-            Files.createDirectories(path.getParent());
-            Files.move(legacy, path);
-            CobblemonSafari.LOGGER.info("Moved config/{} to config/{}", legacyFileName, fileName);
-        } catch (IOException e) {
-            CobblemonSafari.LOGGER.error("Could not move config/{} to config/{}, move it by hand: {}",
-                    legacyFileName, fileName, e.getMessage());
-        }
     }
 }

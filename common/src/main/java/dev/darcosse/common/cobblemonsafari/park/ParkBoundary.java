@@ -42,6 +42,7 @@ public final class ParkBoundary {
                 Component.translatable(CobblemonSafari.MOD_ID + ".message.boundary"), true);
     }
 
+    /** A value kept within [min, max]. */
     private static double clamp(double value, double min, double max) {
         return Math.max(min, Math.min(max, value));
     }

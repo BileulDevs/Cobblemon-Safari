@@ -174,11 +174,12 @@ final class RestHouseBuilder {
      * Only clients are told about the changes; neighbours are neither
      * updated nor reshaped. Neighbour updates would make cut leaves decay and
      * nearby water flow into the freshly cleared space. Reshaping
-     * (UPDATE_KNOWN_SHAPE left out) broke every flower, petal or tuft of
-     * grass that lost its support, and Minecraft forces the drop on those
+     * (UPDATE_KNOWN_SHAPE left out) would break every flower, petal or tuft
+     * of grass that lost its support, and Minecraft forces the drop on those
      * neighbours whatever the flags say (Level.setBlock clears
-     * UPDATE_SUPPRESS_DROPS for them): items were left all over each site.
-     * Whatever loses its support is removed by the build itself instead.
+     * UPDATE_SUPPRESS_DROPS for them): items would be left all over each
+     * site. Whatever loses its support is removed by the build itself
+     * instead.
      */
     private static final int PLACE_FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
 
@@ -430,10 +431,12 @@ final class RestHouseBuilder {
             this.snow = new boolean[count];
         }
 
+        /** Index of a world column in the survey's arrays. */
         int index(int x, int z) {
             return (x - minX) + (z - minZ) * sizeX;
         }
 
+        /** Whether a world column lies in the surveyed area. */
         boolean contains(int x, int z) {
             return x >= minX && x < minX + sizeX && z >= minZ && z < minZ + sizeZ;
         }
@@ -528,6 +531,7 @@ final class RestHouseBuilder {
      */
     static final class Job {
 
+        /** Steps of a build, in order; see {@link #step}. */
         private enum Stage { SURVEY, FELL, GROUND, SKIRT, PLACE, TREES }
 
         final int centerX;
@@ -547,6 +551,7 @@ final class RestHouseBuilder {
         /** Game time the build started at; items younger than the build are its own drops. */
         private long startTime = Long.MIN_VALUE;
 
+        /** A build not started yet; see {@link #start}. */
         private Job(int centerX, int centerZ, Direction facing, StructureTemplate template, boolean acceptWater) {
             this.centerX = centerX;
             this.centerZ = centerZ;
@@ -862,8 +867,8 @@ final class RestHouseBuilder {
 
         /**
          * Fells, whole, every tree whose crown or trunk reaches into the
-         * volume about to be cleared. Clearing alone cut them flat against
-         * the house, leaving half crowns standing next to it; the trees the
+         * volume about to be cleared. Clearing alone would cut them flat
+         * against the house, leaving half crowns standing next to it; the trees the
          * reshaping undermines are left to the tree removal, which sees them
          * float.
          *
@@ -1052,7 +1057,7 @@ final class RestHouseBuilder {
      *       ({@code Block.rotate}); a block that does not answer keeps its
      *       saved facing. Cobblemon's disc shelf, TM machine and fossil
      *       machine do not (checked in the 1.8.0 sources), so in a turned
-     *       house they faced the walls. For such blocks (rotation a no-op,
+     *       house they would face the walls. For such blocks (rotation a no-op,
      *       yet a horizontal direction property), every horizontal direction
      *       property is turned here instead. Minecraft applies its own
      *       rotation after this processor, which leaves them as set.</li>
@@ -1079,6 +1084,7 @@ final class RestHouseBuilder {
             this.groundSub = groundSub;
         }
 
+        /** One template block as it must be placed: ground swapped, orientation fixed, fossil links dropped. */
         @Nullable
         @Override
         public StructureTemplate.StructureBlockInfo processBlock(LevelReader level, BlockPos offset, BlockPos pivot,
@@ -1133,6 +1139,7 @@ final class RestHouseBuilder {
             return turned;
         }
 
+        /** Never serialised (see the class comment), so any registered type will do. */
         @Override
         protected StructureProcessorType<?> getType() {
             return StructureProcessorType.NOP;

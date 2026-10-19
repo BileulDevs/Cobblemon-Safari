@@ -10,8 +10,9 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
- * Lifetime Safari record of one player: the "hunting log" the games never had,
- * and the base for future records, titles and rewards.
+ * Lifetime Safari record of one player: the "hunting log" the games never
+ * had, shown by {@code /safari stats}, {@code /safari top} and the wall
+ * screens' STATS page.
  *
  * <p>Mutated only by {@link SafariStatsListener}, which marks the store dirty.
  */

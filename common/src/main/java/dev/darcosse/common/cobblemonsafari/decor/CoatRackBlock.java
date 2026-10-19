@@ -103,6 +103,7 @@ public class CoatRackBlock extends Block {
         return CODEC;
     }
 
+    /** Half, jacket side and hat colour. */
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(HALF, FACING, HAT);
@@ -221,11 +222,13 @@ public class CoatRackBlock extends Block {
         return state.getValue(HALF) == DoubleBlockHalf.LOWER ? LOWER.get(facing) : UPPER.get(facing);
     }
 
+    /** Turned by structures with the jacket. */
     @Override
     protected BlockState rotate(BlockState state, Rotation rotation) {
         return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
     }
 
+    /** Mirrored by structures with the jacket. */
     @Override
     protected BlockState mirror(BlockState state, Mirror mirror) {
         return state.rotate(mirror.getRotation(state.getValue(FACING)));

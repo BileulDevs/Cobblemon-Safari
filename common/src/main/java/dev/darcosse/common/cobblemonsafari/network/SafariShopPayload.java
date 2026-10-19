@@ -30,14 +30,12 @@ public record SafariShopPayload(boolean refresh, int points, long rotation, List
         implements CustomPacketPayload {
 
     /**
-     * Wire format version. Bump on EVERY change to write/read.
-     * v1: first version. v2: tabs, and the tab index of each entry.
-     * v3: rotation, after points.
-     * v4: each entry's cost (items taken in exchange) and remaining purchases, after the price.
-     * v5: a cost carries every item it accepts (an item tag) and its name.
-     * v6: each entry's wait in seconds (cooldownHours), after the remaining purchases.
+     * Wire format version, checked before anything else is read. The format
+     * is positional: adding, removing or reordering a field (or changing what
+     * one means) without raising this makes a peer of another build read
+     * garbage without an error. Raise it on every change to write/read.
      */
-    public static final int WIRE_VERSION = 6;
+    public static final int WIRE_VERSION = 1;
 
     /** Value of {@link Entry#remaining} for an entry without a purchase limit. */
     public static final int UNLIMITED = -1;
@@ -217,6 +215,7 @@ public record SafariShopPayload(boolean refresh, int points, long rotation, List
         return new SafariShopPayload(refresh, points, rotation, List.copyOf(tabs), List.copyOf(entries));
     }
 
+    /** Type under which each loader registers this payload. */
     @Override
     public CustomPacketPayload.Type<SafariShopPayload> type() {
         return TYPE;

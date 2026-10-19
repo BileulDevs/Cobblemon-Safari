@@ -35,8 +35,8 @@ public final class EscapeRopes {
      * Gives one rope if the config lends them and the player has none yet
      * (a rope dropped on death inside stays where it fell). With a full
      * inventory the rope is dropped at the player's feet, inside the Safari,
-     * and the caller says so: before, the player was told they had a rope
-     * they did not carry.
+     * and the caller says so, so the player is never told they carry a rope
+     * that lies on the ground.
      */
     public static Lent lend(Player player) {
         if (!SafariConfigManager.get().escapeRope.enabled || count(player) > 0) {

@@ -16,8 +16,8 @@ import net.minecraft.resources.ResourceLocation;
  * Draws the remaining Safari time: a stopwatch made of a Safari Ball, its
  * red hand turning faster and faster as time runs out, with the time under
  * it. By default in the bottom left corner, a few pixels above the bottom
- * of the screen. The stopwatch itself stays still. CLIENT ONLY: never reference
- * this class from code that can run on a dedicated server.
+ * of the screen. The stopwatch itself stays still. CLIENT ONLY: never
+ * reference this class from code that can run on a dedicated server.
  *
  * <p>Runs every frame while the HUD is drawn, so it only reads cached state:
  * one formatted string and one texture blit per frame, no config file access.
@@ -29,8 +29,7 @@ public final class SafariTimerHud {
 
     /**
      * The timer's icon (16 x 16), a Safari Ball turned stopwatch, drawn by
-     * tools/timer_icon.py; resource packs can replace it. It used to be
-     * Cobblemon's own Safari Ball texture.
+     * tools/timer_icon.py; resource packs can replace it.
      */
     private static final ResourceLocation ICON_TEXTURE = CobblemonSafari.id("textures/gui/safari_timer.png");
     private static final int TEXTURE_SIZE = 16;

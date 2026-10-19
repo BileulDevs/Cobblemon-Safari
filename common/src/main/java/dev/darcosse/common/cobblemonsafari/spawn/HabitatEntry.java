@@ -54,11 +54,6 @@ public record HabitatEntry(Species species, Set<ResourceKey<Biome>> landHabitats
         return false;
     }
 
-    /** Whether the species lives in the given biome, on land or in the water. */
-    public boolean livesIn(ResourceKey<Biome> biome, boolean water) {
-        return water ? waterHabitats.contains(biome) : landHabitats.contains(biome);
-    }
-
     /**
      * The habitat shown on the wall screens: the first land habitat in the
      * Safari's canonical order, or the first water one.

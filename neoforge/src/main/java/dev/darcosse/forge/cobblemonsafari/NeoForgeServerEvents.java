@@ -30,6 +30,7 @@ public final class NeoForgeServerEvents {
         SafariServerEvents.onServerStarting(event.getServer());
     }
 
+    /** All levels are loaded. */
     static void onServerStarted(ServerStartedEvent event) {
         SafariServerEvents.onServerStarted(event.getServer());
     }
@@ -57,22 +58,26 @@ public final class NeoForgeServerEvents {
         SafariServerEvents.onServerTick(event.getServer());
     }
 
+    /** A player joined; packets only, see SafariServerEvents.onPlayerJoin. */
     static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             SafariServerEvents.onPlayerJoin(player);
         }
     }
 
+    /** A player died inside or outside the Safari. */
     static void onLivingDeath(LivingDeathEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             SafariServerEvents.onPlayerDeath(player);
         }
     }
 
+    /** Registers /safari. */
     static void onRegisterCommands(RegisterCommandsEvent event) {
         SafariServerEvents.onRegisterCommands(event.getDispatcher());
     }
 
+    /** Cancels damage the Safari rules forbid (players inside, gate residents, clerks). */
     static void onIncomingDamage(LivingIncomingDamageEvent event) {
         if (SafariServerEvents.onIncomingDamage(event.getEntity(), event.getSource())) {
             event.setCanceled(true);
@@ -81,8 +86,8 @@ public final class NeoForgeServerEvents {
 
     /**
      * Server side, when the block would actually break. Mining itself is not
-     * refused (no LeftClickBlock listener): refusing every left click spammed
-     * the warning each time a player hit a block. The player sees the cracks,
+     * refused (no LeftClickBlock listener): refusing every left click would
+     * spam the warning each time a player hit a block. The player sees the cracks,
      * then the block stays and the warning shows once.
      */
     static void onBlockBreak(BlockEvent.BreakEvent event) {

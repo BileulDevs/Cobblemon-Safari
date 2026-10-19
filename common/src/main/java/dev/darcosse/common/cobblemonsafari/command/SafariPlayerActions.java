@@ -26,10 +26,10 @@ import java.util.List;
 
 /**
  * What a player can ask of the Safari: their status, and the actions the
- * NPCs offer (shop, missions, accepted balls, entering at a gate, leaving). The status is
- * the {@code /safari} command; the actions are reached only through the
- * NPCs' dialogues ({@link SafariDialogueFunctions}), so they are no longer
- * commands a player sees.
+ * NPCs offer (shop, missions, accepted balls, entering at a gate, leaving).
+ * The status is the {@code /safari} command; the actions are reached only
+ * through the NPCs' dialogues ({@link SafariDialogueFunctions}), so they are
+ * not commands a player sees.
  *
  * <p>Server side. Each action answers the player itself, failures in red,
  * since there is no command source to report to.
@@ -142,9 +142,9 @@ public final class SafariPlayerActions {
      * without a session is sent when logging in inside.
      *
      * <p>The leave itself happens on the next tick
-     * ({@link SafariSessionManager#requestLeave}): run from the clerk's
-     * dialogue, ending and teleporting right away ended the session but left
-     * the player inside.
+     * ({@link SafariSessionManager#requestLeave}): run from within the clerk's
+     * dialogue, ending and teleporting right away would end the session but
+     * leave the player inside.
      */
     public static boolean leave(ServerPlayer player) {
         if (SafariSessionManager.getSession(player) != null || SafariDimensions.isSafari(player.level())) {

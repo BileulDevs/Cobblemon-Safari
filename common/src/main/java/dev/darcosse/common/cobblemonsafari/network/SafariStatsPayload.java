@@ -24,7 +24,12 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 public record SafariStatsPayload(int sessions, int catches, int shinies, int bestSession, long secondsHunted,
                                  int species, int points) implements CustomPacketPayload {
 
-    /** Wire format version. Bump on EVERY change to write/read. v1: first version. */
+    /**
+     * Wire format version, checked before anything else is read. The format
+     * is positional: adding, removing or reordering a field (or changing what
+     * one means) without raising this makes a peer of another build read
+     * garbage without an error. Raise it on every change to write/read.
+     */
     public static final int WIRE_VERSION = 1;
 
     public static final CustomPacketPayload.Type<SafariStatsPayload> TYPE =
@@ -63,6 +68,7 @@ public record SafariStatsPayload(int sessions, int catches, int shinies, int bes
         return new SafariStatsPayload(sessions, catches, shinies, bestSession, secondsHunted, species, points);
     }
 
+    /** Type under which each loader registers this payload. */
     @Override
     public CustomPacketPayload.Type<SafariStatsPayload> type() {
         return TYPE;

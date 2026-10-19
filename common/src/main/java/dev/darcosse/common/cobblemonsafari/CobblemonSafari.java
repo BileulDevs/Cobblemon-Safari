@@ -25,8 +25,9 @@ import org.slf4j.LoggerFactory;
  *
  * <p>Each loader module calls {@link #init(PlatformAdapter)} once, as early as
  * possible, registers {@code SafariBlocks}, then {@code SafariItems}, and the
- * {@code SafariWorldgen} types in its own registry phase, then wires its own events to {@code SafariServerEvents}. Nothing in
- * here may touch client-only classes: this runs on dedicated servers too.
+ * {@code SafariWorldgen} types in its own registry phase, then wires its own
+ * events to {@code SafariServerEvents}. Nothing in here may touch client-only
+ * classes: this runs on dedicated servers too.
  */
 public final class CobblemonSafari {
 

@@ -18,9 +18,9 @@ import net.minecraft.world.phys.AABB;
  * <p>Thanks to the biome tag bridge, the native spawner fills each habitat
  * with its natural fauna. This filter adds the Safari's rules on top:
  * Cobblemon's spawning gamerule, forbidden categories and species, the
- * per-rotation cap of legendary-class
- * species ({@link SpecialSpawnCounter}), and a same-species density cap so
- * that one very common Pokémon cannot take over a whole habitat.
+ * per-rotation cap of legendary-class species ({@link SpecialSpawnCounter}),
+ * and a same-species density cap so that one very common Pokémon cannot take
+ * over a whole habitat.
  *
  * <p>The mod's own special spawns do not go through Cobblemon's spawner and
  * are not filtered here; {@link FeaturedSpawner} applies the same species

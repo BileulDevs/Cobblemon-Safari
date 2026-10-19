@@ -40,12 +40,12 @@ public record SafariRulesPayload(ResourceLocation dimension, List<ResourceLocati
     }
 
     /**
-     * Wire format version. Bump on EVERY change to write/read.
-     * v2: added protectBlocks and exemptCreativeAndSpectator.
-     * v3: added placeableBlocks, at the end.
-     * v4: added restHouses, at the end.
+     * Wire format version, checked before anything else is read. The format
+     * is positional: adding, removing or reordering a field (or changing what
+     * one means) without raising this makes a peer of another build read
+     * garbage without an error. Raise it on every change to write/read.
      */
-    public static final int WIRE_VERSION = 4;
+    public static final int WIRE_VERSION = 1;
 
     /**
      * Upper bound on the list size accepted when reading. A corrupted or hostile
@@ -125,6 +125,7 @@ public record SafariRulesPayload(ResourceLocation dimension, List<ResourceLocati
                 List.copyOf(placeable), List.copyOf(houses));
     }
 
+    /** Type under which each loader registers this payload. */
     @Override
     public CustomPacketPayload.Type<SafariRulesPayload> type() {
         return TYPE;

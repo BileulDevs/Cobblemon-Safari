@@ -12,7 +12,7 @@ import org.jetbrains.annotations.Nullable;
  * <p>The rule is looked up by its name among the registered gamerules
  * rather than through Cobblemon's Kotlin object, so this class compiles and
  * runs against any Cobblemon version: a missing rule is logged once and
- * treated as "spawning allowed", which is how the mod behaved before.
+ * treated as "spawning allowed".
  */
 public final class PokemonSpawningRule {
 
@@ -47,6 +47,7 @@ public final class PokemonSpawningRule {
         if (!looked) {
             looked = true;
             GameRules.visitGameRuleTypes(new GameRules.GameRuleTypeVisitor() {
+                /** Keeps the boolean rule whose name is {@link #RULE_NAME}. */
                 @Override
                 public void visitBoolean(GameRules.Key<GameRules.BooleanValue> candidate,
                                          GameRules.Type<GameRules.BooleanValue> type) {

@@ -24,12 +24,11 @@ import java.util.concurrent.CompletableFuture;
  * The rest houses of the Safari: where they stand, whether they are built,
  * and building the missing ones. Each anchor of
  * {@link ParkGeometry#REST_HOUSES} gets a house, built at the best spot
- * nearby, which can differ from map to map. Always built: they are the only
- * place to heal and the shop's counter inside the park.
+ * nearby, which can differ from map to map. Always built: like the rest
+ * houses of the original Safari Zones, they are the only place to heal
+ * inside the park, and they hold the shop's counter.
  *
- * <p>Like the rest houses of the original Safari Zones, they are the only
- * place to heal inside the park. Each is the Safari Pokémon Center
- * template, placed by code rather than generated as a world structure, so
+ * <p>Each is the Safari Pokémon Center template, placed by code rather than generated as a world structure, so
  * that it stands at a spot chosen for it, fitted to whatever terrain the
  * seed produced (see {@link RestHouseBuilder}).
  *
@@ -38,7 +37,7 @@ import java.util.concurrent.CompletableFuture;
  * the entrance house is built, since players arrive in front of it. The
  * others are built the first time a player has loaded the chunks around
  * them, one at a time, in small steps over a few ticks. Building them all at
- * start meant generating some 150 chunks on the server thread, about 25
+ * start would mean generating some 150 chunks on the server thread, about 25
  * seconds before a new map could be played.
  */
 public final class RestHouses {
@@ -62,9 +61,9 @@ public final class RestHouses {
     public static final int FOOTPRINT_REACH = HALF_SIZE + 2;
 
     /**
-     * How far from its anchor a house may move to find a good
-     * spot, in blocks. The entrance stays close: it must remain next to the
-     * arrival point. Larger radii find better spots on rough maps, at the
+     * How far from its anchor a house may move to find a good spot, in
+     * blocks. The entrance stays close: it must remain next to the arrival
+     * point. Larger radii find better spots on rough maps, at the
      * cost of a slower first start of each map.
      */
     private static final int ENTRANCE_SEARCH_RADIUS = 32;

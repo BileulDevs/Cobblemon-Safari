@@ -24,7 +24,8 @@ import java.util.UUID;
  * Safari, their spawner ticks faster ({@code spawns.spawnRateMultiplier}) and
  * accepts more Pokémon per chunk ({@code spawns.pokemonPerChunkMultiplier});
  * both go back to Cobblemon's values once the player leaves. Only players this
- * class boosted are reset, so settings other mods put on a spawner are left alone.
+ * class boosted are reset, so settings other mods put on a spawner are left
+ * alone.
  *
  * <p>It also keeps {@link NoveltyInfluence} on the spawner of every player in
  * the Safari, with a snapshot of the species they caught there, so new

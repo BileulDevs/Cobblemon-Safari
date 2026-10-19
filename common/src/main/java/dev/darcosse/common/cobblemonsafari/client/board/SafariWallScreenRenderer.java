@@ -41,11 +41,11 @@ import org.joml.Matrix4f;
  */
 public class SafariWallScreenRenderer implements BlockEntityRenderer<SafariWallScreenBlockEntity> {
 
-    /** Texture of the panel's back and edges, the arm and the plate (named after the removed Safari Board, kept to avoid a rename). */
-    private static final ResourceLocation CASING_TEXTURE = CobblemonSafari.id("textures/block/safari_board_frame.png");
+    /** Texture of the panel's back and edges, the arm and the plate. */
+    private static final ResourceLocation CASING_TEXTURE = CobblemonSafari.id("textures/block/safari_wall_screen_frame.png");
 
-    /** Texture of the panel's front, under the picture (named after the removed Safari Board). */
-    private static final ResourceLocation SCREEN_TEXTURE = CobblemonSafari.id("textures/block/safari_board_screen.png");
+    /** Texture of the panel's front, under the picture. */
+    private static final ResourceLocation SCREEN_TEXTURE = CobblemonSafari.id("textures/block/safari_wall_screen_front.png");
 
     /** Pixels per block, for converting the block's pixel constants. */
     private static final float PIXELS_PER_BLOCK = 16.0F;
@@ -166,8 +166,8 @@ public class SafariWallScreenRenderer implements BlockEntityRenderer<SafariWallS
 
         poseStack.pushPose();
         // Block centre, then turn so +X is the reader's right, +Y up and +Z out
-        // of the screen; then back to the bottom-left corner
-        // against the wall, and pixel units.
+        // of the screen; then back to the bottom-left corner against the wall,
+        // and pixel units.
         poseStack.translate(0.5F, 0.5F, 0.5F);
         poseStack.mulPose(Axis.YP.rotationDegrees(-facing.toYRot()));
         poseStack.translate(-0.5F, -0.5F, -0.5F);

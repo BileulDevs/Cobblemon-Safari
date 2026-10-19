@@ -13,8 +13,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Text of the specials list shown by {@code /safari today}. Everything is a translatable component resolved on each
- * client, so species and habitat names appear in the reader's language.
+ * Text of the specials list shown in chat by {@code /safari today} and the
+ * NPCs. Everything is a translatable component resolved on each client, so
+ * species and habitat names appear in the reader's language.
  */
 public final class FeaturedBoard {
 

@@ -87,6 +87,7 @@ public final class SafariBorder {
         }
     }
 
+    /** Whether the live border moved away from the park's centre or size. */
     private static boolean hasDrifted(WorldBorder border) {
         return Math.abs(border.getCenterX() - ParkGeometry.CENTER_X) > DRIFT_EPSILON
                 || Math.abs(border.getCenterZ() - ParkGeometry.CENTER_Z) > DRIFT_EPSILON

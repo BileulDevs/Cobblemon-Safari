@@ -40,11 +40,6 @@ public enum Rarity {
         return RARE;
     }
 
-    /** The more common of two rarities. */
-    public Rarity mostCommon(Rarity other) {
-        return ordinal() <= other.ordinal() ? this : other;
-    }
-
     /** Player-facing name, coloured. */
     public Component displayName() {
         return Component.translatable(CobblemonSafari.MOD_ID + ".rarity." + name().toLowerCase(java.util.Locale.ROOT))

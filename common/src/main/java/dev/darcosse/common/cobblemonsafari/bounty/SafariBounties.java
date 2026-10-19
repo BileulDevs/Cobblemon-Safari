@@ -249,6 +249,7 @@ public final class SafariBounties {
         };
     }
 
+    /** Whether the player has completed every mission of the rotation. */
     private static boolean allDone(List<Bounty> bounties, SafariBountyStore.Progress progress) {
         for (int i = 0; i < bounties.size(); i++) {
             if (progress.counts[i] < bounties.get(i).count()) {
@@ -262,7 +263,7 @@ public final class SafariBounties {
      * Draws the missions of a rotation. A specials mission first when there
      * are specials, then type and species missions in turn, all from
      * species that spawn in the Safari as common or uncommon, so every
-     * mission can be done in one day.
+     * mission can be done within one rotation.
      */
     private static List<Bounty> draw(MinecraftServer server, long period, SafariConfig.Bounties config,
                                      boolean specialsToday) {

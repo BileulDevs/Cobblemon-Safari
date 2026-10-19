@@ -25,7 +25,7 @@ public final class NeoForgeItemRegistration {
      */
     static void onRegister(RegisterEvent event) {
         // NeoForge fires the block registry before the item registry, which is
-        // the order the board's block item needs.
+        // the order the block items need.
         event.register(Registries.BLOCK, helper -> SafariBlocks.register(helper::register));
         event.register(Registries.ITEM, helper -> SafariItems.register(helper::register));
         // Vanilla's registration order puts block entity types after blocks.

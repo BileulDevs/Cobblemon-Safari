@@ -142,9 +142,11 @@ object SafariHabitatIndex {
                 condition.minLight, condition.maxLight, condition.minSkyLight, condition.maxSkyLight, condition.canSeeSky)
         }
 
+    /** Whether a spawn condition accepts the given biome. */
     private fun fitsBiome(condition: SpawningCondition<*>, holder: Holder<Biome>): Boolean =
         condition.biomes?.any { it.fits(holder) } == true
 
+    /** The species a spawn file names, with or without namespace; null when unknown. */
     private fun resolveSpecies(raw: String?): Species? {
         if (raw.isNullOrBlank()) return null
         val id = if (raw.contains(':')) ResourceLocation.tryParse(raw)
@@ -176,13 +178,14 @@ object SafariHabitatIndex {
         private var best: PokemonSpawnDetail? = null
         private val windows = ArrayList<SpawnWindow>()
 
+        /** Adds one natural spawn detail: its habitats, its time windows, and its rarity if it is the most common so far. */
         fun add(detail: PokemonSpawnDetail, biomes: List<ResourceKey<Biome>>, inWater: Boolean,
                 detailWindows: List<SpawnWindow>) {
             if (inWater) water.addAll(biomes) else land.addAll(biomes)
             windows.addAll(detailWindows)
-            // In the published Cobblemon 1.8.0 the bucket is a plain String
-            // (`var bucket = ""` in SpawnDetail). Cobblemon's later main branch
-            // turned it into a SpawnBucket object, which is what `.name` assumed.
+            // In Cobblemon 1.8.0 the bucket is a plain String (`var bucket = ""`
+            // in SpawnDetail); later Cobblemon versions make it a SpawnBucket
+            // object, so this is the line to adapt when updating Cobblemon.
             val detailRarity = Rarity.fromBucket(detail.bucket)
             // The most common bucket is the species' real abundance; its detail
             // also carries the form most players will expect to meet.
@@ -192,6 +195,7 @@ object SafariHabitatIndex {
             }
         }
 
+        /** The entry for everything added; legendary-class species are always ultra-rare. */
         fun build(): HabitatEntry {
             val special = SpeciesRules.isSpecial(species)
             val finalRarity = if (special) Rarity.ULTRA_RARE else rarity ?: Rarity.RARE

@@ -219,6 +219,7 @@ public final class DryJigsawStructure extends Structure {
         return true;
     }
 
+    /** The registered type, the same instance as {@link SafariWorldgen#dryJigsawType()}. */
     @Override
     public StructureType<?> type() {
         return SafariWorldgen.dryJigsawType();

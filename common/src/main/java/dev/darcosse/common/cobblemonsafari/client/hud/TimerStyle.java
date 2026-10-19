@@ -6,8 +6,8 @@ import dev.darcosse.common.cobblemonsafari.util.Ticks;
 /**
  * Decides how the timer looks for a given remaining time.
  *
- * <p>Isolated from the renderer so that future effects (animations, sounds,
- * per-threshold messages) plug in here without touching layout code.
+ * <p>Isolated from the renderer so the colour rules can change without
+ * touching layout code.
  */
 public final class TimerStyle {
 

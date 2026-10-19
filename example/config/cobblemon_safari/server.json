@@ -1,5 +1,5 @@
 {
-  "configVersion": 24,
+  "configVersion": 1,
   "maxDurationSeconds": 3600,
   "allowedBalls": [
     "cobblemon:safari_ball",

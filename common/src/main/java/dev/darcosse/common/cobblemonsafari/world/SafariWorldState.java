@@ -56,8 +56,8 @@ public final class SafariWorldState extends SavedData {
     private final Set<String> builtHouses = new HashSet<>();
     /**
      * Where the house of each anchor was built: the site search may move it
-     * away from its anchor to fit the terrain. Anchors missing
-     * here (saves from before the search) were built on the anchor itself.
+     * away from its anchor to fit the terrain. A built anchor missing here
+     * is taken as built on the anchor itself.
      */
     private final Map<String, String> houseSites = new HashMap<>();
     /**
@@ -238,9 +238,9 @@ public final class SafariWorldState extends SavedData {
     private static SafariWorldState load(CompoundTag nbt, HolderLookup.Provider registries) {
         SafariWorldState state = new SafariWorldState();
         state.rotationSalt = nbt.getLong("rotation_salt");
-        // Absent in older saves: 0, no rotation forced yet.
+        // Absent: 0, no rotation forced yet.
         state.rotationOffset = nbt.getLong("rotation_offset");
-        // Absent in older saves: no rotation recorded, so nothing is excluded.
+        // Absent: no rotation recorded, so nothing is excluded.
         state.specialsPeriod = nbt.contains("specials_period") ? nbt.getLong("specials_period") : Long.MIN_VALUE;
         for (Tag species : nbt.getList("specials", Tag.TAG_STRING)) {
             state.specials.add(species.getAsString());
@@ -248,17 +248,17 @@ public final class SafariWorldState extends SavedData {
         for (Tag species : nbt.getList("specials_excluded", Tag.TAG_STRING)) {
             state.specialsExcluded.add(species.getAsString());
         }
-        // Absent in older saves: 0, the salt of the original map, which is right.
+        // Absent: 0, the salt of the original map.
         state.housesMapSalt = nbt.getLong("houses_map_salt");
         for (Tag house : nbt.getList("built_houses", Tag.TAG_STRING)) {
             state.builtHouses.add(house.getAsString());
         }
-        // Absent in older saves: their houses stand on their anchors.
+        // Absent: built houses stand on their anchors (see houseSite).
         CompoundTag sites = nbt.getCompound("house_sites");
         for (String anchor : sites.getAllKeys()) {
             state.houseSites.put(anchor, sites.getString(anchor));
         }
-        // Absent in older saves: their unbuilt houses are planned again.
+        // Absent: unbuilt houses get their sites chosen again.
         CompoundTag plans = nbt.getCompound("house_plans");
         for (String anchor : plans.getAllKeys()) {
             List<String> planned = new ArrayList<>();

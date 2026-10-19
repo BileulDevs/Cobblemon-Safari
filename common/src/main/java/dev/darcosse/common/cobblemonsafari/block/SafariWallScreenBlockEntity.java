@@ -8,17 +8,17 @@ import net.minecraft.world.level.block.state.BlockState;
 /**
  * Block entity of a Safari Wall Screen.
  *
- * <p>Stores and syncs nothing, like the board's: the picture comes from the
- * featured and timer payloads, the tilt from the block state. It exists so a
- * renderer can draw the tilted panel, and it caches the group layout so the
- * row scan does not run every frame.
+ * <p>Stores and syncs nothing: the picture comes from the payloads the client
+ * already holds (featured, timer, stats, bounties), the tilt and content from the
+ * block state. It exists so a renderer can draw the tilted panel, and it caches
+ * the group layout so the row scan does not run every frame.
  */
 public class SafariWallScreenBlockEntity extends BlockEntity {
 
     /**
-     * How often the cached layout is recomputed, in game ticks. Same value as
-     * the board: lower reacts faster to screens being added or removed, at the
-     * cost of more block reads (up to the row scan length plus
+     * How often the cached layout is recomputed, in game ticks. Lower reacts
+     * faster to screens being added or removed, at the cost of more block
+     * reads (up to the row scan length plus
      * {@link WallScreenLayout#MAX_WIDTH} per screen per refresh).
      */
     private static final long LAYOUT_REFRESH_TICKS = 10L;

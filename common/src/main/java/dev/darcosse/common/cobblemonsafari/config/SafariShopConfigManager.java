@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -22,29 +21,6 @@ public final class SafariShopConfigManager {
 
     /** Path under the config directory: the mod's folder keeps its files together. */
     private static final String FILE_NAME = CobblemonSafari.MOD_ID + "/shop.json";
-    /** Where the file lived before the mod had its own config folder; moved into it on load. */
-    private static final String LEGACY_FILE_NAME = CobblemonSafari.MOD_ID + "_shop.json";
-
-    /** The version selling 15 random Pokémon by default instead of 4, and random items and balls. */
-    private static final int ROTATING_GOODS_VERSION = 10;
-
-    /** The version whose default rare price is 500; a file still on the old 1000 follows. */
-    private static final int CHEAPER_RARE_VERSION = 9;
-
-    /** The version whose default Tauros costs 200 points; the old 1500 is lowered. */
-    private static final int CHEAPER_TAUROS_VERSION = 7;
-
-    /** The version whose default trades take tags; version 5 defaults are converted. */
-    private static final int TAG_TRADES_VERSION = 6;
-
-    /** Version 5 default trade costs and the tag each one becomes. */
-    private static final Map<String, String> OLD_TRADE_ITEMS = Map.of(
-            "cobblemon:red_apricorn", SafariShopConfig.TRADE_APRICORN_TAG,
-            "cobblemon:oran_berry", SafariShopConfig.TRADE_BERRY_TAG,
-            "cobblemon:fire_stone", SafariShopConfig.TRADE_STONE_TAG);
-
-    /** The version that added ticket trades; older files get the default ones once. */
-    private static final int TICKET_TRADES_VERSION = 5;
 
     /**
      * Most items one cost may ask for: nine stacks. Beyond that the trade
@@ -52,27 +28,19 @@ public final class SafariShopConfigManager {
      */
     private static final int MAX_COST_COUNT = 9 * 64;
 
-    /** The version whose defaults sell a single Pokémon instead of five. */
-    private static final int SINGLE_POKEMON_VERSION = 4;
-
-    /** Pokémon sold by default up to version 3, as written in those files. */
-    private static final Set<String> OLD_DEFAULT_POKEMON = Set.of("abra level=10", "clefairy level=12",
-            "porygon level=20", "dratini level=15", "scyther level=20");
-
-    /** The version that added the cooking tab; older files get it and its ingredients once. */
-    private static final int COOKING_VERSION = 11;
-
-    /** The version that added the free daily Safari Balls; older files get them once. */
-    private static final int FREE_BALLS_VERSION = 12;
-
     /**
      * Longest wait an entry may ask, in hours: a year. Beyond it the entry
      * can in practice be bought once, which limitPerRotation 0 says better.
      */
     private static final int MAX_COOLDOWN_HOURS = 24 * 365;
 
-    /** Version written by this build. */
-    public static final int CURRENT_VERSION = 12;
+    /**
+     * Format version written to the file. Raise it when a field changes
+     * meaning and add the conversion to {@link #validate}; a field added or
+     * removed needs no bump, Gson fills new fields with their defaults and
+     * ignores unknown keys.
+     */
+    public static final int CURRENT_VERSION = 1;
 
     /**
      * Most random Pokémon per rotation. Each one is built for the screen
@@ -95,7 +63,7 @@ public final class SafariShopConfigManager {
     private static final String BALL_SUFFIX = "_ball";
 
     private static final JsonConfigFile<SafariShopConfig> FILE =
-            new JsonConfigFile<>(FILE_NAME, LEGACY_FILE_NAME, SafariShopConfig.class, SafariShopConfig::new);
+            new JsonConfigFile<>(FILE_NAME, SafariShopConfig.class, SafariShopConfig::new);
 
     private static SafariShopConfig config = new SafariShopConfig();
 
@@ -128,49 +96,13 @@ public final class SafariShopConfigManager {
      */
     private static boolean validate(SafariShopConfig c) {
         boolean corrected = false;
-        if (c.configVersion < SINGLE_POKEMON_VERSION && c.entries != null && holdsOldDefaultPokemon(c.entries)) {
-            replaceOldDefaultPokemon(c.entries);
-            CobblemonSafari.LOGGER.info("Migrated {}: the five default Pokémon became a single {}",
-                    FILE_NAME, SafariShopConfig.DEFAULT_POKEMON);
-        }
-        if (c.configVersion < TICKET_TRADES_VERSION) {
-            addTicketTrades(c);
-        } else if (c.configVersion < TAG_TRADES_VERSION) {
-            convertTradesToTags(c);
-        }
-        if (c.configVersion < CHEAPER_TAUROS_VERSION && c.entries != null) {
-            for (SafariShopConfig.Entry entry : c.entries) {
-                // Only the untouched default: same properties, old price.
-                if (entry != null && entry.isPokemon() && SafariShopConfig.DEFAULT_POKEMON.equals(entry.pokemon)
-                        && entry.price == SafariShopConfig.OLD_DEFAULT_POKEMON_PRICE) {
-                    entry.price = SafariShopConfig.DEFAULT_POKEMON_PRICE;
-                    CobblemonSafari.LOGGER.info("Migrated {}: {} now costs {} points", FILE_NAME,
-                            entry.pokemon, entry.price);
-                }
-            }
-        }
-        if (c.configVersion < CHEAPER_RARE_VERSION && c.rotating != null
-                && c.rotating.rarePrice == SafariShopConfig.OLD_RARE_PRICE) {
-            c.rotating.rarePrice = SafariShopConfig.RARE_PRICE;
-            CobblemonSafari.LOGGER.info("Migrated {}: rotating.rarePrice is now {}", FILE_NAME, c.rotating.rarePrice);
-        }
-        if (c.configVersion < ROTATING_GOODS_VERSION && c.rotating != null
-                && c.rotating.count == SafariShopConfig.OLD_ROTATING_POKEMON) {
-            c.rotating.count = SafariShopConfig.ROTATING_POKEMON;
-            CobblemonSafari.LOGGER.info("Migrated {}: rotating.count is now {}", FILE_NAME, c.rotating.count);
-        }
-        if (c.configVersion < COOKING_VERSION) {
-            addCookingTab(c);
-        }
-        if (c.configVersion < FREE_BALLS_VERSION) {
-            addFreeBalls(c);
-        }
         if (c.configVersion != CURRENT_VERSION) {
+            // The rewrite also drops keys Gson ignored, so the file shows what is read.
             c.configVersion = CURRENT_VERSION;
             corrected = true;
         }
         if (c.tabs == null || c.tabs.isEmpty()) {
-            // Version 1 files have no tabs: they get the default ones.
+            // Without tabs no entry could be shown: the default tabs come back.
             c.tabs = new SafariShopConfig().tabs;
             corrected = true;
         }
@@ -295,136 +227,6 @@ public final class SafariShopConfigManager {
             }
         }
         return corrected;
-    }
-
-    /**
-     * Turns the version 5 default ticket trades (one item each) into the tag
-     * trades of version 6. Only a ticket trade asking for exactly one of
-     * those items is converted; any trade the admin wrote stays as it is.
-     */
-    private static void convertTradesToTags(SafariShopConfig c) {
-        if (c.entries == null) {
-            return;
-        }
-        for (SafariShopConfig.Entry entry : c.entries) {
-            if (entry == null || !SafariShopConfig.TICKET_ITEM.equals(entry.item) || entry.cost == null
-                    || entry.cost.size() != 1 || entry.cost.get(0) == null) {
-                continue;
-            }
-            String tag = OLD_TRADE_ITEMS.get(entry.cost.get(0).item);
-            if (tag != null) {
-                CobblemonSafari.LOGGER.info("Ticket trade for {} now takes any of {}", entry.cost.get(0).item, tag);
-                entry.cost.get(0).item = tag;
-            }
-        }
-    }
-
-    /**
-     * Brings the tickets tab and the default ticket trades into a file
-     * written before they existed, once: unless the file already has an
-     * entry giving tickets (the admin's own trade or sale).
-     */
-    private static void addTicketTrades(SafariShopConfig c) {
-        SafariShopConfig defaults = new SafariShopConfig();
-        if (c.tabs != null && c.tabs.stream().noneMatch(tab -> tab != null
-                && SafariShopConfig.Tab.TICKETS.equals(tab.id))) {
-            defaults.tabs.stream().filter(tab -> SafariShopConfig.Tab.TICKETS.equals(tab.id))
-                    .findFirst().ifPresent(c.tabs::add);
-        }
-        if (c.entries == null || c.entries.stream().anyMatch(entry -> entry != null
-                && SafariShopConfig.TICKET_ITEM.equals(entry.item))) {
-            return;
-        }
-        defaults.entries.stream().filter(SafariShopConfig.Entry::hasCost).forEach(c.entries::add);
-        CobblemonSafari.LOGGER.info("Added the default ticket trades to {}", FILE_NAME);
-    }
-
-    /**
-     * Adds the free daily Safari Balls, first among the ball entries, unless
-     * the file already has them (same item, free, with a wait). The entry
-     * goes to the balls tab like any id ending in "_ball".
-     */
-    private static void addFreeBalls(SafariShopConfig c) {
-        if (c.entries == null || c.entries.stream().anyMatch(entry -> entry != null && entry.isFreeBalls())) {
-            return;
-        }
-        // First in the balls: before the first ball entry, else at the end.
-        int at = c.entries.size();
-        for (int i = 0; i < c.entries.size(); i++) {
-            SafariShopConfig.Entry entry = c.entries.get(i);
-            if (entry != null && !entry.isPokemon() && entry.item != null && entry.item.endsWith(BALL_SUFFIX)) {
-                at = i;
-                break;
-            }
-        }
-        c.entries.add(at, SafariShopConfig.Entry.freeBalls());
-        CobblemonSafari.LOGGER.info("Added the free daily Safari Balls to {}", FILE_NAME);
-    }
-
-    /**
-     * Adds the cooking tab, before the tickets tab when there is one, and
-     * its default ingredients, unless the file already has a cooking tab
-     * (an admin who made one keeps theirs). Files without tabs get the
-     * default tabs later in validation, the cooking one included.
-     */
-    private static void addCookingTab(SafariShopConfig c) {
-        if (c.tabs == null || c.tabs.isEmpty() || c.tabs.stream().anyMatch(tab -> tab != null
-                && SafariShopConfig.Tab.COOKING.equals(tab.id))) {
-            return;
-        }
-        SafariShopConfig defaults = new SafariShopConfig();
-        SafariShopConfig.Tab cooking = defaults.tabs.stream()
-                .filter(tab -> SafariShopConfig.Tab.COOKING.equals(tab.id)).findFirst().orElse(null);
-        if (cooking == null) {
-            return;
-        }
-        int tickets = -1;
-        for (int i = 0; i < c.tabs.size(); i++) {
-            if (c.tabs.get(i) != null && SafariShopConfig.Tab.TICKETS.equals(c.tabs.get(i).id)) {
-                tickets = i;
-                break;
-            }
-        }
-        if (tickets >= 0) {
-            c.tabs.add(tickets, cooking);
-        } else {
-            c.tabs.add(cooking);
-        }
-        if (c.entries != null) {
-            defaults.entries.stream().filter(entry -> SafariShopConfig.Tab.COOKING.equals(entry.tab))
-                    .forEach(c.entries::add);
-        }
-        CobblemonSafari.LOGGER.info("Added the cooking tab and its ingredients to {}", FILE_NAME);
-    }
-
-    /**
-     * Whether the file still sells exactly the Pokémon of the version 1 to 3
-     * defaults (same properties, any order). Any edit to them, or another
-     * Pokémon added, means the admin chose their list: it is then kept.
-     */
-    private static boolean holdsOldDefaultPokemon(List<SafariShopConfig.Entry> entries) {
-        Set<String> pokemon = new HashSet<>();
-        for (SafariShopConfig.Entry entry : entries) {
-            if (entry != null && entry.isPokemon()) {
-                pokemon.add(entry.pokemon);
-            }
-        }
-        return pokemon.equals(OLD_DEFAULT_POKEMON);
-    }
-
-    /** Swaps the old default Pokémon for the single new one, at the place of the first. */
-    private static void replaceOldDefaultPokemon(List<SafariShopConfig.Entry> entries) {
-        int first = -1;
-        for (int i = 0; i < entries.size(); i++) {
-            SafariShopConfig.Entry entry = entries.get(i);
-            if (entry != null && entry.isPokemon()) {
-                first = first < 0 ? i : first;
-            }
-        }
-        SafariShopConfig.Entry tauros = new SafariShopConfig().entries.stream()
-                .filter(SafariShopConfig.Entry::isPokemon).findFirst().orElseThrow();
-        entries.removeIf(entry -> entry != null && entry.isPokemon());
-        entries.add(Math.min(first, entries.size()), tauros);
     }
 
     /**

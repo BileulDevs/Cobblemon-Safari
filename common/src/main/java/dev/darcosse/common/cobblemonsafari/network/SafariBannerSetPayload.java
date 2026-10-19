@@ -19,7 +19,12 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
  */
 public record SafariBannerSetPayload(BlockPos pos, String design) implements CustomPacketPayload {
 
-    /** Wire format version. Bump on EVERY change to write/read. v1: first version. */
+    /**
+     * Wire format version, checked before anything else is read. The format
+     * is positional: adding, removing or reordering a field (or changing what
+     * one means) without raising this makes a peer of another build read
+     * garbage without an error. Raise it on every change to write/read.
+     */
     public static final int WIRE_VERSION = 1;
 
     /** Longest design text read; matches the server's own bound (BannerDesigns.MAX_ID_LENGTH). */
@@ -53,6 +58,7 @@ public record SafariBannerSetPayload(BlockPos pos, String design) implements Cus
         return new SafariBannerSetPayload(pos, design);
     }
 
+    /** Type under which each loader registers this payload. */
     @Override
     public CustomPacketPayload.Type<SafariBannerSetPayload> type() {
         return TYPE;

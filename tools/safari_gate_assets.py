@@ -457,9 +457,9 @@ def structure():
     return len(entries), len(palette)
 
 
-# Option that rebuilds the structure template. Off by default since the gate
-# is built by hand in game (safari_gate_v1.1): running the script plainly
-# must not overwrite that build with this older generated lodge.
+# Option that rebuilds the structure template procedurally. Off by default:
+# the shipped gate is built by hand in game, and running the script plainly
+# must not overwrite that build with this generated lodge.
 STRUCTURE_FLAG = "--structure"
 
 

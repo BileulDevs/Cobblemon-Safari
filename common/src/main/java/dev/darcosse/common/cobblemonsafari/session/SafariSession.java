@@ -162,8 +162,7 @@ public final class SafariSession {
         ReturnPoint returnPoint = tag.contains("return", Tag.TAG_COMPOUND)
                 ? ReturnPoint.load(tag.getCompound("return"))
                 : null;
-        // Absent keys (sessions saved by 0.3.0 and earlier) read as 0 / empty,
-        // which is exactly "no loan, no catch yet".
+        // Absent keys read as 0 / empty, which is exactly "no loan, no catch yet".
         SafariSession session = new SafariSession(tag.getUUID("player"), Math.max(0, tag.getInt("remaining")),
                 tag.getInt("granted"), returnPoint, tag.getString("source"), Math.max(0, tag.getInt("balls_loaned")));
         ListTag catchList = tag.getList("catches", Tag.TAG_COMPOUND);

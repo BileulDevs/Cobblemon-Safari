@@ -10,8 +10,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
 /**
- * Paints the screen overlay with the gate's amber texture while the player waits in a
- * Safari Gate. Vanilla always draws it with the nether portal's sprite,
+ * Paints the screen overlay with the gate's amber texture while the player
+ * waits in a Safari Gate. Vanilla always draws it with the nether portal's sprite,
  * whatever portal the player stands in.
  */
 @Mixin(Gui.class)

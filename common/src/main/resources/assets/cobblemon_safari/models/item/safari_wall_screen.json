@@ -1,9 +1,9 @@
 {
   "parent": "minecraft:block/block",
   "textures": {
-    "particle": "cobblemon_safari:block/safari_board_frame",
-    "screen": "cobblemon_safari:block/safari_board_screen",
-    "frame": "cobblemon_safari:block/safari_board_frame"
+    "particle": "cobblemon_safari:block/safari_wall_screen_frame",
+    "screen": "cobblemon_safari:block/safari_wall_screen_front",
+    "frame": "cobblemon_safari:block/safari_wall_screen_frame"
   },
   "elements": [
     {

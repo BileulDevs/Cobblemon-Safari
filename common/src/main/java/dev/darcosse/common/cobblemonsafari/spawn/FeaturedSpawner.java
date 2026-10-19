@@ -157,12 +157,11 @@ public final class FeaturedSpawner {
     }
 
     /**
-     * Weighted pick among the specials living in that biome, leaving out
-     * those whose natural spawns refuse the hour or the light at that spot
-     * (a nocturnal species by day, a Gastly in daylight), species already
-     * present around the player, legendary-class species
-     * already roaming the park and those that used up their appearances for
-     * this rotation.
+     * Weighted pick among the specials living in that biome, leaving out those
+     * whose natural spawns refuse the hour or the light at that spot (a nocturnal
+     * species by day, a Gastly in daylight), species already present around the
+     * player, legendary-class species already roaming the park and those that
+     * used up their appearances for this rotation.
      */
     @Nullable
     private static HabitatEntry pick(List<HabitatEntry> specials, Holder<Biome> biome, boolean water,

@@ -102,10 +102,10 @@ public final class SafariServerEvents {
      *
      * <p>Why: Fabric fires its JOIN event in the middle of vanilla's
      * {@code PlayerList.placeNewPlayer}, before the player is added to its
-     * level. A teleport to another dimension at that point registered the
-     * player in the target level, after which vanilla added them to the
-     * original level as well; the chunk tracking of the two disagreed and
-     * the next dimension change crashed the server (NullPointerException in
+     * level. A teleport to another dimension at that point would register the
+     * player in the target level, after which vanilla adds them to the
+     * original level as well; the chunk tracking of the two disagrees and
+     * the next dimension change crashes the server (NullPointerException in
      * {@code DistanceManager.removePlayer}). NeoForge's event comes later,
      * but sharing one path keeps both loaders identical.
      */

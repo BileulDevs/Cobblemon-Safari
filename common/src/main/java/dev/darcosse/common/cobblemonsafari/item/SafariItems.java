@@ -46,8 +46,8 @@ public final class SafariItems {
      * once, after {@code SafariBlocks.register}: block items wrap existing blocks.
      */
     public static void register(BiConsumer<ResourceLocation, Item> registrar) {
-        // The 15 min, 30 min and 1 h tickets of earlier versions are gone: one
-        // ticket, its length set by ticket.defaultDurationSeconds.
+        // One ticket item: its length comes from ticket.defaultDurationSeconds,
+        // or from its own custom data (see SafariTicketItem).
         safariTicket = new SafariTicketItem(new Item.Properties().stacksTo(TICKET_STACK_SIZE).rarity(Rarity.UNCOMMON));
         registrar.accept(SAFARI_TICKET_ID, safariTicket);
         safariWallScreen = new BlockItem(SafariBlocks.safariWallScreen(), new Item.Properties());

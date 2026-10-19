@@ -9,14 +9,9 @@ package dev.darcosse.common.cobblemonsafari.config;
 public class SafariClientConfig {
 
     /**
-     * Bumped when a field changes meaning. Version 6: the board colours moved
-     * from {@code board} to {@code board.colors}, and
-     * {@code board.pokemonDisplay} (MODEL / SPRITE) became the boolean
-     * {@code board.useSprites}; {@link SafariClientConfigManager} converts
-     * older files. Version 7: the timer moved to the bottom left corner,
-     * level with the hotbar. Version 8: the time went back under the
-     * stopwatch. Version 9: the default sits 4 px higher; files still on
-     * the version 6, 7 or 8 default position follow.
+     * Format version of the file, see
+     * {@link SafariClientConfigManager#CURRENT_CONFIG_VERSION}. Not a setting:
+     * the manager rewrites it.
      */
     public int configVersion = SafariClientConfigManager.CURRENT_CONFIG_VERSION;
 
@@ -40,7 +35,7 @@ public class SafariClientConfig {
     /** Below this many seconds the timer turns red and pulses. */
     public int criticalTimeSeconds = 10;
 
-    /** Look of the wall screens (the section keeps its old name, "board", so existing files still load). */
+    /** Look of the wall screens. */
     public Board board = new Board();
 
     /**
@@ -78,10 +73,9 @@ public class SafariClientConfig {
      * {@code "#AARRGGBB"} (the alpha matters for the overlay effects only).
      * An invalid value is replaced by its default and the file is rewritten.
      *
-     * <p>{@link BoardPalette} and the version 6 migration both walk every
-     * public String field of this class: a colour added here is validated
-     * and migrated without further code. Keep anything that is not a colour
-     * out of it.
+     * <p>{@link BoardPalette} walks every public String field of this class:
+     * a colour added here is parsed and validated without further code. Keep
+     * anything that is not a colour out of it.
      */
     public static class BoardColors {
         /** Thin border around the whole picture. */

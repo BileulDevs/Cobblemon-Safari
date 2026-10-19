@@ -22,9 +22,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>One shared instance is put on each player's spawner by
  * {@link SafariSpawnBoost}; it lowers the weight of caught species
  * ({@code spawns.caughtSpeciesWeight}, 0.4 by default) and leaves
- * everything else alone.
- * Outside the Safari, or for a spawner that is not a player's, it changes
- * nothing, so it can stay on the spawner.
+ * everything else alone. Outside the Safari, or for a spawner that is not a
+ * player's, it changes nothing, so it can stay on the spawner.
  *
  * <p>Thread safety: Cobblemon may weigh spawns off the server thread, so the
  * influence reads only immutable snapshots, swapped in by the server thread

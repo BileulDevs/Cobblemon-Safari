@@ -21,7 +21,7 @@ There are three exceptions:
 
 ## Configuration (`config/`)
 
-`config/cobblemon_safari/server.json`, `shop.json` and `client.json`. See [`config/README.md`](config/README.md): what the example files change, then every key with its default.
+`config/cobblemon_safari/server.json`, `shop.json` and `client.json`. See [`config/README.md`](config/README.md) for what the example files change, and [CONFIG.md](../CONFIG.md) for every key.
 
 ## Datapack (`safari-example-datapack/`)
 
@@ -29,7 +29,7 @@ Install: copy the folder into `<world>/datapacks/` (in single player, `saves/<wo
 
 | File | Example | Effect |
 |---|---|---|
-| `data/cobblemon/spawn_pool_world/cobblemon_safari_example.json` | Kanto Safari Zone Pokémon (Nidoran, Doduo, Kangaskhan, Tauros...) | Adds Cobblemon spawns to the Safari only, through its biome tags: `"biomes": ["#cobblemon_safari:safari_grassland"]`. The tags are listed in the mod's README (Biome tags). |
+| `data/cobblemon/spawn_pool_world/cobblemon_safari_example.json` | Kanto Safari Zone Pokémon (Nidoran, Doduo, Kangaskhan, Tauros...) | Adds Cobblemon spawns to the Safari only, through its biome tags: `"biomes": ["#cobblemon_safari:safari_grassland"]`. The tags are listed in [TECHNICAL.md](../TECHNICAL.md) (Biome tags). |
 | `data/cobblemon_safari/dialogues/safari_clerk.json` | Two more answers: "Which Pokémon are special today?" (`q.player.safari_today()`) and "How many Safari points do I have?" (`q.player.safari_status()`: time left, banked time and points) | The rest house clerk's dialogue. Answers call the mod's MoLang functions of the player: `safari_shop`, `safari_bounties`, `safari_gate`, `safari_leave`, `safari_status`, `safari_today`, `safari_balls` (any MoLang works too, `q.player.run_command(...)` included). A text is a translation key; plain text works too. The keys of this example are in the resource pack. |
 | `data/cobblemon_safari/npcs/safari_warden.json` | `horizontal_wander_range` 8 instead of 4 | The gate warden: hitbox, name, dialogue, behaviours. `safari_clerk.json` beside it is the clerk. |
 | `data/cobblemon_safari/tags/worldgen/biome/has_structure/safari_gate.json` | Adds taiga, cherry grove and `#c:is_forest`, `"replace": false` | Biomes where Safari Gates may generate. `"replace": true` with an empty `values` list turns the gates off. |
@@ -48,7 +48,7 @@ Both buildings are structure templates a datapack can replace. Save the new one 
   - Seen after the next map reset (`/safari reset`).
 - **Safari Gate**, `data/cobblemon_safari/structure/safari_gate.nbt`.
   - 27 × 11 × 27; the bottom layer is the ground.
-  - Its gate blocks need `keeps_warden:1b` (warden) and `clear_trees:1b` (cut tree crowns removed) in their block entity. The mod's README (Safari Gates) explains how to add them.
+  - Its gate blocks need `keeps_warden:1b` (warden) and `clear_trees:1b` (cut tree crowns removed) in their block entity. [TECHNICAL.md](../TECHNICAL.md) (Safari Gates) explains how to add them.
 
 ## Resource pack (`safari-example-resourcepack/`)
 

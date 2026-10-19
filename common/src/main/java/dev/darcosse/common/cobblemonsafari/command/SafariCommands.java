@@ -145,6 +145,7 @@ public final class SafariCommands {
                         .executes(SafariCommands::rotate)));
     }
 
+    /** What /safari time does to the remaining time. */
     private enum TimeOperation { ADD, REMOVE, SET }
 
     /** Builds one of the add/remove/set time sub-commands. */
@@ -180,9 +181,8 @@ public final class SafariCommands {
      * Starts sessions for the targets, each paid with their own banked time.
      *
      * <p>Entry requirements are bypassed (operator recovery tool) but the
-     * time is not: a player with an empty bank stays out. Before, this granted
-     * the configured default for free, which let any operator, including the
-     * owner of a single-player world, skip tickets entirely.
+     * time is not: a player with an empty bank stays out, so no operator, the
+     * owner of a single-player world included, can skip tickets this way.
      */
     private static int enterWithCredit(CommandContext<CommandSourceStack> ctx, Collection<ServerPlayer> targets) {
         int entered = 0;
