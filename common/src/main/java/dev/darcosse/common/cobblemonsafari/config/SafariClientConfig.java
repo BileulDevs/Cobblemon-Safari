@@ -13,9 +13,9 @@ public class SafariClientConfig {
      * from {@code board} to {@code board.colors}, and
      * {@code board.pokemonDisplay} (MODEL / SPRITE) became the boolean
      * {@code board.useSprites}; {@link SafariClientConfigManager} converts
-     * older files. Version 7: the timer became one line (stopwatch, then
-     * time) in the bottom left corner, level with the hotbar; a file still on
-     * the old default position follows.
+     * older files. Version 7: the timer moved to the bottom left corner,
+     * level with the hotbar. Version 8: the time went back under the
+     * stopwatch; files still on the version 6 or 7 default position follow.
      */
     public int configVersion = SafariClientConfigManager.CURRENT_CONFIG_VERSION;
 
@@ -26,10 +26,9 @@ public class SafariClientConfig {
     public HudAnchor hudAnchor = SafariClientConfigManager.DEFAULT_HUD_ANCHOR;
 
     /**
-     * Offset of the middle of the timer's stopwatch from the anchor, in GUI
-     * pixels; the time is on its right. The default puts it in the bottom
-     * left corner, its middle level with the middle of the hotbar (22 px
-     * high, at the bottom of the screen).
+     * Offset of the middle of the timer (the stopwatch with the time under
+     * it, 22 px high) from the anchor, in GUI pixels. The default puts it in
+     * the bottom left corner, as high as the hotbar and level with it.
      */
     public int hudOffsetX = SafariClientConfigManager.DEFAULT_HUD_OFFSET_X;
     public int hudOffsetY = SafariClientConfigManager.DEFAULT_HUD_OFFSET_Y;

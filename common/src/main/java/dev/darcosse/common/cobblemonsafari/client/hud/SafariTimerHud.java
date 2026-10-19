@@ -14,9 +14,9 @@ import net.minecraft.resources.ResourceLocation;
 
 /**
  * Draws the remaining Safari time: a stopwatch made of a Safari Ball, its
- * red hand turning faster and faster as time runs out, with the time on its
- * right, on one line. By default in the bottom left corner, level with the
- * hotbar. The stopwatch itself stays still. CLIENT ONLY: never reference
+ * red hand turning faster and faster as time runs out, with the time under
+ * it. By default in the bottom left corner, the two lines together as high
+ * as the hotbar and level with it. The stopwatch itself stays still. CLIENT ONLY: never reference
  * this class from code that can run on a dedicated server.
  *
  * <p>Runs every frame while the HUD is drawn, so it only reads cached state:
@@ -44,21 +44,22 @@ public final class SafariTimerHud {
      * Drawn part of the texture, in texels from its top left corner: the
      * stopwatch fills columns 2 to 13 and rows 0 to 13 (crown to base), the
      * rest is transparent. The widget is laid out and centred on what is
-     * drawn, not on the texture, so the time sits right against the
-     * stopwatch and both line up with the hotbar. Must follow
+     * drawn, not on the texture, so the time sits right under the
+     * stopwatch and the two lines fill the hotbar's height. Must follow
      * tools/timer_icon.py.
      */
     private static final int ICON_DRAWN_LEFT = 2;
     private static final int ICON_DRAWN_RIGHT = 14;
     private static final int ICON_DRAWN_HEIGHT = 14;
 
-    /** Gap between the stopwatch and the time, in GUI pixels. */
-    private static final int TEXT_GAP = 2;
+    /** Gap between the bottom of the stopwatch and the top of the digits, in GUI pixels. */
+    private static final int TEXT_GAP = 1;
 
     /**
      * Height of the font's capitals and digits, in GUI pixels, out of its
-     * 9-pixel line: the time is centred on what is drawn of it, like the
-     * stopwatch, so the digits sit level with its middle.
+     * 9-pixel line: the widget is measured on what is drawn of the time,
+     * like the stopwatch. With the 14 drawn rows of the stopwatch and the
+     * gap, the widget is 22 px high, the height of the hotbar.
      */
     private static final int DIGIT_HEIGHT = 7;
 
@@ -113,8 +114,12 @@ public final class SafariTimerHud {
     private static float handTurns;
     private static float lastHandTicks = Float.NaN;
 
-    /** Keeps the whole widget this far inside the screen whatever the offset. */
-    private static final int SCREEN_MARGIN = 2;
+    /**
+     * Keeps the whole widget this far inside the screen whatever the offset.
+     * 1, not more: the default position puts the widget, as high as the
+     * hotbar, against the bottom of the screen like it.
+     */
+    private static final int SCREEN_MARGIN = 1;
 
     private SafariTimerHud() {
     }
@@ -144,18 +149,20 @@ public final class SafariTimerHud {
         Component time = remaining > 0
                 ? Component.literal(Ticks.format(remaining))
                 : Component.translatable(CobblemonSafari.MOD_ID + ".hud.time_up");
-        // Layout relative to the pivot, the middle of the drawn stopwatch:
-        // texture's top left corner, then the time on the right.
+        // Layout relative to the pivot, the middle of the widget: the
+        // stopwatch on top, the time under it, both centred horizontally.
+        int height = ICON_DRAWN_HEIGHT + TEXT_GAP + DIGIT_HEIGHT;
+        int top = -height / 2;
+        int bottom = top + height;
         int iconX = -(ICON_DRAWN_LEFT + ICON_DRAWN_RIGHT) / 2;
-        int iconY = -ICON_DRAWN_HEIGHT / 2;
-        int textX = iconX + ICON_DRAWN_RIGHT + TEXT_GAP;
-        int textY = -DIGIT_HEIGHT / 2 - 1;
-        int left = iconX + ICON_DRAWN_LEFT;
-        int right = textX + font.width(time);
-        int top = iconY;
-        int bottom = iconY + ICON_DRAWN_HEIGHT;
+        int iconY = top;
+        int textWidth = font.width(time);
+        int textX = -textWidth / 2;
+        int textY = top + ICON_DRAWN_HEIGHT + TEXT_GAP;
+        int left = Math.min(iconX + ICON_DRAWN_LEFT, textX);
+        int right = Math.max(iconX + ICON_DRAWN_RIGHT, textX + textWidth);
 
-        // The anchor and offset place the pivot; the whole line stays on screen.
+        // The anchor and offset place the pivot; the whole widget stays on screen.
         int pivotX = Math.round(graphics.guiWidth() * config.hudAnchor.xFraction) + config.hudOffsetX;
         int pivotY = Math.round(graphics.guiHeight() * config.hudAnchor.yFraction) + config.hudOffsetY;
         pivotX = clamp(pivotX, SCREEN_MARGIN - left, graphics.guiWidth() - SCREEN_MARGIN - right);
