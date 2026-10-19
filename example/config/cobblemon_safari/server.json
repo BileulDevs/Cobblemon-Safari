@@ -1,5 +1,5 @@
 {
-  "configVersion": 22,
+  "configVersion": 24,
   "maxDurationSeconds": 3600,
   "allowedBalls": [
     "cobblemon:safari_ball",
@@ -12,6 +12,8 @@
   "exitDestination": "WORLD_SPAWN",
   "exemptCreativeAndSpectator": true,
   "warningThresholdsSeconds": [
+    900,
+    600,
     300,
     60,
     30,
@@ -43,8 +45,7 @@
     "minAddedSeconds": 1200,
     "extendsActiveSession": true,
     "maxCreditSeconds": 14400,
-    "refundUnusedTimeOnLeave": true,
-    "allowStartCommand": false
+    "refundUnusedTimeOnLeave": true
   },
   "ticketLoot": {
     "enabled": true,
@@ -155,7 +156,6 @@
     "weightUltraRare": 1,
     "spawnIntervalSeconds": 15,
     "spawnChance": 0.35,
-    "maxNearbyPerPlayer": 2,
-    "announceOnEntry": true
+    "maxNearbyPerPlayer": 2
   }
 }

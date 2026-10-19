@@ -126,9 +126,9 @@ public final class SafariNetwork {
     }
 
     /**
-     * Centre columns of the rest houses where they were actually built (the
-     * site search may move them from their configured positions); none when
-     * rest houses are disabled.
+     * Centre columns of the rest houses where they stand or will stand,
+     * built or not yet (the site search may move them from their configured
+     * positions); none when the Safari level is missing.
      */
     private static List<SafariRulesPayload.HouseColumn> restHouseColumns() {
         List<SafariRulesPayload.HouseColumn> columns = new ArrayList<>();

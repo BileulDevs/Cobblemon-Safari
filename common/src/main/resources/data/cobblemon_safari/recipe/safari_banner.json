@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    {
+      "tag": "minecraft:banners"
+    },
+    {
+      "item": "cobblemon_safari:safari_ticket"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "cobblemon_safari:safari_banner"
+  }
+}

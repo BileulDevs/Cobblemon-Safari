@@ -19,7 +19,8 @@ import java.util.Set;
 
 /**
  * Per-world facts the Safari must remember across restarts: which rest houses
- * are already built and where each one actually stands, and the salt that
+ * are already built and where each one actually stands, where the others
+ * will be built once a player comes near them, and the salt that
  * makes this world's daily specials differ from another world's.
  */
 public final class SafariWorldState extends SavedData {
@@ -59,6 +60,14 @@ public final class SafariWorldState extends SavedData {
      * here (saves from before the search) were built on the anchor itself.
      */
     private final Map<String, String> houseSites = new HashMap<>();
+    /**
+     * Sites chosen for the houses not built yet, per anchor, best first: the
+     * first is where the house will stand, the others are used in turn if
+     * the real terrain shows water there. Kept so a restart before a house
+     * is built does not search again, and the house keeps the spot already
+     * sent to clients.
+     */
+    private final Map<String, List<String>> housePlans = new HashMap<>();
     /** Map salt the built houses belong to; a reset map has none of them. */
     private long housesMapSalt;
 
@@ -124,6 +133,8 @@ public final class SafariWorldState extends SavedData {
         if (housesMapSalt != mapSalt) {
             builtHouses.clear();
             houseSites.clear();
+            // Sites were chosen on the old terrain.
+            housePlans.clear();
             housesMapSalt = mapSalt;
             setDirty();
         }
@@ -144,6 +155,37 @@ public final class SafariWorldState extends SavedData {
         String anchor = houseKey(anchorX, anchorZ);
         builtHouses.add(anchor);
         houseSites.put(anchor, houseKey(siteX, siteZ));
+        housePlans.remove(anchor);
+        setDirty();
+    }
+
+    /**
+     * Sites still open for the house of an anchor, {x, z} each, best first;
+     * empty when the house is built or no site was chosen yet.
+     */
+    public List<int[]> housePlan(int anchorX, int anchorZ) {
+        List<int[]> result = new ArrayList<>();
+        for (String site : housePlans.getOrDefault(houseKey(anchorX, anchorZ), List.of())) {
+            result.add(parseColumn(site));
+        }
+        return result;
+    }
+
+    /**
+     * Records the sites chosen for the house of an anchor, best first;
+     * an empty list forgets them.
+     */
+    public void setHousePlan(int anchorX, int anchorZ, List<int[]> sites) {
+        String anchor = houseKey(anchorX, anchorZ);
+        if (sites.isEmpty()) {
+            housePlans.remove(anchor);
+        } else {
+            List<String> keys = new ArrayList<>();
+            for (int[] site : sites) {
+                keys.add(houseKey(site[0], site[1]));
+            }
+            housePlans.put(anchor, keys);
+        }
         setDirty();
     }
 
@@ -160,11 +202,16 @@ public final class SafariWorldState extends SavedData {
         if (site == null) {
             return new int[]{anchorX, anchorZ};
         }
-        String[] parts = site.split(",");
+        return parseColumn(site);
+    }
+
+    /** A column {x, z} from its key, see {@link #houseKey}. */
+    private static int[] parseColumn(String key) {
+        String[] parts = key.split(",");
         return new int[]{Integer.parseInt(parts[0]), Integer.parseInt(parts[1])};
     }
 
-    /** Writes the salt, the built houses and their sites. Keys are the save format. */
+    /** Writes the salt, the built houses, their sites and the planned ones. Keys are the save format. */
     @Override
     public CompoundTag save(CompoundTag nbt, HolderLookup.Provider registries) {
         nbt.putLong("rotation_salt", rotationSalt);
@@ -180,6 +227,9 @@ public final class SafariWorldState extends SavedData {
         CompoundTag sites = new CompoundTag();
         houseSites.forEach(sites::putString);
         nbt.put("house_sites", sites);
+        CompoundTag plans = new CompoundTag();
+        housePlans.forEach((anchor, planned) -> plans.put(anchor, strings(planned)));
+        nbt.put("house_plans", plans);
         nbt.putLong("houses_map_salt", housesMapSalt);
         return nbt;
     }
@@ -207,6 +257,17 @@ public final class SafariWorldState extends SavedData {
         CompoundTag sites = nbt.getCompound("house_sites");
         for (String anchor : sites.getAllKeys()) {
             state.houseSites.put(anchor, sites.getString(anchor));
+        }
+        // Absent in older saves: their unbuilt houses are planned again.
+        CompoundTag plans = nbt.getCompound("house_plans");
+        for (String anchor : plans.getAllKeys()) {
+            List<String> planned = new ArrayList<>();
+            for (Tag site : plans.getList(anchor, Tag.TAG_STRING)) {
+                planned.add(site.getAsString());
+            }
+            if (!planned.isEmpty()) {
+                state.housePlans.put(anchor, planned);
+            }
         }
         // Loading is not a change: undo the dirty flag the constructor set.
         state.setDirty(false);

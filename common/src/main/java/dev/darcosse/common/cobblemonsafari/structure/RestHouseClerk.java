@@ -21,8 +21,8 @@ import java.util.List;
 
 /**
  * The shopkeeper of a rest house: a Cobblemon NPC standing behind the
- * counter whose dialogue opens the Safari shop ({@code /safari shop}, allowed
- * in a rest house) and lists the missions of the day.
+ * counter whose dialogue opens the Safari shop ({@code q.player.safari_shop()},
+ * allowed in a rest house) and lists the missions of the day.
  *
  * <p>Kept by {@link #tick}: whenever a built house is loaded and has no
  * clerk, one is put behind its counter. Spawning lazily, with players
@@ -71,7 +71,10 @@ public final class RestHouseClerk {
             return;
         }
         for (RestHouses.HouseSite site : RestHouses.sites()) {
-            maintain(safari, site.x(), site.z());
+            // A planned house is bare ground: the floor search would find a cave under it.
+            if (site.built()) {
+                maintain(safari, site.x(), site.z());
+            }
         }
     }
 

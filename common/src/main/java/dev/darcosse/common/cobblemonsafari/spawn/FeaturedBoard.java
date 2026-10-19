@@ -8,14 +8,12 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.biome.Biome;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Text of the specials list: {@code /safari today} and the entry
- * announcement. Everything is a translatable component resolved on each
+ * Text of the specials list shown by {@code /safari today}. Everything is a translatable component resolved on each
  * client, so species and habitat names appear in the reader's language.
  */
 public final class FeaturedBoard {
@@ -40,28 +38,6 @@ public final class FeaturedBoard {
         lines.add(Component.translatable(key("board.next_rotation"), untilNextRotation())
                 .withStyle(ChatFormatting.DARK_GRAY));
         return lines;
-    }
-
-    /**
-     * One line naming every special, for the entry announcement.
-     *
-     * @return null when there is nothing to announce
-     */
-    @Nullable
-    public static Component summary(MinecraftServer server) {
-        List<HabitatEntry> specials = FeaturedRotation.today(server);
-        if (specials.isEmpty()) {
-            return null;
-        }
-        MutableComponent names = Component.empty();
-        for (int i = 0; i < specials.size(); i++) {
-            HabitatEntry entry = specials.get(i);
-            if (i > 0) {
-                names.append(", ");
-            }
-            names.append(Component.translatable(entry.species().getTranslationKey()).withStyle(entry.rarity().color));
-        }
-        return Component.translatable(key("board.summary"), names).withStyle(ChatFormatting.YELLOW);
     }
 
     /** One board line: species, rarity and main habitat. */

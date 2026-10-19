@@ -18,7 +18,6 @@ JSON has no comments, so this page documents the files. The key reference at the
 | `protection.placeableBlocks` | adds `minecraft:torch` | Poké Cake, Poké Snack | Players may place torches in caves (they vanish with the daily map). |
 | `loan.count` | `30` | `0` | The games' loan: 30 Safari Balls lent on entry, taken back on exit. |
 | `reset.timeZone` | `"Europe/Paris"` | `""` | The new map starts at 4:00 Paris time, whatever the server's clock. |
-| `ticket.allowStartCommand` | `false` | `true` | `/safari start` is off: players enter through a Safari Gate only. |
 | `ticketLoot.sources` | adds `minecraft:chests/shipwreck_treasure` at `0.2` | 8 sources | Shipwreck treasure chests may hold a ticket. A folder ending in `/` (`cobblemon:ruins/common/`) covers every table under it. |
 | `gate.companions` | adds `scyther level=30 shiny=yes` | Kangaskhan, Tauros, Chansey | A shiny Scyther roams around each gate. Any Cobblemon properties work. |
 | `bounties.count` | `4` | `3` | Four missions per rotation. |
@@ -46,7 +45,7 @@ The default entries, kept in the file, show the other kinds:
 
 | Key | Example | Default | Effect |
 |---|---|---|---|
-| `hudAnchor`, `hudOffsetX`, `hudOffsetY` | `"TOP_RIGHT"`, `-24`, `24` | `"BOTTOM_CENTER"`, `-136`, `-28` | The timer sits in the top right corner. Anchors: `TOP_LEFT`, `TOP_CENTER`, `TOP_RIGHT`, `BOTTOM_LEFT`, `BOTTOM_CENTER`, `BOTTOM_RIGHT`. |
+| `hudAnchor`, `hudOffsetX`, `hudOffsetY` | `"TOP_RIGHT"`, `-24`, `24` | `"BOTTOM_LEFT"`, `10`, `-11` | The timer sits in the top right corner. Anchors: `TOP_LEFT`, `TOP_CENTER`, `TOP_RIGHT`, `BOTTOM_LEFT`, `BOTTOM_CENTER`, `BOTTOM_RIGHT`. |
 | `board.useSprites` | `true` | `false` | Wall screens draw flat sprites instead of 3D models. |
 | `board.panelOpacity` | `0.6` | `0.72` | More of the landscape shows through the panels. |
 | `board.colors.title` | `"#7CFC00"` | `"#FFB000"` | Green titles. |
@@ -58,7 +57,7 @@ Generated from the Javadoc of `SafariConfig`, `SafariShopConfig` and `SafariClie
 
 ## Server rules (`server.json`)
 
-- `configVersion` = `22`: Bumped when a field changes meaning, so `SafariConfigManager` can migrate old files. Version 3: the island grew and the boundary became a square world border, so older park sections no longer match the terrain. Version 4: added the loan and ticket sections (no existing value changes). Version 5: added the spawns, featured and restHouses sections (no existing value changes). Version 6: featured.rotationHours became featured.rotationMinutes. Version 7: added ticket credit settings, the capture section and spawn rate multipliers (no existing value changes). Version 8: added the reset section (no existing value changes). Version 9: removed the top-level defaultDurationSeconds (no entry path grants free time any more) and added the gate section. Version 10: added the points and escapeRope sections (no existing value changes). The shop itself lives in cobblemon_safari/shop.json. Version 11: added protection.placeableBlocks (no existing value changes). Version 12: added the bounties section (no existing value changes). Version 14: added ticket.minAddedSeconds (no existing value changes); the default specials went from 3 uncommon, 2 rare, 1 ultra-rare to 1, 2, 3, and files still on the old defaults follow. Version 15: added the ticketLoot section (no existing value changes). Version 13: the default rotation went from 1440 to 240 minutes; files still on the old default follow it. Version 16: removed dimension, park, featured.rotationHours and the fine-tuning values (now constants), capture.safariBallItem (the bonus follows loan.ballItem) and protection.preventFireSpread preventExplosionBlockDamage (both follow protectBlocks). Their keys are dropped from the file on the next rewrite. Version 17: removed the restHouses section; the houses are always built, at anchors generated with the terrain (park.ParkGeometry). Version 18: capture points and bounty rewards about five times higher, so an hour of hunting buys a Pokémon of the shop; values still on the old defaults follow. Version 19: added spawns.caughtSpeciesWeight (no existing value changes). Version 20: caughtSpeciesWeight 0.25 to 0.4; a file still on 0.25 follows. Version 21: spawns.allowLegendary, allowMythical, allowUltraBeast and allowParadox became the sections spawns.legendary, mythical, ultraBeast and paradox ({allowSpawn, maxSpawnPerPokemon}); the old values move in. Version 22: loan.count 30 to 0, players bring their own balls (the shop gives free Safari Balls once a day); a file still on 30 follows.
+- `configVersion` = `24`: Bumped when a field changes meaning, so `SafariConfigManager` can migrate old files. Version 3: the island grew and the boundary became a square world border, so older park sections no longer match the terrain. Version 4: added the loan and ticket sections (no existing value changes). Version 5: added the spawns, featured and restHouses sections (no existing value changes). Version 6: featured.rotationHours became featured.rotationMinutes. Version 7: added ticket credit settings, the capture section and spawn rate multipliers (no existing value changes). Version 8: added the reset section (no existing value changes). Version 9: removed the top-level defaultDurationSeconds (no entry path grants free time any more) and added the gate section. Version 10: added the points and escapeRope sections (no existing value changes). The shop itself lives in cobblemon_safari/shop.json. Version 11: added protection.placeableBlocks (no existing value changes). Version 12: added the bounties section (no existing value changes). Version 14: added ticket.minAddedSeconds (no existing value changes); the default specials went from 3 uncommon, 2 rare, 1 ultra-rare to 1, 2, 3, and files still on the old defaults follow. Version 15: added the ticketLoot section (no existing value changes). Version 13: the default rotation went from 1440 to 240 minutes; files still on the old default follow it. Version 16: removed dimension, park, featured.rotationHours and the fine-tuning values (now constants), capture.safariBallItem (the bonus follows loan.ballItem) and protection.preventFireSpread preventExplosionBlockDamage (both follow protectBlocks). Their keys are dropped from the file on the next rewrite. Version 17: removed the restHouses section; the houses are always built, at anchors generated with the terrain (park.ParkGeometry). Version 18: capture points and bounty rewards about five times higher, so an hour of hunting buys a Pokémon of the shop; values still on the old defaults follow. Version 19: added spawns.caughtSpeciesWeight (no existing value changes). Version 20: caughtSpeciesWeight 0.25 to 0.4; a file still on 0.25 follows. Version 21: spawns.allowLegendary, allowMythical, allowUltraBeast and allowParadox became the sections spawns.legendary, mythical, ultraBeast and paradox ({allowSpawn, maxSpawnPerPokemon}); the old values move in. Version 22: loan.count 30 to 0, players bring their own balls (the shop gives free Safari Balls once a day); a file still on 30 follows. Version 23: warningThresholdsSeconds gains 15 and 10 minutes (900, 600, 300, 60, 30, 10); a file still on the old 300, 60, 30, 10 follows. featured.announceOnEntry removed (the specials are no longer listed on entry; the wall screens and /safari today show them). Version 24: ticket.allowStartCommand removed with /safari start: players enter through a Safari Gate (or an operator's /safari enter).
 - `maxDurationSeconds` = `7200`: Hard cap on the remaining time; adding time never goes above it. Also the most banked time one entry spends, the rest staying in the bank.
 - `allowedBalls` = `["cobblemon:safari_ball", "cobblemon:master_ball"]`: Poké Ball ids (as in Cobblemon, e.g. `cobblemon:safari_ball`) usable inside the Safari.
 - `pauseTimeWhileOffline` = `true`: When true the clock only runs while the player is online and inside. When false it keeps running while they are offline, and they are escorted out on their next login if it ran out.
@@ -66,7 +65,7 @@ Generated from the Javadoc of `SafariConfig`, `SafariShopConfig` and `SafariClie
 - `battleGraceSeconds` = `120`: Extra time a player may stay after their clock hits zero when they are in the middle of a battle, so the battle is not torn apart by a teleport.
 - `exitDestination` = `"RETURN_POINT"`: Where players go when their session ends.
 - `exemptCreativeAndSpectator` = `true`: Creative and spectator players may enter and roam without a session (building, moderation). Not on login: a player who logs in inside without a session is sent out whatever their game mode.
-- `warningThresholdsSeconds` = `[300, 60, 30, 10]`: Remaining times, in seconds, at which the player gets a warning.
+- `warningThresholdsSeconds` = `[900, 600, 300, 60, 30, 10]`: Remaining times, in seconds, at which the player gets a warning in chat. Its colour follows the time left, whatever the list holds: white, yellow from 5 minutes, red from 1 minute.
 
 ### `protection`
 
@@ -105,8 +104,7 @@ Behaviour of the Safari Ticket item.
 - `ticket.minAddedSeconds` = `1200`: Fewest seconds a ticket may add. When the bank or the hunt is nearly full, a ticket adds only what fits; if that is less than this, it is refused and the player keeps it, rather than burning a ticket for a few seconds. 0 accepts any amount.
 - `ticket.extendsActiveSession` = `true`: Using a ticket while already inside adds its duration to the running session (capped by `maxDurationSeconds`) instead of being refused.
 - `ticket.maxCreditSeconds` = `14400`: Most Safari time a player can bank with tickets, in seconds. Tickets used outside the Safari add to this bank; entering spends it.
-- `ticket.refundUnusedTimeOnLeave` = `true`: Gives the unused time of a hunt paid with banked time back to the bank when the player leaves on purpose (/safari leave, the clerk) or dies inside. Time running out or an operator ending the hunt never refund.
-- `ticket.allowStartCommand` = `true`: Lets players enter with /safari start, spending their banked time. Meant to be turned off once entry goes through the overworld Safari gate; operators keep /safari enter.
+- `ticket.refundUnusedTimeOnLeave` = `true`: Gives the unused time of a hunt paid with banked time back to the bank when the player leaves on purpose (through the clerk) or dies inside. Time running out or an operator ending the hunt never refund.
 
 ### `ticketLoot`
 
@@ -213,7 +211,6 @@ The daily rotation of special Pokémon and the spawner that brings them in.
 - `featured.spawnIntervalSeconds` = `15`: Seconds between two spawn attempts around each player in the Safari.
 - `featured.spawnChance` = `0.35`: Chance that an attempt goes ahead, between 0 and 1.
 - `featured.maxNearbyPerPlayer` = `2`: Special Pokémon allowed around one player at once (within FeaturedSpawner.NEARBY_RADIUS). Also caps each species to one around the player, so no special takes over.
-- `featured.announceOnEntry` = `true`: Lists the specials of the day in chat when a player enters.
 
 ## Shop (`shop.json`)
 
@@ -291,13 +288,13 @@ What can be drawn and at what price: each rule names an item id or an item tag (
 
 ## Client display (`client.json`)
 
-- `configVersion` = `6`: Bumped when a field changes meaning. Version 6: the board colours moved from `board` to `board.colors`, and `board.pokemonDisplay` (MODEL / SPRITE) became the boolean `board.useSprites`; `SafariClientConfigManager` converts older files.
+- `configVersion` = `6`: Bumped when a field changes meaning. Version 6: the board colours moved from `board` to `board.colors`, and `board.pokemonDisplay` (MODEL / SPRITE) became the boolean `board.useSprites`; `SafariClientConfigManager` converts older files. Version 7: the timer became one line (stopwatch, then time) in the bottom left corner, level with the hotbar; a file still on the old default position follows.
 - `hudEnabled` = `true`: Master switch for the timer HUD.
-- `hudAnchor` = `"BOTTOM_CENTER"`: Where the timer is attached.
-- `hudOffsetX` = `-136`: Offset of the centre of the timer's Safari Ball from the anchor, in GUI pixels. The default puts it left of the hotbar, clear of the off-hand slot (the hotbar is 182 px wide, the off-hand slot 29 px beyond it), the time under the ball level with the hotbar.
-- `hudOffsetY` = `-28`: 
+- `hudAnchor` = `"BOTTOM_LEFT"`: Where the timer is attached.
+- `hudOffsetX` = `10`: Offset of the middle of the timer's stopwatch from the anchor, in GUI pixels; the time is on its right. The default puts it in the bottom left corner, its middle level with the middle of the hotbar (22 px high, at the bottom of the screen).
+- `hudOffsetY` = `-11`: 
 - `lowTimeSeconds` = `60`: Below this many seconds the timer turns amber.
-- `criticalTimeSeconds` = `10`: Below this many seconds the timer turns red and pulses, and the ball rocks faster.
+- `criticalTimeSeconds` = `10`: Below this many seconds the timer turns red and pulses.
 
 ### `board`
 

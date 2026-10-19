@@ -12,9 +12,9 @@ import dev.darcosse.common.cobblemonsafari.loan.LoanedBalls;
 import dev.darcosse.common.cobblemonsafari.network.SafariNetwork;
 import dev.darcosse.common.cobblemonsafari.park.ParkBoundary;
 import dev.darcosse.common.cobblemonsafari.park.SafariBorder;
-import dev.darcosse.common.cobblemonsafari.spawn.FeaturedBoard;
 import dev.darcosse.common.cobblemonsafari.teleport.SafariTeleporter;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -57,6 +57,15 @@ public final class SafariSessionManager {
      */
     private static final int RESYNC_INTERVAL_TICKS = 5 * Ticks.PER_SECOND;
 
+    /**
+     * Time left, in seconds, from which a chat warning turns yellow, then
+     * red. Above the first one it is white. They follow the default
+     * warnings (5 minutes in yellow; 1 minute, 30 and 10 seconds in red);
+     * a warning time added in the config takes the colour of its range.
+     */
+    private static final int WARNING_YELLOW_SECONDS = 300;
+    private static final int WARNING_RED_SECONDS = 60;
+
     private static final List<SafariSessionListener> LISTENERS = new CopyOnWriteArrayList<>();
 
     /**
@@ -70,13 +79,13 @@ public final class SafariSessionManager {
     private static final Map<UUID, ReturnPoint> LAST_OUTSIDE = new HashMap<>();
 
     /**
-     * Players who asked to leave (/safari leave, the clerk's dialogue),
+     * Players who asked to leave (the clerk's dialogue),
      * handled at the start of the next server tick ({@link #processLeaves}).
-     * The clerk runs the command from inside Cobblemon's dialogue handling,
+     * The clerk's answer runs from inside Cobblemon's dialogue handling,
      * where a cross-dimension teleport was seen ending the session without
      * moving the player; on the next tick nothing of the dialogue is on the
      * stack any more. Concurrent because nothing guarantees the dialogue
-     * runs the command on the server thread.
+     * runs its actions on the server thread.
      */
     private static final Queue<UUID> PENDING_LEAVES = new ConcurrentLinkedQueue<>();
 
@@ -147,12 +156,6 @@ public final class SafariSessionManager {
             player.sendSystemMessage(Component.translatable(key("message.rope_lent")));
         } else if (rope == EscapeRopes.Lent.DROPPED) {
             player.sendSystemMessage(Component.translatable(key("message.rope_dropped")));
-        }
-        if (SafariConfigManager.get().featured.announceOnEntry) {
-            Component specials = FeaturedBoard.summary(player.getServer());
-            if (specials != null) {
-                player.sendSystemMessage(specials);
-            }
         }
         for (SafariSessionListener listener : LISTENERS) {
             listener.onStart(player, session);
@@ -357,7 +360,7 @@ public final class SafariSessionManager {
                 changed = true;
                 if (inside && SafariConfigManager.warningTicks().contains(session.remainingTicks())) {
                     player.sendSystemMessage(Component.translatable(key("message.time_warning"),
-                            Ticks.format(session.remainingTicks())));
+                            Ticks.format(session.remainingTicks())).withStyle(warningColour(session.remainingTicks())));
                 }
             }
             if (inside && session.remainingTicks() == 0) {
@@ -424,8 +427,8 @@ public final class SafariSessionManager {
             }
             if (inside && !hasSession && !exempt) {
                 // Got in without going through a gate: whatever their banked
-                // time, an entry only starts at a gate or with /safari start,
-                // which record the return point and lend the balls.
+                // time, an entry only starts at a gate (or an operator's
+                // /safari enter), which records the return point and lends the balls.
                 SafariTeleporter.sendOut(player, LAST_OUTSIDE.get(player.getUUID()));
                 player.sendSystemMessage(Component.translatable(key("message.no_session")));
             } else if (!inside && hasSession) {
@@ -445,6 +448,15 @@ public final class SafariSessionManager {
     /** Keeps a requested duration between one second and the configured maximum. */
     private static int clampDuration(int ticks) {
         return Math.max(Ticks.PER_SECOND, Math.min(ticks, SafariConfigManager.maxDurationTicks()));
+    }
+
+    /** Colour of a chat warning, by the time left: see {@link #WARNING_YELLOW_SECONDS}. */
+    private static ChatFormatting warningColour(int remainingTicks) {
+        int seconds = Ticks.toSecondsCeil(remainingTicks);
+        if (seconds <= WARNING_RED_SECONDS) {
+            return ChatFormatting.RED;
+        }
+        return seconds <= WARNING_YELLOW_SECONDS ? ChatFormatting.YELLOW : ChatFormatting.WHITE;
     }
 
     /** Builds a translation key in the mod namespace. */

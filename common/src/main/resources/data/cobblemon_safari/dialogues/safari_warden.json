@@ -36,7 +36,7 @@
             "text": "cobblemon_safari.dialogue.safari_warden.option.enter",
             "value": "enter",
             "action": [
-              "q.player.run_command('safari gate');",
+              "q.player.safari_gate();",
               "q.dialogue.close();"
             ]
           },
@@ -45,7 +45,7 @@
             "value": "shop",
             "action": [
               "q.dialogue.close();",
-              "q.player.run_command('safari shop');"
+              "q.player.safari_shop();"
             ]
           },
           {

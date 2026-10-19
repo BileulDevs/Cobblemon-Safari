@@ -10,17 +10,12 @@ import dev.darcosse.common.cobblemonsafari.access.EntryResult;
 import dev.darcosse.common.cobblemonsafari.access.SafariAccess;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.credit.SafariCredit;
-import dev.darcosse.common.cobblemonsafari.gate.SafariGate;
 import dev.darcosse.common.cobblemonsafari.points.SafariPoints;
-import dev.darcosse.common.cobblemonsafari.bounty.SafariBounties;
-import dev.darcosse.common.cobblemonsafari.shop.SafariShop;
 import dev.darcosse.common.cobblemonsafari.network.SafariNetwork;
 import dev.darcosse.common.cobblemonsafari.park.SafariBorder;
 import dev.darcosse.common.cobblemonsafari.reset.SafariMapReset;
-import dev.darcosse.common.cobblemonsafari.session.SafariSession;
 import dev.darcosse.common.cobblemonsafari.session.SafariSessionManager;
 import dev.darcosse.common.cobblemonsafari.session.SessionEndReason;
-import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedBoard;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedRotation;
 import dev.darcosse.common.cobblemonsafari.structure.RestHouses;
@@ -41,29 +36,30 @@ import java.util.List;
 /**
  * The {@code /safari} command tree.
  *
+ * <p>Players see a single command, {@code /safari}, telling them their time
+ * left, banked time and points: everything else they do goes through the
+ * gates, the NPCs (whose dialogues call {@link SafariDialogueFunctions}) and
+ * the wall screens. The rest is for operators, who look after players.
+ *
  * <p>Operator commands bypass entry requirements on purpose: they are the
  * recovery tool when a paid entry or ticket system is misconfigured.
  *
  * <pre>
+ * /safari                                    own time left, banked time and Safari points
+ * /safari info &lt;player&gt;                     (op) the same for another player
  * /safari enter [targets]                    (op) start a session paid with the targets' banked time
  * /safari enter &lt;targets&gt; &lt;seconds&gt;          (op) start a session of an explicit length, for testing
  * /safari exit &lt;targets&gt;                   (op) end a session
- * /safari start                              enter, paying with banked time (config: ticket.allowStartCommand)
- * /safari gate                               enter through a nearby Safari Gate (used by the gate warden)
- * /safari shop                               open the warden's shop, next to a Safari Gate (used by the warden)
- * /safari bounties                           today's missions and own progress
- * /safari points                             own Safari points
- * /safari points add &lt;targets&gt; &lt;amount&gt;      (op) give Safari points
- * /safari credit                             own banked time
- * /safari credit add &lt;targets&gt; &lt;seconds&gt;     (op) bank time for players
- * /safari leave                              leave early
- * /safari time                               own remaining time
  * /safari time add|remove|set &lt;targets&gt; &lt;seconds&gt;   (op)
+ * /safari credit add &lt;targets&gt; &lt;seconds&gt;     (op) bank time for players
+ * /safari points add &lt;targets&gt; &lt;amount&gt;      (op) give Safari points
+ * /safari shop                               (op) open the shop anywhere, to check its configuration
+ * /safari stats &lt;player&gt;                    (op) lifetime hunting record
+ * /safari top                                (op) best hunters
+ * /safari today                              (op) special Pokémon of the rotation
  * /safari reload                             (op) reload the config
  * /safari reset                              (op) regenerate the map at the next server start
- * /safari stats [player]                     lifetime hunting record
- * /safari top                                best hunters
- * /safari today                              special Pokémon of the day
+ * /safari rotate                             (op) start a new rotation now
  * </pre>
  */
 public final class SafariCommands {
@@ -91,6 +87,11 @@ public final class SafariCommands {
     /** Registers the command tree. Called from each loader's command registration event. */
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("safari")
+                .executes(SafariCommands::status)
+                .then(Commands.literal("info")
+                        .requires(s -> s.hasPermission(OP_LEVEL))
+                        .then(Commands.argument(ARG_TARGET, EntityArgument.player())
+                                .executes(ctx -> info(ctx, EntityArgument.getPlayer(ctx, ARG_TARGET)))))
                 .then(Commands.literal("enter")
                         .requires(s -> s.hasPermission(OP_LEVEL))
                         .executes(ctx -> enterWithCredit(ctx, List.of(ctx.getSource().getPlayerOrException())))
@@ -103,42 +104,35 @@ public final class SafariCommands {
                         .requires(s -> s.hasPermission(OP_LEVEL))
                         .then(Commands.argument(ARG_TARGETS, EntityArgument.players())
                                 .executes(ctx -> exit(ctx, EntityArgument.getPlayers(ctx, ARG_TARGETS)))))
-                .then(Commands.literal("start")
-                        .executes(SafariCommands::start))
-                .then(Commands.literal("gate")
-                        .executes(SafariCommands::enterThroughGate))
-                .then(Commands.literal("bounties")
-                        .executes(SafariCommands::showBounties))
-                .then(Commands.literal("shop")
-                        .executes(SafariCommands::openShop))
-                .then(Commands.literal("points")
-                        .executes(SafariCommands::queryOwnPoints)
-                        .then(Commands.literal("add")
-                                .requires(s -> s.hasPermission(OP_LEVEL))
-                                .then(Commands.argument(ARG_TARGETS, EntityArgument.players())
-                                        .then(Commands.argument(ARG_AMOUNT, IntegerArgumentType.integer(1))
-                                                .executes(SafariCommands::addPoints)))))
-                .then(Commands.literal("credit")
-                        .executes(SafariCommands::queryOwnCredit)
-                        .then(Commands.literal("add")
-                                .requires(s -> s.hasPermission(OP_LEVEL))
-                                .then(Commands.argument(ARG_TARGETS, EntityArgument.players())
-                                        .then(Commands.argument(ARG_SECONDS, IntegerArgumentType.integer(1))
-                                                .executes(SafariCommands::addCredit)))))
-                .then(Commands.literal("leave")
-                        .executes(SafariCommands::leave))
                 .then(Commands.literal("time")
-                        .executes(SafariCommands::queryOwnTime)
+                        .requires(s -> s.hasPermission(OP_LEVEL))
                         .then(timeChange("add", TimeOperation.ADD))
                         .then(timeChange("remove", TimeOperation.REMOVE))
                         .then(timeChange("set", TimeOperation.SET)))
+                .then(Commands.literal("credit")
+                        .requires(s -> s.hasPermission(OP_LEVEL))
+                        .then(Commands.literal("add")
+                                .then(Commands.argument(ARG_TARGETS, EntityArgument.players())
+                                        .then(Commands.argument(ARG_SECONDS, IntegerArgumentType.integer(1))
+                                                .executes(SafariCommands::addCredit)))))
+                .then(Commands.literal("points")
+                        .requires(s -> s.hasPermission(OP_LEVEL))
+                        .then(Commands.literal("add")
+                                .then(Commands.argument(ARG_TARGETS, EntityArgument.players())
+                                        .then(Commands.argument(ARG_AMOUNT, IntegerArgumentType.integer(1))
+                                                .executes(SafariCommands::addPoints)))))
+                .then(Commands.literal("shop")
+                        .requires(s -> s.hasPermission(OP_LEVEL))
+                        .executes(ctx -> SafariPlayerActions.openShop(ctx.getSource().getPlayerOrException()) ? 1 : 0))
                 .then(Commands.literal("stats")
-                        .executes(ctx -> showStats(ctx, ctx.getSource().getPlayerOrException()))
+                        .requires(s -> s.hasPermission(OP_LEVEL))
                         .then(Commands.argument(ARG_TARGET, EntityArgument.player())
                                 .executes(ctx -> showStats(ctx, EntityArgument.getPlayer(ctx, ARG_TARGET)))))
                 .then(Commands.literal("top")
+                        .requires(s -> s.hasPermission(OP_LEVEL))
                         .executes(SafariCommands::showTop))
                 .then(Commands.literal("today")
+                        .requires(s -> s.hasPermission(OP_LEVEL))
                         .executes(SafariCommands::showToday))
                 .then(Commands.literal("reload")
                         .requires(s -> s.hasPermission(OP_LEVEL))
@@ -163,6 +157,23 @@ public final class SafariCommands {
                 .then(Commands.argument(ARG_TARGETS, EntityArgument.players())
                         .then(Commands.argument(ARG_SECONDS, IntegerArgumentType.integer(min))
                                 .executes(ctx -> changeTime(ctx, operation))));
+    }
+
+    /** /safari: the player's own time left, banked time and Safari points. */
+    private static int status(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        for (Component line : SafariPlayerActions.statusLines(player, true)) {
+            ctx.getSource().sendSuccess(() -> line, false);
+        }
+        return 1;
+    }
+
+    /** /safari info: the same for another player, for operators looking after them. */
+    private static int info(CommandContext<CommandSourceStack> ctx, ServerPlayer target) {
+        for (Component line : SafariPlayerActions.statusLines(target, false)) {
+            ctx.getSource().sendSuccess(() -> line, false);
+        }
+        return 1;
     }
 
     /**
@@ -230,93 +241,6 @@ public final class SafariCommands {
         return ended;
     }
 
-    /**
-     * Lets a player end their own session early, or simply walk out.
-     *
-     * <p>A player can stand in the Safari without a session: a creative or
-     * spectator player exempt from the rules, typically an operator testing
-     * on a server. Before, they were told "you are not in the Safari Zone"
-     * and stayed inside, which is also what the clerk's "leave" answer did
-     * for them. They are now sent to the world spawn, the same place a
-     * player without a session is sent when logging in inside.
-     *
-     * <p>The leave itself happens on the next tick
-     * ({@link SafariSessionManager#requestLeave}): run from the clerk's
-     * dialogue, ending and teleporting right away ended the session but left
-     * the player inside.
-     */
-    private static int leave(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-        ServerPlayer player = ctx.getSource().getPlayerOrException();
-        if (SafariSessionManager.getSession(player) != null || SafariDimensions.isSafari(player.level())) {
-            SafariSessionManager.requestLeave(player);
-            return 1;
-        }
-        ctx.getSource().sendFailure(Component.translatable(key("command.self_no_session")));
-        return 0;
-    }
-
-    /** Enters the Safari with banked time, if the server allows the command. */
-    private static int start(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-        ServerPlayer player = ctx.getSource().getPlayerOrException();
-        if (!SafariConfigManager.get().ticket.allowStartCommand) {
-            ctx.getSource().sendFailure(Component.translatable(key("command.start.disabled")));
-            return 0;
-        }
-        EntryResult result = SafariCredit.enter(player);
-        if (!result.success()) {
-            if (result.reason() != null) {
-                ctx.getSource().sendFailure(result.reason());
-            }
-            return 0;
-        }
-        return 1;
-    }
-
-    /** Enters through the Safari Gate the player stands next to, paying with banked time. */
-    private static int enterThroughGate(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-        ServerPlayer player = ctx.getSource().getPlayerOrException();
-        EntryResult result = SafariGate.enterNearby(player);
-        if (!result.success()) {
-            if (result.reason() != null) {
-                ctx.getSource().sendFailure(result.reason());
-            }
-            return 0;
-        }
-        return 1;
-    }
-
-    /**
-     * Opens the shop. Only where a shopkeeper stands (the warden at a Safari
-     * Gate, the clerk in a rest house); operators can open it anywhere, to
-     * check the configuration. See {@link SafariShop#canShopHere}.
-     */
-    private static int openShop(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-        ServerPlayer player = ctx.getSource().getPlayerOrException();
-        if (!SafariShop.canShopHere(player)) {
-            ctx.getSource().sendFailure(Component.translatable(key("command.shop.too_far")));
-            return 0;
-        }
-        return SafariShop.open(player) ? 1 : 0;
-    }
-
-    /** Lists today's missions with the player's progress. */
-    private static int showBounties(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-        ServerPlayer player = ctx.getSource().getPlayerOrException();
-        List<Component> lines = SafariBounties.lines(player);
-        for (Component line : lines) {
-            ctx.getSource().sendSuccess(() -> line, false);
-        }
-        return lines.size();
-    }
-
-    /** Tells a player how many Safari points they have. */
-    private static int queryOwnPoints(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-        ServerPlayer player = ctx.getSource().getPlayerOrException();
-        int points = SafariPoints.balance(player);
-        ctx.getSource().sendSuccess(() -> Component.translatable(key("command.points.query"), SafariPointsIcon.amount(points)), false);
-        return points;
-    }
-
     /** Gives Safari points to every target, up to the configured cap. */
     private static int addPoints(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         int amount = IntegerArgumentType.getInteger(ctx, ARG_AMOUNT);
@@ -331,15 +255,6 @@ public final class SafariCommands {
         return changed;
     }
 
-    /** Tells a player how much Safari time they have banked. */
-    private static int queryOwnCredit(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-        ServerPlayer player = ctx.getSource().getPlayerOrException();
-        int banked = SafariCredit.balance(player);
-        ctx.getSource().sendSuccess(() -> Component.translatable(key("command.credit.query"),
-                Ticks.format(banked)), false);
-        return Ticks.toSecondsCeil(banked);
-    }
-
     /** Banks time for every target, as if they had used tickets. */
     private static int addCredit(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         int ticks = Ticks.fromSeconds(IntegerArgumentType.getInteger(ctx, ARG_SECONDS));
@@ -352,20 +267,6 @@ public final class SafariCommands {
                     target.getDisplayName(), Ticks.format(banked)), true);
         }
         return changed;
-    }
-
-    /** Tells a player how much time they have left. */
-    private static int queryOwnTime(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-        ServerPlayer player = ctx.getSource().getPlayerOrException();
-        SafariSession session = SafariSessionManager.getSession(player);
-        if (session == null) {
-            ctx.getSource().sendFailure(Component.translatable(key("command.self_no_session")));
-            return 0;
-        }
-        int remaining = session.remainingTicks();
-        ctx.getSource().sendSuccess(() -> Component.translatable(key("command.time.query"),
-                Ticks.format(remaining)), false);
-        return Ticks.toSecondsCeil(remaining);
     }
 
     /** Applies a time change to every target and reports the new remaining time. */
@@ -453,7 +354,7 @@ public final class SafariCommands {
         SafariBorder.apply(ctx.getSource().getServer());
         // Slots, categories and exclusions may have changed: redraw today's specials.
         FeaturedRotation.invalidate();
-        RestHouses.ensureBuilt(ctx.getSource().getServer());
+        RestHouses.prepare(ctx.getSource().getServer());
         SafariNetwork.broadcastRules(ctx.getSource().getServer());
         ctx.getSource().sendSuccess(() -> Component.translatable(key("command.reload.success")), true);
         return 1;

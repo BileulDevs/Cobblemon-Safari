@@ -36,7 +36,7 @@
             "value": "shop",
             "action": [
               "q.dialogue.close();",
-              "q.player.run_command('safari shop');"
+              "q.player.safari_shop();"
             ]
           },
           {
@@ -44,7 +44,7 @@
             "value": "bounties",
             "action": [
               "q.dialogue.close();",
-              "q.player.run_command('safari bounties');"
+              "q.player.safari_bounties();"
             ]
           },
           {
@@ -74,7 +74,7 @@
             "text": "cobblemon_safari.dialogue.safari_clerk.option.leave_yes",
             "value": "leave_yes",
             "action": [
-              "q.player.run_command('safari leave');",
+              "q.player.safari_leave();",
               "q.dialogue.close();"
             ]
           },

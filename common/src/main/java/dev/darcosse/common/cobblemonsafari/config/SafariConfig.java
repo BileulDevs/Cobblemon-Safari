@@ -57,6 +57,12 @@ public class SafariConfig {
      * and paradox ({allowSpawn, maxSpawnPerPokemon}); the old values move in.
      * Version 22: loan.count 30 to 0, players bring their own balls (the shop
      * gives free Safari Balls once a day); a file still on 30 follows.
+     * Version 23: warningThresholdsSeconds gains 15 and 10 minutes (900, 600,
+     * 300, 60, 30, 10); a file still on the old 300, 60, 30, 10 follows.
+     * featured.announceOnEntry removed (the specials are no longer listed on
+     * entry; the wall screens and /safari today show them).
+     * Version 24: ticket.allowStartCommand removed with /safari start: players
+     * enter through a Safari Gate (or an operator's /safari enter).
      */
     public int configVersion = SafariConfigManager.CURRENT_CONFIG_VERSION;
 
@@ -98,8 +104,13 @@ public class SafariConfig {
      */
     public boolean exemptCreativeAndSpectator = true;
 
-    /** Remaining times, in seconds, at which the player gets a warning. */
-    public List<Integer> warningThresholdsSeconds = new ArrayList<>(List.of(300, 60, 30, 10));
+    /**
+     * Remaining times, in seconds, at which the player gets a warning in
+     * chat. Its colour follows the time left, whatever the list holds:
+     * white, yellow from 5 minutes, red from 1 minute
+     * (SafariSessionManager.WARNING_YELLOW_SECONDS and WARNING_RED_SECONDS).
+     */
+    public List<Integer> warningThresholdsSeconds = new ArrayList<>(List.of(900, 600, 300, 60, 30, 10));
 
     /** What players can and cannot do to themselves and to the terrain inside the Safari. */
     public Protection protection = new Protection();
@@ -451,8 +462,6 @@ public class SafariConfig {
          */
         public int maxNearbyPerPlayer = 2;
 
-        /** Lists the specials of the day in chat when a player enters. */
-        public boolean announceOnEntry = true;
     }
 
     /**
@@ -556,17 +565,10 @@ public class SafariConfig {
 
         /**
          * Gives the unused time of a hunt paid with banked time back to the bank
-         * when the player leaves on purpose (/safari leave, the clerk) or dies
+         * when the player leaves on purpose (through the clerk) or dies
          * inside. Time running out or an operator ending the hunt never refund.
          */
         public boolean refundUnusedTimeOnLeave = true;
-
-        /**
-         * Lets players enter with /safari start, spending their banked time.
-         * Meant to be turned off once entry goes through the overworld
-         * Safari gate; operators keep /safari enter.
-         */
-        public boolean allowStartCommand = true;
     }
 
     /**

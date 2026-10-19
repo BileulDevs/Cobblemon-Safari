@@ -153,7 +153,7 @@ public final class SafariBounties {
                 config.allDoneBonus));
     }
 
-    /** Chat lines for {@code /safari bounties}: each mission with the player's progress and reward. */
+    /** Chat lines of the clerk's "missions" answer: each mission with the player's progress and reward. */
     public static List<Component> lines(ServerPlayer player) {
         MinecraftServer server = player.getServer();
         List<Component> lines = new ArrayList<>();

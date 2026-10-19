@@ -1,6 +1,5 @@
 package dev.darcosse.common.cobblemonsafari.client.hud;
 
-import com.mojang.math.Axis;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.client.SafariClientState;
 import dev.darcosse.common.cobblemonsafari.config.SafariClientConfig;
@@ -14,8 +13,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * Draws the remaining Safari time: a Safari Ball that rocks gently, faster
- * when time runs low, with the time under it. CLIENT ONLY: never reference
+ * Draws the remaining Safari time: a stopwatch made of a Safari Ball, its
+ * red hand turning faster and faster as time runs out, with the time on its
+ * right, on one line. By default in the bottom left corner, level with the
+ * hotbar. The stopwatch itself stays still. CLIENT ONLY: never reference
  * this class from code that can run on a dedicated server.
  *
  * <p>Runs every frame while the HUD is drawn, so it only reads cached state:
@@ -27,36 +28,90 @@ public final class SafariTimerHud {
     public static final ResourceLocation LAYER_ID = CobblemonSafari.id("timer");
 
     /**
-     * Cobblemon's own Safari Ball item texture (16 x 16), read from its
-     * resources rather than copied, so a resource pack restyling the ball
-     * restyles the timer too.
+     * The timer's icon (16 x 16), a Safari Ball turned stopwatch, drawn by
+     * tools/timer_icon.py; resource packs can replace it. It used to be
+     * Cobblemon's own Safari Ball texture.
      */
-    private static final ResourceLocation BALL_TEXTURE =
-            ResourceLocation.fromNamespaceAndPath("cobblemon", "textures/item/poke_balls/safari_ball.png");
+    private static final ResourceLocation ICON_TEXTURE = CobblemonSafari.id("textures/gui/safari_timer.png");
     private static final int TEXTURE_SIZE = 16;
     /**
      * Size of the texture on screen, in GUI pixels: one per texel, like an
-     * item in the hotbar, which keeps it crisp. The ball itself is the
-     * middle 12 x 12; a non-integer scale (e.g. 18) would give it uneven
-     * pixels.
+     * item in the hotbar, which keeps it crisp. A non-integer scale (e.g. 18)
+     * would give it uneven pixels.
      */
-    private static final int BALL_SIZE = 16;
-    /** Transparent margin of the texture around the ball, in GUI pixels: the time tucks under the ball, not the margin. */
-    private static final int BALL_MARGIN = 2;
+    private static final int ICON_SIZE = 16;
+    /**
+     * Drawn part of the texture, in texels from its top left corner: the
+     * stopwatch fills columns 2 to 13 and rows 0 to 13 (crown to base), the
+     * rest is transparent. The widget is laid out and centred on what is
+     * drawn, not on the texture, so the time sits right against the
+     * stopwatch and both line up with the hotbar. Must follow
+     * tools/timer_icon.py.
+     */
+    private static final int ICON_DRAWN_LEFT = 2;
+    private static final int ICON_DRAWN_RIGHT = 14;
+    private static final int ICON_DRAWN_HEIGHT = 14;
 
-    /** Scale of the time text: the normal font size, matching the smaller ball. */
-    private static final float TEXT_SCALE = 1.0F;
-    /** Gap between the bottom of the ball and the top of the time, in GUI pixels. */
-    private static final int TEXT_GAP = 1;
+    /** Gap between the stopwatch and the time, in GUI pixels. */
+    private static final int TEXT_GAP = 2;
 
     /**
-     * Rocking of the ball: one swing every this many ticks, up to this angle
-     * each way. Below the critical time it swings this many times faster,
-     * like a ball about to break free.
+     * Height of the font's capitals and digits, in GUI pixels, out of its
+     * 9-pixel line: the time is centred on what is drawn of it, like the
+     * stopwatch, so the digits sit level with its middle.
      */
-    private static final float SWING_PERIOD_TICKS = 80.0F;
-    private static final float SWING_DEGREES = 30.0F;
-    private static final float CRITICAL_SWING_SPEED = 5.0F;
+    private static final int DIGIT_HEIGHT = 7;
+
+    /**
+     * Cells of the icon lit by the hand, for each of its eight positions
+     * from twelve o'clock clockwise, in texture coordinates. The pin is at
+     * (8, 8); straight positions are two cells long, diagonal ones one, as
+     * the round dial allows. Must follow the dial of tools/timer_icon.py.
+     * Eight positions, not a rotated sprite: at 16 x 16 a turned hand
+     * would blur, while lit cells stay as crisp as the rest of the icon.
+     */
+    private static final int[][][] HAND_CELLS = {
+            {{8, 7}, {8, 6}},
+            {{9, 7}},
+            {{9, 8}, {10, 8}},
+            {{9, 9}},
+            {{8, 9}, {8, 10}},
+            {{7, 9}},
+            {{7, 8}, {6, 8}},
+            {{7, 7}},
+    };
+
+    /** Colour of the hand, ARGB: the red of a stopwatch's seconds hand. */
+    private static final int HAND_COLOUR = 0xFFD2322D;
+
+    /**
+     * Speed of the hand, in turns per second: the slowest with plenty of
+     * time, the fastest as time runs out. In between, the speed grows with
+     * the square of how far into the last {@link #HAND_RAMP_SECONDS} the
+     * hunt is, so it stays calm for a while and races at the end: about one
+     * turn a second at 5 minutes, close to the fastest under a minute.
+     * Faster than a few turns a second, the eight positions blur.
+     */
+    private static final float HAND_SLOWEST_TURNS_PER_SECOND = 0.125F;
+    private static final float HAND_FASTEST_TURNS_PER_SECOND = 2.0F;
+    /** Time left, in seconds, from which the hand speeds up: the first chat warning by default. */
+    private static final float HAND_RAMP_SECONDS = 900.0F;
+
+    /**
+     * Longest step of the hand between two frames, in ticks. A frame after
+     * a pause, a loading screen or a dimension change must not spin it by
+     * whatever time passed meanwhile.
+     */
+    private static final float MAX_HAND_STEP_TICKS = 20.0F;
+
+    /**
+     * Turns made by the hand so far, and the game time (ticks plus partial
+     * tick) of the frame that last moved it. Accumulated rather than
+     * computed from the clock, since the speed changes as time runs out:
+     * an angle computed from the clock would jump each time the speed did.
+     */
+    private static float handTurns;
+    private static float lastHandTicks = Float.NaN;
 
     /** Keeps the whole widget this far inside the screen whatever the offset. */
     private static final int SCREEN_MARGIN = 2;
@@ -89,39 +144,64 @@ public final class SafariTimerHud {
         Component time = remaining > 0
                 ? Component.literal(Ticks.format(remaining))
                 : Component.translatable(CobblemonSafari.MOD_ID + ".hud.time_up");
-        int textWidth = Math.round(font.width(time) * TEXT_SCALE);
-        int halfWidth = Math.max(BALL_SIZE, textWidth) / 2;
-        int height = BALL_SIZE - BALL_MARGIN + TEXT_GAP + Math.round(font.lineHeight * TEXT_SCALE);
+        // Layout relative to the pivot, the middle of the drawn stopwatch:
+        // texture's top left corner, then the time on the right.
+        int iconX = -(ICON_DRAWN_LEFT + ICON_DRAWN_RIGHT) / 2;
+        int iconY = -ICON_DRAWN_HEIGHT / 2;
+        int textX = iconX + ICON_DRAWN_RIGHT + TEXT_GAP;
+        int textY = -DIGIT_HEIGHT / 2 - 1;
+        int left = iconX + ICON_DRAWN_LEFT;
+        int right = textX + font.width(time);
+        int top = iconY;
+        int bottom = iconY + ICON_DRAWN_HEIGHT;
 
-        // The pivot is the centre of the ball; the anchor and offset place it.
+        // The anchor and offset place the pivot; the whole line stays on screen.
         int pivotX = Math.round(graphics.guiWidth() * config.hudAnchor.xFraction) + config.hudOffsetX;
         int pivotY = Math.round(graphics.guiHeight() * config.hudAnchor.yFraction) + config.hudOffsetY;
-        pivotX = clamp(pivotX, halfWidth + SCREEN_MARGIN, graphics.guiWidth() - halfWidth - SCREEN_MARGIN);
-        pivotY = clamp(pivotY, BALL_SIZE / 2 + SCREEN_MARGIN,
-                graphics.guiHeight() - (height - BALL_SIZE / 2) - SCREEN_MARGIN);
+        pivotX = clamp(pivotX, SCREEN_MARGIN - left, graphics.guiWidth() - SCREEN_MARGIN - right);
+        pivotY = clamp(pivotY, SCREEN_MARGIN - top, graphics.guiHeight() - SCREEN_MARGIN - bottom);
 
         graphics.pose().pushPose();
         graphics.pose().translate(pivotX, pivotY, 0.0F);
 
-        // Driven by the game clock plus the partial tick, so the swing is
-        // smooth at any frame rate; it pauses with the game, like the timer.
+        graphics.blit(ICON_TEXTURE, iconX, iconY, 0.0F, 0.0F, ICON_SIZE, ICON_SIZE, TEXTURE_SIZE, TEXTURE_SIZE);
+        // Driven by the game clock plus the partial tick, so the hand moves
+        // at the same pace at any frame rate; it stops with the game, like the timer.
         float ticks = gameTime + deltaTracker.getGameTimeDeltaPartialTick(false);
-        boolean critical = remaining > 0 && Ticks.toSecondsCeil(remaining) <= config.criticalTimeSeconds;
-        float speed = critical ? CRITICAL_SWING_SPEED : 1.0F;
-        float swing = (float) Math.sin(2.0D * Math.PI * ticks * speed / SWING_PERIOD_TICKS);
-        graphics.pose().pushPose();
-        graphics.pose().mulPose(Axis.ZP.rotationDegrees(swing * SWING_DEGREES));
-        graphics.blit(BALL_TEXTURE, -BALL_SIZE / 2, -BALL_SIZE / 2, 0.0F, 0.0F, BALL_SIZE, BALL_SIZE,
-                TEXTURE_SIZE, TEXTURE_SIZE);
-        graphics.pose().popPose();
+        advanceHand(ticks, remaining);
+        int position = Math.floorMod((int) Math.floor(handTurns * HAND_CELLS.length), HAND_CELLS.length);
+        for (int[] cell : HAND_CELLS[position]) {
+            int x = iconX + cell[0];
+            int y = iconY + cell[1];
+            graphics.fill(x, y, x + 1, y + 1, HAND_COLOUR);
+        }
 
-        graphics.pose().pushPose();
-        graphics.pose().translate(0.0F, BALL_SIZE / 2.0F - BALL_MARGIN + TEXT_GAP, 0.0F);
-        graphics.pose().scale(TEXT_SCALE, TEXT_SCALE, 1.0F);
-        graphics.drawString(font, time, -font.width(time) / 2, 0, TimerStyle.color(remaining, gameTime, config), true);
-        graphics.pose().popPose();
+        graphics.drawString(font, time, textX, textY, TimerStyle.color(remaining, gameTime, config), true);
 
         graphics.pose().popPose();
+    }
+
+    /**
+     * Moves the hand by the time since the last frame, at the speed the time
+     * left calls for. It stops once time is up.
+     */
+    private static void advanceHand(float ticks, int remainingTicks) {
+        float step = Float.isNaN(lastHandTicks) ? 0.0F : ticks - lastHandTicks;
+        lastHandTicks = ticks;
+        // Negative after a new world (its clock starts again); capped after a pause.
+        step = Math.max(0.0F, Math.min(step, MAX_HAND_STEP_TICKS));
+        handTurns = (handTurns + step / Ticks.PER_SECOND * turnsPerSecond(remainingTicks)) % 1.0F;
+    }
+
+    /** Speed of the hand for the time left; see {@link #HAND_SLOWEST_TURNS_PER_SECOND}. */
+    private static float turnsPerSecond(int remainingTicks) {
+        if (remainingTicks <= 0) {
+            return 0.0F;
+        }
+        float seconds = (float) remainingTicks / Ticks.PER_SECOND;
+        float urgency = 1.0F - Math.min(1.0F, seconds / HAND_RAMP_SECONDS);
+        return HAND_SLOWEST_TURNS_PER_SECOND
+                + (HAND_FASTEST_TURNS_PER_SECOND - HAND_SLOWEST_TURNS_PER_SECOND) * urgency * urgency;
     }
 
     /** A value kept within bounds; the lower bound wins on a screen too small for both. */

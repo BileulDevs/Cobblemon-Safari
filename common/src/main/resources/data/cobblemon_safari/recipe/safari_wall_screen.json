@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "G": {
+      "item": "minecraft:glass_pane"
+    },
+    "T": {
+      "item": "cobblemon_safari:safari_ticket"
+    },
+    "R": {
+      "item": "minecraft:redstone"
+    }
+  },
+  "pattern": [
+    "III",
+    "GTG",
+    "GRG"
+  ],
+  "result": {
+    "count": 1,
+    "id": "cobblemon_safari:safari_wall_screen"
+  }
+}

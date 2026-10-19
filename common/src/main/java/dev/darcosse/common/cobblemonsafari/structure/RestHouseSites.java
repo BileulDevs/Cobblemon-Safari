@@ -29,7 +29,10 @@ import java.util.List;
  * from the spots where the Safari's ruins and towers may stand. Among the
  * good ones, the flattest wins, closeness to the anchor breaking ties.
  *
- * <p>Server side; called once per house and map, at server start.
+ * <p>Server side; called once per house and map, at server start. Searches
+ * of several houses may run at the same time on background threads: a
+ * search only reads the noise and the structure placement, never a chunk,
+ * and keeps its state in its own {@link Context}.
  */
 final class RestHouseSites {
 
@@ -225,7 +228,7 @@ final class RestHouseSites {
     }
 
     /** Whether a centre is closer than {@link #MIN_HOUSE_SPACING} to a house already placed. */
-    private static boolean tooClose(int x, int z, List<int[]> taken) {
+    static boolean tooClose(int x, int z, List<int[]> taken) {
         for (int[] other : taken) {
             long dx = x - other[0];
             long dz = z - other[1];

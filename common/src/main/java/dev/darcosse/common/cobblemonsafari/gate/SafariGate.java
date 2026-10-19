@@ -20,12 +20,12 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * Entering the Safari through a Safari Gate: by standing in its pane until
- * the portal effect completes, or by asking its warden (whose dialogue runs {@code /safari gate}).
+ * the portal effect completes, or by asking its warden (whose dialogue calls
+ * {@code q.player.safari_gate()}, see command.SafariDialogueFunctions).
  *
  * <p>Both ways spend banked time ({@link SafariCredit}) and apply the entry
- * requirements, like {@code /safari start}; unlike it, they need the player
- * to stand at a gate, so a server can switch the command off and make the
- * gates the only way in. Server side only.
+ * requirements. They are the only way in for players; operators also have
+ * {@code /safari enter}. Server side only.
  */
 public final class SafariGate {
 
@@ -39,7 +39,7 @@ public final class SafariGate {
     private static final double STEP_OUT_DISTANCE = 1.1D;
 
     /**
-     * Range, in blocks, within which {@code /safari gate} finds a gate. Covers
+     * Range, in blocks, within which the warden's entry finds a gate. Covers
      * the warden's spot next to the gate with room to spare; much more would
      * let players enter from places that are not visibly a gate.
      */

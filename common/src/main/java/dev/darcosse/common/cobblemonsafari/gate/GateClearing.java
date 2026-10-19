@@ -10,6 +10,8 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -47,6 +49,11 @@ import java.util.Set;
  * hundred blocks at most, happens on the last tick. One job per gate,
  * owned by the gate's corner block entity; dropped and started again on a
  * later check if part of the area is not loaded. Server side.
+ *
+ * <p>Rest houses use it too, for the trees their clearing and their terrain
+ * blending cut: they give their own footprint and a box (the house itself)
+ * whose logs and leaves are never treated as trees, since a house's beams
+ * are logs too.
  */
 public final class GateClearing {
 
@@ -82,8 +89,14 @@ public final class GateClearing {
      */
     private static final int BELOW_GROUND = 6;
 
-    /** Setting a block without neighbour updates: no leaf decay chain, no physics. */
-    private static final int PLACE_FLAGS = Block.UPDATE_CLIENTS;
+    /**
+     * Setting a block without neighbour updates (no leaf decay chain, no
+     * physics) and without reshaping its neighbours: a reshaped neighbour
+     * that loses its support breaks, and Minecraft forces its drop
+     * (Level.setBlock clears UPDATE_SUPPRESS_DROPS for neighbours), which
+     * left cocoa beans and petals on the ground.
+     */
+    private static final int PLACE_FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
 
     /**
      * Block reads allowed per tick while scanning. In plains a column costs
@@ -94,6 +107,11 @@ public final class GateClearing {
     private static final int READS_PER_TICK = 4096;
 
     private final BlockPos middle;
+    /** What the log names: "Safari Gate", "Safari rest house". */
+    private final String owner;
+    /** Blocks never counted as trees (a building made of logs); null for none. */
+    @Nullable
+    private final BoundingBox keep;
     private final int ground;
     private final Box scan;
     private final Box removal;
@@ -101,13 +119,29 @@ public final class GateClearing {
     private int nextColumn;
     private final Set<Long> logs = new HashSet<>();
     private final Set<Long> leaves = new HashSet<>();
+    /** Vines of the scan area, checked once the trees are removed: those left hanging on nothing go too. */
+    private final List<Long> vines = new ArrayList<>();
 
     /** A job for the gate whose pane's middle bottom block is given; nothing is read yet. */
     public GateClearing(ServerLevel level, BlockPos middle) {
+        this(level, middle, FOOTPRINT_HALF, null, "Safari Gate");
+    }
+
+    /**
+     * A job for any build: {@code middle} is the block just above the
+     * build's ground at its centre, {@code footprintHalf} how far from it,
+     * horizontally, trees may have been cut. Logs and leaves inside
+     * {@code keep} are part of the build: never removed, and holding
+     * nothing up (a crown resting on a roof still rests on something solid).
+     */
+    public GateClearing(ServerLevel level, BlockPos middle, int footprintHalf, @Nullable BoundingBox keep,
+                        String owner) {
         this.middle = middle.immutable();
+        this.owner = owner;
+        this.keep = keep;
         this.ground = middle.getY() - 1;
         // Removal area: the footprint plus the reach of a crown.
-        int removeHalf = FOOTPRINT_HALF + CROWN_REACH;
+        int removeHalf = footprintHalf + CROWN_REACH;
         // Scan area: one leaf reach further, so that a leaf at the edge of
         // the removal area still finds the log that holds it.
         int scanHalf = removeHalf + LEAF_REACH;
@@ -141,15 +175,23 @@ public final class GateClearing {
             int x = scan.minX + nextColumn % width;
             int z = scan.minZ + nextColumn / width;
             nextColumn++;
-            // Nothing stands above the heightmap (leaves included in
-            // MOTION_BLOCKING), so the column ends there instead of at
-            // the top of the scan: most of the area is open sky.
-            int top = Math.min(scan.maxY, level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) - 1);
+            // Nothing stands above the heightmap, so the column ends there
+            // instead of at the top of the scan: most of the area is open
+            // sky. WORLD_SURFACE, not MOTION_BLOCKING: vines block no
+            // motion, so a column holding only vines hanging beside a crown
+            // ended at the ground, and those vines were never seen (they
+            // stayed hanging in the air once the crown was removed).
+            int top = Math.min(scan.maxY, level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z) - 1);
             for (int y = scan.minY; y <= top; y++) {
                 BlockState state = level.getBlockState(cursor.set(x, y, z));
                 reads++;
+                if (keep != null && keep.isInside(cursor)) {
+                    continue;
+                }
                 if (state.is(BlockTags.LOGS)) {
                     logs.add(cursor.asLong());
+                } else if (state.is(Blocks.VINE)) {
+                    vines.add(cursor.asLong());
                 } else if (state.is(BlockTags.LEAVES)) {
                     leaves.add(cursor.asLong());
                 }
@@ -172,7 +214,7 @@ public final class GateClearing {
         DONE
     }
 
-    /** Removes the floating logs, the bee nests under them and the orphan leaves, from what the scan found. */
+    /** Removes the floating logs, the bee nests and cocoa pods on them and the orphan leaves, from what the scan found. */
     private void removeCutTrees(ServerLevel level) {
         List<Long> cutLogs = floatingLogs(level, logs, leaves, scan, removal);
         for (long log : cutLogs) {
@@ -188,10 +230,10 @@ public final class GateClearing {
                 continue;
             }
             level.setBlock(pos, Blocks.AIR.defaultBlockState(), PLACE_FLAGS);
-            // A bee nest hangs under a branch; it would float like the crown.
+            // A bee nest hangs under a branch, a cocoa pod on a jungle trunk: they would float like the crown.
             for (Direction side : Direction.values()) {
                 BlockPos next = pos.relative(side);
-                if (level.getBlockState(next).is(Blocks.BEE_NEST)) {
+                if (level.getBlockState(next).is(Blocks.BEE_NEST) || level.getBlockState(next).is(Blocks.COCOA)) {
                     level.setBlock(next, Blocks.AIR.defaultBlockState(), PLACE_FLAGS);
                     nests++;
                 }
@@ -203,10 +245,46 @@ public final class GateClearing {
                 level.setBlock(pos, Blocks.AIR.defaultBlockState(), PLACE_FLAGS);
             }
         }
-        if (!cutLogs.isEmpty() || !orphanLeaves.isEmpty()) {
-            CobblemonSafari.LOGGER.info("Safari Gate at {}: removed {} logs, {} leaves and {} bee nests of cut trees",
-                    middle.toShortString(), cutLogs.size(), orphanLeaves.size(), nests);
+        int lostVines = detachVines(level);
+        if (!cutLogs.isEmpty() || !orphanLeaves.isEmpty() || lostVines > 0) {
+            CobblemonSafari.LOGGER.info("{} at {}: removed {} logs, {} leaves, {} bee nests or cocoa pods and {} vines of cut trees",
+                    owner, middle.toShortString(), cutLogs.size(), orphanLeaves.size(), nests, lostVines);
         }
+    }
+
+    /**
+     * Gives every vine of the scan area the shape vanilla would give it now
+     * that the trees are gone: a face whose log or leaf was removed is
+     * dropped, and a vine left with no face becomes air. Top down, so a vine
+     * hanging from one that just went loses its hold in turn, as vanilla's
+     * chain of updates would. Without this, the vines of a cut jungle tree
+     * stayed hanging in the air: blocks are removed without updating their
+     * neighbours.
+     *
+     * <p>The new shape comes from {@code Block.updateFromNeighbourShapes},
+     * the vine's own rules; nothing drops (set without updates).
+     *
+     * @return how many vines were removed
+     */
+    private int detachVines(ServerLevel level) {
+        vines.sort((a, b) -> Integer.compare(BlockPos.getY(b), BlockPos.getY(a)));
+        int removed = 0;
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        for (long vine : vines) {
+            BlockState state = level.getBlockState(cursor.set(vine));
+            if (!state.is(Blocks.VINE)) {
+                continue;
+            }
+            BlockState updated = Block.updateFromNeighbourShapes(state, level, cursor);
+            if (updated == state) {
+                continue;
+            }
+            level.setBlock(cursor, updated, PLACE_FLAGS);
+            if (updated.isAir()) {
+                removed++;
+            }
+        }
+        return removed;
     }
 
     /**

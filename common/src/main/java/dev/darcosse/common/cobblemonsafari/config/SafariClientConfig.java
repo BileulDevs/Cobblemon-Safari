@@ -13,7 +13,9 @@ public class SafariClientConfig {
      * from {@code board} to {@code board.colors}, and
      * {@code board.pokemonDisplay} (MODEL / SPRITE) became the boolean
      * {@code board.useSprites}; {@link SafariClientConfigManager} converts
-     * older files.
+     * older files. Version 7: the timer became one line (stopwatch, then
+     * time) in the bottom left corner, level with the hotbar; a file still on
+     * the old default position follows.
      */
     public int configVersion = SafariClientConfigManager.CURRENT_CONFIG_VERSION;
 
@@ -21,13 +23,13 @@ public class SafariClientConfig {
     public boolean hudEnabled = true;
 
     /** Where the timer is attached. */
-    public HudAnchor hudAnchor = HudAnchor.BOTTOM_CENTER;
+    public HudAnchor hudAnchor = SafariClientConfigManager.DEFAULT_HUD_ANCHOR;
 
     /**
-     * Offset of the centre of the timer's Safari Ball from the anchor, in
-     * GUI pixels. The default puts it left of the hotbar, clear of the
-     * off-hand slot (the hotbar is 182 px wide, the off-hand slot 29 px
-     * beyond it), the time under the ball level with the hotbar.
+     * Offset of the middle of the timer's stopwatch from the anchor, in GUI
+     * pixels; the time is on its right. The default puts it in the bottom
+     * left corner, its middle level with the middle of the hotbar (22 px
+     * high, at the bottom of the screen).
      */
     public int hudOffsetX = SafariClientConfigManager.DEFAULT_HUD_OFFSET_X;
     public int hudOffsetY = SafariClientConfigManager.DEFAULT_HUD_OFFSET_Y;
@@ -35,7 +37,7 @@ public class SafariClientConfig {
     /** Below this many seconds the timer turns amber. */
     public int lowTimeSeconds = 60;
 
-    /** Below this many seconds the timer turns red and pulses, and the ball rocks faster. */
+    /** Below this many seconds the timer turns red and pulses. */
     public int criticalTimeSeconds = 10;
 
     /** Look of the wall screens (the section keeps its old name, "board", so existing files still load). */

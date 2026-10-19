@@ -28,13 +28,26 @@ public final class SafariClientConfigManager {
      * showBalls and showCatches removed, the offset now places the ball's
      * centre) and the board got pokemonDisplay. Version 6: the board
      * colours moved into board.colors and pokemonDisplay became useSprites
-     * (see {@link #upgrade}).
+     * (see {@link #upgrade}). Version 7: the timer is one line in the bottom
+     * left corner; a file on the version 6 default position follows.
      */
-    public static final int CURRENT_CONFIG_VERSION = 6;
+    public static final int CURRENT_CONFIG_VERSION = 7;
 
-    /** Default timer position, see {@link SafariClientConfig#hudOffsetX}. */
-    public static final int DEFAULT_HUD_OFFSET_X = -136;
-    public static final int DEFAULT_HUD_OFFSET_Y = -28;
+    /**
+     * Default timer position, see {@link SafariClientConfig#hudOffsetX}: 10
+     * puts the stopwatch 4 px from the left edge (its drawn part is 12 px
+     * wide), -11 its middle on the middle of the 22 px hotbar.
+     */
+    public static final HudAnchor DEFAULT_HUD_ANCHOR = HudAnchor.BOTTOM_LEFT;
+    public static final int DEFAULT_HUD_OFFSET_X = 10;
+    public static final int DEFAULT_HUD_OFFSET_Y = -11;
+
+    /** Default position up to version 6: left of the hotbar, the time under the ball. */
+    private static final HudAnchor V6_HUD_ANCHOR = HudAnchor.BOTTOM_CENTER;
+    private static final int V6_HUD_OFFSET_X = -136;
+    private static final int V6_HUD_OFFSET_Y = -28;
+    /** The version that moved the timer to the bottom left corner. */
+    private static final int ONE_LINE_TIMER_VERSION = 7;
 
     /**
      * Offsets written by default before version 5 (a panel above the action
@@ -76,6 +89,14 @@ public final class SafariClientConfigManager {
         boolean corrected = false;
         if (loaded.configVersion < TIMER_REWORK_VERSION
                 && loaded.hudOffsetX == LEGACY_HUD_OFFSET_X && loaded.hudOffsetY == LEGACY_HUD_OFFSET_Y) {
+            loaded.hudOffsetX = DEFAULT_HUD_OFFSET_X;
+            loaded.hudOffsetY = DEFAULT_HUD_OFFSET_Y;
+            loaded.hudAnchor = DEFAULT_HUD_ANCHOR;
+        }
+        // Exact comparison: a player who moved the timer keeps their place.
+        if (loaded.configVersion < ONE_LINE_TIMER_VERSION && loaded.hudAnchor == V6_HUD_ANCHOR
+                && loaded.hudOffsetX == V6_HUD_OFFSET_X && loaded.hudOffsetY == V6_HUD_OFFSET_Y) {
+            loaded.hudAnchor = DEFAULT_HUD_ANCHOR;
             loaded.hudOffsetX = DEFAULT_HUD_OFFSET_X;
             loaded.hudOffsetY = DEFAULT_HUD_OFFSET_Y;
         }

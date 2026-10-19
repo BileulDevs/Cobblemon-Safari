@@ -54,13 +54,13 @@ public final class SafariConfigManager {
     private static final int MAX_GATE_ROAM_RADIUS = 24;
 
     /**
-     * Most missions per rotation. /safari bounties lists them in chat; past
+     * Most missions per rotation. The clerk lists them in chat; past
      * about eight lines the list scrolls out of the chat box.
      */
     private static final int MAX_BOUNTIES = 8;
 
     /** Version written by this build. Raise it together with a new step in {@link #migrate}. */
-    public static final int CURRENT_CONFIG_VERSION = 22;
+    public static final int CURRENT_CONFIG_VERSION = 24;
 
     /**
      * Default length of a featured rotation, in minutes: four hours, so the
@@ -87,6 +87,12 @@ public final class SafariConfigManager {
      */
     public static final double DEFAULT_CAUGHT_SPECIES_WEIGHT = 0.4;
     private static final double LEGACY_CAUGHT_SPECIES_WEIGHT = 0.25;
+
+    /** First version warning at 15 and 10 minutes too; a file still on the old list follows. */
+    private static final int LONGER_WARNINGS_VERSION = 23;
+
+    /** Default warning times, in seconds, up to version 22. */
+    private static final List<Integer> LEGACY_WARNING_THRESHOLDS = List.of(300, 60, 30, 10);
 
     /** First version without a ball loan by default; a file still lending the old 30 follows. */
     private static final int NO_LOAN_VERSION = 22;
@@ -281,6 +287,11 @@ public final class SafariConfigManager {
         if (c.configVersion < NO_LOAN_VERSION && c.loan != null && c.loan.count == LEGACY_LOAN_COUNT) {
             c.loan.count = 0;
             CobblemonSafari.LOGGER.info("Migrated {}: the ball loan is now off (loan.count 0)", FILE_NAME);
+        }
+        // Exact comparison: a server that chose its own times keeps them.
+        if (c.configVersion < LONGER_WARNINGS_VERSION && LEGACY_WARNING_THRESHOLDS.equals(c.warningThresholdsSeconds)) {
+            c.warningThresholdsSeconds = new SafariConfig().warningThresholdsSeconds;
+            CobblemonSafari.LOGGER.info("Migrated {}: warnings now also at 15 and 10 minutes", FILE_NAME);
         }
         CobblemonSafari.LOGGER.info("Migrated {} from version {} to {}", FILE_NAME, c.configVersion,
                 CURRENT_CONFIG_VERSION);

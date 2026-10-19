@@ -70,7 +70,8 @@ public final class SafariServerEvents {
         SafariBorder.apply(server);
         // A reset map has no rest houses yet, whatever the save says.
         SafariWorldState.get(server).forgetHousesIfMapChanged(SafariMapReset.salt());
-        RestHouses.ensureBuilt(server);
+        RestHouses.reset();
+        RestHouses.prepare(server);
     }
 
     /**
@@ -90,6 +91,7 @@ public final class SafariServerEvents {
         FeaturedSync.tick(server);
         SafariBounties.tick(server);
         SafariSpawnBoost.tick(server);
+        RestHouses.tick(server);
         RestHouseClerk.tick(server);
     }
 
