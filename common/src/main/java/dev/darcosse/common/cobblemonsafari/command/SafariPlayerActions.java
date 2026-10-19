@@ -3,6 +3,7 @@ package dev.darcosse.common.cobblemonsafari.command;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.access.EntryResult;
 import dev.darcosse.common.cobblemonsafari.bounty.SafariBounties;
+import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.credit.SafariCredit;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
 import dev.darcosse.common.cobblemonsafari.gate.SafariGate;
@@ -14,7 +15,10 @@ import dev.darcosse.common.cobblemonsafari.shop.SafariShop;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedBoard;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.ArrayList;
@@ -22,7 +26,7 @@ import java.util.List;
 
 /**
  * What a player can ask of the Safari: their status, and the actions the
- * NPCs offer (shop, missions, entering at a gate, leaving). The status is
+ * NPCs offer (shop, missions, accepted balls, entering at a gate, leaving). The status is
  * the {@code /safari} command; the actions are reached only through the
  * NPCs' dialogues ({@link SafariDialogueFunctions}), so they are no longer
  * commands a player sees.
@@ -91,6 +95,32 @@ public final class SafariPlayerActions {
         for (Component line : FeaturedBoard.lines(player.getServer())) {
             player.sendSystemMessage(line);
         }
+        return true;
+    }
+
+    /**
+     * Lists in chat the Poké Balls that work inside the Safari, by their item
+     * names (in the reader's language): the configured {@code allowedBalls},
+     * plus the lent ball when the loan is on. Asked of the gate warden before
+     * going in, or of a rest house clerk.
+     */
+    public static boolean showAllowedBalls(ServerPlayer player) {
+        MutableComponent names = Component.empty();
+        int count = 0;
+        for (ResourceLocation id : SafariConfigManager.allowedBalls()) {
+            if (count++ > 0) {
+                names.append(", ");
+            }
+            // Ball ids and item ids coincide for every Cobblemon ball; an id
+            // of no known item (a typo, a removed mod) still shows, as is.
+            names.append(BuiltInRegistries.ITEM.getOptional(id)
+                    .<Component>map(item -> item.getDescription())
+                    .orElse(Component.literal(id.toString()))
+                    .copy().withStyle(ChatFormatting.WHITE));
+        }
+        player.sendSystemMessage(count == 0
+                ? Component.translatable(key("message.allowed_balls_none")).withStyle(ChatFormatting.RED)
+                : Component.translatable(key("message.allowed_balls"), names).withStyle(ChatFormatting.YELLOW));
         return true;
     }
 

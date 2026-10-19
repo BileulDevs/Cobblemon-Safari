@@ -12,8 +12,8 @@ import java.util.function.Predicate;
 /**
  * The Safari's actions as MoLang functions of the player, for NPC dialogues:
  * {@code q.player.safari_shop()}, {@code safari_bounties()},
- * {@code safari_gate()}, {@code safari_leave()}, {@code safari_status()} and
- * {@code safari_today()}.
+ * {@code safari_gate()}, {@code safari_leave()}, {@code safari_status()},
+ * {@code safari_today()} and {@code safari_balls()}.
  *
  * <p>Why not commands: the dialogues used to run {@code /safari shop} and the
  * like in the player's name ({@code q.player.run_command}), which had to stay
@@ -35,6 +35,7 @@ public final class SafariDialogueFunctions {
     public static final String LEAVE = "safari_leave";
     public static final String STATUS = "safari_status";
     public static final String TODAY = "safari_today";
+    public static final String BALLS = "safari_balls";
 
     private static boolean registered;
 
@@ -68,6 +69,7 @@ public final class SafariDialogueFunctions {
         functions.put(LEAVE, params -> run(player, SafariPlayerActions::leave));
         functions.put(STATUS, params -> run(player, SafariPlayerActions::sendStatus));
         functions.put(TODAY, params -> run(player, SafariPlayerActions::showToday));
+        functions.put(BALLS, params -> run(player, SafariPlayerActions::showAllowedBalls));
         return functions;
     }
 

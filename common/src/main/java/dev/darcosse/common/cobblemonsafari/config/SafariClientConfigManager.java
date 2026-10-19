@@ -29,21 +29,22 @@ public final class SafariClientConfigManager {
      * centre) and the board got pokemonDisplay. Version 6: the board
      * colours moved into board.colors and pokemonDisplay became useSprites
      * (see {@link #upgrade}). Version 7: the timer is in the bottom left
-     * corner. Version 8: the time is back under the stopwatch; a file on the
-     * version 6 or 7 default position follows.
+     * corner. Version 8: the time is back under the stopwatch. Version 9:
+     * the default sits 4 px higher; a file on the version 6, 7 or 8 default
+     * position follows.
      */
-    public static final int CURRENT_CONFIG_VERSION = 8;
+    public static final int CURRENT_CONFIG_VERSION = 9;
 
     /**
      * Default timer position, see {@link SafariClientConfig#hudOffsetX}: 20
      * puts the middle of the timer far enough from the left edge for a time
-     * like 19:59 (about 30 px wide) to keep a few pixels of margin; -12 puts
-     * the 22 px widget against the bottom of the screen, like the hotbar,
-     * one pixel up for the text shadow.
+     * like 19:59 (about 30 px wide) to keep a few pixels of margin; -16
+     * leaves 5 px between the 22 px widget and the bottom of the screen.
+     * Closer (-12, version 8), the time looked glued to the edge.
      */
     public static final HudAnchor DEFAULT_HUD_ANCHOR = HudAnchor.BOTTOM_LEFT;
     public static final int DEFAULT_HUD_OFFSET_X = 20;
-    public static final int DEFAULT_HUD_OFFSET_Y = -12;
+    public static final int DEFAULT_HUD_OFFSET_Y = -16;
 
     /** Default position up to version 6: left of the hotbar, the time under the ball. */
     private static final HudAnchor V6_HUD_ANCHOR = HudAnchor.BOTTOM_CENTER;
@@ -52,8 +53,11 @@ public final class SafariClientConfigManager {
     /** Default position of version 7: bottom left, on one line. */
     private static final int V7_HUD_OFFSET_X = 10;
     private static final int V7_HUD_OFFSET_Y = -11;
+    /** Default position of version 8: bottom left, stacked, against the bottom edge. */
+    private static final int V8_HUD_OFFSET_X = 20;
+    private static final int V8_HUD_OFFSET_Y = -12;
     /** The version whose default position is the current one. */
-    private static final int STACKED_TIMER_VERSION = 8;
+    private static final int RAISED_TIMER_VERSION = 9;
 
     /**
      * Offsets written by default before version 5 (a panel above the action
@@ -104,7 +108,9 @@ public final class SafariClientConfigManager {
                 && loaded.hudOffsetX == V6_HUD_OFFSET_X && loaded.hudOffsetY == V6_HUD_OFFSET_Y;
         boolean v7Default = loaded.hudAnchor == DEFAULT_HUD_ANCHOR
                 && loaded.hudOffsetX == V7_HUD_OFFSET_X && loaded.hudOffsetY == V7_HUD_OFFSET_Y;
-        if (loaded.configVersion < STACKED_TIMER_VERSION && (v6Default || v7Default)) {
+        boolean v8Default = loaded.hudAnchor == DEFAULT_HUD_ANCHOR
+                && loaded.hudOffsetX == V8_HUD_OFFSET_X && loaded.hudOffsetY == V8_HUD_OFFSET_Y;
+        if (loaded.configVersion < RAISED_TIMER_VERSION && (v6Default || v7Default || v8Default)) {
             loaded.hudAnchor = DEFAULT_HUD_ANCHOR;
             loaded.hudOffsetX = DEFAULT_HUD_OFFSET_X;
             loaded.hudOffsetY = DEFAULT_HUD_OFFSET_Y;

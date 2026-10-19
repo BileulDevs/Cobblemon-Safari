@@ -15,7 +15,8 @@ public class SafariClientConfig {
      * {@code board.useSprites}; {@link SafariClientConfigManager} converts
      * older files. Version 7: the timer moved to the bottom left corner,
      * level with the hotbar. Version 8: the time went back under the
-     * stopwatch; files still on the version 6 or 7 default position follow.
+     * stopwatch. Version 9: the default sits 4 px higher; files still on
+     * the version 6, 7 or 8 default position follow.
      */
     public int configVersion = SafariClientConfigManager.CURRENT_CONFIG_VERSION;
 
@@ -28,7 +29,7 @@ public class SafariClientConfig {
     /**
      * Offset of the middle of the timer (the stopwatch with the time under
      * it, 22 px high) from the anchor, in GUI pixels. The default puts it in
-     * the bottom left corner, as high as the hotbar and level with it.
+     * the bottom left corner, a few pixels above the bottom of the screen.
      */
     public int hudOffsetX = SafariClientConfigManager.DEFAULT_HUD_OFFSET_X;
     public int hudOffsetY = SafariClientConfigManager.DEFAULT_HUD_OFFSET_Y;

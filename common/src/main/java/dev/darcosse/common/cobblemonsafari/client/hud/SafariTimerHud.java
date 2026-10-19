@@ -15,8 +15,8 @@ import net.minecraft.resources.ResourceLocation;
 /**
  * Draws the remaining Safari time: a stopwatch made of a Safari Ball, its
  * red hand turning faster and faster as time runs out, with the time under
- * it. By default in the bottom left corner, the two lines together as high
- * as the hotbar and level with it. The stopwatch itself stays still. CLIENT ONLY: never reference
+ * it. By default in the bottom left corner, a few pixels above the bottom
+ * of the screen. The stopwatch itself stays still. CLIENT ONLY: never reference
  * this class from code that can run on a dedicated server.
  *
  * <p>Runs every frame while the HUD is drawn, so it only reads cached state:
@@ -116,8 +116,8 @@ public final class SafariTimerHud {
 
     /**
      * Keeps the whole widget this far inside the screen whatever the offset.
-     * 1, not more: the default position puts the widget, as high as the
-     * hotbar, against the bottom of the screen like it.
+     * Small, so a player can still set the timer against an edge; the
+     * default position keeps its own distance from the bottom.
      */
     private static final int SCREEN_MARGIN = 1;
 

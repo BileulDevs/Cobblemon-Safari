@@ -54,6 +54,14 @@
             "action": "q.dialogue.set_page('tickets');"
           },
           {
+            "text": "cobblemon_safari.dialogue.safari_warden.option.balls",
+            "value": "balls",
+            "action": [
+              "q.player.safari_balls();",
+              "q.dialogue.set_page('balls');"
+            ]
+          },
+          {
             "text": "cobblemon_safari.dialogue.safari_warden.option.bye",
             "value": "bye",
             "action": "q.dialogue.set_page('bye');"
@@ -68,6 +76,14 @@
         "cobblemon_safari.dialogue.safari_warden.tickets.1",
         "cobblemon_safari.dialogue.safari_warden.tickets.2",
         "cobblemon_safari.dialogue.safari_warden.tickets.3"
+      ],
+      "input": "q.dialogue.set_page('greeting');"
+    },
+    {
+      "id": "balls",
+      "speaker": "npc",
+      "lines": [
+        "cobblemon_safari.dialogue.safari_warden.balls"
       ],
       "input": "q.dialogue.set_page('greeting');"
     },

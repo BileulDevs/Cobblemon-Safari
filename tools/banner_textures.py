@@ -10,7 +10,8 @@ frame size, as any animated block texture. Run from the project root:
 
     python3 tools/banner_textures.py
 
-Original art only: Safari motifs, no characters. Deterministic.
+Original art only: Safari motifs, a generic capture ball and an original
+creature of the mod, no existing character. Deterministic.
 Requires Pillow.
 """
 import json
@@ -37,6 +38,9 @@ WATERFALL_FRAMES = 16
 SLOW_FRAMES = 16
 FAST_FRAME_TICKS = 2
 CAMPFIRE_FRAME_TICKS = 3
+# The throw tells a story in 24 steps (throw, hit, catch, wobbles, sparkles):
+# 24 frames of 3 ticks loop every 3.6 s. Fewer frames would cut steps.
+THROW_FRAMES = 24
 
 
 def rgb(h):
@@ -780,6 +784,219 @@ def sun_rays(frame, frames):
     return cv.img
 
 
+# Colours of the capture ball drawn on two pictures: a generic red and white
+# ball with a black band and a button, shaded as a sphere lit from the top left.
+BALL_TOP, BALL_BOTTOM, BALL_BAND = rgb("#E23B32"), rgb("#F4F1EA"), rgb("#1E1E24")
+BALL_OUTLINE = rgb("#141418")
+# Half-height of the band and angular sizes of the button and its ring, as a
+# fraction of the radius and in radians. Thicker reads better on small balls.
+BALL_BAND_HALF = 0.13
+BALL_BUTTON = 0.36
+BALL_BUTTON_RING = 0.52
+
+
+def capture_ball(cv, cx, cy, r, spin=0.0, tilt=0.0, lift=0, glow=None):
+    """A shaded capture ball of radius r, turned by spin around its vertical axis and leaning by tilt.
+
+    Drawn pixel by pixel as a sphere: each pixel's point on the surface is
+    turned back by the spin to find its colour (red cap, black band, white
+    base, button facing the viewer at spin 0), then lit. lift raises the
+    cap by that many pixels, as a ball opening; glow recolours the button.
+    """
+    light = (-0.45, -0.6, 0.66)
+    for y in range(int(cy - r - lift - 1), int(cy + r + 2)):
+        for x in range(int(cx - r - 1), int(cx + r + 2)):
+            for part in ("cap", "base"):
+                oy = lift if part == "cap" else 0
+                dx, dy = (x + 0.5 - cx) / r, (y + 0.5 + oy - cy) / r
+                d2 = dx * dx + dy * dy
+                if d2 > 1:
+                    continue
+                # Lean: turn the point back by the tilt in the picture's plane.
+                ct, st = math.cos(-tilt), math.sin(-tilt)
+                nx, ny = dx * ct - dy * st, dx * st + dy * ct
+                if (part == "cap") != (ny < 0):
+                    continue
+                nz = math.sqrt(max(0.0, 1 - nx * nx - ny * ny))
+                sx = nx * math.cos(spin) - nz * math.sin(spin)
+                sz = nx * math.sin(spin) + nz * math.cos(spin)
+                angle = math.acos(max(-1.0, min(1.0, sz)))
+                if abs(ny) < BALL_BAND_HALF or BALL_BUTTON <= angle < BALL_BUTTON_RING:
+                    c = BALL_BAND
+                elif angle < BALL_BUTTON:
+                    c = glow if glow else BALL_BOTTOM
+                else:
+                    c = BALL_TOP if ny < 0 else BALL_BOTTOM
+                lit = max(0.0, dx * light[0] + dy * light[1] + math.sqrt(max(0.0, 1 - d2)) * light[2])
+                c = mix(mix(c, (0, 0, 0), 0.45), c, min(1.0, 0.35 + lit))
+                # One-pixel outline: a pixel with a neighbour off the disc. A
+                # band measured on the radius ate most of a small ball.
+                edge = any(((x + 0.5 + ox - cx) / r) ** 2 + ((y + 0.5 + oy + oy2 - cy) / r) ** 2 > 1
+                           for ox, oy2 in ((1, 0), (-1, 0), (0, 1), (0, -1)))
+                if edge:
+                    c = BALL_OUTLINE
+                elif lit > 0.93 and r >= 5:
+                    c = mix(c, (255, 255, 255), 0.7)
+                cv.put(x, y, c)
+
+
+def spinning_ball(frame, frames):
+    """A capture ball turning on itself over a starry teal glow, sparkles circling it."""
+    deep, glow, ring, spark = rgb("#0B2A33"), rgb("#1F6F73"), rgb("#7FD6C8"), rgb("#FFF4C2")
+    shadow, gold = rgb("#06171C"), rgb("#E2B33C")
+    cv = Canvas(deep)
+    cx, cy = 15.5, 28.5
+    for y in range(H):
+        for x in range(W):
+            d = math.hypot(x + 0.5 - cx, (y + 0.5 - cy) * 0.8)
+            c = mix(glow, deep, min(1.0, d / 22))
+            if noise(x, y, 21) < 0.04:
+                c = mix(c, ring, 0.5)
+            cv.put(x, y, c)
+    phase = frame / frames * 2 * math.pi
+    # Shadow on the ground, narrower when the button faces sideways.
+    for x in range(W):
+        for y in range(43, 47):
+            if ((x + 0.5 - cx) / 9) ** 2 + ((y + 0.5 - 45) / 1.8) ** 2 <= 1:
+                cv.put(x, y, mix(cv.get(x, y), shadow, 0.7))
+    # Four sparkles circling the ball, in front of it on the lower half of their path.
+    sparkles = []
+    for i in range(4):
+        a = phase + i * math.pi / 2
+        sparkles.append((cx + 13 * math.cos(a), cy + 4 * math.sin(a), math.sin(a) > 0))
+    for x, y, front in sparkles:
+        if not front:
+            cv.put(round(x), round(y), mix(spark, deep, 0.4))
+    capture_ball(cv, cx, cy, 10, spin=phase)
+    for x, y, front in sparkles:
+        if front:
+            xi, yi = round(x), round(y)
+            cv.put(xi, yi, spark)
+            for ox, oy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                cv.put(xi + ox, yi + oy, mix(spark, ring, 0.5))
+    hem(cv, shadow, gold)
+    return cv.img
+
+
+def leaf_sprout(cv, cx, cy, scale, tint=None, amount=0.0):
+    """An original little creature: a round green body, two leaf ears and big eyes, sitting on the grass."""
+    body, belly, leaf, leaf_dark = rgb("#5DBB4A"), rgb("#B8E58F"), rgb("#2F8F3A"), rgb("#1F5E28")
+    eye, glint = rgb("#14141A"), rgb("#FFFFFF")
+
+    def put(x, y, c):
+        cv.put(x, y, mix(c, tint, amount) if tint else c)
+
+    if scale <= 0:
+        return
+    r = 4.5 * scale
+    for y in range(int(cy - r - 1), int(cy + r + 2)):
+        for x in range(int(cx - r - 1), int(cx + r + 2)):
+            dx, dy = x + 0.5 - cx, y + 0.5 - cy
+            if dx * dx + (dy * 1.1) ** 2 <= r * r:
+                inner = dx * dx + ((dy - r * 0.35) * 1.4) ** 2 <= (r * 0.55) ** 2
+                edge = dx * dx + (dy * 1.1) ** 2 > (r - 1) ** 2
+                put(x, y, leaf_dark if edge else (belly if inner else body))
+    if scale < 0.5:
+        return
+    # Leaf ears, leaning outwards.
+    for side in (-1, 1):
+        for k in range(int(5 * scale)):
+            x = round(cx + side * (1.5 + k * 0.7) * scale)
+            y = round(cy - r - k * scale)
+            put(x, y, leaf if k < 4 * scale - 1 else leaf_dark)
+            put(x + side, y, leaf_dark)
+    # Eyes, a glint in each.
+    for side in (-1, 1):
+        ex, ey = round(cx + side * 1.6 * scale - 0.5), round(cy - 0.8 * scale)
+        put(ex, ey, eye)
+        put(ex, ey + 1, eye)
+        put(ex + (1 if side < 0 else -1), ey, eye)
+        put(ex, ey, glint)
+
+
+def ball_throw(frame, frames):
+    """A capture ball thrown at an original creature: hit, pulled in, three wobbles, caught.
+
+    The loop is 24 frames: the throw (0-6), the hit (7), the creature pulled
+    into the open ball (8-10), the drop (11-13), three wobbles (14-19) and the
+    sparkles of the catch (20-23).
+    """
+    sky_top, sky_low = rgb("#7EC8E3"), rgb("#F3E3B0")
+    grass, grass_dark, grass_light = rgb("#6FA53C"), rgb("#4C7A2A"), rgb("#9CC75A")
+    flash, beam, star, dark = rgb("#FFFFFF"), rgb("#FF5A4A"), rgb("#FFE27A"), rgb("#2E4A1C")
+    cv = Canvas(sky_top)
+    ground = 41
+    for y in range(H):
+        for x in range(W):
+            if y < ground:
+                c = mix(sky_top, sky_low, y / ground)
+            else:
+                c = mix(grass, grass_dark, (y - ground) / (H - ground))
+                if noise(x, y, 31) < 0.18:
+                    c = grass_light
+            cv.put(x, y, c)
+    # Grass tufts on the horizon line.
+    for x in range(0, W, 3):
+        cv.put(x, ground - 1, grass_dark)
+        cv.put(x + 1, ground - 2, grass)
+    # Sizes read on a banner seen from a few blocks away: a smaller ball
+    # was only its outline, a smaller creature a green dot.
+    sprout_x, sprout_y, sprout_scale = 20.5, 34.5, 1.4
+    flight_r, ground_r = 4, 4.5
+    hit_y = sprout_y - 10
+    land_x, land_y = 20.5, ground - ground_r + 0.5
+    f = frame * 24 // frames
+
+    if f <= 6:
+        leaf_sprout(cv, sprout_x, sprout_y, sprout_scale)
+        t = f / 6
+        # A parabola from the bottom left corner to just above the creature.
+        start_x, start_y = 6.0, 56.0
+        def path(s):
+            return start_x + (sprout_x - start_x) * s, start_y - 2 * (start_y - hit_y) * s + (start_y - hit_y) * s * s
+        for k in range(1, 3):
+            sx, sy = path(max(0.0, t - k * 0.07))
+            cv.put(round(sx), round(sy), mix(flash, sky_low, 0.3 * k))
+        bx, by = path(t)
+        capture_ball(cv, bx, by, flight_r, spin=f * 1.2, tilt=-f * 0.5)
+    elif f == 7:
+        leaf_sprout(cv, sprout_x, sprout_y, sprout_scale, flash, 0.7)
+        for a in range(0, 360, 45):
+            tr = math.radians(a)
+            for k in range(7, 11):
+                cv.put(round(sprout_x + math.cos(tr) * k), round(sprout_y + math.sin(tr) * k), flash)
+        capture_ball(cv, sprout_x, hit_y, flight_r, spin=8.4)
+    elif f <= 10:
+        k = f - 7
+        leaf_sprout(cv, sprout_x, sprout_y + k, sprout_scale * (1 - k / 3), beam, 0.4 + 0.2 * k)
+        bx, by = sprout_x, hit_y
+        for y in range(round(by), round(sprout_y + k)):
+            cv.put(round(bx), y, beam)
+            cv.put(round(bx) - 1, y, mix(beam, flash, 0.4))
+        capture_ball(cv, bx, by, flight_r, lift=2)
+    elif f <= 13:
+        k = f - 10
+        by = hit_y + (land_y - hit_y) * (k / 3) ** 2
+        capture_ball(cv, land_x, by, ground_r)
+    elif f <= 19:
+        tilts = (0.0, -0.45, 0.0, 0.45, 0.0, -0.35)
+        capture_ball(cv, land_x, land_y, ground_r, tilt=tilts[f - 14], glow=beam if f % 2 else None)
+    else:
+        capture_ball(cv, land_x, land_y, ground_r)
+        k = f - 20
+        for i, sx in enumerate((-5, 0, 5)):
+            x, y = round(land_x + sx), round(land_y - 7 - k - (i % 2))
+            cv.put(x, y, star)
+            for ox, oy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                cv.put(x + ox, y + oy, mix(star, flash, 0.3))
+    # The ball's shadow on the grass once it lies there.
+    if f >= 13:
+        for x in range(round(land_x) - 4, round(land_x) + 4):
+            cv.put(x, ground, mix(cv.get(x, ground), dark, 0.5))
+    hem(cv, dark, star)
+    return cv.img
+
+
 def item_icon(crest):
     """Inventory icon: a small banner on its pole, its cloth a shrunk copy of the crest."""
     icon = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
@@ -833,6 +1050,8 @@ def main():
     save_animated("lily_pond", lily_pond, SLOW_FRAMES)
     save_animated("shooting_stars", shooting_stars, FRAMES, CAMPFIRE_FRAME_TICKS)
     save_animated("sun_rays", sun_rays, SLOW_FRAMES)
+    save_animated("spinning_ball", spinning_ball, SLOW_FRAMES, FAST_FRAME_TICKS)
+    save_animated("ball_throw", ball_throw, THROW_FRAMES, CAMPFIRE_FRAME_TICKS)
     save(item_icon(crest), ROOT, "item", "safari_banner.png")
 
 

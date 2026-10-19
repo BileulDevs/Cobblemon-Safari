@@ -45,7 +45,7 @@ The default entries, kept in the file, show the other kinds:
 
 | Key | Example | Default | Effect |
 |---|---|---|---|
-| `hudAnchor`, `hudOffsetX`, `hudOffsetY` | `"TOP_RIGHT"`, `-24`, `24` | `"BOTTOM_LEFT"`, `20`, `-12` | The timer sits in the top right corner. Anchors: `TOP_LEFT`, `TOP_CENTER`, `TOP_RIGHT`, `BOTTOM_LEFT`, `BOTTOM_CENTER`, `BOTTOM_RIGHT`. |
+| `hudAnchor`, `hudOffsetX`, `hudOffsetY` | `"TOP_RIGHT"`, `-24`, `24` | `"BOTTOM_LEFT"`, `20`, `-16` | The timer sits in the top right corner. Anchors: `TOP_LEFT`, `TOP_CENTER`, `TOP_RIGHT`, `BOTTOM_LEFT`, `BOTTOM_CENTER`, `BOTTOM_RIGHT`. |
 | `board.useSprites` | `true` | `false` | Wall screens draw flat sprites instead of 3D models. |
 | `board.panelOpacity` | `0.6` | `0.72` | More of the landscape shows through the panels. |
 | `board.colors.title` | `"#7CFC00"` | `"#FFB000"` | Green titles. |
@@ -288,11 +288,11 @@ What can be drawn and at what price: each rule names an item id or an item tag (
 
 ## Client display (`client.json`)
 
-- `configVersion` = `8`: Bumped when a field changes meaning. Version 6: the board colours moved from `board` to `board.colors`, and `board.pokemonDisplay` (MODEL / SPRITE) became the boolean `board.useSprites`; `SafariClientConfigManager` converts older files. Version 7: the timer moved to the bottom left corner, level with the hotbar. Version 8: the time went back under the stopwatch; files still on the version 6 or 7 default position follow.
+- `configVersion` = `9`: Bumped when a field changes meaning. Version 6: the board colours moved from `board` to `board.colors`, and `board.pokemonDisplay` (MODEL / SPRITE) became the boolean `board.useSprites`; `SafariClientConfigManager` converts older files. Version 7: the timer moved to the bottom left corner, level with the hotbar. Version 8: the time went back under the stopwatch. Version 9: the default sits 4 px higher; files still on the version 6, 7 or 8 default position follow.
 - `hudEnabled` = `true`: Master switch for the timer HUD.
 - `hudAnchor` = `"BOTTOM_LEFT"`: Where the timer is attached.
-- `hudOffsetX` = `20`: Offset of the middle of the timer (the stopwatch with the time under it, 22 px high) from the anchor, in GUI pixels. The default puts it in the bottom left corner, as high as the hotbar and level with it.
-- `hudOffsetY` = `-12`: 
+- `hudOffsetX` = `20`: Offset of the middle of the timer (the stopwatch with the time under it, 22 px high) from the anchor, in GUI pixels. The default puts it in the bottom left corner, a few pixels above the bottom of the screen.
+- `hudOffsetY` = `-16`: 
 - `lowTimeSeconds` = `60`: Below this many seconds the timer turns amber.
 - `criticalTimeSeconds` = `10`: Below this many seconds the timer turns red and pulses.
 

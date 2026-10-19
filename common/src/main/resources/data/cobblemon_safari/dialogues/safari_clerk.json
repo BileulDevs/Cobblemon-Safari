@@ -53,6 +53,14 @@
             "action": "q.dialogue.set_page('leave');"
           },
           {
+            "text": "cobblemon_safari.dialogue.safari_clerk.option.balls",
+            "value": "balls",
+            "action": [
+              "q.player.safari_balls();",
+              "q.dialogue.set_page('balls');"
+            ]
+          },
+          {
             "text": "cobblemon_safari.dialogue.safari_clerk.option.bye",
             "value": "bye",
             "action": "q.dialogue.set_page('bye');"
@@ -85,6 +93,14 @@
           }
         ]
       }
+    },
+    {
+      "id": "balls",
+      "speaker": "npc",
+      "lines": [
+        "cobblemon_safari.dialogue.safari_clerk.balls"
+      ],
+      "input": "q.dialogue.set_page('greeting');"
     },
     {
       "id": "bye",
