@@ -1,6 +1,6 @@
 # Cobblemon Safari
 
-A real Safari Zone for [Cobblemon](https://cobblemon.com). Find a Safari Gate in the overworld, step through with a Safari Ticket, and hunt against the clock on a hand-crafted island that changes every day: fourteen habitats, rare Pokémon of the day, daily missions, rest houses, and a shop paid in Safari points.
+A highly configurable Safari Zone for [Cobblemon](https://cobblemon.com): hunt rare Pokémon of the day against the clock on an island that changes daily. Time limits, allowed Poké Balls, spawns, rewards and the shop are all yours to tune.
 
 [![CurseForge](https://img.shields.io/badge/CurseForge-Cobblemon%20Safari-f16436?logo=curseforge)](https://www.curseforge.com/minecraft/mc-mods/cobblemon-safari)
 [![Minecraft](https://img.shields.io/badge/Minecraft-1.21.1-green?logo=minecraft)](https://www.minecraft.net)
