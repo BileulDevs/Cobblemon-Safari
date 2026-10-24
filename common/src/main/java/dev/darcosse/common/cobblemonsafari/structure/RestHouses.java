@@ -61,6 +61,16 @@ public final class RestHouses {
     public static final int FOOTPRINT_REACH = HALF_SIZE + 2;
 
     /**
+     * Radius, in chunks around a house's centre chunk, of a ticket that
+     * loads everything its build touches (RestHouseTravel, RestHousePrebuilder).
+     * A house and its cleared ring span at most 2 chunks from its centre on
+     * each side, plus the build skirt; 3 makes sure every chunk of the build
+     * and the arrival is fully loaded. Each step up loads about 2 × (2r + 1)
+     * chunks more.
+     */
+    public static final int AREA_TICKET_RADIUS = 3;
+
+    /**
      * How far from its anchor a house may move to find a good spot, in
      * blocks. The entrance stays close: it must remain next to the arrival
      * point. Larger radii find better spots on rough maps, at the
@@ -103,8 +113,10 @@ public final class RestHouses {
      * @param z        centre column
      * @param entrance whether it is the entrance house (the one nearest the arrival point)
      * @param built    whether it stands already; a planned house is only a spot kept clear
+     * @param anchor   index of its anchor in ParkGeometry.REST_HOUSES: what stays the same when a
+     *                 build finds the spot wet and moves the house to its next candidate
      */
-    public record HouseSite(int x, int z, boolean entrance, boolean built) {
+    public record HouseSite(int x, int z, boolean entrance, boolean built, int anchor) {
     }
 
     /** A build under way, and the anchor whose house it is. */
@@ -347,6 +359,14 @@ public final class RestHouses {
         }
     }
 
+    /**
+     * Whether a build is under way, placing blocks or removing the cut
+     * trees: a ticket keeping its house loaded should stay until it ends.
+     */
+    public static boolean isBuilding() {
+        return !builds.isEmpty();
+    }
+
     /** Key of an anchor in {@link #paused}. */
     private static String key(ParkGeometry.Column anchor) {
         return anchor.x() + "," + anchor.z();
@@ -369,12 +389,12 @@ public final class RestHouses {
             ParkGeometry.Column position = ParkGeometry.REST_HOUSES.get(i);
             int[] site = state.houseSite(position.x(), position.z());
             if (site != null) {
-                list.add(new HouseSite(site[0], site[1], i == 0, true));
+                list.add(new HouseSite(site[0], site[1], i == 0, true, i));
                 continue;
             }
             List<int[]> plan = state.housePlan(position.x(), position.z());
             if (!plan.isEmpty()) {
-                list.add(new HouseSite(plan.get(0)[0], plan.get(0)[1], i == 0, false));
+                list.add(new HouseSite(plan.get(0)[0], plan.get(0)[1], i == 0, false, i));
             }
         }
         sites = List.copyOf(list);
@@ -392,7 +412,7 @@ public final class RestHouses {
         List<HouseSite> anchors = new ArrayList<>();
         for (int i = 0; i < ParkGeometry.REST_HOUSES.size(); i++) {
             ParkGeometry.Column anchor = ParkGeometry.REST_HOUSES.get(i);
-            anchors.add(new HouseSite(anchor.x(), anchor.z(), i == 0, false));
+            anchors.add(new HouseSite(anchor.x(), anchor.z(), i == 0, false, i));
         }
         return anchors;
     }
@@ -440,19 +460,40 @@ public final class RestHouses {
     }
 
     /**
-     * The arrival in front of the built rest house nearest to a column, or
-     * the entrance one when none is built yet (it is built at server start,
-     * so this only happens on a broken map). Null when no house is known.
-     * Planned houses are skipped: their spot is only kept clear.
+     * The rest house, built or planned, lying in a compass sector of the
+     * park, or null when there is none.
      */
     @Nullable
-    public static Arrival nearestArrival(int x, int z) {
+    public static HouseSite siteIn(Compass direction) {
+        for (HouseSite site : sites()) {
+            if (Compass.of(site.x(), site.z()) == direction) {
+                return site;
+            }
+        }
+        return null;
+    }
+
+    /** The house of an anchor as it stands now (built, or planned where it will be), or null. */
+    @Nullable
+    public static HouseSite siteOf(int anchor) {
+        for (HouseSite site : sites()) {
+            if (site.anchor() == anchor) {
+                return site;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * The rest house nearest to a column, built or planned, or null when
+     * none is known. A planned one is built when its area is loaded, which
+     * a trip there does (RestHouseTravel).
+     */
+    @Nullable
+    public static HouseSite nearestSite(int x, int z) {
         HouseSite nearest = null;
         long nearestDistance = Long.MAX_VALUE;
         for (HouseSite site : sites()) {
-            if (!site.built()) {
-                continue;
-            }
             long dx = site.x() - x;
             long dz = site.z() - z;
             long distance = dx * dx + dz * dz;
@@ -461,22 +502,7 @@ public final class RestHouses {
                 nearestDistance = distance;
             }
         }
-        return nearest != null ? arrivalOf(nearest) : entranceArrival();
-    }
-
-    /**
-     * The built rest house lying in a compass sector of the park, or null
-     * when the house of that sector is not built yet (nobody went near it
-     * on this map) or there is none.
-     */
-    @Nullable
-    public static HouseSite builtSiteIn(Compass direction) {
-        for (HouseSite site : sites()) {
-            if (site.built() && Compass.of(site.x(), site.z()) == direction) {
-                return site;
-            }
-        }
-        return null;
+        return nearest;
     }
 
     /**

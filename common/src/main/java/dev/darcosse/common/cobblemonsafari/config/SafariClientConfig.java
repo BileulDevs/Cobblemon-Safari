@@ -64,6 +64,17 @@ public class SafariClientConfig {
          */
         public double panelOpacity = 0.72;
 
+        /**
+         * What the bar at the bottom of each kind of screen counts down: the
+         * viewer's hunting time (SESSION, the next rotation when they are not
+         * hunting) or always the next rotation (ROTATION). The specials and
+         * missions show the hunt by default, the record the rotation, which
+         * is when the missions and the shop's goods change.
+         */
+        public WallScreenFooter featuredFooter = WallScreenFooter.SESSION;
+        public WallScreenFooter statsFooter = WallScreenFooter.ROTATION;
+        public WallScreenFooter bountiesFooter = WallScreenFooter.SESSION;
+
         /** Colours of the screens. */
         public BoardColors colors = new BoardColors();
     }

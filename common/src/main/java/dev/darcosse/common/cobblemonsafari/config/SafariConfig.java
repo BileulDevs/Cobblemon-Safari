@@ -98,6 +98,9 @@ public class SafariConfig {
     /** The Escape Rope lent at the entrance, to get out of caves. */
     public EscapeRope escapeRope = new EscapeRope();
 
+    /** Travel to the rest houses: by the Safari Guide of each house, and by the Escape Rope. */
+    public RestHouseTravel restHouseTravel = new RestHouseTravel();
+
     /** Daily missions shown on the wall screens, paid in Safari points. */
     public Bounties bounties = new Bounties();
 
@@ -383,14 +386,50 @@ public class SafariConfig {
         public boolean enabled = true;
 
         /**
-         * Seconds before the same player can travel to a rest house again,
-         * by the rope or by the Safari Guide of a rest house: one wait for
-         * both, or a player could rope to a house and take its guide straight
-         * on. It makes the houses a way back to safety and a slow network,
-         * not instant travel. 0 removes the wait. Climbing to the open air
-         * does not use it.
+         * Former home of {@link RestHouseTravel#cooldownSeconds}, read once
+         * by the config manager to carry an older file's value over (config
+         * version 2), then cleared. Null in any current file: Gson leaves
+         * null fields out when writing, so the key disappears.
          */
-        public int restHouseCooldownSeconds = SafariConfigManager.DEFAULT_ROPE_REST_HOUSE_COOLDOWN_SECONDS;
+        @Deprecated
+        public Integer restHouseCooldownSeconds = null;
+    }
+
+    /**
+     * Travel to the rest houses. Every trip shows a short loading cinematic
+     * while the destination loads, and builds itself first if nobody went
+     * near it on this map yet.
+     */
+    public static class RestHouseTravel {
+        /** The Safari Guide of every rest house; when false, the houses have no guide. */
+        public boolean guideEnabled = true;
+
+        /** The Escape Rope's "nearest rest house" option; climbing to the open air stays. */
+        public boolean ropeEnabled = true;
+
+        /**
+         * Builds every rest house of a new map in the background, one at a
+         * time, from shortly after the server starts, so trips rarely wait
+         * for a house to build. Each house generates its few dozen chunks
+         * off the server thread, then places its blocks over a few ticks.
+         * When false, a house is built the first time a player goes near it
+         * or travels to it.
+         */
+        public boolean prebuildHouses = true;
+
+        /**
+         * Seconds before the same player can travel to a rest house again,
+         * by the guide or by the rope: one wait for both, or a player could
+         * rope to a house and take its guide straight on. 0 removes the wait.
+         */
+        public int cooldownSeconds = SafariConfigManager.DEFAULT_TRAVEL_COOLDOWN_SECONDS;
+
+        /**
+         * Shortest length of the loading cinematic, in seconds, even when the
+         * destination is ready at once. Longer when the destination must load
+         * or be built first. 0 teleports as soon as it is ready.
+         */
+        public int cinematicSeconds = SafariConfigManager.DEFAULT_TRAVEL_CINEMATIC_SECONDS;
     }
 
     /** Catch rate adjustments inside the Safari. */

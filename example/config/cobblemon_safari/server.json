@@ -1,5 +1,5 @@
 {
-  "configVersion": 2,
+  "configVersion": 3,
   "maxDurationSeconds": 3600,
   "allowedBalls": [
     "cobblemon:safari_ball",
@@ -109,8 +109,14 @@
     "shinyBonus": 250
   },
   "escapeRope": {
-    "enabled": true,
-    "restHouseCooldownSeconds": 60
+    "enabled": true
+  },
+  "restHouseTravel": {
+    "guideEnabled": true,
+    "ropeEnabled": true,
+    "prebuildHouses": true,
+    "cooldownSeconds": 60,
+    "cinematicSeconds": 3
   },
   "bounties": {
     "enabled": true,

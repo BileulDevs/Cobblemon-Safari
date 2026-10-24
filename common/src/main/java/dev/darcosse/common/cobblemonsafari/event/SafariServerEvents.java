@@ -18,6 +18,7 @@ import dev.darcosse.common.cobblemonsafari.spawn.FeaturedSync;
 import dev.darcosse.common.cobblemonsafari.spawn.SafariSpawnBoost;
 import dev.darcosse.common.cobblemonsafari.spawn.SafariSpawnFilter;
 import dev.darcosse.common.cobblemonsafari.spawn.SpecialSpawnCounter;
+import dev.darcosse.common.cobblemonsafari.structure.RestHousePrebuilder;
 import dev.darcosse.common.cobblemonsafari.structure.RestHouses;
 import dev.darcosse.common.cobblemonsafari.teleport.RestHouseTravel;
 import net.minecraft.commands.CommandSourceStack;
@@ -70,6 +71,7 @@ public final class SafariServerEvents {
         SafariSpawnBoost.reset();
         SpecialSpawnCounter.reset();
         RestHouseTravel.reset();
+        RestHousePrebuilder.reset();
         SafariBorder.apply(server);
         // A reset map has no rest houses yet, whatever the save says.
         SafariWorldState.get(server).forgetHousesIfMapChanged(SafariMapReset.salt());
@@ -98,6 +100,8 @@ public final class SafariServerEvents {
         SafariSpawnBoost.tick(server);
         RestHouses.tick(server);
         RestHouseStaff.tick(server);
+        RestHouseTravel.tick(server);
+        RestHousePrebuilder.tick(server);
     }
 
     /**

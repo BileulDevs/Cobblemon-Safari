@@ -17,8 +17,9 @@ import java.util.function.Predicate;
  * {@code q.player.safari_shop()}, {@code safari_bounties()},
  * {@code safari_gate()}, {@code safari_leave()}, {@code safari_status()},
  * {@code safari_today()}, {@code safari_balls()}, and the Escape Rope's
- * {@code safari_rope_can_climb()}, {@code safari_rope_climb()} and
- * {@code safari_rope_rest_house()}, and the rest house guide's
+ * {@code safari_rope_can_climb()}, {@code safari_rope_climb()},
+ * {@code safari_rope_can_rest_house()} and {@code safari_rope_rest_house()},
+ * and the rest house guide's
  * {@code safari_guide_can_<direction>()} and {@code safari_guide_go_<direction>()}
  * for each of the eight {@link Compass} directions ({@code safari_guide_go_north_east()}).
  *
@@ -47,6 +48,8 @@ public final class SafariDialogueFunctions {
     public static final String ROPE_CAN_CLIMB = "safari_rope_can_climb";
     public static final String ROPE_CLIMB = "safari_rope_climb";
     public static final String ROPE_REST_HOUSE = "safari_rope_rest_house";
+    /** Whether the rope offers the nearest rest house (restHouseTravel.ropeEnabled). */
+    public static final String ROPE_CAN_REST_HOUSE = "safari_rope_can_rest_house";
     /**
      * Prefixes of the guide's functions, followed by a {@link Compass#id()}.
      * One function per direction rather than one taking the direction as a
@@ -92,6 +95,7 @@ public final class SafariDialogueFunctions {
         functions.put(ROPE_CAN_CLIMB, params -> run(player, EscapeRopeActions::canClimb));
         functions.put(ROPE_CLIMB, params -> run(player, EscapeRopeActions::climb));
         functions.put(ROPE_REST_HOUSE, params -> run(player, EscapeRopeActions::toRestHouse));
+        functions.put(ROPE_CAN_REST_HOUSE, params -> run(player, EscapeRopeActions::canGoToRestHouse));
         for (Compass direction : Compass.values()) {
             functions.put(GUIDE_CAN_PREFIX + direction.id(),
                     params -> run(player, p -> RestHouseTravel.canTravelTo(p, direction)));

@@ -18,7 +18,7 @@ How the files behave:
 - **An invalid value** (a negative price, an hour of 25, a colour that is not a colour...) is replaced by its default or clamped into range, a warning names it in the log, and the file is rewritten with the fixed value.
 - **A file that cannot be read at all** (a missing comma, a stray quote) is never overwritten: the mod runs on the defaults, logs the error, and reads the file again once you fix it.
 - **Unknown keys** are ignored and dropped when the file is rewritten.
-- **`configVersion`** is the format version of the file (`2` for `server.json`). It is not a setting: the mod writes it. A `server.json` at version `1` is converted once on load: its `spawns` species rules are copied to `featured` (see below), so nothing changes in game until you edit them.
+- **`configVersion`** is the format version of the file (`3` for `server.json`). It is not a setting: the mod writes it. A `server.json` at version `1` is converted once on load: its `spawns` species rules are copied to `featured` (see below), so nothing changes in game until you edit them.
 
 Formats used below:
 
@@ -142,8 +142,21 @@ With the default missions, the defaults give about 600 points per hour of active
 
 | Key | Default | What it does |
 |---|---|---|
-| `enabled` | `true` | Lends an Escape Rope to every player entering, taken back on exit. Used in the Safari, it offers to climb to the nearest safe spot in the open air (from a cave) or to go to the nearest rest house. |
-| `restHouseCooldownSeconds` | `60` | Seconds before the same player can travel to a rest house again, with the rope or with the Safari Guide of a rest house: one wait for both, so the two cannot be chained. 0 removes the wait. Climbing to the open air does not use it. At least 0. |
+| `enabled` | `true` | Lends an Escape Rope to every player entering, taken back on exit. Used in the Safari, it offers to climb to the nearest safe spot in the open air (from a cave) or to go to the nearest rest house (see `restHouseTravel`). |
+
+### `restHouseTravel`: trips between the rest houses
+
+The Safari Guide of every rest house takes players to any other house of the island, named by its biome (with its direction, "Jungle Safari (north)", when two houses share a biome). The Escape Rope can take them to the nearest one. Every trip shows a short cinematic while the destination loads; a house nobody went near yet is built during it.
+
+| Key | Default | What it does |
+|---|---|---|
+| `guideEnabled` | `true` | The Safari Guide of every rest house. `false` removes the guides from the houses. |
+| `ropeEnabled` | `true` | The Escape Rope's "nearest rest house" option. Climbing to the open air stays either way. |
+| `prebuildHouses` | `true` | Builds every rest house of a new map in the background, one at a time, from 30 s after the server starts, so trips rarely wait. `false` builds a house the first time a player goes near it or travels to it. |
+| `cooldownSeconds` | `60` | Seconds before the same player can travel again, by the guide or by the rope: one wait for both, so the two cannot be chained. 0 removes the wait. At least 0. |
+| `cinematicSeconds` | `3` | Shortest length of the cinematic, even when the destination is ready at once; longer while it loads or builds (45 s at most, then the trip is given up). 0 to 15. |
+
+A file of version 2 had the wait as `escapeRope.restHouseCooldownSeconds`; its value is moved here on load.
 
 ### `bounties`: missions
 
@@ -339,6 +352,9 @@ These settings belong to each player; a server cannot change them.
 | `useSprites` | `false` | Draws the Pokémon as the mod's flat pixel sprites instead of turning 3D Cobblemon models. A Pokémon without a sprite keeps its model. Resource packs can replace the sprites (`assets/cobblemon_safari/textures/pokemon_sprites/`). |
 | `backgroundImage` | `true` | Shows the safari landscape of the time of day behind the screen. `false` uses the plain `colors.background`. |
 | `panelOpacity` | `0.72` | Opacity of the title band, cells and bars over the landscape, from 0 (invisible) to 1 (opaque). |
+| `featuredFooter` | `"SESSION"` | What the bar at the bottom of the specials screens counts down: `"SESSION"`, your hunting time while you hunt (the next rotation otherwise), or `"ROTATION"`, always the next rotation. |
+| `statsFooter` | `"ROTATION"` | Same, for the record screens. |
+| `bountiesFooter` | `"SESSION"` | Same, for the missions screens. |
 | `colors` | see below | Every colour of the screens. |
 
 ### `board.colors`

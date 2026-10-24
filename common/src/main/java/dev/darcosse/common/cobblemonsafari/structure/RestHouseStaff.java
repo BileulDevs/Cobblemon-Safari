@@ -4,6 +4,7 @@ import com.cobblemon.mod.common.api.npc.NPCClass;
 import com.cobblemon.mod.common.api.npc.NPCClasses;
 import com.cobblemon.mod.common.entity.npc.NPCEntity;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
+import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -20,6 +21,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.function.BiFunction;
+import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 
 /**
@@ -29,7 +31,8 @@ import java.util.function.Function;
  *   ({@code q.player.safari_shop()}, allowed in a rest house) and lists the
  *   missions of the day;</li>
  *   <li>the guide, in the south hall, whose dialogue takes the player to
- *   another rest house already built on this map ({@code RestHouseTravel}).</li>
+ *   another rest house of the map ({@code RestHouseTravel}); only while
+ *   {@code restHouseTravel.guideEnabled} is on, and removed when it is off.</li>
  * </ul>
  *
  * <p>Kept by {@link #tick}: whenever a built house is loaded and misses one
@@ -70,11 +73,12 @@ public final class RestHouseStaff {
     /**
      * One staff member: how to recognise them, their NPC class, where they
      * stand and which way they face, from the house centre and the
-     * direction its door opens toward.
+     * direction its door opens toward, and whether the config wants them.
      */
     private record Role(String tag, ResourceLocation npcClass,
                         BiFunction<BlockPos, Direction, BlockPos> column,
-                        Function<Direction, Direction> facing) {
+                        Function<Direction, Direction> facing,
+                        BooleanSupplier enabled) {
     }
 
     /** Both roles, clerk first: a house loaded for a moment gets its shop before its guide. */
@@ -82,10 +86,12 @@ public final class RestHouseStaff {
             new Role(CLERK_TAG, CobblemonSafari.id("safari_clerk"),
                     (centre, door) -> RestHouseBuilder.clerkColumn(centre.getX(), centre.getZ(), door),
                     // Behind the counter, looking at the door the players come in through.
-                    door -> door),
+                    door -> door,
+                    () -> true),
             new Role(GUIDE_TAG, CobblemonSafari.id("safari_guide"),
                     (centre, door) -> RestHouseBuilder.guideColumn(centre.getX(), centre.getZ(), door),
-                    RestHouseBuilder::guideFacing)
+                    RestHouseBuilder::guideFacing,
+                    () -> SafariConfigManager.get().restHouseTravel.guideEnabled)
     );
 
     private static int ticks;
@@ -133,8 +139,13 @@ public final class RestHouseStaff {
                 centerX + half + 1, level.getMaxBuildHeight(), centerZ + half + 1);
         List<NPCEntity> found = level.getEntitiesOfClass(NPCEntity.class, house,
                 entity -> entity.getTags().contains(role.tag()));
-        for (int i = 1; i < found.size(); i++) {
+        // Switched off in the config: the role goes, and is not brought back.
+        int keep = role.enabled().getAsBoolean() ? 1 : 0;
+        for (int i = keep; i < found.size(); i++) {
             found.get(i).discard();
+        }
+        if (keep == 0) {
+            return;
         }
         if (!found.isEmpty()) {
             return;

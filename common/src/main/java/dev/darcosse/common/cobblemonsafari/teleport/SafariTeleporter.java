@@ -148,19 +148,6 @@ public final class SafariTeleporter {
     }
 
     /**
-     * Moves a player in front of the door of the rest house nearest to them,
-     * facing it, or to the best place to stand near that spot when it is
-     * blocked. Same placement as the arrival at the entrance house.
-     *
-     * @return false when no rest house is known or no place to stand was
-     *         found; the player has not moved
-     */
-    public static boolean sendToRestHouse(ServerPlayer player, ServerLevel level) {
-        RestHouses.Arrival front = RestHouses.nearestArrival(player.getBlockX(), player.getBlockZ());
-        return front != null && sendToArrival(player, level, front);
-    }
-
-    /**
      * Moves a player to a rest house arrival, facing the door, or to the
      * best place to stand near it when the spot is blocked.
      *

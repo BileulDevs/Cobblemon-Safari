@@ -10,6 +10,9 @@
     "useSprites": true,
     "backgroundImage": true,
     "panelOpacity": 0.6,
+    "featuredFooter": "SESSION",
+    "statsFooter": "ROTATION",
+    "bountiesFooter": "SESSION",
     "colors": {
       "bezel": "#1A1C22",
       "background": "#0A1220",

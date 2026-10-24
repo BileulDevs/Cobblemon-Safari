@@ -119,29 +119,25 @@ public final class EscapeRopeActions {
     }
 
     /**
-     * Takes the player in front of the nearest rest house, once per
-     * {@code escapeRope.restHouseCooldownSeconds} (a wait shared with the
-     * Safari Guide). Works in the open air too.
+     * Whether the dialogue offers the nearest rest house: when
+     * {@code restHouseTravel.ropeEnabled} is on.
+     */
+    public static boolean canGoToRestHouse(ServerPlayer player) {
+        return SafariDimensions.isSafari(player.level()) && RestHouseTravel.ropeEnabled();
+    }
+
+    /**
+     * Starts a trip to the nearest rest house, built or not yet, with the
+     * loading cinematic, once per {@code restHouseTravel.cooldownSeconds}
+     * (a wait shared with the Safari Guide). Works in the open air too.
      *
-     * @return whether the player was moved
+     * @return whether the trip started; the player is moved a few seconds later
      */
     public static boolean toRestHouse(ServerPlayer player) {
         if (refuse(player)) {
             return false;
         }
-        int remaining = RestHouseTravel.remainingTicks(player);
-        if (remaining > 0) {
-            player.displayClientMessage(Component.translatable(key("message.rope_rest_house_wait"),
-                    Ticks.format(remaining)), true);
-            return false;
-        }
-        if (!SafariTeleporter.sendToRestHouse(player, (ServerLevel) player.level())) {
-            player.displayClientMessage(Component.translatable(key("message.rope_no_rest_house")), true);
-            return false;
-        }
-        RestHouseTravel.markTravelled(player);
-        arrived(player);
-        return true;
+        return RestHouseTravel.ropeToNearest(player, EscapeRopeActions::startCooldown);
     }
 
     /** Tells the player why the rope refuses, if it does. */
@@ -158,6 +154,14 @@ public final class EscapeRopeActions {
     private static void arrived(ServerPlayer player) {
         player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                 SoundEvents.CHORUS_FRUIT_TELEPORT, SoundSource.PLAYERS, 1.0F, 1.0F);
+        startCooldown(player);
+    }
+
+    /**
+     * The rope's short cooldown alone: after a rest house trip, whose own
+     * arrival already plays the sound (RestHouseTravel).
+     */
+    private static void startCooldown(ServerPlayer player) {
         int cooldown = Ticks.fromSeconds(TELEPORT_COOLDOWN_SECONDS);
         if (cooldown > 0) {
             player.getCooldowns().addCooldown(SafariItems.escapeRope(), cooldown);

@@ -29,7 +29,7 @@ public final class SafariNetwork {
      * version, so that a client of another build is refused at login with a
      * clear message instead of failing on the first packet.
      */
-    public static final String PROTOCOL_VERSION = "1.0.0";
+    public static final String PROTOCOL_VERSION = "1.1.0";
 
     private SafariNetwork() {
     }

@@ -64,12 +64,19 @@ public final class SafariConfigManager {
      * <p>History: 2 split the species rules. Up to 1, {@code spawns.legendary}
      * and its siblings governed every way into the Safari; from 2 they only
      * govern Cobblemon's natural spawns and {@code featured} carries its own
-     * set for the board (see {@link #migrate}).
+     * set for the board (see {@link #migrate}). 3 moved the rest house
+     * travel wait from {@code escapeRope} to {@code restHouseTravel}.
      */
-    public static final int CURRENT_CONFIG_VERSION = 2;
+    public static final int CURRENT_CONFIG_VERSION = 3;
 
     /** First version in which {@code featured} has its own species rules. */
     private static final int SPLIT_SPECIES_RULES_VERSION = 2;
+
+    /**
+     * First version with the {@code restHouseTravel} section; before it, its
+     * wait was {@code escapeRope.restHouseCooldownSeconds}.
+     */
+    private static final int TRAVEL_SECTION_VERSION = 3;
 
     /**
      * Default length of a featured rotation, in minutes: four hours, so the
@@ -85,11 +92,24 @@ public final class SafariConfigManager {
     public static final double DEFAULT_CAUGHT_SPECIES_WEIGHT = 0.4;
 
     /**
-     * Default escapeRope.restHouseCooldownSeconds. Long enough that walking
-     * between two houses is faster than waiting to rope from one to the
-     * next; short enough to come back to a house after the next cave.
+     * Default restHouseTravel.cooldownSeconds. Long enough that the houses
+     * are not an instant network; short enough to come back to a house
+     * after the next cave.
      */
-    public static final int DEFAULT_ROPE_REST_HOUSE_COOLDOWN_SECONDS = 60;
+    public static final int DEFAULT_TRAVEL_COOLDOWN_SECONDS = 60;
+
+    /**
+     * Default restHouseTravel.cinematicSeconds: long enough to read the
+     * destination, short enough not to feel like a loading screen.
+     */
+    public static final int DEFAULT_TRAVEL_CINEMATIC_SECONDS = 3;
+
+    /**
+     * Longest cinematic accepted, in seconds. Beyond it the trip feels
+     * stuck; the wait for the destination itself has its own limit
+     * (RestHouseTravel.MAX_WAIT_SECONDS).
+     */
+    private static final int MAX_TRAVEL_CINEMATIC_SECONDS = 15;
 
     /**
      * Upper bound on loaned balls. A full inventory holds 36 stacks; beyond a
@@ -152,6 +172,19 @@ public final class SafariConfigManager {
             c.featured.copyRulesFrom(c.spawns);
             CobblemonSafari.LOGGER.info("Copied the species rules of spawns to featured in {} (config version {} -> {})",
                     FILE_NAME, c.configVersion, CURRENT_CONFIG_VERSION);
+        }
+        // Read whatever the version: a file saved by a build between 2 and 3
+        // may carry the old key with version 2 or, rewritten by hand, 3.
+        if (c.escapeRope != null && c.escapeRope.restHouseCooldownSeconds != null) {
+            if (c.restHouseTravel == null) {
+                c.restHouseTravel = new SafariConfig.RestHouseTravel();
+            }
+            if (c.configVersion < TRAVEL_SECTION_VERSION) {
+                c.restHouseTravel.cooldownSeconds = c.escapeRope.restHouseCooldownSeconds;
+                CobblemonSafari.LOGGER.info("Moved escapeRope.restHouseCooldownSeconds to restHouseTravel.cooldownSeconds in {}",
+                        FILE_NAME);
+            }
+            c.escapeRope.restHouseCooldownSeconds = null;
         }
     }
 
@@ -449,13 +482,31 @@ public final class SafariConfigManager {
             c.escapeRope = new SafariConfig.EscapeRope();
             corrected = true;
         }
-        if (c.escapeRope.restHouseCooldownSeconds < 0) {
-            warn("escapeRope.restHouseCooldownSeconds", c.escapeRope.restHouseCooldownSeconds, 0);
-            c.escapeRope.restHouseCooldownSeconds = 0;
-            corrected = true;
-        }
+        corrected |= validateTravel(c);
         corrected |= validateSpawns(c);
         corrected |= validateFeatured(c);
+        return corrected;
+    }
+
+    /** Fixes the rest house travel section: no negative wait, a bounded cinematic. Returns true if anything changed. */
+    private static boolean validateTravel(SafariConfig c) {
+        if (c.restHouseTravel == null) {
+            c.restHouseTravel = new SafariConfig.RestHouseTravel();
+            return true;
+        }
+        SafariConfig.RestHouseTravel t = c.restHouseTravel;
+        boolean corrected = false;
+        if (t.cooldownSeconds < 0) {
+            warn("restHouseTravel.cooldownSeconds", t.cooldownSeconds, 0);
+            t.cooldownSeconds = 0;
+            corrected = true;
+        }
+        if (t.cinematicSeconds < 0 || t.cinematicSeconds > MAX_TRAVEL_CINEMATIC_SECONDS) {
+            int fixed = Math.max(0, Math.min(MAX_TRAVEL_CINEMATIC_SECONDS, t.cinematicSeconds));
+            warn("restHouseTravel.cinematicSeconds", t.cinematicSeconds, fixed);
+            t.cinematicSeconds = fixed;
+            corrected = true;
+        }
         return corrected;
     }
 

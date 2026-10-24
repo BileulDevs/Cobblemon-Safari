@@ -33,7 +33,10 @@
         "vertical": true,
         "options": [
           {
-            "text": "cobblemon_safari.dialogue.safari_guide.option.north",
+            "text": {
+              "type": "cobblemon_safari:rest_house_name",
+              "direction": "north"
+            },
             "value": "north",
             "isVisible": "q.player.safari_guide_can_north()",
             "action": [
@@ -42,7 +45,10 @@
             ]
           },
           {
-            "text": "cobblemon_safari.dialogue.safari_guide.option.north_east",
+            "text": {
+              "type": "cobblemon_safari:rest_house_name",
+              "direction": "north_east"
+            },
             "value": "north_east",
             "isVisible": "q.player.safari_guide_can_north_east()",
             "action": [
@@ -51,7 +57,10 @@
             ]
           },
           {
-            "text": "cobblemon_safari.dialogue.safari_guide.option.east",
+            "text": {
+              "type": "cobblemon_safari:rest_house_name",
+              "direction": "east"
+            },
             "value": "east",
             "isVisible": "q.player.safari_guide_can_east()",
             "action": [
@@ -60,7 +69,10 @@
             ]
           },
           {
-            "text": "cobblemon_safari.dialogue.safari_guide.option.south_east",
+            "text": {
+              "type": "cobblemon_safari:rest_house_name",
+              "direction": "south_east"
+            },
             "value": "south_east",
             "isVisible": "q.player.safari_guide_can_south_east()",
             "action": [
@@ -69,7 +81,10 @@
             ]
           },
           {
-            "text": "cobblemon_safari.dialogue.safari_guide.option.south",
+            "text": {
+              "type": "cobblemon_safari:rest_house_name",
+              "direction": "south"
+            },
             "value": "south",
             "isVisible": "q.player.safari_guide_can_south()",
             "action": [
@@ -78,7 +93,10 @@
             ]
           },
           {
-            "text": "cobblemon_safari.dialogue.safari_guide.option.south_west",
+            "text": {
+              "type": "cobblemon_safari:rest_house_name",
+              "direction": "south_west"
+            },
             "value": "south_west",
             "isVisible": "q.player.safari_guide_can_south_west()",
             "action": [
@@ -87,7 +105,10 @@
             ]
           },
           {
-            "text": "cobblemon_safari.dialogue.safari_guide.option.west",
+            "text": {
+              "type": "cobblemon_safari:rest_house_name",
+              "direction": "west"
+            },
             "value": "west",
             "isVisible": "q.player.safari_guide_can_west()",
             "action": [
@@ -96,7 +117,10 @@
             ]
           },
           {
-            "text": "cobblemon_safari.dialogue.safari_guide.option.north_west",
+            "text": {
+              "type": "cobblemon_safari:rest_house_name",
+              "direction": "north_west"
+            },
             "value": "north_west",
             "isVisible": "q.player.safari_guide_can_north_west()",
             "action": [
