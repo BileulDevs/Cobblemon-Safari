@@ -18,7 +18,7 @@ How the files behave:
 - **An invalid value** (a negative price, an hour of 25, a colour that is not a colour...) is replaced by its default or clamped into range, a warning names it in the log, and the file is rewritten with the fixed value.
 - **A file that cannot be read at all** (a missing comma, a stray quote) is never overwritten: the mod runs on the defaults, logs the error, and reads the file again once you fix it.
 - **Unknown keys** are ignored and dropped when the file is rewritten.
-- **`configVersion`** is the format version of the file (`3` for `server.json`). It is not a setting: the mod writes it. A `server.json` at version `1` is converted once on load: its `spawns` species rules are copied to `featured` (see below), so nothing changes in game until you edit them.
+- **`configVersion`** is the format version of the file (`3` for `server.json`, `2` for `shop.json`, `1` for `client.json`). It is not a setting: the mod writes it. A `server.json` at version `1` (Cobblemon Safari 1.0.0) is converted once on load: its `spawns` species rules are copied to `featured` (see below), so nothing changes in game until you edit them. A `shop.json` at version `1` gets the fossil ticket trade added once.
 
 Formats used below:
 
@@ -248,7 +248,7 @@ The Safari Warden (at every gate) and the Safari Clerk (in every rest house) ope
 |---|---|---|
 | `enabled` | `true` | `false` closes the shop: the NPCs say so. |
 | `tabs` | Pokémon, Items, Poké Balls, Cooking, Tickets | Tabs of the shop screen, in display order. See below. |
-| `entries` | 21 entries, see below | The fixed list of what is for sale. |
+| `entries` | 22 entries, see below | The fixed list of what is for sale. |
 | `rotating` | see below | The random Pokémon. |
 | `rotatingItems` | see below | The random items. |
 | `rotatingBalls` | see below | The random Poké Balls. |

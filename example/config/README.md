@@ -41,7 +41,7 @@ JSON has no comments, so this page says what the example files change. [CONFIG.m
 The default entries, kept in the file, show the other kinds:
 - the free daily Safari Balls: `"price": 0`, `"cooldownHours": 24`;
 - plain item and Pokémon purchases;
-- the tickets traded for apricorns, berries or an evolution stone: `cost` with `limitPerRotation`.
+- the tickets traded for apricorns, berries, an evolution stone or a fossil: `cost` with `limitPerRotation`.
 
 ### `client.json`
 

@@ -46,7 +46,7 @@ Cobblemon's natural spawns fill the park too, faster than usual, and they favour
 
 ### Rest houses
 
-Eight Pokémon Centers stand on every map, the entrance one right where you arrive. Each has two Healing Machines, a PC, a cooking corner with a Poké Pot, a **Safari Clerk** who runs the shop, lists the missions and can walk you out early, and a **Safari Guide** who takes you to any other rest house of the island, named by its biome, with a short travel cinematic: a double of you flies off on your own flying Pokémon (or a Staraptor if you have none), seen by everyone around, and lands at the destination (every 30 seconds by default). The Escape Rope's trip has its own pixel-art scene.
+Eight Pokémon Centers stand on every map, the entrance one right where you arrive. Each has two Healing Machines, a PC, a cooking corner with a Poké Pot, a **Safari Clerk** who runs the shop, lists the missions and can walk you out early, and a **Safari Guide** who takes you to any other rest house of the island, named by its biome, with a short travel cinematic: a double of you flies off on your own flying Pokémon (or a Staraptor if you have none), seen by everyone around, and lands at the destination. One trip every 30 seconds by default; the Escape Rope's trip shares that wait and has its own pixel-art scene.
 
 ### Missions and Safari points
 
@@ -65,7 +65,7 @@ A screen on an arm that you can tilt toward the floor or the ceiling, up to thre
 
 ### Escape Rope
 
-Lent on entry and taken back on exit. Use it to choose: climb from a cave to the nearest safe spot in the open air, or go to the nearest rest house (every 30 seconds by default).
+Lent on entry and taken back on exit. Use it to choose: climb from a cave to the nearest safe spot in the open air, or go to the nearest rest house (one trip every 30 seconds by default, shared with the Guide).
 
 ### Everywhere else
 
@@ -131,6 +131,7 @@ In single player, nothing else to do.
 - [CONFIG.md](https://github.com/BileulDevs/Cobblemon-Safari/blob/main/CONFIG.md): every setting of the three config files.
 - [TECHNICAL.md](https://github.com/BileulDevs/Cobblemon-Safari/blob/main/TECHNICAL.md): how the mod works under the hood, for datapack makers and contributors.
 - [example/](https://github.com/BileulDevs/Cobblemon-Safari/tree/main/example): a sample config, datapack and resource pack.
+- [CHANGELOG.md](https://github.com/BileulDevs/Cobblemon-Safari/blob/main/CHANGELOG.md): what changed in each version.
 
 ## Credits & License
 
