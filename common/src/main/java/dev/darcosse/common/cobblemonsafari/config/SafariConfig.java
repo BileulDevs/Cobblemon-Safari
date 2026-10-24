@@ -433,10 +433,11 @@ public class SafariConfig {
 
         /**
          * How the guide's trips are shown: FLIGHT (the player's double flies
-         * off on a Staraptor, seen by everyone around) or PANORAMA (the
-         * painted landscape). FLIGHT falls back to PANORAMA on its own when
-         * the sky is closed or Staraptor is missing. The rope always plays
-         * its own scene.
+         * off on their own flying Pokémon, or a Staraptor, seen by everyone
+         * around) or PANORAMA (the painted landscape). FLIGHT falls back to
+         * PANORAMA on its own when the sky is closed, or when the player has
+         * no flyer and Staraptor is missing. The rope always plays its own
+         * scene.
          */
         public TravelCinematicStyle cinematicStyle = TravelCinematicStyle.FLIGHT;
     }

@@ -10,10 +10,12 @@ package dev.darcosse.common.cobblemonsafari.config;
  */
 public enum TravelCinematicStyle {
     /**
-     * A double of the player, wearing their skin, flies off on a Staraptor
-     * and lands at the destination, filmed by the game's own camera; other
-     * players see it too. Falls back to {@link #PANORAMA} on its own when it
-     * cannot be played (no open sky to take off, Staraptor missing).
+     * A double of the player, wearing their skin, flies off on the first
+     * Pokémon of their party that can be ridden in the air (a Staraptor when
+     * none can) and lands at the destination, filmed by the game's own
+     * camera; other players see it too. Falls back to {@link #PANORAMA} on its own when it
+     * cannot be played (no open sky to take off, no flyer and no
+     * Staraptor).
      */
     FLIGHT,
     /** The painted Safari landscape panning behind black bands. */

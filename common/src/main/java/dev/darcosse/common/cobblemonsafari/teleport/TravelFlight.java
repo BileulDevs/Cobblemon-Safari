@@ -1,12 +1,19 @@
 package dev.darcosse.common.cobblemonsafari.teleport;
 
+import com.cobblemon.mod.common.Cobblemon;
 import com.cobblemon.mod.common.api.npc.NPCClass;
 import com.cobblemon.mod.common.api.npc.NPCClasses;
 import com.cobblemon.mod.common.api.pokemon.PokemonProperties;
+import com.cobblemon.mod.common.api.pokemon.PokemonPropertyExtractor;
 import com.cobblemon.mod.common.api.pokemon.PokemonSpecies;
+import com.cobblemon.mod.common.api.riding.RidingProperties;
+import com.cobblemon.mod.common.api.riding.RidingStyle;
+import com.cobblemon.mod.common.api.riding.behaviour.RidingBehaviourSettings;
 import com.cobblemon.mod.common.entity.npc.NPCEntity;
 import com.cobblemon.mod.common.entity.pokemon.PokemonBehaviourFlag;
 import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
+import com.cobblemon.mod.common.pokemon.Pokemon;
+import com.cobblemon.mod.common.pokemon.properties.UncatchableProperty;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.structure.RestHouses;
 import net.minecraft.core.BlockPos;
@@ -28,15 +35,18 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 /**
- * The actors of the flight cinematic: a Staraptor and, on its back, a double
- * of the travelling player wearing their skin. They take off in front of the
- * house the player leaves and land in front of the one they reach, moved by
- * the server along a fixed path, so every player around sees the same
- * flight.
+ * The actors of the flight cinematic: a flying mount and, on its back, a
+ * double of the travelling player wearing their skin. The mount is a copy of
+ * the first Pokémon of the player's party that can be ridden in the air
+ * ({@link #mountOf}), or a Staraptor when the party has none. They take off
+ * in front of the house the player leaves and land in front of the one they
+ * reach, moved by the server along a fixed path, so every player around sees
+ * the same flight.
  *
  * <p>Why a double rather than the player riding: a client moves the vehicle
  * it controls by itself, so the server could not script the player's own
@@ -57,12 +67,12 @@ final class TravelFlight {
     /** NPC class of the double: no dialogue, the player's skin, a seated pose. */
     private static final ResourceLocation TRAVELLER_CLASS = CobblemonSafari.id("safari_traveller");
 
-    /** The bird's species, checked by {@link #available}; a datapack may remove it. */
+    /** The fallback mount's species, checked by {@link #available}; a datapack may remove it. */
     private static final ResourceLocation BIRD_SPECIES = ResourceLocation.fromNamespaceAndPath("cobblemon", "staraptor");
 
     /**
-     * The bird, as Cobblemon properties. "uncatchable" makes balls bounce
-     * off; shiny is fixed so the same bird flies for everyone, every time.
+     * The fallback mount, as Cobblemon properties. "uncatchable" makes balls
+     * bounce off; shiny is fixed so the same bird flies for everyone, every time.
      * The level only shows on its name plate, which a wild Pokémon hides.
      */
     private static final String BIRD_PROPERTIES = "staraptor level=50 shiny=false uncatchable";
@@ -121,7 +131,7 @@ final class TravelFlight {
     /**
      * One flight under way.
      *
-     * @param bird      the Staraptor
+     * @param bird      the mount: a copy of the player's flyer, or the fallback Staraptor
      * @param rider     the player's double on its back
      * @param spot      the feet position it takes off from or lands on
      * @param direction where it flies toward, horizontal unit vector
@@ -138,12 +148,35 @@ final class TravelFlight {
     }
 
     /**
-     * Whether a flight can be staged at all: the bird species and the
-     * double's NPC class are loaded. Cheap: two registry lookups.
+     * Whether a flight can be staged at all for this player: the double's
+     * NPC class is loaded, and the player has a flyer or the fallback
+     * species exists. Cheap: two registry lookups and a walk over a party of six.
      */
-    static boolean available() {
-        return PokemonSpecies.getByIdentifier(BIRD_SPECIES) != null
-                && NPCClasses.getByIdentifier(TRAVELLER_CLASS) != null;
+    static boolean available(ServerPlayer player) {
+        return NPCClasses.getByIdentifier(TRAVELLER_CLASS) != null
+                && (mountOf(player) != null || PokemonSpecies.getByIdentifier(BIRD_SPECIES) != null);
+    }
+
+    /**
+     * The first Pokémon of the player's party that can carry a rider in the
+     * air, not fainted, or null. "Can carry" is Cobblemon's own riding data:
+     * an AIR riding behaviour and at least one seat. A species that only
+     * flies as a wild Pokémon, without seats, is skipped: the double would
+     * have nowhere to sit and would float above it.
+     */
+    @Nullable
+    private static Pokemon mountOf(ServerPlayer player) {
+        for (Pokemon pokemon : Cobblemon.INSTANCE.getStorage().getParty(player)) {
+            if (pokemon == null || pokemon.isFainted()) {
+                continue;
+            }
+            RidingProperties riding = pokemon.getRiding();
+            Map<RidingStyle, RidingBehaviourSettings> behaviours = riding.getBehaviours();
+            if (behaviours != null && behaviours.containsKey(RidingStyle.AIR) && !riding.getSeats().isEmpty()) {
+                return pokemon;
+            }
+        }
+        return null;
     }
 
     /**
@@ -182,7 +215,7 @@ final class TravelFlight {
         }
         Vec3 first = position(spot, direction, landing, 0.0D);
         float yaw = yawOf(direction);
-        PokemonEntity bird = spawnBird(level, first, yaw);
+        PokemonEntity bird = spawnBird(level, player, first, yaw);
         if (bird == null) {
             return null;
         }
@@ -398,12 +431,32 @@ final class TravelFlight {
         return hit.getType() == HitResult.Type.MISS;
     }
 
-    /** Spawns the bird, frozen in the air until moved, or null when the level refused it. */
+    /**
+     * Spawns the mount, frozen in the air until moved, or null when it could
+     * not be built or the level refused it.
+     *
+     * <p>The player's flyer is copied, never sent out: its species, form,
+     * aspects (shiny, regional form...), gender and level, so it looks the
+     * same, but as a new wild entity. Using the party Pokémon itself would
+     * tie the actor to the party: recalling it, its health, its position in
+     * storage. The copy is uncatchable like the fallback bird.
+     */
     @Nullable
-    private static PokemonEntity spawnBird(ServerLevel level, Vec3 at, float yaw) {
+    private static PokemonEntity spawnBird(ServerLevel level, ServerPlayer player, Vec3 at, float yaw) {
         PokemonEntity bird;
         try {
-            bird = PokemonProperties.Companion.parse(BIRD_PROPERTIES).createEntity(level);
+            Pokemon mount = mountOf(player);
+            PokemonProperties properties;
+            if (mount != null) {
+                properties = mount.createPokemonProperties(PokemonPropertyExtractor.SPECIES,
+                        PokemonPropertyExtractor.FORM, PokemonPropertyExtractor.SHINY,
+                        PokemonPropertyExtractor.ASPECTS, PokemonPropertyExtractor.GENDER,
+                        PokemonPropertyExtractor.LEVEL);
+                properties.getCustomProperties().add(UncatchableProperty.INSTANCE.uncatchable());
+            } else {
+                properties = PokemonProperties.Companion.parse(BIRD_PROPERTIES);
+            }
+            bird = properties.createEntity(level);
         } catch (RuntimeException e) {
             CobblemonSafari.LOGGER.warn("Could not create the travel cinematic's bird: {}", e.toString());
             return null;

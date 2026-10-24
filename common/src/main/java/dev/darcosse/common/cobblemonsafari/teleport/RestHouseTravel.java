@@ -60,7 +60,8 @@ import java.util.function.Consumer;
  *
  * <p>The guide's trips are filmed by default
  * ({@code restHouseTravel.cinematicStyle}: FLIGHT): a double of the player
- * takes off on a Staraptor in front of the house ({@link TravelFlight}),
+ * takes off on their own flying Pokémon (a Staraptor when they have none)
+ * in front of the house ({@link TravelFlight}),
  * the screen goes black while the destination gets ready, then the double
  * lands in front of the destination, where the player already stands,
  * invisible, and takes their place. The rope plays its own pixel-art scene.
@@ -374,13 +375,13 @@ public final class RestHouseTravel {
 
     /**
      * The take-off of the guide's trip, or null when the trip is to be shown
-     * as the painted landscape: the config asks for it, Staraptor or the
-     * double's NPC class is missing, or the bird has no open sky in front of
-     * the house.
+     * as the painted landscape: the config asks for it, there is no mount
+     * at all (no flyer in the party and no Staraptor), the double's NPC
+     * class is missing, or the mount has no open sky in front of the house.
      */
     @Nullable
     private static TravelFlight.Flight stageTakeOff(ServerLevel level, ServerPlayer player, Vec3 heading, int now) {
-        if (config().cinematicStyle != TravelCinematicStyle.FLIGHT || !TravelFlight.available()) {
+        if (config().cinematicStyle != TravelCinematicStyle.FLIGHT || !TravelFlight.available(player)) {
             return null;
         }
         RestHouses.HouseSite here = RestHouses.siteAt(player.getBlockX(), player.getBlockZ(), HOUSE_MARGIN);
