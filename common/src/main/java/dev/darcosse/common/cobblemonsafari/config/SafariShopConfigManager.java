@@ -39,8 +39,14 @@ public final class SafariShopConfigManager {
      * meaning and add the conversion to {@link #validate}; a field added or
      * removed needs no bump, Gson fills new fields with their defaults and
      * ignores unknown keys.
+     *
+     * <p>History: 2 added the fossil ticket trade to existing files
+     * ({@link #addFossilTrade}).
      */
-    public static final int CURRENT_VERSION = 1;
+    public static final int CURRENT_VERSION = 2;
+
+    /** First version whose default entries include the fossil ticket trade. */
+    private static final int FOSSIL_TRADE_VERSION = 2;
 
     /**
      * Most random Pokémon per rotation. Each one is built for the screen
@@ -79,6 +85,27 @@ public final class SafariShopConfigManager {
         config = loaded;
     }
 
+    /**
+     * Adds the default trade of a fossil for a ticket to a file written
+     * before it existed, unless the file already trades fossils. Once only:
+     * the version then moves on, so an operator who removes the entry
+     * afterwards keeps it removed.
+     */
+    private static void addFossilTrade(SafariShopConfig c) {
+        for (SafariShopConfig.Entry entry : c.entries) {
+            if (entry != null && entry.hasCost()) {
+                for (SafariShopConfig.Cost cost : entry.cost) {
+                    if (cost != null && SafariShopConfig.TRADE_FOSSIL_TAG.equals(cost.item)) {
+                        return;
+                    }
+                }
+            }
+        }
+        c.entries.add(SafariShopConfig.fossilTrade());
+        CobblemonSafari.LOGGER.info("Added the fossil ticket trade to {} (shop version {} -> {})", FILE_NAME,
+                c.configVersion, CURRENT_VERSION);
+    }
+
     /** Current shop. Treat as read-only. */
     public static SafariShopConfig get() {
         return config;
@@ -96,6 +123,9 @@ public final class SafariShopConfigManager {
      */
     private static boolean validate(SafariShopConfig c) {
         boolean corrected = false;
+        if (c.configVersion < FOSSIL_TRADE_VERSION && c.entries != null) {
+            addFossilTrade(c);
+        }
         if (c.configVersion != CURRENT_VERSION) {
             // The rewrite also drops keys Gson ignored, so the file shows what is read.
             c.configVersion = CURRENT_VERSION;

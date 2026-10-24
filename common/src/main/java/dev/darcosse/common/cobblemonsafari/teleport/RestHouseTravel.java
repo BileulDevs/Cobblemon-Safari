@@ -4,6 +4,7 @@ import com.cobblemon.mod.common.battles.BattleRegistry;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
+import dev.darcosse.common.cobblemonsafari.config.TravelCinematicStyle;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
 import dev.darcosse.common.cobblemonsafari.network.SafariTravelPayload;
 import dev.darcosse.common.cobblemonsafari.platform.Platform;
@@ -21,17 +22,24 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -49,6 +57,13 @@ import java.util.function.Consumer;
  * {@code restHouseTravel.cinematicSeconds}; the cinematic then fades out on
  * the new place. A trip follows the house's anchor, not a position: a build
  * that finds its spot wet moves the house to its next candidate.
+ *
+ * <p>The guide's trips are filmed by default
+ * ({@code restHouseTravel.cinematicStyle}: FLIGHT): a double of the player
+ * takes off on a Staraptor in front of the house ({@link TravelFlight}),
+ * the screen goes black while the destination gets ready, then the double
+ * lands in front of the destination, where the player already stands,
+ * invisible, and takes their place. The rope plays its own pixel-art scene.
  *
  * <p>One wait between two trips, whichever way they go
  * ({@code restHouseTravel.cooldownSeconds}): with two, a player could rope to
@@ -86,6 +101,20 @@ public final class RestHouseTravel {
      */
     private static final int TICKET_SPARE_SECONDS = 15;
 
+    /**
+     * Ticks between the player's move to the destination and the filming of
+     * the landing, under the black screen: time for the destination's chunks
+     * to reach their client. Shorter shows the landing over missing terrain.
+     */
+    private static final int SETTLE_TICKS = 30;
+
+    /**
+     * Ticks before the end of the take-off at which the client is told to
+     * fade to black. Matches the client's fade (TravelCinematicScreen
+     * SHOT_FADE_MS), so the bird leaves the frame as the black closes.
+     */
+    private static final int BLACK_LEAD_TICKS = 12;
+
     /** Ticket keeping a destination loaded; one per trip, keyed by its chunk. */
     private static final TicketType<ChunkPos> TICKET = TicketType.create(CobblemonSafari.MOD_ID + "_travel",
             Comparator.comparingLong(ChunkPos::toLong), Ticks.fromSeconds(MAX_WAIT_SECONDS + TICKET_SPARE_SECONDS));
@@ -97,23 +126,65 @@ public final class RestHouseTravel {
      */
     private static final int HOUSE_MARGIN = 2;
 
-    /**
-     * A trip under way.
-     *
-     * @param anchor    the destination house, by its anchor
-     * @param startTick server tick it began
-     * @param ticket    centre chunk of its ticket, to remove it; moved with the house when a
-     *                  build finds its spot wet and takes the next candidate
-     * @param arrived   what the source adds once the player is moved (the rope's cooldown)
-     */
-    private record Trip(int anchor, int startTick, ChunkPos ticket, Consumer<ServerPlayer> arrived) {
-
-        /** The same trip with its ticket at another chunk. */
-        Trip withTicket(ChunkPos moved) {
-            return new Trip(anchor, startTick, moved, arrived);
-        }
+    /** Where a trip stands. Painted cinematics go straight to {@link #WAITING}. */
+    private enum Phase {
+        /** The double takes off in front of the house the player leaves. */
+        DEPARTING,
+        /** Black screen (or painted scene) while the destination loads and builds. */
+        WAITING,
+        /** The player stands at the destination; its chunks reach their client before the landing is filmed. */
+        SETTLING,
+        /** The double lands in front of the destination, where the player stands invisible. */
+        LANDING
     }
 
+    /**
+     * A trip under way. Mutable: it moves through its {@link Phase}s, and its
+     * ticket follows the house when a build finds its spot wet and takes the
+     * next candidate.
+     */
+    private static final class Trip {
+        /** The destination house, by its anchor. */
+        final int anchor;
+        /** Server tick it began. */
+        final int startTick;
+        /** What the source adds once the player is moved (the rope's cooldown). */
+        final Consumer<ServerPlayer> arrived;
+        /** Whether this trip plays the flight; false for the painted scenes. */
+        final boolean flying;
+        /** Horizontal unit vector from the house left to the destination: where the double flies. */
+        final Vec3 heading;
+        /** Centre chunk of its ticket, to remove it. */
+        ChunkPos ticket;
+        Phase phase;
+        /** Server tick the current phase began. */
+        int phaseTick;
+        /** The actors of the take-off or landing under way, or null. */
+        @Nullable
+        TravelFlight.Flight flight;
+        /** Where the player was put down at the destination; set from {@link Phase#SETTLING} on. */
+        @Nullable
+        BlockPos landingFeet;
+
+        Trip(int anchor, int startTick, ChunkPos ticket, Consumer<ServerPlayer> arrived,
+             @Nullable TravelFlight.Flight flight, Vec3 heading) {
+            this.anchor = anchor;
+            this.startTick = startTick;
+            this.ticket = ticket;
+            this.arrived = arrived;
+            this.flight = flight;
+            this.flying = flight != null;
+            this.heading = heading;
+            this.phase = flying ? Phase.DEPARTING : Phase.WAITING;
+            this.phaseTick = startTick;
+        }
+
+        /** Moves to the next phase from this tick. */
+        void enter(Phase next, int now) {
+            phase = next;
+            phaseTick = now;
+        }
+    }
     /**
      * The words naming a house: its biome and, when another house shares
      * that biome, its compass direction too. Translation keys, so each
@@ -151,8 +222,11 @@ public final class RestHouseTravel {
     /** Forgets waits, trips and biomes; call when a server starts, as single player reuses this class. */
     public static void reset() {
         READY_AT.clear();
+        // The actors of a previous world's trips, if any, are swept as orphans.
         TRIPS.clear();
         BIOMES.clear();
+        TravelSkins.reset();
+        TravelFlight.reset();
     }
 
     // ---- Waits ------------------------------------------------------------
@@ -221,7 +295,7 @@ public final class RestHouseTravel {
             player.displayClientMessage(Component.translatable(key("message.guide_unreachable")), true);
             return false;
         }
-        start(player, target, ignored -> {
+        start(player, target, Source.GUIDE, ignored -> {
         });
         return true;
     }
@@ -256,43 +330,89 @@ public final class RestHouseTravel {
             player.displayClientMessage(Component.translatable(key("message.rope_no_rest_house")), true);
             return false;
         }
-        start(player, target, arrived);
+        start(player, target, Source.ROPE, arrived);
         return true;
     }
 
     // ---- Trips ------------------------------------------------------------
 
     /**
-     * Starts a trip: loads the destination, opens the cinematic. Cost: one
-     * ticket added; the chunks load over the next ticks, generated off the
-     * server thread when new.
+     * Starts a trip: loads the destination, stages the take-off when the
+     * guide's trip is filmed, and opens the cinematic. Cost: one ticket
+     * added (the chunks load over the next ticks, generated off the server
+     * thread when new); for a flight, a few heightmap and block reads and
+     * two entities spawned.
      */
-    private static void start(ServerPlayer player, RestHouses.HouseSite target, Consumer<ServerPlayer> arrived) {
+    private static void start(ServerPlayer player, RestHouses.HouseSite target, Source source,
+                              Consumer<ServerPlayer> arrived) {
         ServerLevel level = (ServerLevel) player.level();
+        int now = player.getServer().getTickCount();
         ChunkPos centre = new ChunkPos(new BlockPos(target.x(), 0, target.z()));
         level.getChunkSource().addRegionTicket(TICKET, centre, TICKET_RADIUS, centre);
-        TRIPS.put(player.getUUID(), new Trip(target.anchor(), player.getServer().getTickCount(), centre, arrived));
+        Vec3 heading = headingTo(player, target);
+        TravelFlight.Flight flight = source == Source.GUIDE ? stageTakeOff(level, player, heading, now) : null;
+        Trip trip = new Trip(target.anchor(), now, centre, arrived, flight, heading);
+        TRIPS.put(player.getUUID(), trip);
         Label label = labelOf(level, target);
         // The client closes the cinematic by itself a little after the server would give up.
-        int clientTimeout = Ticks.fromSeconds(MAX_WAIT_SECONDS + TICKET_SPARE_SECONDS);
-        Platform.get().sendToPlayer(player, SafariTravelPayload.start(label.biomeKey(), label.directionKey(),
-                clientTimeout));
+        int clientTimeout = Ticks.fromSeconds(MAX_WAIT_SECONDS + TICKET_SPARE_SECONDS)
+                + (flight != null ? TravelFlight.FLIGHT_TICKS * 2 + SETTLE_TICKS : 0);
+        SafariTravelPayload payload;
+        if (flight != null) {
+            payload = SafariTravelPayload.startFlight(label.biomeKey(), label.directionKey(), clientTimeout,
+                    flight.bird().getId(), flight.camera(), flight.look());
+        } else {
+            SafariTravelPayload.Scene scene = source == Source.ROPE ? SafariTravelPayload.Scene.CAVE
+                    : SafariTravelPayload.Scene.LANDSCAPE;
+            payload = SafariTravelPayload.start(scene, label.biomeKey(), label.directionKey(), clientTimeout);
+        }
+        Platform.get().sendToPlayer(player, payload);
+        if (flight != null) {
+            hide(player);
+        }
     }
 
     /**
-     * Moves the players whose destination is ready, and gives up the trips
-     * that cannot end. Called each server tick. Cost: nothing without a trip;
-     * per trip, a player lookup, a battle lookup and, once the cinematic has
-     * run long enough, a house lookup and a loaded-chunk check.
+     * The take-off of the guide's trip, or null when the trip is to be shown
+     * as the painted landscape: the config asks for it, Staraptor or the
+     * double's NPC class is missing, or the bird has no open sky in front of
+     * the house.
+     */
+    @Nullable
+    private static TravelFlight.Flight stageTakeOff(ServerLevel level, ServerPlayer player, Vec3 heading, int now) {
+        if (config().cinematicStyle != TravelCinematicStyle.FLIGHT || !TravelFlight.available()) {
+            return null;
+        }
+        RestHouses.HouseSite here = RestHouses.siteAt(player.getBlockX(), player.getBlockZ(), HOUSE_MARGIN);
+        if (here == null) {
+            return null;
+        }
+        BlockPos feet = SafariTeleporter.arrivalFeet(level, RestHouses.arrivalOf(here));
+        return feet == null ? null : TravelFlight.takeOff(level, player, feet, heading, now);
+    }
+
+    /** Horizontal unit vector from the player toward the destination; south when they stand on it. */
+    private static Vec3 headingTo(ServerPlayer player, RestHouses.HouseSite target) {
+        Vec3 heading = new Vec3(target.x() + 0.5D - player.getX(), 0.0D, target.z() + 0.5D - player.getZ());
+        return heading.lengthSqr() < 1.0E-6D ? new Vec3(0.0D, 0.0D, 1.0D) : heading.normalize();
+    }
+
+    /**
+     * Plays the trips: films the flights, moves the players whose
+     * destination is ready, gives up the trips that cannot end, and sweeps
+     * orphan actors. Called each server tick. Cost: nothing without a trip
+     * but the sweep (one pass over the Safari's entities every 5 s); per
+     * trip, a player lookup and a battle lookup, plus during a flight two
+     * entity moves, and once the cinematic has run long enough a house
+     * lookup and a loaded-chunk check.
      */
     public static void tick(MinecraftServer server) {
+        ServerLevel safari = SafariDimensions.level(server);
+        TravelFlight.sweep(safari, activeActors());
         if (TRIPS.isEmpty()) {
             return;
         }
-        ServerLevel safari = SafariDimensions.level(server);
         int now = server.getTickCount();
-        int minimum = Ticks.fromSeconds(config().cinematicSeconds);
-        int giveUp = Ticks.fromSeconds(MAX_WAIT_SECONDS);
         Iterator<Map.Entry<UUID, Trip>> it = TRIPS.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<UUID, Trip> entry = it.next();
@@ -309,70 +429,197 @@ public final class RestHouseTravel {
                 it.remove();
                 continue;
             }
-            int elapsed = now - trip.startTick();
-            if (elapsed > giveUp) {
-                CobblemonSafari.LOGGER.warn("Trip of {} to rest house {} given up after {} s: the house never got ready",
-                        player.getGameProfile().getName(), trip.anchor(), MAX_WAIT_SECONDS);
-                end(safari, trip, player, "message.guide_unreachable");
+            if (trip.flying) {
+                // Again each tick: a potion effect ending would show the player.
+                player.setInvisible(true);
+            }
+            if (!advance(safari, player, trip, now)) {
                 it.remove();
-                continue;
             }
-            if (elapsed < minimum) {
-                continue;
-            }
-            RestHouses.HouseSite site = RestHouses.siteOf(trip.anchor());
-            if (site == null) {
-                continue;
-            }
-            // A wet spot moved the house to its next candidate, maybe beyond
-            // the ticket: follow it, or the new spot never loads and the trip
-            // waits until it gives up.
-            ChunkPos siteChunk = new ChunkPos(new BlockPos(site.x(), 0, site.z()));
-            if (!siteChunk.equals(trip.ticket())) {
-                safari.getChunkSource().removeRegionTicket(TICKET, trip.ticket(), TICKET_RADIUS, trip.ticket());
-                safari.getChunkSource().addRegionTicket(TICKET, siteChunk, TICKET_RADIUS, siteChunk);
-                trip = trip.withTicket(siteChunk);
-                entry.setValue(trip);
-            }
-            if (!site.built()) {
-                continue;
-            }
-            RestHouses.Arrival arrival = RestHouses.arrivalOf(site);
-            if (!safari.hasChunkAt(arrival.column())) {
-                continue;
-            }
-            it.remove();
-            if (!SafariTeleporter.sendToArrival(player, safari, arrival)) {
-                end(safari, trip, player, "message.guide_unreachable");
-                continue;
-            }
-            markTravelled(player);
-            safari.playSound(null, player.getX(), player.getY(), player.getZ(),
-                    SoundEvents.CHORUS_FRUIT_TELEPORT, SoundSource.PLAYERS, 1.0F, 1.0F);
-            trip.arrived().accept(player);
-            end(safari, trip, player, null);
         }
     }
 
     /**
-     * Ends a trip: removes its ticket, closes the player's cinematic and
-     * tells them why when it failed. The player now there keeps the chunks
-     * loaded on their own.
+     * Plays one tick of a trip's current phase.
+     *
+     * @return false when the trip is over (ended here)
+     */
+    private static boolean advance(ServerLevel safari, ServerPlayer player, Trip trip, int now) {
+        switch (trip.phase) {
+            case DEPARTING -> {
+                TravelFlight.Flight flight = trip.flight;
+                boolean done = flight == null || TravelFlight.tick(flight, now);
+                // Black a little before the bird is gone, so the fade ends as it does.
+                if (now - trip.phaseTick == TravelFlight.FLIGHT_TICKS - BLACK_LEAD_TICKS) {
+                    Platform.get().sendToPlayer(player, SafariTravelPayload.black());
+                }
+                if (done) {
+                    dropFlight(trip);
+                    trip.enter(Phase.WAITING, now);
+                }
+                return true;
+            }
+            case WAITING -> {
+                return waitForDestination(safari, player, trip, now);
+            }
+            case SETTLING -> {
+                if (now - trip.phaseTick < SETTLE_TICKS) {
+                    return true;
+                }
+                TravelFlight.Flight landing = trip.landingFeet == null ? null
+                        : TravelFlight.land(safari, player, trip.landingFeet, trip.heading, now);
+                if (landing == null) {
+                    // No open sky at the destination: straight from black to the player's eyes.
+                    end(safari, trip, player, null);
+                    return false;
+                }
+                trip.flight = landing;
+                trip.enter(Phase.LANDING, now);
+                Platform.get().sendToPlayer(player, SafariTravelPayload.shot(landing.bird().getId(),
+                        landing.camera(), landing.look()));
+                return true;
+            }
+            case LANDING -> {
+                if (trip.flight != null && !TravelFlight.tick(trip.flight, now)) {
+                    return true;
+                }
+                end(safari, trip, player, null);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Waits until the destination stands and the cinematic has run long
+     * enough, then moves the player there.
+     *
+     * @return false when the trip is over (ended here)
+     */
+    private static boolean waitForDestination(ServerLevel safari, ServerPlayer player, Trip trip, int now) {
+        int elapsed = now - trip.startTick;
+        if (elapsed > Ticks.fromSeconds(MAX_WAIT_SECONDS)
+                + (trip.flying ? TravelFlight.FLIGHT_TICKS : 0)) {
+            CobblemonSafari.LOGGER.warn("Trip of {} to rest house {} given up after {} s: the house never got ready",
+                    player.getGameProfile().getName(), trip.anchor, MAX_WAIT_SECONDS);
+            end(safari, trip, player, "message.guide_unreachable");
+            return false;
+        }
+        if (elapsed < Ticks.fromSeconds(config().cinematicSeconds)) {
+            return true;
+        }
+        RestHouses.HouseSite site = RestHouses.siteOf(trip.anchor);
+        if (site == null) {
+            return true;
+        }
+        // A wet spot moved the house to its next candidate, maybe beyond
+        // the ticket: follow it, or the new spot never loads and the trip
+        // waits until it gives up.
+        ChunkPos siteChunk = new ChunkPos(new BlockPos(site.x(), 0, site.z()));
+        if (!siteChunk.equals(trip.ticket)) {
+            safari.getChunkSource().removeRegionTicket(TICKET, trip.ticket, TICKET_RADIUS, trip.ticket);
+            safari.getChunkSource().addRegionTicket(TICKET, siteChunk, TICKET_RADIUS, siteChunk);
+            trip.ticket = siteChunk;
+        }
+        if (!site.built()) {
+            return true;
+        }
+        RestHouses.Arrival arrival = RestHouses.arrivalOf(site);
+        if (!safari.hasChunkAt(arrival.column())) {
+            return true;
+        }
+        BlockPos feet = SafariTeleporter.arrivalFeet(safari, arrival);
+        if (feet == null || !SafariTeleporter.sendToArrival(player, safari, arrival)) {
+            end(safari, trip, player, "message.guide_unreachable");
+            return false;
+        }
+        markTravelled(player);
+        trip.arrived.accept(player);
+        if (trip.flying) {
+            // Invisible where the double will land: the swap at the end shows nothing.
+            trip.landingFeet = feet;
+            trip.enter(Phase.SETTLING, now);
+            return true;
+        }
+        safari.playSound(null, player.getX(), player.getY(), player.getZ(),
+                SoundEvents.CHORUS_FRUIT_TELEPORT, SoundSource.PLAYERS, 1.0F, 1.0F);
+        end(safari, trip, player, null);
+        return false;
+    }
+
+    /**
+     * Ends a trip: removes its ticket and its actors, shows the player
+     * again, closes their cinematic and tells them why when it failed. The
+     * player now there keeps the chunks loaded on their own.
      *
      * @param reason translation key (without the mod prefix) of the failure, or null
      */
     private static void end(@Nullable ServerLevel safari, Trip trip, @Nullable ServerPlayer player,
                             @Nullable String reason) {
         if (safari != null) {
-            safari.getChunkSource().removeRegionTicket(TICKET, trip.ticket(), TICKET_RADIUS, trip.ticket());
+            safari.getChunkSource().removeRegionTicket(TICKET, trip.ticket, TICKET_RADIUS, trip.ticket);
         }
+        dropFlight(trip);
         if (player == null) {
             return;
+        }
+        if (trip.flying) {
+            show(player);
         }
         Platform.get().sendToPlayer(player, SafariTravelPayload.end());
         if (reason != null) {
             player.displayClientMessage(Component.translatable(key(reason)), true);
         }
+    }
+
+    /** Removes the actors of the trip's take-off or landing, if any. */
+    private static void dropFlight(Trip trip) {
+        if (trip.flight != null) {
+            TravelFlight.discard(trip.flight);
+            trip.flight = null;
+        }
+    }
+
+    /**
+     * Hides the player while their double flies. Their armour and held
+     * items still show to others, as for any invisible player: hiding those
+     * would take a client change on every viewer.
+     */
+    private static void hide(ServerPlayer player) {
+        player.setInvisible(true);
+    }
+
+    /** Shows the player again, unless an invisibility effect of their own keeps them hidden. */
+    private static void show(ServerPlayer player) {
+        player.setInvisible(player.hasEffect(MobEffects.INVISIBILITY));
+    }
+
+    /** The UUIDs of the actors of every flight under way, which the sweep must spare. */
+    private static Set<UUID> activeActors() {
+        if (TRIPS.isEmpty()) {
+            return Set.of();
+        }
+        Set<UUID> actors = new HashSet<>();
+        for (Trip trip : TRIPS.values()) {
+            if (trip.flight != null) {
+                actors.add(trip.flight.bird().getUUID());
+                actors.add(trip.flight.rider().getUUID());
+            }
+        }
+        return actors;
+    }
+
+    /**
+     * Whether damage must be cancelled: to a player on a trip (they cannot
+     * see nor move behind the cinematic) and to the flight's actors. All of
+     * it but {@code /kill} and the void, like the rest house staff.
+     */
+    public static boolean shouldCancelDamage(Entity entity, DamageSource source) {
+        if (source.is(DamageTypes.GENERIC_KILL) || source.is(DamageTypes.FELL_OUT_OF_WORLD)) {
+            return false;
+        }
+        return entity.getTags().contains(TravelFlight.ACTOR_TAG)
+                || entity instanceof ServerPlayer player && isTravelling(player);
     }
 
     // ---- Names ------------------------------------------------------------

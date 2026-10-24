@@ -78,7 +78,8 @@ public class SafariShopConfig {
             Entry.cooking("minecraft:milk_bucket", 1, 20),
             Entry.ticketTrade(TRADE_APRICORN_TAG, TRADE_APRICORNS),
             Entry.ticketTrade(TRADE_BERRY_TAG, TRADE_BERRIES),
-            Entry.ticketTrade(TRADE_STONE_TAG, TRADE_STONES)
+            Entry.ticketTrade(TRADE_STONE_TAG, TRADE_STONES),
+            fossilTrade()
     ));
 
     /**
@@ -104,18 +105,26 @@ public class SafariShopConfig {
      * Default ticket trades: overworld goods the warden takes for one
      * ticket, each once per player and rotation (TRADE_LIMIT), any kind
      * of each (Cobblemon's item tags). Apricorns and berries are farmed,
-     * evolution stones are mined: three ways in for three play styles. With
-     * 3 trades and a 4 h rotation, trading alone gives up to 1 h 30 of
-     * Safari time per rotation; raise the counts or lower the limit to make
-     * tickets scarcer.
+     * evolution stones and fossils are mined: four ways in for the play
+     * styles of the overworld. With 4 trades and a 4 h rotation, trading
+     * alone gives up to 2 h of Safari time per rotation; raise the counts or
+     * lower the limit to make tickets scarcer.
      */
     static final int TRADE_APRICORNS = 16;
     static final int TRADE_BERRIES = 24;
     static final int TRADE_STONES = 1;
+    /** One fossil, any kind: rarer than a stone in most worlds, so one is enough. */
+    static final int TRADE_FOSSILS = 1;
     static final int TRADE_LIMIT = 1;
     static final String TRADE_APRICORN_TAG = "#cobblemon:apricorns";
     static final String TRADE_BERRY_TAG = "#cobblemon:berries";
     static final String TRADE_STONE_TAG = "#cobblemon:evolution_stones";
+    static final String TRADE_FOSSIL_TAG = "#cobblemon:fossils";
+
+    /** The fossil ticket trade; also added to older files by SafariShopConfigManager. */
+    static Entry fossilTrade() {
+        return Entry.ticketTrade(TRADE_FOSSIL_TAG, TRADE_FOSSILS);
+    }
 
     /**
      * Pokémon drawn at random for each rotation of the Safari specials, sold

@@ -153,8 +153,9 @@ The Safari Guide of every rest house takes players to any other house of the isl
 | `guideEnabled` | `true` | The Safari Guide of every rest house. `false` removes the guides from the houses. |
 | `ropeEnabled` | `true` | The Escape Rope's "nearest rest house" option. Climbing to the open air stays either way. |
 | `prebuildHouses` | `true` | Builds every rest house of a new map in the background, one at a time, from 30 s after the server starts, so trips rarely wait. `false` builds a house the first time a player goes near it or travels to it. |
-| `cooldownSeconds` | `60` | Seconds before the same player can travel again, by the guide or by the rope: one wait for both, so the two cannot be chained. 0 removes the wait. At least 0. |
+| `cooldownSeconds` | `30` | Seconds before the same player can travel again, by the guide or by the rope: one wait for both, so the two cannot be chained. 0 removes the wait. At least 0. |
 | `cinematicSeconds` | `3` | Shortest length of the cinematic, even when the destination is ready at once; longer while it loads or builds (45 s at most, then the trip is given up). 0 to 15. |
+| `cinematicStyle` | `"FLIGHT"` | How the guide's trips are shown. `"FLIGHT"`: a double of the player, wearing their skin, takes off on a Staraptor in front of the house and lands in front of the destination, filmed by the game camera; players around see it too. `"PANORAMA"`: the painted landscape between black bands. FLIGHT falls back to PANORAMA by itself when the bird has no open sky in front of the house or Staraptor is missing. The Escape Rope always plays its own pixel-art scene. |
 
 A file of version 2 had the wait as `escapeRope.restHouseCooldownSeconds`; its value is moved here on load.
 
@@ -273,7 +274,7 @@ Each entry is an item or a Pokémon. Entries appear in the order of the file wit
 | `count` | items | Stack given per purchase, 1 to 64. |
 | `pokemon` | Pokémon | Cobblemon properties, e.g. `"dratini level=15"`. The Pokémon goes to the party, or the PC when the party is full. |
 | `price` | both | Cost in Safari points (0 for free). For a Pokémon, `"auto"` prices it like the random ones: the base price of its rarity in the Safari times its evolution stage. |
-| `cost` | both | Items taken in exchange, on top of `price`: a list of `{"item": ..., "count": ...}`, each `item` an id or a `#tag` (any mix of the tag's items counts). Leave it out for a plain purchase. |
+| `cost` | both | Items taken in exchange, on top of `price`: a list of `{"item": ..., "count": ...}`, each `item` an id or a `#tag` (any mix of the tag's items counts; a player carrying several kinds picks which one is given first). Leave it out for a plain purchase. |
 | `limitPerRotation` | both | How many times each player may buy it per rotation. Leave it out for no limit. |
 | `cooldownHours` | both | Hours each player waits after buying it before buying it again, in real time (the wait goes on while the player or the server is offline). Leave it out for no wait. Up to a year. |
 | `tab` | both | Id of the tab showing it. Empty or unknown: `pokemon` for Pokémon, `balls` for items whose id ends in `_ball`, `tickets` for Safari Tickets, `items` otherwise. The mod writes the chosen tab back. |
@@ -284,7 +285,7 @@ The default entries show every kind:
 - **Items**: Rare Candy, Exp. Candy M, Ability Capsule, Poké Balls, Great Balls and Ultra Balls.
 - **Free daily Safari Balls**: 30 `cobblemon:safari_ball` for 0 points with `"cooldownHours": 24`. The card shows "Free" and a "Take" button.
 - **Cooking**: what the rest houses' Poké Pot needs (Hearty Grains, Vivichoke, Medicinal Leek, Tasty Tail, Galarica Nuts, Pep-Up Flower, Energy Root, honey, sugar, milk).
-- **Ticket trades**: one Safari Ticket for 16 `#cobblemon:apricorns`, 24 `#cobblemon:berries` or 1 `#cobblemon:evolution_stones`, each `"limitPerRotation": 1`.
+- **Ticket trades**: one Safari Ticket for 16 `#cobblemon:apricorns`, 24 `#cobblemon:berries`, 1 `#cobblemon:evolution_stones` or 1 `#cobblemon:fossils`, each `"limitPerRotation": 1`. A `shop.json` from before the fossil trade (version 1) gets it added once on load, unless it already trades fossils.
 
 ### `rotating`: random Pokémon
 

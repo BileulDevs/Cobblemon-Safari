@@ -96,7 +96,7 @@ public final class SafariConfigManager {
      * are not an instant network; short enough to come back to a house
      * after the next cave.
      */
-    public static final int DEFAULT_TRAVEL_COOLDOWN_SECONDS = 60;
+    public static final int DEFAULT_TRAVEL_COOLDOWN_SECONDS = 30;
 
     /**
      * Default restHouseTravel.cinematicSeconds: long enough to read the
@@ -505,6 +505,13 @@ public final class SafariConfigManager {
             int fixed = Math.max(0, Math.min(MAX_TRAVEL_CINEMATIC_SECONDS, t.cinematicSeconds));
             warn("restHouseTravel.cinematicSeconds", t.cinematicSeconds, fixed);
             t.cinematicSeconds = fixed;
+            corrected = true;
+        }
+        // Gson leaves null for a value that names no constant (a typo).
+        if (t.cinematicStyle == null) {
+            CobblemonSafari.LOGGER.warn("{}: restHouseTravel.cinematicStyle is not FLIGHT or PANORAMA; using FLIGHT",
+                    FILE_NAME);
+            t.cinematicStyle = TravelCinematicStyle.FLIGHT;
             corrected = true;
         }
         return corrected;

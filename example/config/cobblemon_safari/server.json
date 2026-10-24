@@ -115,8 +115,9 @@
     "guideEnabled": true,
     "ropeEnabled": true,
     "prebuildHouses": true,
-    "cooldownSeconds": 60,
-    "cinematicSeconds": 3
+    "cooldownSeconds": 30,
+    "cinematicSeconds": 3,
+    "cinematicStyle": "FLIGHT"
   },
   "bounties": {
     "enabled": true,

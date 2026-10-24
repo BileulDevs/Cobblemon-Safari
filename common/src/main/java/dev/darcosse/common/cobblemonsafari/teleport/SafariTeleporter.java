@@ -154,18 +154,27 @@ public final class SafariTeleporter {
      * @return false when no place to stand was found; the player has not moved
      */
     public static boolean sendToArrival(ServerPlayer player, ServerLevel level, RestHouses.Arrival front) {
-        int x = front.column().getX();
-        int z = front.column().getZ();
-        BlockPos feet = surface(level, x, z);
-        if (!isSafe(level, feet)) {
-            feet = findStandingSpotNear(level, x, z);
-            if (feet == null) {
-                return false;
-            }
+        BlockPos feet = arrivalFeet(level, front);
+        if (feet == null) {
+            return false;
         }
         // Level gaze, as on entry: the player sees the house.
         teleport(player, level, feet.getX() + 0.5, feet.getY(), feet.getZ() + 0.5, front.yaw(), 0.0F);
         return true;
+    }
+
+    /**
+     * Where {@link #sendToArrival} would put the player's feet, or null when
+     * there is nowhere to stand. Also where the travel cinematic's bird lands
+     * and takes off, so the double and the player stand on the same block.
+     * Loads the chunks it reads, like {@link #findStandingSpotNear}.
+     */
+    @Nullable
+    public static BlockPos arrivalFeet(ServerLevel level, RestHouses.Arrival front) {
+        int x = front.column().getX();
+        int z = front.column().getZ();
+        BlockPos feet = surface(level, x, z);
+        return isSafe(level, feet) ? feet : findStandingSpotNear(level, x, z);
     }
 
     /**

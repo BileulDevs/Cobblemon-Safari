@@ -430,6 +430,15 @@ public class SafariConfig {
          * or be built first. 0 teleports as soon as it is ready.
          */
         public int cinematicSeconds = SafariConfigManager.DEFAULT_TRAVEL_CINEMATIC_SECONDS;
+
+        /**
+         * How the guide's trips are shown: FLIGHT (the player's double flies
+         * off on a Staraptor, seen by everyone around) or PANORAMA (the
+         * painted landscape). FLIGHT falls back to PANORAMA on its own when
+         * the sky is closed or Staraptor is missing. The rope always plays
+         * its own scene.
+         */
+        public TravelCinematicStyle cinematicStyle = TravelCinematicStyle.FLIGHT;
     }
 
     /** Catch rate adjustments inside the Safari. */

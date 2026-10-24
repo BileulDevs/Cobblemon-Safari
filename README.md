@@ -30,7 +30,7 @@ Rare lodges in the overworld's plains, meadows, light forests and savannas. Stan
 ### Timed hunts
 
 - **Safari Tickets** add 30 minutes of Safari time, banked up to 4 hours. Entering at a gate spends the bank, up to 2 hours per hunt.
-- **Earn tickets** by trading overworld goods at the shop (16 Apricorns, 24 Berries or 1 evolution stone, once per rotation each) or by finding them in village houses, desert and jungle temples and Cobblemon ruins.
+- **Earn tickets** by trading overworld goods at the shop (16 Apricorns, 24 Berries, 1 evolution stone or 1 fossil, once per rotation each, choosing which kind you give) or by finding them in village houses, desert and jungle temples and Cobblemon ruins.
 - **A stopwatch HUD**, made of a Safari Ball, whose hand spins faster as time runs out, with chat warnings from 15 minutes down to 10 seconds.
 - **An end-of-game recap** with every Pokémon caught. Leave early through a rest house clerk and the unused time goes back to your bank.
 
@@ -46,7 +46,7 @@ Cobblemon's natural spawns fill the park too, faster than usual, and they favour
 
 ### Rest houses
 
-Eight Pokémon Centers stand on every map, the entrance one right where you arrive. Each has two Healing Machines, a PC, a cooking corner with a Poké Pot, a **Safari Clerk** who runs the shop, lists the missions and can walk you out early, and a **Safari Guide** who takes you to any other rest house of the island, named by its biome, with a short travel cinematic (once a minute by default).
+Eight Pokémon Centers stand on every map, the entrance one right where you arrive. Each has two Healing Machines, a PC, a cooking corner with a Poké Pot, a **Safari Clerk** who runs the shop, lists the missions and can walk you out early, and a **Safari Guide** who takes you to any other rest house of the island, named by its biome, with a short travel cinematic: a double of you flies off on a Staraptor, seen by everyone around, and lands at the destination (every 30 seconds by default). The Escape Rope's trip has its own pixel-art scene.
 
 ### Missions and Safari points
 
@@ -65,7 +65,7 @@ A screen on an arm that you can tilt toward the floor or the ceiling, up to thre
 
 ### Escape Rope
 
-Lent on entry and taken back on exit. Use it to choose: climb from a cave to the nearest safe spot in the open air, or go to the nearest rest house (once a minute by default).
+Lent on entry and taken back on exit. Use it to choose: climb from a cave to the nearest safe spot in the open air, or go to the nearest rest house (every 30 seconds by default).
 
 ### Everywhere else
 
@@ -78,7 +78,7 @@ Lent on entry and taken back on exit. Use it to choose: climb from a cave to the
 
 ## How to play
 
-1. Get a **Safari Ticket**: trade Apricorns, Berries or an evolution stone at a Safari shop, or loot one from a chest.
+1. Get a **Safari Ticket**: trade Apricorns, Berries, an evolution stone or a fossil at a Safari shop, or loot one from a chest.
 2. **Use the ticket** (right-click) to bank its time. `/safari` shows your time and points.
 3. Find a **Safari Gate** and stand in its pane, or ask the warden.
 4. **Hunt**: throw your Safari Balls, check the wall screens for the specials and missions, heal at the rest houses.

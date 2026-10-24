@@ -1,5 +1,5 @@
 {
-  "configVersion": 1,
+  "configVersion": 2,
   "enabled": true,
   "tabs": [
     {
@@ -196,6 +196,20 @@
       "cost": [
         {
           "item": "#cobblemon:evolution_stones",
+          "count": 1
+        }
+      ],
+      "limitPerRotation": 1,
+      "tab": ""
+    },
+    {
+      "type": "item",
+      "item": "cobblemon_safari:safari_ticket",
+      "count": 1,
+      "price": 0,
+      "cost": [
+        {
+          "item": "#cobblemon:fossils",
           "count": 1
         }
       ],

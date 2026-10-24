@@ -208,6 +208,6 @@ public final class SafariServerEvents {
      */
     public static boolean onIncomingDamage(LivingEntity entity, DamageSource source) {
         return SafariProtection.shouldCancelDamage(entity, source) || GateResidents.shouldCancelDamage(entity, source)
-                || RestHouseStaff.shouldCancelDamage(entity, source);
+                || RestHouseStaff.shouldCancelDamage(entity, source) || RestHouseTravel.shouldCancelDamage(entity, source);
     }
 }

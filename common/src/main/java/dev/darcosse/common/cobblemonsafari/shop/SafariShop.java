@@ -92,7 +92,7 @@ public final class SafariShop {
             // now be another species, which the buyer never saw.
             player.displayClientMessage(Component.translatable(key("message.shop_changed")), true);
         } else {
-            buy(player, entries.get(request.index()), RotatingShop.period());
+            buy(player, entries.get(request.index()), RotatingShop.period(), request.preferred());
         }
         SafariNetwork.sendShop(player, snapshot(player, true));
     }
@@ -352,16 +352,23 @@ public final class SafariShop {
     }
 
     /**
-     * Removes a cost's items from the player's inventory, whichever of the
-     * accepted items come first (a tag cost takes a mix). Only call after
-     * {@link #carried} checked them.
+     * Removes a cost's items from the player's inventory: the kind the
+     * player chose first, then the other accepted kinds in the tag's order
+     * (a tag cost may take a mix when the chosen kind is not enough). Only
+     * call after {@link #carried} checked them.
      *
+     * <p>Without a choice, the tag's order alone decides. That is what took
+     * "a random stone" from a player carrying several: the first one the tag
+     * lists, which the player could not see nor pick.
+     *
+     * @param preferred id of the kind to take first, or "" for none; ignored
+     *                  when the cost does not accept it (a stale or forged choice)
      * @return the stacks taken, to give back if the purchase fails
      */
-    private static List<ItemStack> take(ServerPlayer player, SafariShopPayload.Cost cost) {
+    private static List<ItemStack> take(ServerPlayer player, SafariShopPayload.Cost cost, String preferred) {
         List<ItemStack> taken = new ArrayList<>();
         int left = cost.count();
-        for (ItemStack item : cost.items()) {
+        for (ItemStack item : inTakingOrder(cost, preferred)) {
             if (left == 0) {
                 break;
             }
@@ -374,6 +381,22 @@ public final class SafariShop {
         }
         player.containerMenu.broadcastChanges();
         return taken;
+    }
+
+    /** The kinds a cost accepts, the preferred one moved to the front when it is one of them. */
+    private static List<ItemStack> inTakingOrder(SafariShopPayload.Cost cost, String preferred) {
+        if (preferred.isEmpty()) {
+            return cost.items();
+        }
+        List<ItemStack> ordered = new ArrayList<>(cost.items().size());
+        for (ItemStack item : cost.items()) {
+            if (BuiltInRegistries.ITEM.getKey(item.getItem()).toString().equals(preferred)) {
+                ordered.add(0, item);
+            } else {
+                ordered.add(item);
+            }
+        }
+        return ordered;
     }
 
     /** Gives back items taken for a purchase that could not be delivered. */
@@ -394,8 +417,12 @@ public final class SafariShop {
      * the points and the items, then hands over the goods. Points and items
      * are given back if the goods cannot be delivered (broken entry, party
      * and PC both full).
+     *
+     * @param preferred for each cost, the kind the player chose to give first, or ""; missing
+     *                  values (an older or shorter list) count as ""
      */
-    private static void buy(ServerPlayer player, SafariShopConfig.Entry entry, long rotation) {
+    private static void buy(ServerPlayer player, SafariShopConfig.Entry entry, long rotation,
+                            List<String> preferred) {
         List<SafariShopPayload.Cost> costs = costs(entry);
         if (costs == null) {
             player.displayClientMessage(Component.translatable(key("message.shop_failed")), true);
@@ -427,8 +454,8 @@ public final class SafariShop {
             return;
         }
         List<ItemStack> taken = new ArrayList<>();
-        for (SafariShopPayload.Cost cost : costs) {
-            taken.addAll(take(player, cost));
+        for (int i = 0; i < costs.size(); i++) {
+            taken.addAll(take(player, costs.get(i), i < preferred.size() ? preferred.get(i) : ""));
         }
         Component bought = entry.isPokemon() ? givePokemon(player, entry) : giveItem(player, entry);
         if (bought == null) {
@@ -450,18 +477,19 @@ public final class SafariShop {
             player.sendSystemMessage(Component.translatable(key("message.shop_bought"), bought,
                     SafariPointsIcon.amount(entry.price), SafariPointsIcon.amount(SafariPoints.balance(player))));
         } else {
-            player.sendSystemMessage(Component.translatable(key("message.shop_traded"), describeCosts(costs), bought));
+            // What was really taken, kind by kind: the player sees which stone went.
+            player.sendSystemMessage(Component.translatable(key("message.shop_traded"), describeTaken(taken), bought));
         }
     }
 
-    /** "16 × Red Apricorn, 1 × Fire Stone", for the trade message. */
-    private static Component describeCosts(List<SafariShopPayload.Cost> costs) {
+    /** "10 × Red Apricorn, 6 × Blue Apricorn", the stacks a trade took, for its message. */
+    private static Component describeTaken(List<ItemStack> taken) {
         MutableComponent text = Component.empty();
-        for (int i = 0; i < costs.size(); i++) {
+        for (int i = 0; i < taken.size(); i++) {
             if (i > 0) {
                 text.append(", ");
             }
-            text.append(Component.literal(costs.get(i).count() + " × ").append(costs.get(i).name()));
+            text.append(Component.literal(taken.get(i).getCount() + " × ").append(taken.get(i).getHoverName()));
         }
         return text;
     }

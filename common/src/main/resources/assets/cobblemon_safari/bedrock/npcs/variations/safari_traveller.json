@@ -1,0 +1,27 @@
+{
+  "name": "cobblemon_safari:safari_traveller",
+  "order": 0,
+  "variations": [
+    {
+      "aspects": [],
+      "poser": "cobblemon_safari:safari_traveller",
+      "model": "cobblemon:trainer.geo",
+      "texture": "cobblemon:textures/npcs/standard/trainer.png",
+      "layers": []
+    },
+    {
+      "aspects": ["model-default"],
+      "poser": "cobblemon_safari:safari_traveller",
+      "model": "cobblemon:steve.geo",
+      "texture": "variable",
+      "layers": []
+    },
+    {
+      "aspects": ["model-slim"],
+      "poser": "cobblemon_safari:safari_traveller",
+      "model": "cobblemon:alex.geo",
+      "texture": "variable",
+      "layers": []
+    }
+  ]
+}
