@@ -433,13 +433,73 @@ public final class RestHouses {
     public static Arrival entranceArrival() {
         for (HouseSite site : sites()) {
             if (site.entrance()) {
-                Direction facing = doorFacing(site.x(), site.z());
-                // Looking back at the house: the opposite of where its door opens.
-                return new Arrival(RestHouseBuilder.arrivalColumn(site.x(), site.z(), facing),
-                        facing.getOpposite().toYRot());
+                return arrivalOf(site);
             }
         }
         return null;
+    }
+
+    /**
+     * The arrival in front of the built rest house nearest to a column, or
+     * the entrance one when none is built yet (it is built at server start,
+     * so this only happens on a broken map). Null when no house is known.
+     * Planned houses are skipped: their spot is only kept clear.
+     */
+    @Nullable
+    public static Arrival nearestArrival(int x, int z) {
+        HouseSite nearest = null;
+        long nearestDistance = Long.MAX_VALUE;
+        for (HouseSite site : sites()) {
+            if (!site.built()) {
+                continue;
+            }
+            long dx = site.x() - x;
+            long dz = site.z() - z;
+            long distance = dx * dx + dz * dz;
+            if (distance < nearestDistance) {
+                nearest = site;
+                nearestDistance = distance;
+            }
+        }
+        return nearest != null ? arrivalOf(nearest) : entranceArrival();
+    }
+
+    /**
+     * The built rest house lying in a compass sector of the park, or null
+     * when the house of that sector is not built yet (nobody went near it
+     * on this map) or there is none.
+     */
+    @Nullable
+    public static HouseSite builtSiteIn(Compass direction) {
+        for (HouseSite site : sites()) {
+            if (site.built() && Compass.of(site.x(), site.z()) == direction) {
+                return site;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * The house whose square (walls and plaza, {@link #HALF_SIZE} around its
+     * centre, plus {@code margin}) holds a column, or null.
+     */
+    @Nullable
+    public static HouseSite siteAt(int x, int z, int margin) {
+        int reach = HALF_SIZE + margin;
+        for (HouseSite site : sites()) {
+            if (Math.abs(x - site.x()) <= reach && Math.abs(z - site.z()) <= reach) {
+                return site;
+            }
+        }
+        return null;
+    }
+
+    /** The arrival in front of one house's steps, facing its door. */
+    public static Arrival arrivalOf(HouseSite site) {
+        Direction facing = doorFacing(site.x(), site.z());
+        // Looking back at the house: the opposite of where its door opens.
+        return new Arrival(RestHouseBuilder.arrivalColumn(site.x(), site.z(), facing),
+                facing.getOpposite().toYRot());
     }
 
     /**

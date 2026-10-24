@@ -95,6 +95,19 @@ final class RestHouseBuilder {
     static final int CLERK_Z = 9;
 
     /**
+     * Template cell, on its floor, where the Safari Guide stands: in the
+     * south hall, in front of the slab counter along the south wall, with
+     * two free blocks above. Moving it onto furniture leaves the house
+     * without a guide (no floor with headroom is found there); it must also
+     * stay off the walkway between the door and the Healing Machines.
+     */
+    static final int GUIDE_X = 12;
+    static final int GUIDE_Z = 15;
+
+    /** Direction the guide faces in the template, as saved: north (local -Z), toward the middle of the hall. */
+    private static final Direction GUIDE_TEMPLATE_FACING = Direction.NORTH;
+
+    /**
      * Template column where arriving players stand: the grass in front of
      * the steps, on the door's axis. One block further in, the awning over
      * the entrance would be taken for the ground.
@@ -277,6 +290,20 @@ final class RestHouseBuilder {
     /** World column where the clerk stands, behind the counter; see {@link #CLERK_X}. */
     static BlockPos clerkColumn(int centerX, int centerZ, Direction facing) {
         return column(centerX, centerZ, facing, CLERK_X, CLERK_Z);
+    }
+
+    /** World column where the Safari Guide stands, in the south hall; see {@link #GUIDE_X}. */
+    static BlockPos guideColumn(int centerX, int centerZ, Direction facing) {
+        return column(centerX, centerZ, facing, GUIDE_X, GUIDE_Z);
+    }
+
+    /**
+     * The world direction the guide faces in a house whose door opens
+     * toward {@code facing}: the template's direction turned like the
+     * template itself.
+     */
+    static Direction guideFacing(Direction facing) {
+        return rotationFor(facing).rotate(GUIDE_TEMPLATE_FACING);
     }
 
     /** World column where arriving players stand, in front of the steps; see {@link #ARRIVAL_X}. */

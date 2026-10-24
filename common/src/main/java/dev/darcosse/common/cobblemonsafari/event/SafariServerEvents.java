@@ -2,7 +2,7 @@ package dev.darcosse.common.cobblemonsafari.event;
 
 import dev.darcosse.common.cobblemonsafari.network.SafariNetwork;
 import com.mojang.brigadier.CommandDispatcher;
-import dev.darcosse.common.cobblemonsafari.structure.RestHouseClerk;
+import dev.darcosse.common.cobblemonsafari.structure.RestHouseStaff;
 import dev.darcosse.common.cobblemonsafari.capture.CaptureGuard;
 import dev.darcosse.common.cobblemonsafari.command.SafariCommands;
 import dev.darcosse.common.cobblemonsafari.park.SafariBorder;
@@ -16,8 +16,10 @@ import dev.darcosse.common.cobblemonsafari.spawn.FeaturedRotation;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedSpawner;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedSync;
 import dev.darcosse.common.cobblemonsafari.spawn.SafariSpawnBoost;
+import dev.darcosse.common.cobblemonsafari.spawn.SafariSpawnFilter;
 import dev.darcosse.common.cobblemonsafari.spawn.SpecialSpawnCounter;
 import dev.darcosse.common.cobblemonsafari.structure.RestHouses;
+import dev.darcosse.common.cobblemonsafari.teleport.RestHouseTravel;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -67,6 +69,7 @@ public final class SafariServerEvents {
         SafariBounties.reset();
         SafariSpawnBoost.reset();
         SpecialSpawnCounter.reset();
+        RestHouseTravel.reset();
         SafariBorder.apply(server);
         // A reset map has no rest houses yet, whatever the save says.
         SafariWorldState.get(server).forgetHousesIfMapChanged(SafariMapReset.salt());
@@ -75,11 +78,13 @@ public final class SafariServerEvents {
     }
 
     /**
-     * Datapacks were reloaded: spawn files or biome tags may have changed, so
-     * the habitat index and today's specials are rebuilt on next use.
+     * Datapacks were reloaded: spawn files, biome tags or species labels may
+     * have changed, so the habitat index, today's specials and the natural
+     * spawn filter are rebuilt on next use.
      */
     public static void onDataReload(MinecraftServer server) {
         FeaturedRotation.invalidate();
+        SafariSpawnFilter.invalidate();
     }
 
     /** End of every server tick. */
@@ -92,7 +97,7 @@ public final class SafariServerEvents {
         SafariBounties.tick(server);
         SafariSpawnBoost.tick(server);
         RestHouses.tick(server);
-        RestHouseClerk.tick(server);
+        RestHouseStaff.tick(server);
     }
 
     /**
@@ -199,6 +204,6 @@ public final class SafariServerEvents {
      */
     public static boolean onIncomingDamage(LivingEntity entity, DamageSource source) {
         return SafariProtection.shouldCancelDamage(entity, source) || GateResidents.shouldCancelDamage(entity, source)
-                || RestHouseClerk.shouldCancelDamage(entity, source);
+                || RestHouseStaff.shouldCancelDamage(entity, source);
     }
 }

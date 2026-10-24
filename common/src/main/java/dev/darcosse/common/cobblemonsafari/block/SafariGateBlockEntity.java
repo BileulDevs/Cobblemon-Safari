@@ -10,6 +10,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -19,7 +20,8 @@ import java.util.List;
  * Block entity of a Safari Gate block. The one at the gate's bottom corner
  * (lowest block, smallest coordinate along the axis) is the gate's
  * caretaker: every few seconds it makes sure the roaming Pokémon are there,
- * and the warden too when the gate keeps one. The others only count ticks.
+ * and the warden too when the gate keeps one; every second it also keeps the
+ * warden off the pane. The others only count ticks.
  *
  * <p>Two flags are saved. {@link #KEEPS_WARDEN_KEY}: true for the blocks of
  * a generated Safari Gate structure, false for a block an operator places by
@@ -54,6 +56,16 @@ public class SafariGateBlockEntity extends BlockEntity {
      * come back faster at a higher cost.
      */
     private static final int CHECK_INTERVAL_TICKS = 100;
+
+    /**
+     * Ticks between two checks that the warden keeps clear of the pane
+     * (GateResidents.keepWardenClearOfPane). Shorter turns him back sooner
+     * when he strolls toward the pane, at one entity box query per gate per
+     * check while a player is near. Must divide {@link #CHECK_INTERVAL_TICKS}:
+     * both share the same phase, so the resident check lands on a clearance
+     * tick and the corner work is done once.
+     */
+    private static final int PANE_GUARD_INTERVAL_TICKS = 20;
 
     /**
      * Delay before the first check after the block entity loads. Entities
@@ -153,9 +165,11 @@ public class SafariGateBlockEntity extends BlockEntity {
                 && isCorner(level, pos, state)) {
             startClearing(clearLevel, pos, state, gate);
         }
+        // Offset by position so that the gates of a loaded area do not all work on the same tick.
+        int phase = Math.floorMod(gate.ticksLoaded + pos.hashCode(), CHECK_INTERVAL_TICKS);
+        boolean residentCheck = phase == 0;
         if (gate.ticksLoaded < WARMUP_TICKS
-                // Offset by position so that the gates of a loaded area do not all work on the same tick.
-                || Math.floorMod(gate.ticksLoaded + pos.hashCode(), CHECK_INTERVAL_TICKS) != 0
+                || phase % PANE_GUARD_INTERVAL_TICKS != 0
                 || !(level instanceof ServerLevel serverLevel)
                 || !isCorner(level, pos, state)) {
             return;
@@ -164,6 +178,10 @@ public class SafariGateBlockEntity extends BlockEntity {
         int width = widthOf(level, pos, axis);
         Direction along = Direction.fromAxisAndDirection(axis, Direction.AxisDirection.POSITIVE);
         BlockPos middle = pos.relative(along, width / 2);
+        GateResidents.keepWardenClearOfPane(serverLevel, middle, axis, paneBox(level, pos, along, width));
+        if (!residentCheck) {
+            return;
+        }
         List<SafariGateBlockEntity> blocks = gateBlocks(level, pos, along, width);
         if (gate.clearing == null && blocks.stream().anyMatch(block -> block.clearTrees)) {
             // A gate whose flag sits on another block than the corner (widened by hand, or set with /data).
@@ -198,6 +216,22 @@ public class SafariGateBlockEntity extends BlockEntity {
         Direction back = Direction.fromAxisAndDirection(state.getValue(SafariGateBlock.AXIS),
                 Direction.AxisDirection.NEGATIVE);
         return !isGate(level, pos.below()) && !isGate(level, pos.relative(back));
+    }
+
+    /**
+     * The gate's pane as a block-aligned box, from the corner: its bottom row
+     * and the height of the corner's column. A gate with uneven columns
+     * (rebuilt by hand) is measured by its first column.
+     */
+    private static AABB paneBox(Level level, BlockPos corner, Direction along, int width) {
+        int height = 1;
+        while (height < MAX_GATE_SPAN && isGate(level, corner.above(height))) {
+            height++;
+        }
+        // The corner has the smallest coordinate along the axis (see isCorner),
+        // so the far block is above and after it on every axis.
+        BlockPos far = corner.relative(along, width - 1).above(height - 1);
+        return new AABB(corner.getX(), corner.getY(), corner.getZ(), far.getX() + 1, far.getY() + 1, far.getZ() + 1);
     }
 
     /** Number of gate blocks in the bottom row, from the corner along the axis. */

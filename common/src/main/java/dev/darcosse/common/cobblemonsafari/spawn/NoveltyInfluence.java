@@ -8,7 +8,6 @@ import com.cobblemon.mod.common.api.spawning.spawner.PlayerSpawner;
 import com.cobblemon.mod.common.api.spawning.spawner.Spawner;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
 
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -33,9 +32,6 @@ public final class NoveltyInfluence implements SpawningInfluence {
 
     /** The one instance; spawners hold it, so it is found again by identity. */
     public static final NoveltyInfluence INSTANCE = new NoveltyInfluence();
-
-    /** Namespace of a species written without one in spawn data ("pikachu"). */
-    private static final String DEFAULT_NAMESPACE = "cobblemon:";
 
     /** Weight of caught species, from the config; 1 means no effect. */
     private static volatile float caughtWeight = 1.0F;
@@ -97,18 +93,9 @@ public final class NoveltyInfluence implements SpawningInfluence {
         }
         Set<String> caught = CAUGHT.get(playerSpawner.getUuid());
         String species = pokemonDetail.getPokemon().getSpecies();
-        if (caught == null || species == null || !caught.contains(normalize(species))) {
+        if (caught == null || species == null || !caught.contains(SpeciesRules.normalizeId(species))) {
             return weight;
         }
         return weight * factor;
-    }
-
-    /**
-     * A species as spawn data writes it ("pikachu", "cobblemon:pikachu") in
-     * the form the stats keep ("cobblemon:pikachu").
-     */
-    private static String normalize(String species) {
-        String lower = species.toLowerCase(Locale.ROOT);
-        return lower.indexOf(':') >= 0 ? lower : DEFAULT_NAMESPACE + lower;
     }
 }

@@ -21,8 +21,10 @@ JSON has no comments, so this page says what the example files change. [CONFIG.m
 | `ticketLoot.sources` | adds `minecraft:chests/shipwreck_treasure` at `0.2` | 8 sources | Shipwreck treasure chests may hold a ticket. A folder ending in `/` (`cobblemon:ruins/common/`) covers every table under it. |
 | `gate.companions` | adds `scyther level=30 shiny=yes` | Kangaskhan, Tauros, Chansey | A shiny Scyther roams around each gate. Any Cobblemon properties work. |
 | `bounties.count` | `4` | `3` | Four missions per rotation. |
-| `spawns.legendary.allowSpawn` | `true` | `false` | Legendaries can appear, at most one of each species per rotation (`maxSpawnPerPokemon`). |
-| `spawns.excludedSpecies` | `["cobblemon:ditto"]` | `[]` | Ditto never appears in the Safari. |
+| `spawns.legendary.allowSpawn` | `true` | `false` | Legendaries can come through Cobblemon's natural spawns, at most one of each species per rotation (`maxSpawnPerPokemon`). |
+| `spawns.excludedSpecies` | `["cobblemon:ditto"]` | `[]` | Ditto never comes through the natural spawns. |
+| `featured.legendary.allowSpawn` | `true` | `false` | Legendaries can be drawn on the board and brought in by the mod, at most one of each species per rotation, counted apart from the natural ones. |
+| `featured.excludedSpecies` | `["cobblemon:ditto"]` | `[]` | Ditto is never one of the specials. |
 | `featured.rotationMinutes` | `1440` | `240` | One set of specials, missions and shop Pokémon per day instead of every four hours. |
 
 ### `shop.json`

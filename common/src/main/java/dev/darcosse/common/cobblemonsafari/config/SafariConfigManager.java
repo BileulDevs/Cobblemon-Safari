@@ -60,8 +60,16 @@ public final class SafariConfigManager {
      * meaning and add the conversion to {@link #load}; a field added or
      * removed needs no bump, Gson fills new fields with their defaults and
      * ignores unknown keys.
+     *
+     * <p>History: 2 split the species rules. Up to 1, {@code spawns.legendary}
+     * and its siblings governed every way into the Safari; from 2 they only
+     * govern Cobblemon's natural spawns and {@code featured} carries its own
+     * set for the board (see {@link #migrate}).
      */
-    public static final int CURRENT_CONFIG_VERSION = 1;
+    public static final int CURRENT_CONFIG_VERSION = 2;
+
+    /** First version in which {@code featured} has its own species rules. */
+    private static final int SPLIT_SPECIES_RULES_VERSION = 2;
 
     /**
      * Default length of a featured rotation, in minutes: four hours, so the
@@ -75,6 +83,13 @@ public final class SafariConfigManager {
      * barely noticeable.
      */
     public static final double DEFAULT_CAUGHT_SPECIES_WEIGHT = 0.4;
+
+    /**
+     * Default escapeRope.restHouseCooldownSeconds. Long enough that walking
+     * between two houses is faster than waiting to rope from one to the
+     * next; short enough to come back to a house after the next cave.
+     */
+    public static final int DEFAULT_ROPE_REST_HOUSE_COOLDOWN_SECONDS = 60;
 
     /**
      * Upper bound on loaned balls. A full inventory holds 36 stacks; beyond a
@@ -103,6 +118,7 @@ public final class SafariConfigManager {
     public static void load() {
         SafariConfig loaded = FILE.read();
         boolean outdated = loaded.configVersion != CURRENT_CONFIG_VERSION;
+        migrate(loaded);
         // The rewrite also drops keys Gson ignored, so the file shows what is read.
         loaded.configVersion = CURRENT_CONFIG_VERSION;
         if (validate(loaded) || outdated) {
@@ -112,6 +128,31 @@ public final class SafariConfigManager {
         rebuildDerived();
         // Same lifecycle: /safari reload re-reads the shop too.
         SafariShopConfigManager.load();
+    }
+
+    /**
+     * Converts a file written by an older version of the mod, before it is
+     * validated. Each step only runs for files older than the version that
+     * introduced it.
+     */
+    private static void migrate(SafariConfig c) {
+        // Gson builds a missing featured section, or missing keys in it, from
+        // the default constructor, so "absent" cannot be told from "set to the
+        // defaults": the version is the only reliable signal. Without this
+        // copy, a server that allowed legendaries in v1 would silently lose
+        // them from the board on update.
+        if (c.configVersion < SPLIT_SPECIES_RULES_VERSION && c.spawns != null) {
+            if (c.featured == null) {
+                c.featured = new SafariConfig.Featured();
+            }
+            ensureCategories(c.spawns);
+            if (c.spawns.excludedSpecies == null) {
+                c.spawns.excludedSpecies = new ArrayList<>();
+            }
+            c.featured.copyRulesFrom(c.spawns);
+            CobblemonSafari.LOGGER.info("Copied the species rules of spawns to featured in {} (config version {} -> {})",
+                    FILE_NAME, c.configVersion, CURRENT_CONFIG_VERSION);
+        }
     }
 
     /** Re-reads the file; callers are responsible for re-syncing clients afterwards. */
@@ -190,30 +231,53 @@ public final class SafariConfigManager {
     }
 
     /**
-     * Replaces missing category sections with defaults.
+     * Replaces missing category sections of one rules section with defaults.
+     * Only an explicit {@code null} in the file gets here: an absent key is
+     * already filled by Gson from the field initialiser.
      *
      * @return true if one was missing
      */
-    private static boolean ensureCategories(SafariConfig.Spawns spawns) {
+    private static boolean ensureCategories(SafariConfig.SpeciesRulesSection section) {
         boolean missing = false;
-        if (spawns.legendary == null) {
-            spawns.legendary = new SafariConfig.SpecialCategory();
+        if (section.legendary == null) {
+            section.legendary = new SafariConfig.SpecialCategory();
             missing = true;
         }
-        if (spawns.mythical == null) {
-            spawns.mythical = new SafariConfig.SpecialCategory();
+        if (section.mythical == null) {
+            section.mythical = new SafariConfig.SpecialCategory();
             missing = true;
         }
-        if (spawns.ultraBeast == null) {
-            spawns.ultraBeast = new SafariConfig.SpecialCategory();
+        if (section.ultraBeast == null) {
+            section.ultraBeast = new SafariConfig.SpecialCategory();
             missing = true;
         }
-        if (spawns.paradox == null) {
-            spawns.paradox = SafariConfig.SpecialCategory.of(SafariConfig.Spawns.PARADOX_DEFAULT_ALLOWED,
-                    SafariConfig.Spawns.PARADOX_DEFAULT_CAP);
+        if (section.paradox == null) {
+            section.paradox = SafariConfig.SpecialCategory.of(SafariConfig.SpeciesRulesSection.PARADOX_DEFAULT_ALLOWED,
+                    SafariConfig.SpeciesRulesSection.PARADOX_DEFAULT_CAP);
             missing = true;
         }
         return missing;
+    }
+
+    /**
+     * Fixes the categories and exclusions of one rules section ({@code spawns}
+     * or {@code featured}).
+     *
+     * @param name the section's key, for the log
+     * @return true if anything changed
+     */
+    private static boolean validateSpeciesRules(String name, SafariConfig.SpeciesRulesSection section) {
+        boolean corrected = false;
+        if (section.excludedSpecies == null) {
+            section.excludedSpecies = new ArrayList<>();
+            corrected = true;
+        }
+        corrected |= ensureCategories(section);
+        corrected |= validateCategory(name + ".legendary", section.legendary);
+        corrected |= validateCategory(name + ".mythical", section.mythical);
+        corrected |= validateCategory(name + ".ultraBeast", section.ultraBeast);
+        corrected |= validateCategory(name + ".paradox", section.paradox);
+        return corrected;
     }
 
     /**
@@ -385,6 +449,11 @@ public final class SafariConfigManager {
             c.escapeRope = new SafariConfig.EscapeRope();
             corrected = true;
         }
+        if (c.escapeRope.restHouseCooldownSeconds < 0) {
+            warn("escapeRope.restHouseCooldownSeconds", c.escapeRope.restHouseCooldownSeconds, 0);
+            c.escapeRope.restHouseCooldownSeconds = 0;
+            corrected = true;
+        }
         corrected |= validateSpawns(c);
         corrected |= validateFeatured(c);
         return corrected;
@@ -484,10 +553,6 @@ public final class SafariConfigManager {
             c.spawns = new SafariConfig.Spawns();
             return true;
         }
-        if (c.spawns.excludedSpecies == null) {
-            c.spawns.excludedSpecies = new ArrayList<>();
-            corrected = true;
-        }
         if (!(c.spawns.spawnRateMultiplier >= MIN_SPAWN_MULTIPLIER && c.spawns.spawnRateMultiplier <= MAX_SPAWN_MULTIPLIER)) {
             double fixed = clampMultiplier(c.spawns.spawnRateMultiplier);
             warn("spawns.spawnRateMultiplier", c.spawns.spawnRateMultiplier, fixed);
@@ -514,11 +579,7 @@ public final class SafariConfigManager {
             c.spawns.maxSameSpeciesNearby = 0;
             corrected = true;
         }
-        corrected |= ensureCategories(c.spawns);
-        corrected |= validateCategory("spawns.legendary", c.spawns.legendary);
-        corrected |= validateCategory("spawns.mythical", c.spawns.mythical);
-        corrected |= validateCategory("spawns.ultraBeast", c.spawns.ultraBeast);
-        corrected |= validateCategory("spawns.paradox", c.spawns.paradox);
+        corrected |= validateSpeciesRules("spawns", c.spawns);
         return corrected;
     }
 
@@ -575,6 +636,7 @@ public final class SafariConfigManager {
             f.maxNearbyPerPlayer = 0;
             corrected = true;
         }
+        corrected |= validateSpeciesRules("featured", f);
         return corrected;
     }
 

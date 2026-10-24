@@ -55,7 +55,7 @@ public final class FeaturedRotation {
      * Species with no natural spawn anywhere (most legendaries, some data
      * pack species) may be featured, their habitat guessed from their types.
      * Whether a legendary can actually be drawn is the job of the
-     * spawns.legendary section (and its siblings); this only makes such
+     * featured.legendary section (and its siblings); this only makes such
      * species known to the index.
      */
     private static final boolean INCLUDE_WITHOUT_NATURAL_SPAWN = true;
@@ -237,7 +237,7 @@ public final class FeaturedRotation {
         // The index is sorted by species id, so pools are built in a stable
         // order before shuffling: required for the draw to be reproducible.
         for (HabitatEntry entry : index.values()) {
-            if (entry.rarity() == Rarity.COMMON || !SpeciesRules.isAllowed(entry.species())) {
+            if (entry.rarity() == Rarity.COMMON || !SpeciesRules.isAllowed(entry.species(), SpawnSource.FEATURED)) {
                 continue;
             }
             if (!entry.natural() && !INCLUDE_WITHOUT_NATURAL_SPAWN) {

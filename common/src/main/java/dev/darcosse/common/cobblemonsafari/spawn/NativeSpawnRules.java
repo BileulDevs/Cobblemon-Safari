@@ -17,14 +17,22 @@ import net.minecraft.world.phys.AABB;
  *
  * <p>Thanks to the biome tag bridge, the native spawner fills each habitat
  * with its natural fauna. This filter adds the Safari's rules on top:
- * Cobblemon's spawning gamerule, forbidden categories and species, the
- * per-rotation cap of legendary-class species ({@link SpecialSpawnCounter}),
- * and a same-species density cap so that one very common Pokémon cannot take
- * over a whole habitat.
+ * Cobblemon's spawning gamerule, the categories and species forbidden by
+ * {@code spawns}, the per-rotation cap of legendary-class species
+ * ({@link SpecialSpawnCounter}, natural count), and a same-species density
+ * cap so that one very common Pokémon cannot take over a whole habitat.
+ *
+ * <p>This is the last line, not the first: cancelling here happens after
+ * Cobblemon has picked the species, so the attempt is lost. A forbidden
+ * species with a huge weight would win almost every pick and leave the park
+ * empty. {@link SafariSpawnFilter} takes the same species out of the pick
+ * itself on players' spawners; this filter still catches what it cannot see
+ * (other spawners, the second it lags behind, a spot more crowded than the
+ * area around the player).
  *
  * <p>The mod's own special spawns do not go through Cobblemon's spawner and
- * are not filtered here; {@link FeaturedSpawner} applies the same species
- * rules itself.
+ * are not filtered here; {@link FeaturedSpawner} applies the rules of
+ * {@code featured} itself, which may differ from these.
  */
 public final class NativeSpawnRules {
 
@@ -32,9 +40,11 @@ public final class NativeSpawnRules {
      * Radius of the same-species cap (spawns.maxSameSpeciesNearby), in
      * blocks. Wider spreads a herd's cap over more of the habitat; each check
      * is one entity query over the box. Quoted in the comment of
-     * spawns.maxSameSpeciesNearby (SafariConfig): keep both in step.
+     * spawns.maxSameSpeciesNearby (SafariConfig): keep both in step. Also
+     * the radius SafariSpawnFilter counts around each player, once a second;
+     * package-private for that.
      */
-    private static final int SAME_SPECIES_RADIUS = 48;
+    static final int SAME_SPECIES_RADIUS = 48;
 
     private NativeSpawnRules() {
     }
@@ -69,8 +79,8 @@ public final class NativeSpawnRules {
         // by other means (spawner blocks, other mods' spawners going through
         // Cobblemon's event) are refused in the Safari too.
         if (!config.nativeSpawns || !PokemonSpawningRule.allowed(level.getServer())
-                || !SpeciesRules.isAllowed(species)
-                || !SpecialSpawnCounter.canSpawn(level.getServer(), species)) {
+                || !SpeciesRules.isAllowed(species, SpawnSource.NATURAL)
+                || !SpecialSpawnCounter.canSpawn(level.getServer(), species, SpawnSource.NATURAL)) {
             event.cancel();
             return;
         }
@@ -88,7 +98,7 @@ public final class NativeSpawnRules {
         // Counted when this filter lets the spawn through. If a listener running
         // after this one cancels it, the counter's sweep never finds the entity
         // and gives the slot back a few seconds later.
-        SpecialSpawnCounter.recordSpawn(level.getServer(), species, pokemonEntity.getUUID(),
-                event.getSpawnablePosition().getPosition());
+        SpecialSpawnCounter.recordSpawn(level.getServer(), species, SpawnSource.NATURAL, pokemonEntity.getUUID(),
+                pokemonEntity.getPokemon().getUuid(), event.getSpawnablePosition().getPosition());
     }
 }

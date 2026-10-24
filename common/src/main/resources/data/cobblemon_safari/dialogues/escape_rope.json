@@ -1,0 +1,44 @@
+{
+  "speakers": {
+    "rope": {
+      "name": "item.cobblemon_safari.safari_escape_rope"
+    }
+  },
+  "pages": [
+    {
+      "id": "choose",
+      "speaker": "rope",
+      "lines": [
+        "cobblemon_safari.dialogue.escape_rope.prompt"
+      ],
+      "input": {
+        "type": "option",
+        "vertical": true,
+        "options": [
+          {
+            "text": "cobblemon_safari.dialogue.escape_rope.option.surface",
+            "value": "surface",
+            "isVisible": "q.player.safari_rope_can_climb()",
+            "action": [
+              "q.dialogue.close();",
+              "q.player.safari_rope_climb();"
+            ]
+          },
+          {
+            "text": "cobblemon_safari.dialogue.escape_rope.option.rest_house",
+            "value": "rest_house",
+            "action": [
+              "q.dialogue.close();",
+              "q.player.safari_rope_rest_house();"
+            ]
+          },
+          {
+            "text": "cobblemon_safari.dialogue.escape_rope.option.cancel",
+            "value": "cancel",
+            "action": "q.dialogue.close();"
+          }
+        ]
+      }
+    }
+  ]
+}

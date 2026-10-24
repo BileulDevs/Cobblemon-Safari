@@ -2,7 +2,7 @@
 
 A highly configurable Safari Zone for [Cobblemon](https://cobblemon.com): hunt rare Pokémon of the day against the clock on an island that changes daily. Time limits, allowed Poké Balls, spawns, rewards and the shop are all yours to tune.
 
-[![CurseForge](https://img.shields.io/badge/CurseForge-Cobblemon%20Safari-f16436?logo=curseforge)](https://www.curseforge.com/minecraft/mc-mods/cobblemon-safari)
+[![CurseForge](https://img.shields.io/curseforge/dt/1719274?logo=curseforge&label=Downloads&color=f16436)](https://www.curseforge.com/minecraft/mc-mods/cobblemon-safari)
 [![Minecraft](https://img.shields.io/badge/Minecraft-1.21.1-green?logo=minecraft)](https://www.minecraft.net)
 [![Fabric](https://img.shields.io/badge/Fabric-supported-dbb37d?logo=fabric)](https://fabricmc.net)
 [![NeoForge](https://img.shields.io/badge/NeoForge-supported-e04e14)](https://neoforged.net)
@@ -46,7 +46,7 @@ Cobblemon's natural spawns fill the park too, faster than usual, and they favour
 
 ### Rest houses
 
-Eight Pokémon Centers stand on every map, the entrance one right where you arrive. Each has two Healing Machines, a PC, a cooking corner with a Poké Pot, and a **Safari Clerk** who runs the shop, lists the missions and can walk you out early.
+Eight Pokémon Centers stand on every map, the entrance one right where you arrive. Each has two Healing Machines, a PC, a cooking corner with a Poké Pot, a **Safari Clerk** who runs the shop, lists the missions and can walk you out early, and a **Safari Guide** who takes you to any other rest house already open on the island (once a minute by default).
 
 ### Missions and Safari points
 
@@ -65,7 +65,7 @@ A screen on an arm that you can tilt toward the floor or the ceiling, up to thre
 
 ### Escape Rope
 
-Lent on entry and taken back on exit. Use it in a cave to get back to the surface right above you.
+Lent on entry and taken back on exit. Use it to choose: climb from a cave to the nearest safe spot in the open air, or go to the nearest rest house (once a minute by default).
 
 ### Everywhere else
 

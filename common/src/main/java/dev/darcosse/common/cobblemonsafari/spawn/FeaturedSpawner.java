@@ -38,8 +38,9 @@ import java.util.List;
  * <p>Anti-monopoly: at most {@code maxNearbyPerPlayer} specials around a
  * player, never two of the same species around them, never more than one
  * legendary-class special in the whole park at once, and no more appearances
- * of a legendary-class species per rotation than its category allows
- * ({@link SpecialSpawnCounter}).
+ * of a legendary-class species per rotation than its category in
+ * {@code featured} allows ({@link SpecialSpawnCounter}, board count). Which
+ * species may come at all follows {@code featured} too, not {@code spawns}.
  */
 public final class FeaturedSpawner {
 
@@ -172,10 +173,10 @@ public final class FeaturedSpawner {
         for (HabitatEntry entry : specials) {
             boolean livesHere = (water ? entry.waterHabitats() : entry.landHabitats()).stream().anyMatch(key -> biome.is(key));
             // Cheap checks first: the window check reads light, the others are lookups.
-            if (!livesHere || !SpeciesRules.isAllowed(entry.species())
+            if (!livesHere || !SpeciesRules.isAllowed(entry.species(), SpawnSource.FEATURED)
                     || isPresent(nearbySpecials, entry)
                     || (SpeciesRules.isSpecial(entry.species()) && isRoamingAnywhere(level, entry))
-                    || !SpecialSpawnCounter.canSpawn(server, entry.species())
+                    || !SpecialSpawnCounter.canSpawn(server, entry.species(), SpawnSource.FEATURED)
                     || !entry.canSpawnAt(level, spawnPos, biome, water)) {
                 continue;
             }
@@ -249,7 +250,8 @@ public final class FeaturedSpawner {
         pokemonEntity.addTag(FEATURED_TAG);
         // Counted only once really added: another mod may veto the entity.
         if (level.addFreshEntity(pokemonEntity)) {
-            SpecialSpawnCounter.recordSpawn(level.getServer(), entry.species(), pokemonEntity.getUUID(), pos);
+            SpecialSpawnCounter.recordSpawn(level.getServer(), entry.species(), SpawnSource.FEATURED,
+                    pokemonEntity.getUUID(), pokemonEntity.getPokemon().getUuid(), pos);
         }
     }
 

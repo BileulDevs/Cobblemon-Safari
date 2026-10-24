@@ -94,11 +94,20 @@ public final class SafariGate {
     }
 
     /**
-     * Whether any gate block lies within {@link #COMMAND_RANGE}. Up to 21³
-     * block reads, only when a gate command is used. Also what keeps the
-     * warden's shop at the warden.
+     * Whether the player is at a gate: talking to its warden, or with a gate
+     * block within {@link #COMMAND_RANGE}. What the warden's entry and shop
+     * require.
+     *
+     * <p>The warden comes first: he strolls up to a few blocks from his spot
+     * and can be found farther than {@link #COMMAND_RANGE} from the pane, so
+     * the block test alone refused his own shop to the player talking to
+     * him. Cost: one small entity box query, then, only if no warden is near,
+     * up to 21³ block reads; only when a gate action is used.
      */
     public static boolean isNearGate(ServerPlayer player) {
+        if (GateResidents.isNearWarden(player)) {
+            return true;
+        }
         BlockPos centre = player.blockPosition();
         for (BlockPos pos : BlockPos.betweenClosed(centre.offset(-COMMAND_RANGE, -COMMAND_RANGE, -COMMAND_RANGE),
                 centre.offset(COMMAND_RANGE, COMMAND_RANGE, COMMAND_RANGE))) {

@@ -1,6 +1,9 @@
 package dev.darcosse.common.cobblemonsafari.command;
 
 import com.cobblemon.mod.common.api.molang.function.PlayerMoLangFunctions;
+import dev.darcosse.common.cobblemonsafari.item.EscapeRopeActions;
+import dev.darcosse.common.cobblemonsafari.structure.Compass;
+import dev.darcosse.common.cobblemonsafari.teleport.RestHouseTravel;
 import kotlin.jvm.functions.Function1;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -13,7 +16,11 @@ import java.util.function.Predicate;
  * The Safari's actions as MoLang functions of the player, for NPC dialogues:
  * {@code q.player.safari_shop()}, {@code safari_bounties()},
  * {@code safari_gate()}, {@code safari_leave()}, {@code safari_status()},
- * {@code safari_today()} and {@code safari_balls()}.
+ * {@code safari_today()}, {@code safari_balls()}, and the Escape Rope's
+ * {@code safari_rope_can_climb()}, {@code safari_rope_climb()} and
+ * {@code safari_rope_rest_house()}, and the rest house guide's
+ * {@code safari_guide_can_<direction>()} and {@code safari_guide_go_<direction>()}
+ * for each of the eight {@link Compass} directions ({@code safari_guide_go_north_east()}).
  *
  * <p>Why not commands: a dialogue running a command in the player's name
  * ({@code q.player.run_command}) needs a command every player may type.
@@ -36,6 +43,18 @@ public final class SafariDialogueFunctions {
     public static final String STATUS = "safari_status";
     public static final String TODAY = "safari_today";
     public static final String BALLS = "safari_balls";
+    /** Whether the rope can climb out from here; the rope dialogue shows that option only then. */
+    public static final String ROPE_CAN_CLIMB = "safari_rope_can_climb";
+    public static final String ROPE_CLIMB = "safari_rope_climb";
+    public static final String ROPE_REST_HOUSE = "safari_rope_rest_house";
+    /**
+     * Prefixes of the guide's functions, followed by a {@link Compass#id()}.
+     * One function per direction rather than one taking the direction as a
+     * parameter: the parameters' type comes from the MoLang library, which
+     * is not on this module's compile classpath (see {@link #register}).
+     */
+    public static final String GUIDE_CAN_PREFIX = "safari_guide_can_";
+    public static final String GUIDE_GO_PREFIX = "safari_guide_go_";
 
     private static boolean registered;
 
@@ -70,6 +89,15 @@ public final class SafariDialogueFunctions {
         functions.put(STATUS, params -> run(player, SafariPlayerActions::sendStatus));
         functions.put(TODAY, params -> run(player, SafariPlayerActions::showToday));
         functions.put(BALLS, params -> run(player, SafariPlayerActions::showAllowedBalls));
+        functions.put(ROPE_CAN_CLIMB, params -> run(player, EscapeRopeActions::canClimb));
+        functions.put(ROPE_CLIMB, params -> run(player, EscapeRopeActions::climb));
+        functions.put(ROPE_REST_HOUSE, params -> run(player, EscapeRopeActions::toRestHouse));
+        for (Compass direction : Compass.values()) {
+            functions.put(GUIDE_CAN_PREFIX + direction.id(),
+                    params -> run(player, p -> RestHouseTravel.canTravelTo(p, direction)));
+            functions.put(GUIDE_GO_PREFIX + direction.id(),
+                    params -> run(player, p -> RestHouseTravel.travelTo(p, direction)));
+        }
         return functions;
     }
 

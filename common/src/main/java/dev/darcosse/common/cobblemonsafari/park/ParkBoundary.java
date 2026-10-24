@@ -37,7 +37,13 @@ public final class ParkBoundary {
         int limit = Math.max(0, ParkGeometry.BORDER_HALF_SIZE - PULLBACK_DISTANCE);
         int x = (int) Math.floor(clamp(player.getX(), ParkGeometry.CENTER_X - limit, ParkGeometry.CENTER_X + limit));
         int z = (int) Math.floor(clamp(player.getZ(), ParkGeometry.CENTER_Z - limit, ParkGeometry.CENTER_Z + limit));
-        SafariTeleporter.sendToSurface(player, (ServerLevel) player.level(), x, z);
+        ServerLevel level = (ServerLevel) player.level();
+        // The best place to stand nearby, as for the Escape Rope: the bare
+        // column could be inside a tree crown. The pull-back must happen
+        // anyway, so the column itself is the fallback.
+        if (!SafariTeleporter.sendToSurface(player, level, x, z)) {
+            SafariTeleporter.sendToColumnTop(player, level, x, z);
+        }
         player.displayClientMessage(
                 Component.translatable(CobblemonSafari.MOD_ID + ".message.boundary"), true);
     }

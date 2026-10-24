@@ -8,14 +8,17 @@ import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 /**
- * Decides which species may appear in the Safari at all: special categories
- * (legendary, mythical, ultra beast, paradox) and the excluded list.
+ * Decides which species may come into the Safari through each way
+ * ({@link SpawnSource}): special categories (legendary, mythical, ultra
+ * beast, paradox) and the excluded list, read from the section of the config
+ * that way follows ({@code spawns} or {@code featured}).
  *
- * <p>Applied to both Cobblemon's native spawns and the mod's special spawns,
- * so a forbidden species can never come in through either door.
+ * <p>Every check takes the way explicitly, so a caller can never apply the
+ * board's rules to a natural spawn by mistake.
  */
 public final class SpeciesRules {
 
@@ -42,6 +45,9 @@ public final class SpeciesRules {
      * so a species whose line starts here is Eevee or an eeveelution.
      */
     private static final String EEVEE_ID = "cobblemon:eevee";
+
+    /** Namespace of a species written without one in spawn data ("pikachu"). */
+    private static final String DEFAULT_NAMESPACE = "cobblemon:";
 
     private SpeciesRules() {
     }
@@ -93,11 +99,21 @@ public final class SpeciesRules {
     }
 
     /**
-     * Whether the species may appear in the Safari under the current config.
-     * A species in several special categories needs all of them allowed.
+     * A species as spawn data writes it ("pikachu", "Cobblemon:Pikachu") in
+     * the form species ids take everywhere else ("cobblemon:pikachu").
      */
-    public static boolean isAllowed(Species species) {
-        SafariConfig.Spawns config = SafariConfigManager.get().spawns;
+    public static String normalizeId(String species) {
+        String lower = species.toLowerCase(Locale.ROOT);
+        return lower.indexOf(':') >= 0 ? lower : DEFAULT_NAMESPACE + lower;
+    }
+
+    /**
+     * Whether the species may come into the Safari through this way under
+     * the current config. A species in several special categories needs all
+     * of them allowed.
+     */
+    public static boolean isAllowed(Species species, SpawnSource source) {
+        SafariConfig.SpeciesRulesSection config = source.rules(SafariConfigManager.get());
         if (config.excludedSpecies.contains(species.getResourceIdentifier().toString())) {
             return false;
         }
@@ -110,13 +126,13 @@ public final class SpeciesRules {
     }
 
     /**
-     * Most times the species may appear per rotation, from the categories it
-     * belongs to: the lowest positive cap among them, 0 when none sets one
-     * (ordinary species, or caps all lifted).
+     * Most times the species may come in through this way per rotation, from
+     * the categories it belongs to: the lowest positive cap among them, 0
+     * when none sets one (ordinary species, or caps all lifted).
      */
-    public static int spawnCap(Species species) {
+    public static int spawnCap(Species species, SpawnSource source) {
         int cap = 0;
-        for (SafariConfig.SpecialCategory category : categoriesOf(species, SafariConfigManager.get().spawns)) {
+        for (SafariConfig.SpecialCategory category : categoriesOf(species, source.rules(SafariConfigManager.get()))) {
             if (category.maxSpawnPerPokemon > 0) {
                 cap = cap == 0 ? category.maxSpawnPerPokemon : Math.min(cap, category.maxSpawnPerPokemon);
             }
@@ -125,7 +141,8 @@ public final class SpeciesRules {
     }
 
     /** The config sections of the special categories the species belongs to; empty for an ordinary species. */
-    private static List<SafariConfig.SpecialCategory> categoriesOf(Species species, SafariConfig.Spawns config) {
+    private static List<SafariConfig.SpecialCategory> categoriesOf(Species species,
+                                                                  SafariConfig.SpeciesRulesSection config) {
         Set<String> labels = species.getLabels();
         List<SafariConfig.SpecialCategory> categories = new ArrayList<>(SPECIAL_LABELS.size());
         if (labels.contains(CobblemonPokemonLabels.LEGENDARY)) {

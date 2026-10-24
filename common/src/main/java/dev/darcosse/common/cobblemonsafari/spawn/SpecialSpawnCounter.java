@@ -19,15 +19,28 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.phys.AABB;
 
+import com.cobblemon.mod.common.api.pokemon.PokemonSpecies;
+import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
  * Enforces the per-rotation cap of capped special species (legendary,
  * mythical, ultra beast, paradox; see {@code SafariConfig.SpecialCategory}).
+ *
+ * <p>Each way into the Safari ({@link SpawnSource}) has its own count and
+ * its own cap, read from its config section: a Rayquaza brought by the board
+ * never uses a slot of the natural spawns, nor the reverse. A catch is
+ * charged to the way its Pokémon came in, found by the Pokémon's UUID among
+ * the roaming entries; one the counter never saw spawn counts as natural.
  *
  * <p>A species uses one slot of its cap per Pokémon caught in the Safari this
  * rotation, plus one per Pokémon of it still roaming the park. A Pokémon that
@@ -50,6 +63,17 @@ public final class SpecialSpawnCounter extends SavedData {
 
     /** File name under data/. Changing it forgets the current rotation's counts once. */
     private static final String DATA_NAME = CobblemonSafari.MOD_ID + "_special_spawns";
+
+    /**
+     * Save format version. 1 (no key) had one count for both ways; 2 counts
+     * each way apart and keeps each roaming Pokémon's way and Pokémon UUID.
+     * A version 1 save loads with everything charged to the natural spawns.
+     */
+    private static final int SAVE_VERSION = 2;
+
+    /** Key of the catches charged to each way; the natural one keeps version 1's key, so old saves read into it. */
+    private static final String CAUGHT_NATURAL_KEY = "caught";
+    private static final String CAUGHT_FEATURED_KEY = "caught_featured";
 
     private static final SavedData.Factory<SpecialSpawnCounter> FACTORY =
             new SavedData.Factory<>(SpecialSpawnCounter::new, SpecialSpawnCounter::load, null);
@@ -84,21 +108,41 @@ public final class SpecialSpawnCounter extends SavedData {
     private long period = Long.MIN_VALUE;
     /** Map the roaming entries belong to (SafariMapReset.salt()); another salt means a new map. */
     private long mapSalt = Long.MIN_VALUE;
-    /** Pokémon of each capped species caught in the Safari this rotation, by species id. */
-    private final Map<String, Integer> caught = new HashMap<>();
+    /** Pokémon of each capped species caught in the Safari this rotation, by way in, then by species id. */
+    private final Map<SpawnSource, Map<String, Integer>> caught = new EnumMap<>(SpawnSource.class);
     /** Capped Pokémon spawned this rotation and possibly still in the park, by entity UUID. */
     private final Map<UUID, Roaming> roaming = new LinkedHashMap<>();
 
-    /** One roaming Pokémon: its species, where it was last seen, and how many sweeps missed it since. */
+    /**
+     * One roaming Pokémon: its species, the way it came in, where it was
+     * last seen, and how many sweeps missed it since.
+     */
     private static final class Roaming {
         private final String species;
+        private final SpawnSource source;
+        /**
+         * UUID of the Pokémon (not of its entity), which survives the
+         * capture: the capture event carries the Pokémon, whose entity is
+         * already discarded by then. Null for an entry of a version 1 save.
+         */
+        @Nullable
+        private final UUID pokemonId;
         private BlockPos lastSeen;
         private int misses;
 
         /** A Pokémon just spawned, at its spawn position. */
-        private Roaming(String species, BlockPos lastSeen) {
+        private Roaming(String species, SpawnSource source, @Nullable UUID pokemonId, BlockPos lastSeen) {
             this.species = species;
+            this.source = source;
+            this.pokemonId = pokemonId;
             this.lastSeen = lastSeen;
+        }
+    }
+
+    /** An empty counter; the catch map holds one entry per way so lookups never meet a missing key. */
+    private SpecialSpawnCounter() {
+        for (SpawnSource source : SpawnSource.values()) {
+            caught.put(source, new HashMap<>());
         }
     }
 
@@ -114,30 +158,64 @@ public final class SpecialSpawnCounter extends SavedData {
     }
 
     /**
-     * Whether one more of the species may appear now. Always true for a
-     * species without a cap, so callers need no category check of their own.
+     * Whether one more of the species may come in through this way now.
+     * Always true for a species without a cap, so callers need no category
+     * check of their own.
      */
-    public static boolean canSpawn(MinecraftServer server, Species species) {
-        int cap = SpeciesRules.spawnCap(species);
-        return cap <= 0 || get(server).used(species.getResourceIdentifier().toString()) < cap;
+    public static boolean canSpawn(MinecraftServer server, Species species, SpawnSource source) {
+        int cap = SpeciesRules.spawnCap(species, source);
+        return cap <= 0 || get(server).used(species.getResourceIdentifier().toString(), source) < cap;
     }
 
     /**
-     * Takes one slot for a Pokémon of a capped species entering the Safari.
-     * Call it once the spawn is decided; the slot comes back by itself if the
-     * Pokémon is never found in the park (see the class comment).
+     * Takes one slot of this way for a Pokémon of a capped species entering
+     * the Safari. Call it once the spawn is decided; the slot comes back by
+     * itself if the Pokémon is never found in the park (see the class comment).
      *
-     * @param entityId UUID of the Pokémon's entity
-     * @param pos      where it appears
+     * @param entityId  UUID of the Pokémon's entity, followed by the sweeps
+     * @param pokemonId UUID of the Pokémon itself, to charge its capture to this way
+     * @param pos       where it appears
      */
-    public static void recordSpawn(MinecraftServer server, Species species, UUID entityId, BlockPos pos) {
-        if (SpeciesRules.spawnCap(species) <= 0) {
+    public static void recordSpawn(MinecraftServer server, Species species, SpawnSource source,
+                                   UUID entityId, UUID pokemonId, BlockPos pos) {
+        if (SpeciesRules.spawnCap(species, source) <= 0) {
             return;
         }
         SpecialSpawnCounter counter = get(server);
         counter.refresh();
-        counter.roaming.put(entityId, new Roaming(species.getResourceIdentifier().toString(), pos.immutable()));
+        counter.roaming.put(entityId, new Roaming(species.getResourceIdentifier().toString(), source, pokemonId,
+                pos.immutable()));
         counter.setDirty();
+    }
+
+    /**
+     * Ids of the species that used up this way's cap for the rotation, for
+     * filters that must not even offer them. Only species with a slot in use
+     * can be at their cap, so this walks the counter, not every species.
+     * Server thread.
+     */
+    public static Set<String> speciesAtCap(MinecraftServer server, SpawnSource source) {
+        SpecialSpawnCounter counter = get(server);
+        counter.refresh();
+        Map<String, Integer> used = new HashMap<>(counter.caught.get(source));
+        for (Roaming entry : counter.roaming.values()) {
+            if (entry.source == source) {
+                used.merge(entry.species, 1, Integer::sum);
+            }
+        }
+        Set<String> atCap = new HashSet<>();
+        used.forEach((id, count) -> {
+            ResourceLocation location = ResourceLocation.tryParse(id);
+            Species species = location == null ? null : PokemonSpecies.getByIdentifier(location);
+            if (species == null) {
+                return;
+            }
+            int cap = SpeciesRules.spawnCap(species, source);
+            if (cap > 0 && count >= cap) {
+                atCap.add(id);
+            }
+        });
+        return atCap;
     }
 
     /**
@@ -168,30 +246,48 @@ public final class SpecialSpawnCounter extends SavedData {
         tickCounter = 0;
     }
 
-    /** A capped species caught inside the Safari keeps its slot until the next rotation. */
+    /**
+     * A capped species caught inside the Safari keeps its slot until the next
+     * rotation, in the count of the way it came in.
+     */
     private static void onCaptured(PokemonCapturedEvent event) {
         MinecraftServer server = event.getPlayer().getServer();
         if (server == null || !SafariDimensions.isSafari(event.getPlayer().level())) {
             return;
         }
         Species species = event.getPokemon().getSpecies();
-        if (SpeciesRules.spawnCap(species) <= 0) {
-            return;
-        }
         SpecialSpawnCounter counter = get(server);
         counter.refresh();
-        counter.caught.merge(species.getResourceIdentifier().toString(), 1, Integer::sum);
+        SpawnSource source = counter.sourceOf(event.getPokemon().getUuid());
+        if (SpeciesRules.spawnCap(species, source) <= 0) {
+            return;
+        }
+        counter.caught.get(source).merge(species.getResourceIdentifier().toString(), 1, Integer::sum);
         // Its roaming entry is dropped by the next sweeps, which no longer find
         // the entity; until then the Pokémon counts twice, on the safe side.
         counter.setDirty();
     }
 
-    /** Slots of the species in use: caught this rotation plus still roaming. */
-    private int used(String species) {
-        refresh();
-        int count = caught.getOrDefault(species, 0);
+    /**
+     * The way a Pokémon came in, by its Pokémon UUID. Natural when unknown:
+     * spawns the counter never recorded (an uncapped species, a Poké Snack,
+     * a version 1 save) all come from Cobblemon's spawner.
+     */
+    private SpawnSource sourceOf(UUID pokemonId) {
         for (Roaming entry : roaming.values()) {
-            if (entry.species.equals(species)) {
+            if (pokemonId.equals(entry.pokemonId)) {
+                return entry.source;
+            }
+        }
+        return SpawnSource.NATURAL;
+    }
+
+    /** Slots of the species in use for this way: caught this rotation plus still roaming. */
+    private int used(String species, SpawnSource source) {
+        refresh();
+        int count = caught.get(source).getOrDefault(species, 0);
+        for (Roaming entry : roaming.values()) {
+            if (entry.source == source && entry.species.equals(species)) {
                 count++;
             }
         }
@@ -234,7 +330,7 @@ public final class SpecialSpawnCounter extends SavedData {
         long now = FeaturedRotation.period();
         if (now != period) {
             period = now;
-            caught.clear();
+            caught.values().forEach(Map::clear);
             roaming.clear();
             setDirty();
         }
@@ -246,19 +342,27 @@ public final class SpecialSpawnCounter extends SavedData {
         }
     }
 
-    /** Writes the rotation, map, catches and roaming Pokémon. Keys are the save format. */
+    /**
+     * Writes the rotation, map, catches and roaming Pokémon. Keys are the save
+     * format: change one and {@link #load} must read both, then raise
+     * {@link #SAVE_VERSION}. {@link #load} reads the same keys.
+     */
     @Override
     public CompoundTag save(CompoundTag nbt, HolderLookup.Provider registries) {
+        nbt.putInt("version", SAVE_VERSION);
         nbt.putLong("period", period);
         nbt.putLong("map_salt", mapSalt);
-        CompoundTag caughtTag = new CompoundTag();
-        caught.forEach(caughtTag::putInt);
-        nbt.put("caught", caughtTag);
+        nbt.put(CAUGHT_NATURAL_KEY, caughtTag(SpawnSource.NATURAL));
+        nbt.put(CAUGHT_FEATURED_KEY, caughtTag(SpawnSource.FEATURED));
         ListTag roamingTag = new ListTag();
         roaming.forEach((id, pokemon) -> {
             CompoundTag entry = new CompoundTag();
             entry.putUUID("id", id);
             entry.putString("species", pokemon.species);
+            entry.putString("source", pokemon.source.name());
+            if (pokemon.pokemonId != null) {
+                entry.putUUID("pokemon_id", pokemon.pokemonId);
+            }
             entry.putInt("x", pokemon.lastSeen.getX());
             entry.putInt("y", pokemon.lastSeen.getY());
             entry.putInt("z", pokemon.lastSeen.getZ());
@@ -268,20 +372,48 @@ public final class SpecialSpawnCounter extends SavedData {
         return nbt;
     }
 
-    /** Reads what {@link #save} wrote. Missing keys read as an empty, stale counter. */
+    /** One way's catches as a compound, species id to count. */
+    private CompoundTag caughtTag(SpawnSource source) {
+        CompoundTag tag = new CompoundTag();
+        caught.get(source).forEach(tag::putInt);
+        return tag;
+    }
+
+    /**
+     * Reads what {@link #save} wrote, versions 1 and 2. Missing keys read as
+     * an empty, stale counter; a version 1 save has no featured catches and
+     * no way on its roaming entries, which all become natural.
+     */
     private static SpecialSpawnCounter load(CompoundTag nbt, HolderLookup.Provider registries) {
         SpecialSpawnCounter counter = new SpecialSpawnCounter();
         counter.period = nbt.contains("period") ? nbt.getLong("period") : Long.MIN_VALUE;
         counter.mapSalt = nbt.contains("map_salt") ? nbt.getLong("map_salt") : Long.MIN_VALUE;
-        CompoundTag caughtTag = nbt.getCompound("caught");
-        for (String key : caughtTag.getAllKeys()) {
-            counter.caught.put(key, caughtTag.getInt(key));
-        }
+        readCaught(nbt.getCompound(CAUGHT_NATURAL_KEY), counter.caught.get(SpawnSource.NATURAL));
+        readCaught(nbt.getCompound(CAUGHT_FEATURED_KEY), counter.caught.get(SpawnSource.FEATURED));
         for (Tag element : nbt.getList("roaming", Tag.TAG_COMPOUND)) {
             CompoundTag entry = (CompoundTag) element;
+            UUID pokemonId = entry.hasUUID("pokemon_id") ? entry.getUUID("pokemon_id") : null;
             counter.roaming.put(entry.getUUID("id"), new Roaming(entry.getString("species"),
+                    readSource(entry.getString("source")), pokemonId,
                     new BlockPos(entry.getInt("x"), entry.getInt("y"), entry.getInt("z"))));
         }
         return counter;
+    }
+
+    /** Copies a compound of species id to count into a catch map. */
+    private static void readCaught(CompoundTag tag, Map<String, Integer> into) {
+        for (String key : tag.getAllKeys()) {
+            into.put(key, tag.getInt(key));
+        }
+    }
+
+    /** A saved way; natural when absent (version 1) or unknown (a renamed constant). */
+    private static SpawnSource readSource(String raw) {
+        for (SpawnSource source : SpawnSource.values()) {
+            if (source.name().equals(raw)) {
+                return source;
+            }
+        }
+        return SpawnSource.NATURAL;
     }
 }
