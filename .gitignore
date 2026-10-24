@@ -42,6 +42,6 @@ replay_*.log
 # worldgen generator download cache
 tools/worldgen/.vanilla_cache/
 /A_LIRE.md
-/afaire.txt
+/TODO.txt
 
 *.salive

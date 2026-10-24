@@ -8,6 +8,7 @@ import dev.darcosse.common.cobblemonsafari.network.SafariShopBuyPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariShopPayload;
 import dev.darcosse.common.cobblemonsafari.points.SafariPointsIcon;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -18,6 +19,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -28,7 +30,12 @@ import java.util.List;
  * <p>The screen only displays what the server sent ({@link SafariShopPayload})
  * and asks for purchases ({@link SafariShopBuyPayload}); the server decides.
  * After each request the server sends a refresh, which also re-enables the
- * Buy button, so a double click cannot buy twice. CLIENT ONLY.
+ * Buy button, so a double click cannot buy twice.
+ *
+ * <p>A trade whose cost accepts several kinds (any evolution stone, any
+ * apricorn) first asks which kind to give when the player carries more than
+ * one ({@link Choice}); without it the server would take whichever its tag
+ * lists first. CLIENT ONLY.
  */
 public class SafariShopScreen extends Screen {
 
@@ -163,6 +170,41 @@ public class SafariShopScreen extends Screen {
     private static final int PRICE_TOO_HIGH = 0xFFFF6B6B;
     private static final int MUTED_COLOR = 0xFFB5C9BA;
 
+    /**
+     * The "which kind do you give" box: its width (inside the panel, with
+     * room for the frame to show), padding, and the cell of each item icon.
+     * Narrower cells make the icons touch; wider ones fit fewer per line.
+     */
+    private static final int CHOICE_WIDTH = PANEL_WIDTH - 40;
+    private static final int CHOICE_PADDING = 8;
+    private static final int CHOICE_CELL = 20;
+    private static final int CHOICE_LINE_GAP = 4;
+    private static final int CHOICE_BUTTON_WIDTH = 80;
+    /**
+     * Depth of the box, above the cards' item models (drawn up to about z 250)
+     * and their count labels, so nothing of the cards shows through it.
+     */
+    private static final float CHOICE_Z = 400.0F;
+    private static final int CHOICE_BACKGROUND = 0xF0122A1C;
+    private static final int CHOICE_SELECTED = 0x60FFD86B;
+    /** GLFW's Escape key: closes the box rather than the whole shop. */
+    private static final int KEY_ESCAPE = 256;
+
+    /**
+     * One cost of the trade being confirmed, whose kind the player picks.
+     *
+     * @param costIndex position of the cost in the entry
+     * @param cost      the cost
+     * @param kinds     the accepted kinds the player carries, with how many of each
+     * @param picked    index in kinds of the one given first
+     */
+    private record Row(int costIndex, SafariShopPayload.Cost cost, List<ItemStack> kinds, int[] picked) {
+    }
+
+    /** The trade being confirmed: its entry and the costs with a choice. */
+    private record Choice(int entryIndex, List<Row> rows) {
+    }
+
     private SafariShopPayload data;
     /** Index in {@code data.tabs()} of the open tab. */
     private int tab;
@@ -185,6 +227,11 @@ public class SafariShopScreen extends Screen {
     private Button previousButton;
     private Button nextButton;
     private Button buyButton;
+    /** The box's buttons: clickable children, drawn by hand above the box (see {@link #render}). */
+    private Button confirmButton;
+    private Button cancelButton;
+    /** The trade waiting for the player to pick what to give, or null. */
+    private Choice choice;
 
     /** Screen showing the given shop contents. */
     private SafariShopScreen(SafariShopPayload data) {
@@ -217,6 +264,8 @@ public class SafariShopScreen extends Screen {
         boolean redrawn = payload.rotation() != data.rotation();
         data = payload;
         awaitingServer = false;
+        // The entry may have changed under the box: the player confirms afresh.
+        choice = null;
         if (tab >= data.tabs().size() || entriesOf(tab).isEmpty()) {
             tab = firstTabWithEntries();
         }
@@ -241,6 +290,11 @@ public class SafariShopScreen extends Screen {
         buyButton = addRenderableWidget(Button.builder(tr("shop.select"), button -> buySelected())
                 .bounds(left + PANEL_WIDTH - MARGIN - BUY_BUTTON_WIDTH, buttonY, BUY_BUTTON_WIDTH, BUTTON_HEIGHT)
                 .build());
+        // Children only, not renderables: drawn in render(), above the box.
+        confirmButton = addWidget(Button.builder(tr("shop.choose.confirm"), button -> confirmChoice())
+                .bounds(0, 0, CHOICE_BUTTON_WIDTH, BUTTON_HEIGHT).build());
+        cancelButton = addWidget(Button.builder(tr("shop.choose.cancel"), button -> closeChoice())
+                .bounds(0, 0, CHOICE_BUTTON_WIDTH, BUTTON_HEIGHT).build());
         refreshButtons();
     }
 
@@ -248,6 +302,16 @@ public class SafariShopScreen extends Screen {
     private void refreshButtons() {
         if (buyButton == null) {
             return;
+        }
+        boolean choosing = choice != null;
+        // Hidden, not only greyed: a hidden button ignores clicks, so the box is modal.
+        previousButton.visible = !choosing;
+        nextButton.visible = !choosing;
+        buyButton.visible = !choosing;
+        confirmButton.visible = choosing;
+        cancelButton.visible = choosing;
+        if (choosing) {
+            layoutChoiceButtons();
         }
         previousButton.active = page > 0;
         nextButton.active = page + 1 < pageCount();
@@ -332,20 +396,91 @@ public class SafariShopScreen extends Screen {
         refreshButtons();
     }
 
-    /** Sends the purchase request; the server's refresh re-enables the button. */
+    /**
+     * Buys the selected entry, or first opens the box asking which kind to
+     * give when one of its costs accepts several kinds the player carries.
+     */
     private void buySelected() {
         SafariShopPayload.Entry entry = selectedEntry();
         if (entry == null || awaitingServer) {
             return;
         }
+        List<Row> rows = new ArrayList<>();
+        for (int i = 0; i < entry.cost().size(); i++) {
+            SafariShopPayload.Cost cost = entry.cost().get(i);
+            List<ItemStack> kinds = carriedKinds(cost);
+            if (kinds.size() > 1) {
+                // The first kind is what the server takes first anyway: picked by default.
+                rows.add(new Row(i, cost, kinds, new int[]{0}));
+            }
+        }
+        if (rows.isEmpty()) {
+            send(entry, Collections.nCopies(entry.cost().size(), ""));
+            return;
+        }
+        choice = new Choice(selected, rows);
+        refreshButtons();
+    }
+
+    /** Sends the purchase with the kinds picked in the box. */
+    private void confirmChoice() {
+        SafariShopPayload.Entry entry = selectedEntry();
+        Choice pending = choice;
+        choice = null;
+        if (entry == null || pending == null || pending.entryIndex() != selected) {
+            refreshButtons();
+            return;
+        }
+        List<String> preferred = new ArrayList<>(Collections.nCopies(entry.cost().size(), ""));
+        for (Row row : pending.rows()) {
+            ItemStack kind = row.kinds().get(row.picked()[0]);
+            preferred.set(row.costIndex(), BuiltInRegistries.ITEM.getKey(kind.getItem()).toString());
+        }
+        send(entry, preferred);
+    }
+
+    /** Closes the box without buying. */
+    private void closeChoice() {
+        choice = null;
+        refreshButtons();
+    }
+
+    /** Sends the purchase request; the server's refresh re-enables the button. */
+    private void send(SafariShopPayload.Entry entry, List<String> preferred) {
         awaitingServer = true;
         refreshButtons();
-        SafariClientNetwork.sendToServer(new SafariShopBuyPayload(selected, entry.price(), data.rotation()));
+        SafariClientNetwork.sendToServer(new SafariShopBuyPayload(selected, entry.price(), data.rotation(),
+                List.copyOf(preferred)));
+    }
+
+    /**
+     * The kinds of a cost the local player carries, in the cost's order, as
+     * stacks holding how many they carry (for the icon's count).
+     */
+    private List<ItemStack> carriedKinds(SafariShopPayload.Cost cost) {
+        List<ItemStack> kinds = new ArrayList<>();
+        if (minecraft == null || minecraft.player == null) {
+            return kinds;
+        }
+        for (ItemStack item : cost.items()) {
+            int count = minecraft.player.getInventory().countItem(item.getItem());
+            if (count > 0) {
+                kinds.add(item.copyWithCount(count));
+            }
+        }
+        return kinds;
     }
 
     /** Selects the card or opens the tab under the mouse; otherwise lets the buttons handle the click. */
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (choice != null) {
+            // Modal: only the box's icons and buttons answer.
+            if (pickAt(mouseX, mouseY)) {
+                return true;
+            }
+            return super.mouseClicked(mouseX, mouseY, button);
+        }
         int tabIndex = tabAt(mouseX, mouseY);
         if (tabIndex == ARROW_BACK || tabIndex == ARROW_FORWARD) {
             scrollTabs(tabIndex == ARROW_BACK ? -1 : 1);
@@ -362,6 +497,146 @@ public class SafariShopScreen extends Screen {
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    /** Escape closes the box first, then the shop. */
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (choice != null && keyCode == KEY_ESCAPE) {
+            closeChoice();
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    /** Draws the shop, then the box above everything when it is open. */
+    @Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        super.render(graphics, mouseX, mouseY, partialTick);
+        if (choice != null) {
+            drawChoice(graphics, mouseX, mouseY, partialTick);
+        }
+    }
+
+    /** Where the box's parts stand on screen; shared by drawing and clicks. */
+    private record ChoiceLayout(int x, int y, int height, int columns, List<Integer> rowTops, int hintY,
+                                int buttonsY) {
+    }
+
+    /** Lays the box out, centred on the panel, as tall as its rows need. */
+    private ChoiceLayout choiceLayout() {
+        int columns = Math.max(1, (CHOICE_WIDTH - 2 * CHOICE_PADDING) / CHOICE_CELL);
+        int y = CHOICE_PADDING + font.lineHeight + CHOICE_LINE_GAP;
+        List<Integer> rowTops = new ArrayList<>();
+        boolean hint = false;
+        for (Row row : choice.rows()) {
+            rowTops.add(y);
+            int lines = (row.kinds().size() + columns - 1) / columns;
+            y += font.lineHeight + 2 + lines * CHOICE_CELL + CHOICE_LINE_GAP;
+            hint |= row.cost().count() > 1;
+        }
+        int hintY = y;
+        if (hint) {
+            y += font.wordWrapHeight(tr("shop.choose.first"), CHOICE_WIDTH - 2 * CHOICE_PADDING) + CHOICE_LINE_GAP;
+        }
+        int buttonsY = y;
+        int height = y + BUTTON_HEIGHT + CHOICE_PADDING;
+        int x = left + (PANEL_WIDTH - CHOICE_WIDTH) / 2;
+        int top = this.top + (PANEL_HEIGHT - height) / 2;
+        List<Integer> absolute = new ArrayList<>(rowTops.size());
+        for (int rowTop : rowTops) {
+            absolute.add(top + rowTop);
+        }
+        return new ChoiceLayout(x, top, height, columns, absolute, hint ? top + hintY : -1, top + buttonsY);
+    }
+
+    /** Places the box's two buttons at its bottom, side by side. */
+    private void layoutChoiceButtons() {
+        ChoiceLayout layout = choiceLayout();
+        int gap = CHOICE_PADDING;
+        int start = layout.x() + (CHOICE_WIDTH - 2 * CHOICE_BUTTON_WIDTH - gap) / 2;
+        confirmButton.setPosition(start, layout.buttonsY());
+        cancelButton.setPosition(start + CHOICE_BUTTON_WIDTH + gap, layout.buttonsY());
+    }
+
+    /** The top-left corner of a kind's icon cell. */
+    private static int[] cellOf(ChoiceLayout layout, int rowTop, int kind, int lineHeight) {
+        int x = layout.x() + CHOICE_PADDING + (kind % layout.columns()) * CHOICE_CELL;
+        int y = rowTop + lineHeight + 2 + (kind / layout.columns()) * CHOICE_CELL;
+        return new int[]{x, y};
+    }
+
+    /**
+     * The box: a title, then for each cost its name and the kinds carried,
+     * the picked one framed in gold, a hint when a kind may not cover the
+     * whole count, and the two buttons. Hovering an icon names the item.
+     */
+    private void drawChoice(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        ChoiceLayout layout = choiceLayout();
+        int x0 = layout.x();
+        int y0 = layout.y();
+        int x1 = x0 + CHOICE_WIDTH;
+        int y1 = y0 + layout.height();
+        graphics.pose().pushPose();
+        graphics.pose().translate(0.0F, 0.0F, CHOICE_Z);
+        // The shop dimmed behind the box, so it reads as a question.
+        graphics.fill(left, top, left + PANEL_WIDTH, top + PANEL_HEIGHT, 0x80000000);
+        graphics.fill(x0, y0, x1, y1, CHOICE_BACKGROUND);
+        frame(graphics, x0, y0, x1, y1, GOLD);
+        Component heading = tr("shop.choose.title");
+        graphics.drawString(font, heading, x0 + (CHOICE_WIDTH - font.width(heading)) / 2, y0 + CHOICE_PADDING,
+                TEXT_COLOR);
+        ItemStack hovered = ItemStack.EMPTY;
+        for (int r = 0; r < choice.rows().size(); r++) {
+            Row row = choice.rows().get(r);
+            int rowTop = layout.rowTops().get(r);
+            Component label = Component.literal(row.cost().count() + " × ").append(row.cost().name());
+            graphics.drawString(font, label, x0 + CHOICE_PADDING, rowTop, PRICE_COLOR);
+            for (int k = 0; k < row.kinds().size(); k++) {
+                int[] cell = cellOf(layout, rowTop, k, font.lineHeight);
+                if (k == row.picked()[0]) {
+                    graphics.fill(cell[0], cell[1], cell[0] + CHOICE_CELL - 1, cell[1] + CHOICE_CELL - 1,
+                            CHOICE_SELECTED);
+                    frame(graphics, cell[0], cell[1], cell[0] + CHOICE_CELL - 1, cell[1] + CHOICE_CELL - 1, GOLD);
+                }
+                ItemStack kind = row.kinds().get(k);
+                int iconX = cell[0] + (CHOICE_CELL - 1 - ITEM_ICON_SIZE) / 2;
+                int iconY = cell[1] + (CHOICE_CELL - 1 - ITEM_ICON_SIZE) / 2;
+                graphics.renderItem(kind, iconX, iconY);
+                graphics.renderItemDecorations(font, kind, iconX, iconY);
+                if (mouseX >= cell[0] && mouseX < cell[0] + CHOICE_CELL && mouseY >= cell[1]
+                        && mouseY < cell[1] + CHOICE_CELL) {
+                    hovered = kind;
+                }
+            }
+        }
+        if (layout.hintY() >= 0) {
+            graphics.drawWordWrap(font, tr("shop.choose.first"), x0 + CHOICE_PADDING, layout.hintY(),
+                    CHOICE_WIDTH - 2 * CHOICE_PADDING, MUTED_COLOR);
+        }
+        confirmButton.render(graphics, mouseX, mouseY, partialTick);
+        cancelButton.render(graphics, mouseX, mouseY, partialTick);
+        if (!hovered.isEmpty()) {
+            graphics.renderTooltip(font, hovered, mouseX, mouseY);
+        }
+        graphics.pose().popPose();
+    }
+
+    /** Picks the kind under the mouse, if any. */
+    private boolean pickAt(double mouseX, double mouseY) {
+        ChoiceLayout layout = choiceLayout();
+        for (int r = 0; r < choice.rows().size(); r++) {
+            Row row = choice.rows().get(r);
+            for (int k = 0; k < row.kinds().size(); k++) {
+                int[] cell = cellOf(layout, layout.rowTops().get(r), k, font.lineHeight);
+                if (mouseX >= cell[0] && mouseX < cell[0] + CHOICE_CELL && mouseY >= cell[1]
+                        && mouseY < cell[1] + CHOICE_CELL) {
+                    row.picked()[0] = k;
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /** The world stays visible and running behind the counter. */

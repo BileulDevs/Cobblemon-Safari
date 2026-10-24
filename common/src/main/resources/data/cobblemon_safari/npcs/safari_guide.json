@@ -1,0 +1,24 @@
+{
+  "hitbox": "player",
+  "names": [
+    "cobblemon_safari.npc.safari_guide.name"
+  ],
+  "interaction": {
+    "type": "dialogue",
+    "dialogue": "cobblemon_safari:safari_guide"
+  },
+  "canDespawn": false,
+  "isInvulnerable": true,
+  "isMovable": false,
+  "isLeashable": false,
+  "allowProjectileHits": false,
+  "behaviours": [
+    {
+      "type": "apply_behaviours",
+      "behaviours": [
+        "cobblemon:core",
+        "cobblemon:looks_at_players"
+      ]
+    }
+  ]
+}

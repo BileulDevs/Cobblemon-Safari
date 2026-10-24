@@ -9,6 +9,7 @@ import dev.darcosse.common.cobblemonsafari.points.SafariPoints;
 import dev.darcosse.common.cobblemonsafari.bounty.SafariBounties;
 import dev.darcosse.common.cobblemonsafari.capture.CatchTracker;
 import dev.darcosse.common.cobblemonsafari.command.SafariDialogueFunctions;
+import dev.darcosse.common.cobblemonsafari.teleport.RestHouseNameText;
 import dev.darcosse.common.cobblemonsafari.session.SafariSessionManager;
 import dev.darcosse.common.cobblemonsafari.spawn.NativeSpawnRules;
 import dev.darcosse.common.cobblemonsafari.spawn.SpecialSpawnCounter;
@@ -58,6 +59,7 @@ public final class CobblemonSafari {
         SafariPoints.register();
         SafariBounties.register();
         SafariDialogueFunctions.register();
+        RestHouseNameText.register();
         SafariSessionManager.addListener(new SafariStatsListener());
         LOGGER.info("Cobblemon Safari initialised");
     }

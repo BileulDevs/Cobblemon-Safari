@@ -1,6 +1,8 @@
 package dev.darcosse.common.cobblemonsafari.client;
 
 import dev.darcosse.common.cobblemonsafari.client.shop.SafariShopScreen;
+import dev.darcosse.common.cobblemonsafari.client.travel.TravelCinematicScreen;
+import dev.darcosse.common.cobblemonsafari.network.TravelClientBridge;
 import dev.darcosse.common.cobblemonsafari.network.ShopClientBridge;
 import dev.darcosse.common.cobblemonsafari.network.WallScreenClientBridge;
 import dev.darcosse.common.cobblemonsafari.network.BannerClientBridge;
@@ -19,14 +21,15 @@ public final class SafariClient {
     }
 
     /**
-     * Loads display preferences and installs the shop, wall screen settings
-     * and banner design screens as payload handlers.
+     * Loads display preferences and installs the shop, wall screen settings,
+     * banner design and travel cinematic screens as payload handlers.
      */
     public static void init() {
         SafariClientConfigManager.load();
         ShopClientBridge.setHandler(SafariShopScreen::handle);
         WallScreenClientBridge.setHandler(WallScreenSettingsScreen::handle);
         BannerClientBridge.setHandler(BannerDesignScreen::handle);
+        TravelClientBridge.setHandler(TravelCinematicScreen::handle);
     }
 
     /** Forgets server-provided state so it cannot leak into the next server. */

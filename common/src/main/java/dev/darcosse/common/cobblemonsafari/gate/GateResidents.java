@@ -13,6 +13,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
@@ -95,11 +96,38 @@ public final class GateResidents {
 
     /**
      * How far the warden may wander from his spot before being walked back,
-     * in blocks, and teleported back beyond TELEPORT_FACTOR times that.
-     * Kept small: players talk to him to enter, which only works within 10
-     * blocks of a gate (SafariGate.COMMAND_RANGE).
+     * in blocks, and teleported back beyond TELEPORT_FACTOR times that. Also
+     * the radius his own wandering is restricted to around the spot (vanilla
+     * restriction, which Cobblemon's wander task honours through
+     * LandRandomPos). Larger lets him stroll more of the plaza and sends him
+     * to the pane's clearance more often, where he is turned back.
      */
     private static final int WARDEN_LEASH = 4;
+
+    /**
+     * Blocks kept free around the gate's pane, horizontally on every side:
+     * the warden is walked out as soon as he stands this close (checked
+     * every second, see {@link #keepWardenClearOfPane}). Standing against
+     * the pane, he is hard to click without stepping into the portal.
+     * Must stay below WARDEN_ACROSS, or his own spot lies in the clearance
+     * and he is sent back and forth forever.
+     */
+    private static final int PANE_CLEARANCE = 2;
+
+    /**
+     * Same clearance, vertically: covers a warden on the step below the pane
+     * or on a block beside it. Larger would also catch him on the plaza
+     * under a gate raised on a platform.
+     */
+    private static final int PANE_CLEARANCE_HEIGHT = 1;
+
+    /**
+     * How close, in blocks, a player must be to the gate's warden for his
+     * shop and his entry to count as "at the gate", wherever he stands
+     * (see {@link #isNearWarden}). Survival players reach an entity from 3
+     * blocks; the margin covers the time the dialogue stays open.
+     */
+    private static final double WARDEN_TALK_RANGE = 6.0D;
 
     /** Residents farther than roamRadius × this are teleported back instead of walked back. */
     private static final double TELEPORT_FACTOR = 2.0D;
@@ -119,6 +147,14 @@ public final class GateResidents {
 
     /** How close, in blocks, a stray must get to the gate for its walk back to count as done. */
     private static final int RETURN_CLOSE_ENOUGH = 2;
+
+    /**
+     * Same, for the warden walked out of the pane's clearance: all the way
+     * to his spot. His spot is only one block outside the clearance, so
+     * stopping {@link #RETURN_CLOSE_ENOUGH} short would leave him inside it,
+     * walked out again every second without ever moving.
+     */
+    private static final int CLEARANCE_RETURN_CLOSE_ENOUGH = 0;
 
     /**
      * No Pokémon spawns closer than this to the gate's plane, in blocks, so
@@ -198,9 +234,11 @@ public final class GateResidents {
     /**
      * Keeps exactly one warden beside the gate, wandering a few blocks
      * around his spot ({@link #WARDEN_LEASH}). He walks around on his own
-     * (Cobblemon's wander behaviour, see the NPC class); this only brings
-     * him back when he strays too far, and spawns a new one when he is gone.
-     * Two generated gates closer than {@link #WARDEN_SEARCH} share one.
+     * (Cobblemon's wander behaviour, see the NPC class), restricted to the
+     * leash around his spot; this brings him back when he strays anyway,
+     * teleports him out of water or a drop, and spawns a new one when he is
+     * gone. Two generated gates closer than {@link #WARDEN_SEARCH} share one.
+     * Keeping him off the pane runs more often, in {@link #keepWardenClearOfPane}.
      */
     private static void maintainWarden(ServerLevel level, BlockPos middle, Direction.Axis axis) {
         List<NPCEntity> wardens = level.getEntitiesOfClass(NPCEntity.class,
@@ -219,17 +257,71 @@ public final class GateResidents {
             wardens.get(i).discard();
         }
         Vec3 centre = Vec3.atBottomCenterOf(spot);
-        Mob warden = wardens.get(0);
+        NPCEntity warden = wardens.get(0);
         // A warden whose ball was taken (or a copy pasted without it) gets it back.
         if (warden.getMainHandItem().isEmpty()) {
             equipSafariBall(warden);
         }
+        // Re-applied every check: vanilla does not save a restriction, and the
+        // spot may have moved (a block placed on it).
+        warden.restrictTo(spot, WARDEN_LEASH);
         double distance = horizontalDistance(warden.position(), centre);
-        if (distance > WARDEN_LEASH * TELEPORT_FACTOR) {
+        // Water and drops are teleported at once: the NPC class lets him float
+        // and head for land, but a steep bank or a pit can still trap him, and
+        // walking him back would only push him against it.
+        if (distance > WARDEN_LEASH * TELEPORT_FACTOR || warden.isInWater()
+                || Math.abs(warden.getY() - centre.y) > SPOT_SEARCH_HEIGHT) {
             warden.teleportTo(centre.x, centre.y, centre.z);
         } else if (distance > WARDEN_LEASH) {
             walkBack(warden, spot);
         }
+    }
+
+    /**
+     * Walks the gate's warden away from the pane when he stands within
+     * {@link #PANE_CLEARANCE} of it, back to his spot. Called every second by
+     * the gate, more often than {@link #maintain}, so he never lingers there.
+     *
+     * <p>Cost: one player proximity check and one entity box query per gate
+     * and per second while a player is near; nothing more unless the warden
+     * is in the clearance (then a few block reads to find his spot).
+     *
+     * @param middle bottom block in the middle of the gate
+     * @param axis   horizontal axis the gate spans
+     * @param pane   the gate's pane blocks, as a block-aligned box
+     */
+    public static void keepWardenClearOfPane(ServerLevel level, BlockPos middle, Direction.Axis axis, AABB pane) {
+        Vec3 centre = Vec3.atBottomCenterOf(middle);
+        if (!level.hasNearbyAlivePlayer(centre.x, centre.y, centre.z, PLAYER_RANGE)) {
+            return;
+        }
+        AABB clearance = pane.inflate(PANE_CLEARANCE, PANE_CLEARANCE_HEIGHT, PANE_CLEARANCE);
+        List<NPCEntity> inside = level.getEntitiesOfClass(NPCEntity.class, clearance,
+                entity -> entity.getTags().contains(WARDEN_TAG) && clearance.contains(entity.position()));
+        if (inside.isEmpty()) {
+            return;
+        }
+        BlockPos spot = wardenSpot(level, middle, axis);
+        if (spot == null) {
+            return;
+        }
+        for (NPCEntity warden : inside) {
+            walkBack(warden, spot, CLEARANCE_RETURN_CLOSE_ENOUGH);
+        }
+    }
+
+    /**
+     * Whether a gate's warden stands within talking range of the player.
+     * What the warden's shop and entry accept besides the distance to the
+     * gate blocks: the player is obviously at the gate when talking to him,
+     * even while he strolls at the edge of his leash. Only wardens spawned by
+     * a gate carry the tag, so a Safari Warden NPC placed by hand elsewhere
+     * does not open the way. One small entity box query.
+     */
+    public static boolean isNearWarden(ServerPlayer player) {
+        return !player.level().getEntitiesOfClass(NPCEntity.class,
+                player.getBoundingBox().inflate(WARDEN_TALK_RANGE),
+                entity -> entity.getTags().contains(WARDEN_TAG)).isEmpty();
     }
 
     /**
@@ -278,11 +370,19 @@ public final class GateResidents {
      * wander. Mobs without that memory fall back to navigation.
      */
     private static void walkBack(Mob resident, BlockPos middle) {
+        walkBack(resident, middle, RETURN_CLOSE_ENOUGH);
+    }
+
+    /**
+     * {@link #walkBack(Mob, BlockPos)} with how close the resident must get
+     * for the walk to count as done.
+     */
+    private static void walkBack(Mob resident, BlockPos target, int closeEnough) {
         Brain<?> brain = resident.getBrain();
         if (brain.checkMemory(MemoryModuleType.WALK_TARGET, MemoryStatus.REGISTERED)) {
-            brain.setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(middle, RETURN_SPEED, RETURN_CLOSE_ENOUGH));
+            brain.setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(target, RETURN_SPEED, closeEnough));
         } else {
-            resident.getNavigation().moveTo(middle.getX() + 0.5D, middle.getY(), middle.getZ() + 0.5D, NAVIGATION_SPEED);
+            resident.getNavigation().moveTo(target.getX() + 0.5D, target.getY(), target.getZ() + 0.5D, NAVIGATION_SPEED);
         }
     }
 

@@ -27,9 +27,11 @@ import java.util.UUID;
  * class boosted are reset, so settings other mods put on a spawner are left
  * alone.
  *
- * <p>It also keeps {@link NoveltyInfluence} on the spawner of every player in
- * the Safari, with a snapshot of the species they caught there, so new
- * species come up more often.
+ * <p>It also keeps two influences on the spawner of every player in the
+ * Safari: {@link NoveltyInfluence}, with a snapshot of the species they
+ * caught there, so new species come up more often; and
+ * {@link SafariSpawnFilter}, with snapshots of the species the Safari would
+ * refuse, so those never take part in Cobblemon's weighted pick.
  */
 public final class SafariSpawnBoost {
 
@@ -52,6 +54,7 @@ public final class SafariSpawnBoost {
     public static void reset() {
         BOOSTED.clear();
         NoveltyInfluence.clear();
+        SafariSpawnFilter.clear();
         tickCounter = 0;
     }
 
@@ -59,7 +62,9 @@ public final class SafariSpawnBoost {
      * Runs from the server tick. Cost: a counter increment per tick; once a
      * second, per online player, two field writes and, inside the Safari, a
      * stats lookup (the caught species are copied only when their number
-     * changed).
+     * changed) and one entity query for the crowding snapshot; plus, once a
+     * second while anyone is in the Safari, the filter's server-wide refresh
+     * (see {@link SafariSpawnFilter#refresh}).
      */
     public static void tick(MinecraftServer server) {
         if (++tickCounter < CHECK_INTERVAL_TICKS) {
@@ -81,31 +86,42 @@ public final class SafariSpawnBoost {
                 spawner.setTickTimerMultiplier((float) config.spawnRateMultiplier);
                 spawner.setMaxPokemonPerChunk((float) (basePerChunk * config.pokemonPerChunkMultiplier));
                 BOOSTED.add(player.getUUID());
-                attachNovelty(spawner, player.getUUID(), stats);
+                attachInfluences(spawner, player.getUUID(), stats);
+                SafariSpawnFilter.updateCrowded(player, config.maxSameSpeciesNearby);
             } else if (BOOSTED.remove(player.getUUID())) {
                 spawner.setTickTimerMultiplier(NORMAL_RATE);
                 spawner.setMaxPokemonPerChunk(basePerChunk);
-                // The influence stays on the spawner: it does nothing outside
-                // the Safari, and leaving it avoids touching the list Cobblemon
-                // may be reading. Only the snapshot goes.
+                // The influences stay on the spawner: they do nothing outside
+                // the Safari, and leaving them avoids touching the list Cobblemon
+                // may be reading. Only the snapshots go.
                 NoveltyInfluence.forget(player.getUUID());
+                SafariSpawnFilter.forget(player.getUUID());
             }
         }
         // Players who logged out get a fresh spawner from Cobblemon next time.
         BOOSTED.retainAll(online);
         NoveltyInfluence.retain(online);
+        SafariSpawnFilter.retain(online);
+        // After the loop so the snapshot is fresh for the spawners just
+        // attached; skipped when nobody is in, since nothing reads it then.
+        if (!BOOSTED.isEmpty()) {
+            SafariSpawnFilter.refresh(server);
+        }
     }
 
     /**
-     * Puts the novelty influence on a spawner once, and refreshes the
-     * player's snapshot of caught species when its size changed (species are
-     * only ever added, so the size tells).
+     * Puts the novelty and filter influences on a spawner once, and refreshes
+     * the player's snapshot of caught species when its size changed (species
+     * are only ever added, so the size tells).
      */
-    private static void attachNovelty(PlayerSpawner spawner, UUID playerId, SafariStatsStore stats) {
+    private static void attachInfluences(PlayerSpawner spawner, UUID playerId, SafariStatsStore stats) {
         // Cobblemon's list is a plain ArrayList: added to once per spawner, on
         // the server thread, the first second the player is in the Safari.
         if (!spawner.getInfluences().contains(NoveltyInfluence.INSTANCE)) {
             spawner.getInfluences().add(NoveltyInfluence.INSTANCE);
+        }
+        if (!spawner.getInfluences().contains(SafariSpawnFilter.INSTANCE)) {
+            spawner.getInfluences().add(SafariSpawnFilter.INSTANCE);
         }
         PlayerSafariStats playerStats = stats.find(playerId);
         Set<String> caught = playerStats == null ? Set.of() : playerStats.speciesCaught();

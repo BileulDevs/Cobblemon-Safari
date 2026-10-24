@@ -1,0 +1,148 @@
+{
+  "initializationAction": "c.npc.set_chatting();",
+  "speakers": {
+    "npc": {
+      "name": {
+        "type": "expression",
+        "expression": "q.npc.name"
+      },
+      "face": "q.npc.face();",
+      "gibber": {
+        "step": 6,
+        "interval": 0.04
+      }
+    },
+    "player": {
+      "face": "q.player.face();",
+      "name": {
+        "type": "expression",
+        "expression": "q.player.username"
+      }
+    }
+  },
+  "pages": [
+    {
+      "id": "greeting",
+      "speaker": "npc",
+      "lines": [
+        "cobblemon_safari.dialogue.safari_guide.greeting.1",
+        "cobblemon_safari.dialogue.safari_guide.greeting.2"
+      ],
+      "input": {
+        "type": "option",
+        "vertical": true,
+        "options": [
+          {
+            "text": {
+              "type": "cobblemon_safari:rest_house_name",
+              "direction": "north"
+            },
+            "value": "north",
+            "isVisible": "q.player.safari_guide_can_north()",
+            "action": [
+              "q.dialogue.close();",
+              "q.player.safari_guide_go_north();"
+            ]
+          },
+          {
+            "text": {
+              "type": "cobblemon_safari:rest_house_name",
+              "direction": "north_east"
+            },
+            "value": "north_east",
+            "isVisible": "q.player.safari_guide_can_north_east()",
+            "action": [
+              "q.dialogue.close();",
+              "q.player.safari_guide_go_north_east();"
+            ]
+          },
+          {
+            "text": {
+              "type": "cobblemon_safari:rest_house_name",
+              "direction": "east"
+            },
+            "value": "east",
+            "isVisible": "q.player.safari_guide_can_east()",
+            "action": [
+              "q.dialogue.close();",
+              "q.player.safari_guide_go_east();"
+            ]
+          },
+          {
+            "text": {
+              "type": "cobblemon_safari:rest_house_name",
+              "direction": "south_east"
+            },
+            "value": "south_east",
+            "isVisible": "q.player.safari_guide_can_south_east()",
+            "action": [
+              "q.dialogue.close();",
+              "q.player.safari_guide_go_south_east();"
+            ]
+          },
+          {
+            "text": {
+              "type": "cobblemon_safari:rest_house_name",
+              "direction": "south"
+            },
+            "value": "south",
+            "isVisible": "q.player.safari_guide_can_south()",
+            "action": [
+              "q.dialogue.close();",
+              "q.player.safari_guide_go_south();"
+            ]
+          },
+          {
+            "text": {
+              "type": "cobblemon_safari:rest_house_name",
+              "direction": "south_west"
+            },
+            "value": "south_west",
+            "isVisible": "q.player.safari_guide_can_south_west()",
+            "action": [
+              "q.dialogue.close();",
+              "q.player.safari_guide_go_south_west();"
+            ]
+          },
+          {
+            "text": {
+              "type": "cobblemon_safari:rest_house_name",
+              "direction": "west"
+            },
+            "value": "west",
+            "isVisible": "q.player.safari_guide_can_west()",
+            "action": [
+              "q.dialogue.close();",
+              "q.player.safari_guide_go_west();"
+            ]
+          },
+          {
+            "text": {
+              "type": "cobblemon_safari:rest_house_name",
+              "direction": "north_west"
+            },
+            "value": "north_west",
+            "isVisible": "q.player.safari_guide_can_north_west()",
+            "action": [
+              "q.dialogue.close();",
+              "q.player.safari_guide_go_north_west();"
+            ]
+          },
+          {
+            "text": "cobblemon_safari.dialogue.safari_guide.option.bye",
+            "value": "bye",
+            "action": "q.dialogue.set_page('bye');"
+          }
+        ]
+      }
+    },
+    {
+      "id": "bye",
+      "speaker": "npc",
+      "lines": [
+        "cobblemon_safari.dialogue.safari_guide.bye"
+      ],
+      "input": "q.dialogue.close();"
+    }
+  ]
+}

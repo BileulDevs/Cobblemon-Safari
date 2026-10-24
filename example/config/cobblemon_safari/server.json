@@ -1,5 +1,5 @@
 {
-  "configVersion": 1,
+  "configVersion": 3,
   "maxDurationSeconds": 3600,
   "allowedBalls": [
     "cobblemon:safari_ball",
@@ -111,6 +111,14 @@
   "escapeRope": {
     "enabled": true
   },
+  "restHouseTravel": {
+    "guideEnabled": true,
+    "ropeEnabled": true,
+    "prebuildHouses": true,
+    "cooldownSeconds": 30,
+    "cinematicSeconds": 3,
+    "cinematicStyle": "FLIGHT"
+  },
   "bounties": {
     "enabled": true,
     "count": 4,
@@ -121,6 +129,10 @@
   },
   "spawns": {
     "nativeSpawns": true,
+    "maxSameSpeciesNearby": 4,
+    "spawnRateMultiplier": 2.0,
+    "pokemonPerChunkMultiplier": 2.0,
+    "caughtSpeciesWeight": 0.4,
     "legendary": {
       "allowSpawn": true,
       "maxSpawnPerPokemon": 1
@@ -139,11 +151,7 @@
     },
     "excludedSpecies": [
       "cobblemon:ditto"
-    ],
-    "maxSameSpeciesNearby": 4,
-    "spawnRateMultiplier": 2.0,
-    "pokemonPerChunkMultiplier": 2.0,
-    "caughtSpeciesWeight": 0.4
+    ]
   },
   "featured": {
     "enabled": true,
@@ -156,6 +164,25 @@
     "weightUltraRare": 1,
     "spawnIntervalSeconds": 15,
     "spawnChance": 0.35,
-    "maxNearbyPerPlayer": 2
+    "maxNearbyPerPlayer": 2,
+    "legendary": {
+      "allowSpawn": true,
+      "maxSpawnPerPokemon": 1
+    },
+    "mythical": {
+      "allowSpawn": false,
+      "maxSpawnPerPokemon": 1
+    },
+    "ultraBeast": {
+      "allowSpawn": false,
+      "maxSpawnPerPokemon": 1
+    },
+    "paradox": {
+      "allowSpawn": true,
+      "maxSpawnPerPokemon": 0
+    },
+    "excludedSpecies": [
+      "cobblemon:ditto"
+    ]
   }
 }

@@ -67,6 +67,20 @@ public final class SafariClientConfigManager {
             loaded.board = new SafariClientConfig.Board();
             corrected = true;
         }
+        // A value Gson could not match (a typo) reads as null: back to the default.
+        SafariClientConfig.Board boardDefaults = new SafariClientConfig.Board();
+        if (loaded.board.featuredFooter == null) {
+            loaded.board.featuredFooter = boardDefaults.featuredFooter;
+            corrected = true;
+        }
+        if (loaded.board.statsFooter == null) {
+            loaded.board.statsFooter = boardDefaults.statsFooter;
+            corrected = true;
+        }
+        if (loaded.board.bountiesFooter == null) {
+            loaded.board.bountiesFooter = boardDefaults.bountiesFooter;
+            corrected = true;
+        }
         if (loaded.board.colors == null) {
             loaded.board.colors = new SafariClientConfig.BoardColors();
             corrected = true;

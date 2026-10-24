@@ -13,7 +13,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
@@ -44,6 +46,16 @@ public final class SafariTeleporter {
      * nobody lands on its roof or wedged against its walls.
      */
     private static final int ARRIVAL_HOUSE_MARGIN = 2;
+
+    /**
+     * How far, in blocks, {@link #findStandingSpotNear} looks around the
+     * column asked for, ring by ring. Covers the width of a big tree's crown
+     * or a lake shore. Each ring loads at most a few chunks once; the worst
+     * case (nothing found) reads about 625 columns, for a rare action.
+     * Smaller fails more often in dense jungle; larger may put the player
+     * far from where they stood.
+     */
+    private static final int STANDING_SEARCH_RADIUS = 12;
 
     private SafariTeleporter() {
     }
@@ -108,11 +120,151 @@ public final class SafariTeleporter {
                 player.getYRot(), player.getXRot());
     }
 
-    /** Moves a player to the given column inside a level, on its surface. */
-    public static void sendToSurface(ServerPlayer player, ServerLevel level, int x, int z) {
+    /**
+     * Moves a player to the best place to stand at the surface near a column
+     * of the Safari: see {@link #findStandingSpotNear}.
+     *
+     * @return false when no such place was found; the player has not moved
+     */
+    public static boolean sendToSurface(ServerPlayer player, ServerLevel level, int x, int z) {
+        BlockPos spot = findStandingSpotNear(level, x, z);
+        if (spot == null) {
+            return false;
+        }
+        teleport(player, level, spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5,
+                player.getYRot(), player.getXRot());
+        return true;
+    }
+
+    /**
+     * Moves a player onto the top of the given column, whatever stands there.
+     * Only for a move that must happen even when {@link #sendToSurface} finds
+     * nothing better, like bringing someone back inside the park.
+     */
+    public static void sendToColumnTop(ServerPlayer player, ServerLevel level, int x, int z) {
         BlockPos surface = surface(level, x, z);
         teleport(player, level, surface.getX() + 0.5, surface.getY(), surface.getZ() + 0.5,
                 player.getYRot(), player.getXRot());
+    }
+
+    /**
+     * Moves a player to a rest house arrival, facing the door, or to the
+     * best place to stand near it when the spot is blocked.
+     *
+     * @return false when no place to stand was found; the player has not moved
+     */
+    public static boolean sendToArrival(ServerPlayer player, ServerLevel level, RestHouses.Arrival front) {
+        BlockPos feet = arrivalFeet(level, front);
+        if (feet == null) {
+            return false;
+        }
+        // Level gaze, as on entry: the player sees the house.
+        teleport(player, level, feet.getX() + 0.5, feet.getY(), feet.getZ() + 0.5, front.yaw(), 0.0F);
+        return true;
+    }
+
+    /**
+     * Where {@link #sendToArrival} would put the player's feet, or null when
+     * there is nowhere to stand. Also where the travel cinematic's bird lands
+     * and takes off, so the double and the player stand on the same block.
+     * Loads the chunks it reads, like {@link #findStandingSpotNear}.
+     */
+    @Nullable
+    public static BlockPos arrivalFeet(ServerLevel level, RestHouses.Arrival front) {
+        int x = front.column().getX();
+        int z = front.column().getZ();
+        BlockPos feet = surface(level, x, z);
+        return isSafe(level, feet) ? feet : findStandingSpotNear(level, x, z);
+    }
+
+    /**
+     * The best place to stand at the surface near a column of the Safari, or
+     * null: the nearest one under the open sky, else the nearest one under
+     * a cover (foliage, an overhang), searched ring by ring up to
+     * {@link #STANDING_SEARCH_RADIUS}.
+     *
+     * <p>Why not the column itself: its surface ignores leaves (so the
+     * player does not land on a canopy), which puts the "ground" of a column
+     * under a tree on top of the trunk, inside the crown, where players got
+     * stuck. The column may also be a lake or a rest house roof. Columns
+     * outside the park or on a rest house are skipped.
+     *
+     * <p>Loads the chunks it reads: not for the tick loop.
+     */
+    @Nullable
+    public static BlockPos findStandingSpotNear(ServerLevel level, int x, int z) {
+        BlockPos covered = null;
+        for (int radius = 0; radius <= STANDING_SEARCH_RADIUS; radius++) {
+            BlockPos best = null;
+            int bestDistance = Integer.MAX_VALUE;
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    // The ring only: the inner columns were tried on smaller radii.
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != radius) {
+                        continue;
+                    }
+                    int cx = x + dx;
+                    int cz = z + dz;
+                    if (ParkBoundary.isOutside(cx, cz) || RestHouses.isNear(cx, cz, ARRIVAL_HOUSE_MARGIN)) {
+                        continue;
+                    }
+                    BlockPos feet = surface(level, cx, cz);
+                    if (!canStandAt(level, feet)) {
+                        continue;
+                    }
+                    if (!level.canSeeSky(feet)) {
+                        if (covered == null) {
+                            covered = feet;
+                        }
+                        continue;
+                    }
+                    int distance = dx * dx + dz * dz;
+                    if (distance < bestDistance) {
+                        best = feet;
+                        bestDistance = distance;
+                    }
+                }
+            }
+            // A square ring holds columns farther than the next ring's
+            // nearest ones (its corners); close enough for a teleport, and
+            // stopping here keeps the common case to a few columns.
+            if (best != null) {
+                return best;
+            }
+        }
+        return covered;
+    }
+
+    /**
+     * Whether a player can stand at these feet and walk away: ground with a
+     * collision box that is neither liquid, leaves, a trunk top nor harmful,
+     * and two blocks free of collision, liquid and harm above it. Plants
+     * without collision (grass, flowers) count as free, unlike {@link #isSafe}.
+     */
+    private static boolean canStandAt(ServerLevel level, BlockPos feet) {
+        if (feet.getY() <= level.getMinBuildHeight() || feet.getY() + 1 >= level.getMaxBuildHeight()) {
+            return false;
+        }
+        BlockPos groundPos = feet.below();
+        BlockState ground = level.getBlockState(groundPos);
+        if (!ground.getFluidState().isEmpty() || ground.is(BlockTags.LEAVES) || ground.is(BlockTags.LOGS)
+                || ground.is(Blocks.MAGMA_BLOCK) || ground.is(Blocks.CACTUS) || ground.is(BlockTags.CAMPFIRES)
+                || ground.getCollisionShape(level, groundPos).isEmpty()) {
+            return false;
+        }
+        return isFree(level, feet) && isFree(level, feet.above());
+    }
+
+    /** A block a player can be in: no collision, no liquid, nothing that hurts or traps. */
+    private static boolean isFree(ServerLevel level, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        return state.getCollisionShape(level, pos).isEmpty()
+                && state.getFluidState().isEmpty()
+                && !state.is(BlockTags.FIRE)
+                && !state.is(Blocks.SWEET_BERRY_BUSH)
+                && !state.is(Blocks.POWDER_SNOW)
+                && !state.is(Blocks.COBWEB)
+                && !state.is(Blocks.WITHER_ROSE);
     }
 
     /** Moves a player across dimensions, dismounting first and clearing fall distance. */

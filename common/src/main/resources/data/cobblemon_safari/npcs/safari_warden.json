@@ -18,7 +18,9 @@
       "behaviours": [
         "cobblemon:core",
         "cobblemon:looks_at_players",
-        "cobblemon:wanders"
+        "cobblemon:wanders",
+        "cobblemon:floats",
+        "cobblemon:avoids_water"
       ]
     },
     {

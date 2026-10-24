@@ -98,30 +98,31 @@ public class SafariConfig {
     /** The Escape Rope lent at the entrance, to get out of caves. */
     public EscapeRope escapeRope = new EscapeRope();
 
+    /** Travel to the rest houses: by the Safari Guide of each house, and by the Escape Rope. */
+    public RestHouseTravel restHouseTravel = new RestHouseTravel();
+
     /** Daily missions shown on the wall screens, paid in Safari points. */
     public Bounties bounties = new Bounties();
 
-    /** Which Pokémon may appear in the Safari, whoever spawns them. */
+    /** Cobblemon's natural spawns inside the Safari: which Pokémon may come in, and how many. */
     public Spawns spawns = new Spawns();
 
-    /** The daily rotation of special Pokémon and the spawner that brings them in. */
+    /** The daily rotation of special Pokémon, its board and the spawner that brings them in. */
     public Featured featured = new Featured();
 
     /**
-     * Rules applied to every Pokémon appearing in the Safari.
+     * Which species one way into the Safari lets through: the four special
+     * categories and a list of excluded species. Shared by {@link Spawns}
+     * (Cobblemon's natural spawns) and {@link Featured} (the board and the
+     * mod's own spawner), which each carry their own copy, so a legendary can
+     * be on the board while staying out of the natural spawns, or the reverse.
      *
-     * <p>Cobblemon's own spawner populates the Safari through the biome tag
-     * bridge ({@code data/cobblemon/tags/worldgen/biome}): each habitat gets the
-     * Pokémon that naturally live in the matching Cobblemon biomes, including
-     * those added by spawn datapacks.
+     * <p>A base class rather than a nested section so the JSON keys stay
+     * where they always were ({@code spawns.legendary}, not
+     * {@code spawns.rules.legendary}): Gson writes inherited fields into the
+     * same object.
      */
-    public static class Spawns {
-        /**
-         * Lets Cobblemon's natural spawner work in the Safari. When false, only the
-         * daily special Pokémon appear, which makes the park very quiet.
-         */
-        public boolean nativeSpawns = true;
-
+    public abstract static class SpeciesRulesSection {
         /**
          * Defaults of the paradox category; see {@link #paradox}. Changing
          * them only affects new config files and files without a paradox
@@ -144,8 +145,41 @@ public class SafariConfig {
          */
         public SpecialCategory paradox = SpecialCategory.of(PARADOX_DEFAULT_ALLOWED, PARADOX_DEFAULT_CAP);
 
-        /** Species ids that never appear in the Safari, e.g. {@code cobblemon:ditto}. */
+        /** Species ids that never come in this way, e.g. {@code cobblemon:ditto}. */
         public List<String> excludedSpecies = new ArrayList<>();
+
+        /**
+         * Copies another section's categories and exclusions into this one.
+         * Used once, to carry the rules of a pre-split file over to the
+         * section that did not exist yet; the copies are independent.
+         */
+        public void copyRulesFrom(SpeciesRulesSection other) {
+            legendary = other.legendary.copy();
+            mythical = other.mythical.copy();
+            ultraBeast = other.ultraBeast.copy();
+            paradox = other.paradox.copy();
+            excludedSpecies = new ArrayList<>(other.excludedSpecies);
+        }
+    }
+
+    /**
+     * Cobblemon's natural spawns inside the Safari. The special Pokémon of
+     * the day follow {@link Featured} instead, categories included.
+     *
+     * <p>Cobblemon's own spawner populates the Safari through the biome tag
+     * bridge ({@code data/cobblemon/tags/worldgen/biome}): each habitat gets the
+     * Pokémon that naturally live in the matching Cobblemon biomes, including
+     * those added by spawn datapacks. The categories and exclusions inherited
+     * from {@link SpeciesRulesSection} take a species out of Cobblemon's draw
+     * itself, so a forbidden species with a huge weight does not starve the
+     * others (see spawn.SafariSpawnFilter).
+     */
+    public static class Spawns extends SpeciesRulesSection {
+        /**
+         * Lets Cobblemon's natural spawner work in the Safari. When false, only the
+         * daily special Pokémon appear, which makes the park very quiet.
+         */
+        public boolean nativeSpawns = true;
 
         /**
          * A natural spawn is cancelled when this many Pokémon of the same species
@@ -183,8 +217,9 @@ public class SafariConfig {
 
     /**
      * Whether, and how often, one category of special Pokémon (legendary,
-     * mythical, ultra beast, paradox) may appear in the Safari. Applies to
-     * every door: the daily specials and Cobblemon's natural spawns alike.
+     * mythical, ultra beast, paradox) may come into the Safari through one
+     * way: {@code spawns} for Cobblemon's natural spawns, {@code featured}
+     * for the board and the mod's spawner. Each way keeps its own count.
      */
     public static class SpecialCategory {
         /** Default {@link #maxSpawnPerPokemon} of every category but paradox. */
@@ -194,12 +229,14 @@ public class SafariConfig {
 
         /**
          * Most Pokémon of each species of this category per rotation of the
-         * specials (featured.rotationMinutes), counting those caught in the
-         * Safari plus those still roaming: with 2, once two Rayquaza are
-         * caught, no third shows up before the next rotation. One that
-         * leaves uncaught (despawned, fled, knocked out) gives its place back
-         * within about ten seconds, so another player gets a chance. 0 lifts
-         * the cap. A species in two categories follows the lower cap.
+         * specials (featured.rotationMinutes) coming in this way, counting
+         * those caught in the Safari plus those still roaming: with 2, once
+         * two Rayquaza from this way are caught, no third shows up through it
+         * before the next rotation. The other way counts separately, so caps
+         * of 1 in both sections allow two Rayquaza per rotation in all. One
+         * that leaves uncaught (despawned, fled, knocked out) gives its place
+         * back within about ten seconds, so another player gets a chance.
+         * 0 lifts the cap. A species in two categories follows the lower cap.
          */
         public int maxSpawnPerPokemon = DEFAULT_CAP;
 
@@ -214,6 +251,11 @@ public class SafariConfig {
             category.allowSpawn = allowSpawn;
             category.maxSpawnPerPokemon = cap;
             return category;
+        }
+
+        /** An independent copy, so two sections never share one object. */
+        public SpecialCategory copy() {
+            return of(allowSpawn, maxSpawnPerPokemon);
         }
     }
 
@@ -335,13 +377,69 @@ public class SafariConfig {
     }
 
     /**
-     * The Escape Rope: lent on entry, taken back on exit. Used in a cave of
-     * the Safari, it brings the player back to the open air right above.
-     * It never wears out.
+     * The Escape Rope: lent on entry, taken back on exit. Used in the
+     * Safari, it offers to climb back to the open air (from a cave) or to go
+     * to the nearest rest house. It never wears out.
      */
     public static class EscapeRope {
         /** Lends one rope to every player entering. */
         public boolean enabled = true;
+
+        /**
+         * Former home of {@link RestHouseTravel#cooldownSeconds}, read once
+         * by the config manager to carry an older file's value over (config
+         * version 2), then cleared. Null in any current file: Gson leaves
+         * null fields out when writing, so the key disappears.
+         */
+        @Deprecated
+        public Integer restHouseCooldownSeconds = null;
+    }
+
+    /**
+     * Travel to the rest houses. Every trip shows a short loading cinematic
+     * while the destination loads, and builds itself first if nobody went
+     * near it on this map yet.
+     */
+    public static class RestHouseTravel {
+        /** The Safari Guide of every rest house; when false, the houses have no guide. */
+        public boolean guideEnabled = true;
+
+        /** The Escape Rope's "nearest rest house" option; climbing to the open air stays. */
+        public boolean ropeEnabled = true;
+
+        /**
+         * Builds every rest house of a new map in the background, one at a
+         * time, from shortly after the server starts, so trips rarely wait
+         * for a house to build. Each house generates its few dozen chunks
+         * off the server thread, then places its blocks over a few ticks.
+         * When false, a house is built the first time a player goes near it
+         * or travels to it.
+         */
+        public boolean prebuildHouses = true;
+
+        /**
+         * Seconds before the same player can travel to a rest house again,
+         * by the guide or by the rope: one wait for both, or a player could
+         * rope to a house and take its guide straight on. 0 removes the wait.
+         */
+        public int cooldownSeconds = SafariConfigManager.DEFAULT_TRAVEL_COOLDOWN_SECONDS;
+
+        /**
+         * Shortest length of the loading cinematic, in seconds, even when the
+         * destination is ready at once. Longer when the destination must load
+         * or be built first. 0 teleports as soon as it is ready.
+         */
+        public int cinematicSeconds = SafariConfigManager.DEFAULT_TRAVEL_CINEMATIC_SECONDS;
+
+        /**
+         * How the guide's trips are shown: FLIGHT (the player's double flies
+         * off on their own flying Pokémon, or a Staraptor, seen by everyone
+         * around) or PANORAMA (the painted landscape). FLIGHT falls back to
+         * PANORAMA on its own when the sky is closed, or when the player has
+         * no flyer and Staraptor is missing. The rope always plays its own
+         * scene.
+         */
+        public TravelCinematicStyle cinematicStyle = TravelCinematicStyle.FLIGHT;
     }
 
     /** Catch rate adjustments inside the Safari. */
@@ -361,8 +459,13 @@ public class SafariConfig {
      * Special Pokémon of the day: a handful of uncommon, rare and ultra-rare
      * species drawn from what is installed (Cobblemon and datapacks), shown on
      * the wall screens and spawned in their habitat by the mod itself.
+     *
+     * <p>The categories and exclusions inherited from
+     * {@link SpeciesRulesSection} decide which species the board may draw and
+     * the mod's spawner may bring in; Cobblemon's natural spawns follow
+     * {@link Spawns} instead.
      */
-    public static class Featured {
+    public static class Featured extends SpeciesRulesSection {
         /** Master switch for the rotation, the board content and the special spawner. */
         public boolean enabled = true;
 

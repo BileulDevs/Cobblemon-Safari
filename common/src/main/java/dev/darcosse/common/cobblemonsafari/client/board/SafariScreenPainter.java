@@ -11,6 +11,7 @@ import dev.darcosse.common.cobblemonsafari.client.FeaturedClientState;
 import dev.darcosse.common.cobblemonsafari.client.SafariClientState;
 import dev.darcosse.common.cobblemonsafari.config.BoardPalette;
 import dev.darcosse.common.cobblemonsafari.config.SafariClientConfig;
+import dev.darcosse.common.cobblemonsafari.config.WallScreenFooter;
 import dev.darcosse.common.cobblemonsafari.config.SafariClientConfigManager;
 import dev.darcosse.common.cobblemonsafari.network.SafariFeaturedPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariStatsPayload;
@@ -31,9 +32,9 @@ import java.util.Locale;
  * Paints the picture of a wall screen: a station-style display of the
  * special Pokémon of the day with their animated models (FEATURED page), the
  * hunter's numbers (STATS) or the missions (BOUNTIES), with a header, a
- * footer and a progress bar for the time that matters to the viewer (their
- * own hunt if they have a session, otherwise the time until the next
- * rotation).
+ * footer and a progress bar for the time that matters to the viewer: their
+ * own hunt if they have a session, or the time until the next rotation,
+ * as each kind of screen is set in the client config (board.*Footer).
  *
  * <p>Not a block entity renderer itself: {@code SafariWallScreenRenderer}
  * places and tilts the pose, then calls {@link #paintScreen}. Everything is
@@ -287,7 +288,7 @@ public class SafariScreenPainter {
             default -> drawBody(p, x0, bodyTop, x1, bodyBottom, FeaturedClientState.entries(), now);
         };
         drawHeader(p, x0, headerTop, x1, page, now, titleKey(content));
-        drawFooter(p, x0, footerTop, x1, now, gameTime);
+        drawFooter(p, x0, footerTop, x1, now, gameTime, footerOf(board, content));
 
         drawScanline(p, left, top, right, bottom, now);
         long sinceChange = now - FeaturedClientState.changedAtMillis();
@@ -795,16 +796,28 @@ public class SafariScreenPainter {
 
     // ---- Footer -------------------------------------------------------------
 
+    /** What the footer of a kind of screen counts down, from the viewer's client config. */
+    private static WallScreenFooter footerOf(SafariClientConfig.Board board, WallScreenContent content) {
+        return switch (content) {
+            case STATS -> board.statsFooter;
+            case BOUNTIES -> board.bountiesFooter;
+            default -> board.featuredFooter;
+        };
+    }
+
     /**
-     * Label, time and progress bar. A viewer with a session sees their own
-     * hunt draining; anyone else sees the countdown to the next rotation.
+     * Label, time and progress bar. With {@link WallScreenFooter#SESSION}, a
+     * viewer with a session sees their own hunt draining; anyone else, and
+     * everyone with {@link WallScreenFooter#ROTATION}, sees the countdown to
+     * the next rotation.
      */
-    private void drawFooter(BoardPainter p, float x0, float y, float x1, long now, long gameTime) {
+    private void drawFooter(BoardPainter p, float x0, float y, float x1, long now, long gameTime,
+                            WallScreenFooter mode) {
         String labelKey;
         String time;
         float fraction;
         int color;
-        if (SafariClientState.isActive()) {
+        if (mode == WallScreenFooter.SESSION && SafariClientState.isActive()) {
             int remaining = SafariClientState.remainingTicks(gameTime);
             // max(): a raise of the remaining time reaches the client in the same
             // snapshot as the new total, but guard against a ratio above 1 anyway.

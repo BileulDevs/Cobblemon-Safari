@@ -18,7 +18,7 @@ How the files behave:
 - **An invalid value** (a negative price, an hour of 25, a colour that is not a colour...) is replaced by its default or clamped into range, a warning names it in the log, and the file is rewritten with the fixed value.
 - **A file that cannot be read at all** (a missing comma, a stray quote) is never overwritten: the mod runs on the defaults, logs the error, and reads the file again once you fix it.
 - **Unknown keys** are ignored and dropped when the file is rewritten.
-- **`configVersion`** is the format version of the file (`1`). It is not a setting: the mod writes it.
+- **`configVersion`** is the format version of the file (`3` for `server.json`). It is not a setting: the mod writes it. A `server.json` at version `1` is converted once on load: its `spawns` species rules are copied to `featured` (see below), so nothing changes in game until you edit them.
 
 Formats used below:
 
@@ -142,7 +142,22 @@ With the default missions, the defaults give about 600 points per hour of active
 
 | Key | Default | What it does |
 |---|---|---|
-| `enabled` | `true` | Lends an Escape Rope to every player entering, taken back on exit. Used in a cave, it brings the player to the surface right above. |
+| `enabled` | `true` | Lends an Escape Rope to every player entering, taken back on exit. Used in the Safari, it offers to climb to the nearest safe spot in the open air (from a cave) or to go to the nearest rest house (see `restHouseTravel`). |
+
+### `restHouseTravel`: trips between the rest houses
+
+The Safari Guide of every rest house takes players to any other house of the island, named by its biome (with its direction, "Jungle Safari (north)", when two houses share a biome). The Escape Rope can take them to the nearest one. Every trip shows a short cinematic while the destination loads; a house nobody went near yet is built during it.
+
+| Key | Default | What it does |
+|---|---|---|
+| `guideEnabled` | `true` | The Safari Guide of every rest house. `false` removes the guides from the houses. |
+| `ropeEnabled` | `true` | The Escape Rope's "nearest rest house" option. Climbing to the open air stays either way. |
+| `prebuildHouses` | `true` | Builds every rest house of a new map in the background, one at a time, from 30 s after the server starts, so trips rarely wait. `false` builds a house the first time a player goes near it or travels to it. |
+| `cooldownSeconds` | `30` | Seconds before the same player can travel again, by the guide or by the rope: one wait for both, so the two cannot be chained. 0 removes the wait. At least 0. |
+| `cinematicSeconds` | `3` | Shortest length of the cinematic, even when the destination is ready at once; longer while it loads or builds (45 s at most, then the trip is given up). 0 to 15. |
+| `cinematicStyle` | `"FLIGHT"` | How the guide's trips are shown. `"FLIGHT"`: a double of the player, wearing their skin, takes off in front of the house on the first Pokémon of their party that can be ridden in the air (a copy of it: the party is not touched), or on a Staraptor when none can, and lands in front of the destination, filmed by the game camera; players around see it too. `"PANORAMA"`: the painted landscape between black bands. FLIGHT falls back to PANORAMA by itself when the mount has no open sky in front of the house, or when the player has no flyer and Staraptor is missing. The Escape Rope always plays its own pixel-art scene. |
+
+A file of version 2 had the wait as `escapeRope.restHouseCooldownSeconds`; its value is moved here on load.
 
 ### `bounties`: missions
 
@@ -157,35 +172,53 @@ A few missions drawn with each rotation of the specials, the same for every play
 | `featuredReward` | `250` | Reward of a "catch one of today's specials" mission. There is no such mission when the specials are off. |
 | `allDoneBonus` | `200` | Extra points once every mission of the rotation is done. |
 
-### `spawns`: which Pokémon may appear
+### Species rules: `spawns` and `featured`
 
-These rules apply to every Pokémon appearing in the Safari: Cobblemon's natural spawns and the specials alike.
+Pokémon come into the Safari two ways, and each has its own species rules:
+
+- **`spawns`** for Cobblemon's natural spawns;
+- **`featured`** for the Pokémon of the day: what the wall screens may draw, and what the mod's own spawner brings in.
+
+So a legendary can be one of the specials without roaming the park through the natural spawns, or the reverse. Both sections take the same five keys:
 
 | Key | Default | What it does |
 |---|---|---|
-| `nativeSpawns` | `true` | Lets Cobblemon's natural spawner work in the Safari. `false` leaves only the specials, and the park very quiet. |
-| `legendary` | allowed: `false`, cap: `1` | Pokémon labelled `legendary` (Rayquaza, Mewtwo...). See the category keys below. |
-| `mythical` | allowed: `false`, cap: `1` | Pokémon labelled `mythical` (Mew, Celebi...). |
-| `ultraBeast` | allowed: `false`, cap: `1` | Pokémon labelled `ultra_beast` (Nihilego, Buzzwole...). |
-| `paradox` | allowed: `true`, cap: `0` | Pokémon labelled `paradox` (Great Tusk, Iron Treads...). Allowed and uncapped by default: they are ordinary wild Pokémon in their own games. |
-| `excludedSpecies` | `[]` | Species that never appear, e.g. `["cobblemon:ditto"]`. |
-| `maxSameSpeciesNearby` | `4` | A natural spawn is cancelled when this many Pokémon of the same species already roam nearby, so one common species cannot flood a habitat. 0 turns the cap off. |
-| `spawnRateMultiplier` | `2.0` | How much faster Cobblemon's spawner works for players in the Safari. 1 is Cobblemon's own pace. Higher costs more server time. 0.1 to 10. |
-| `pokemonPerChunkMultiplier` | `2.0` | Multiplies Cobblemon's Pokémon-per-chunk cap for players in the Safari, so faster spawning is not wasted on a full cap. 0.1 to 10. |
-| `caughtSpeciesWeight` | `0.4` | Weight of the species a player already caught in the Safari, in the natural spawns around them (against 1 for species they have not). At 0.4 a new species is two and a half times as likely as a caught one. 1 turns it off; 0 stops caught species entirely while anything else can spawn. 0 to 1. |
+| `legendary` | `allowSpawn`: `false`, `maxSpawnPerPokemon`: `1` | Pokémon labelled `legendary` (Rayquaza, Mewtwo...). See the category keys below. |
+| `mythical` | `allowSpawn`: `false`, `maxSpawnPerPokemon`: `1` | Pokémon labelled `mythical` (Mew, Celebi...). |
+| `ultraBeast` | `allowSpawn`: `false`, `maxSpawnPerPokemon`: `1` | Pokémon labelled `ultra_beast` (Nihilego, Buzzwole...). |
+| `paradox` | `allowSpawn`: `true`, `maxSpawnPerPokemon`: `0` | Pokémon labelled `paradox` (Great Tusk, Iron Treads...). Allowed and uncapped by default: they are ordinary wild Pokémon in their own games. |
+| `excludedSpecies` | `[]` | Species that never come in this way, e.g. `["cobblemon:ditto"]`. |
 
 Each category (`legendary`, `mythical`, `ultraBeast`, `paradox`) has two keys:
 
 | Key | What it does |
 |---|---|
-| `allowSpawn` | Whether Pokémon of this category may appear at all. A species in two categories needs both allowed. |
-| `maxSpawnPerPokemon` | Most Pokémon of each species of this category per rotation, counting those caught in the Safari plus those still roaming: with 2, once two Rayquaza are caught, no third shows up before the next rotation. One that leaves uncaught (despawned, fled, knocked out) gives its place back within about ten seconds. 0 lifts the cap. |
+| `allowSpawn` | Whether Pokémon of this category may come in this way at all. A species in two categories needs both allowed. |
+| `maxSpawnPerPokemon` | Most Pokémon of each species of this category coming in this way per rotation, counting those caught in the Safari plus those still roaming: with 2, once two Rayquaza are caught, no third comes in this way before the next rotation. One that leaves uncaught (despawned, fled, knocked out) gives its place back within about ten seconds. 0 lifts the cap. |
+
+The two ways count apart: with a cap of `1` in both sections, one Rayquaza may come from the natural spawns and another from the specials in the same rotation.
+
+These rules only cover the Safari: they never change what spawns in the rest of the world. The missions follow `spawns` (they are met with natural Pokémon); the shop has its own rules (`rotating` in `shop.json`).
+
+A species refused by `spawns` is taken out of Cobblemon's spawn draw itself, so it no longer shows in `/checkspawn` there, and one with a huge weight (a datapack spawning Mew as common, say) cannot starve the other species. Species at their `maxSpawnPerPokemon`, or already `maxSameSpeciesNearby` times around the player, leave the draw the same way, until a slot frees up.
+
+### `spawns`: Cobblemon's natural spawns
+
+On top of the species rules above:
+
+| Key | Default | What it does |
+|---|---|---|
+| `nativeSpawns` | `true` | Lets Cobblemon's natural spawner work in the Safari. `false` leaves only the specials, and the park very quiet. |
+| `maxSameSpeciesNearby` | `4` | No natural spawn of a species when this many of it already roam nearby, so one common species cannot flood a habitat. 0 turns the cap off. |
+| `spawnRateMultiplier` | `2.0` | How much faster Cobblemon's spawner works for players in the Safari. 1 is Cobblemon's own pace. Higher costs more server time. 0.1 to 10. |
+| `pokemonPerChunkMultiplier` | `2.0` | Multiplies Cobblemon's Pokémon-per-chunk cap for players in the Safari, so faster spawning is not wasted on a full cap. 0.1 to 10. |
+| `caughtSpeciesWeight` | `0.4` | Weight of the species a player already caught in the Safari, in the natural spawns around them (against 1 for species they have not). At 0.4 a new species is two and a half times as likely as a caught one. 1 turns it off; 0 stops caught species entirely while anything else can spawn. 0 to 1. |
 
 Cobblemon's `/gamerule doPokemonSpawning false` stops every spawn in the Safari, specials included.
 
 ### `featured`: the Pokémon of the day
 
-A few uncommon, rare and ultra-rare species, drawn from what is installed, shown on the wall screens and spawned by the mod in their own habitat.
+A few uncommon, rare and ultra-rare species, drawn from what is installed, shown on the wall screens and spawned by the mod in their own habitat. On top of the species rules above:
 
 | Key | Default | What it does |
 |---|---|---|
@@ -193,13 +226,15 @@ A few uncommon, rare and ultra-rare species, drawn from what is installed, shown
 | `rotationMinutes` | `240` (4 h) | Length of a rotation, in real minutes. When it divides a day, rotations are aligned on midnight UTC: 240 changes the specials at 0, 4, 8, 12, 16 and 20 h UTC. Missions, the shop's random goods and the purchase limits follow the same rotation. At least 1. |
 | `uncommonSlots` | `1` | Uncommon species per rotation. |
 | `rareSlots` | `2` | Rare species per rotation. |
-| `ultraRareSlots` | `3` | Ultra-rare species per rotation; legendaries land here when allowed. A slot a rarity cannot fill goes to the next more common one. |
+| `ultraRareSlots` | `3` | Ultra-rare species per rotation; legendaries land here when `featured.legendary` allows them. A slot a rarity cannot fill goes to the next more common one. |
 | `weightUncommon` | `10` | Relative chance of an uncommon special being picked for a spawn. |
 | `weightRare` | `4` | Relative chance of a rare special. |
 | `weightUltraRare` | `1` | Relative chance of an ultra-rare special. |
 | `spawnIntervalSeconds` | `15` | Seconds between two spawn attempts around each player in the Safari. At least 1. |
 | `spawnChance` | `0.35` | Chance that an attempt goes ahead, 0 to 1. |
 | `maxNearbyPerPlayer` | `2` | Specials allowed around one player at once (never two of the same species). |
+
+After `/safari reload`, the specials are redrawn with the new rules right away.
 
 `/safari rotate` starts a new rotation now; `/safari today` lists the current specials.
 
@@ -239,7 +274,7 @@ Each entry is an item or a Pokémon. Entries appear in the order of the file wit
 | `count` | items | Stack given per purchase, 1 to 64. |
 | `pokemon` | Pokémon | Cobblemon properties, e.g. `"dratini level=15"`. The Pokémon goes to the party, or the PC when the party is full. |
 | `price` | both | Cost in Safari points (0 for free). For a Pokémon, `"auto"` prices it like the random ones: the base price of its rarity in the Safari times its evolution stage. |
-| `cost` | both | Items taken in exchange, on top of `price`: a list of `{"item": ..., "count": ...}`, each `item` an id or a `#tag` (any mix of the tag's items counts). Leave it out for a plain purchase. |
+| `cost` | both | Items taken in exchange, on top of `price`: a list of `{"item": ..., "count": ...}`, each `item` an id or a `#tag` (any mix of the tag's items counts; a player carrying several kinds picks which one is given first). Leave it out for a plain purchase. |
 | `limitPerRotation` | both | How many times each player may buy it per rotation. Leave it out for no limit. |
 | `cooldownHours` | both | Hours each player waits after buying it before buying it again, in real time (the wait goes on while the player or the server is offline). Leave it out for no wait. Up to a year. |
 | `tab` | both | Id of the tab showing it. Empty or unknown: `pokemon` for Pokémon, `balls` for items whose id ends in `_ball`, `tickets` for Safari Tickets, `items` otherwise. The mod writes the chosen tab back. |
@@ -250,7 +285,7 @@ The default entries show every kind:
 - **Items**: Rare Candy, Exp. Candy M, Ability Capsule, Poké Balls, Great Balls and Ultra Balls.
 - **Free daily Safari Balls**: 30 `cobblemon:safari_ball` for 0 points with `"cooldownHours": 24`. The card shows "Free" and a "Take" button.
 - **Cooking**: what the rest houses' Poké Pot needs (Hearty Grains, Vivichoke, Medicinal Leek, Tasty Tail, Galarica Nuts, Pep-Up Flower, Energy Root, honey, sugar, milk).
-- **Ticket trades**: one Safari Ticket for 16 `#cobblemon:apricorns`, 24 `#cobblemon:berries` or 1 `#cobblemon:evolution_stones`, each `"limitPerRotation": 1`.
+- **Ticket trades**: one Safari Ticket for 16 `#cobblemon:apricorns`, 24 `#cobblemon:berries`, 1 `#cobblemon:evolution_stones` or 1 `#cobblemon:fossils`, each `"limitPerRotation": 1`. A `shop.json` from before the fossil trade (version 1) gets it added once on load, unless it already trades fossils.
 
 ### `rotating`: random Pokémon
 
@@ -318,6 +353,9 @@ These settings belong to each player; a server cannot change them.
 | `useSprites` | `false` | Draws the Pokémon as the mod's flat pixel sprites instead of turning 3D Cobblemon models. A Pokémon without a sprite keeps its model. Resource packs can replace the sprites (`assets/cobblemon_safari/textures/pokemon_sprites/`). |
 | `backgroundImage` | `true` | Shows the safari landscape of the time of day behind the screen. `false` uses the plain `colors.background`. |
 | `panelOpacity` | `0.72` | Opacity of the title band, cells and bars over the landscape, from 0 (invisible) to 1 (opaque). |
+| `featuredFooter` | `"SESSION"` | What the bar at the bottom of the specials screens counts down: `"SESSION"`, your hunting time while you hunt (the next rotation otherwise), or `"ROTATION"`, always the next rotation. |
+| `statsFooter` | `"ROTATION"` | Same, for the record screens. |
+| `bountiesFooter` | `"SESSION"` | Same, for the missions screens. |
 | `colors` | see below | Every colour of the screens. |
 
 ### `board.colors`

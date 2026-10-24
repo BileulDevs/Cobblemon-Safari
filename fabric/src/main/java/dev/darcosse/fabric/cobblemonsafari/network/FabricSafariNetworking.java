@@ -6,6 +6,7 @@ import dev.darcosse.common.cobblemonsafari.network.SafariRulesPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariTimerPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariShopBuyPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariShopPayload;
+import dev.darcosse.common.cobblemonsafari.network.SafariTravelPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariStatsPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariWallScreenOpenPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariWallScreenSetPayload;
@@ -48,6 +49,7 @@ public final class FabricSafariNetworking {
         ServerPlayNetworking.registerGlobalReceiver(SafariWallScreenSetPayload.TYPE,
                 (payload, context) -> WallScreenSettings.handleSet(context.player(), payload));
         PayloadTypeRegistry.playS2C().register(SafariBannerOpenPayload.TYPE, SafariBannerOpenPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(SafariTravelPayload.TYPE, SafariTravelPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SafariBannerSetPayload.TYPE, SafariBannerSetPayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(SafariBannerSetPayload.TYPE,
                 (payload, context) -> BannerDesigns.handleSet(context.player(), payload));

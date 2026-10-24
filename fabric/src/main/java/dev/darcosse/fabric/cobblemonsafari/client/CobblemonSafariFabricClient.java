@@ -15,7 +15,9 @@ import dev.darcosse.common.cobblemonsafari.network.SafariBountiesPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariClientNetwork;
 import dev.darcosse.common.cobblemonsafari.network.SafariRulesPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariShopPayload;
+import dev.darcosse.common.cobblemonsafari.network.SafariTravelPayload;
 import dev.darcosse.common.cobblemonsafari.network.ShopClientBridge;
+import dev.darcosse.common.cobblemonsafari.network.TravelClientBridge;
 import dev.darcosse.common.cobblemonsafari.network.SafariStatsPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariWallScreenOpenPayload;
 import dev.darcosse.common.cobblemonsafari.network.WallScreenClientBridge;
@@ -62,6 +64,8 @@ public class CobblemonSafariFabricClient implements ClientModInitializer {
                 context.client().execute(() -> WallScreenClientBridge.onOpen(payload)));
         ClientPlayNetworking.registerGlobalReceiver(SafariBannerOpenPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> BannerClientBridge.onOpen(payload)));
+        ClientPlayNetworking.registerGlobalReceiver(SafariTravelPayload.TYPE, (payload, context) ->
+                context.client().execute(() -> TravelClientBridge.onTravel(payload)));
         SafariClientNetwork.setSender(ClientPlayNetworking::send);
 
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> SafariClient.onDisconnect());

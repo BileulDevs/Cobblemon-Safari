@@ -17,6 +17,7 @@ import dev.darcosse.common.cobblemonsafari.points.SafariPoints;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedRotation;
 import dev.darcosse.common.cobblemonsafari.spawn.HabitatEntry;
 import dev.darcosse.common.cobblemonsafari.spawn.Rarity;
+import dev.darcosse.common.cobblemonsafari.spawn.SpawnSource;
 import dev.darcosse.common.cobblemonsafari.spawn.SpeciesRules;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
 import dev.darcosse.common.cobblemonsafari.world.SafariWorldState;
@@ -270,8 +271,12 @@ public final class SafariBounties {
         List<Species> pool = new ArrayList<>();
         Map<String, Integer> typeWeights = new LinkedHashMap<>();
         for (HabitatEntry entry : FeaturedRotation.index(server).values()) {
+            // Natural rules, not the board's: missions are met with what
+            // Cobblemon's spawner brings, so a species it never lets in would
+            // make a mission impossible.
             if ((entry.rarity() != Rarity.COMMON && entry.rarity() != Rarity.UNCOMMON)
-                    || !SpeciesRules.isAllowed(entry.species()) || SpeciesRules.isSpecial(entry.species())) {
+                    || !SpeciesRules.isAllowed(entry.species(), SpawnSource.NATURAL)
+                    || SpeciesRules.isSpecial(entry.species())) {
                 continue;
             }
             pool.add(entry.species());

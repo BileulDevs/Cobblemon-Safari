@@ -1,0 +1,12 @@
+{
+  "hitbox": "player",
+  "names": [
+    "cobblemon_safari.npc.safari_traveller.name"
+  ],
+  "canDespawn": false,
+  "isInvulnerable": true,
+  "isMovable": false,
+  "isLeashable": false,
+  "allowProjectileHits": false,
+  "behaviours": []
+}

@@ -9,7 +9,9 @@ import dev.darcosse.common.cobblemonsafari.network.SafariNetwork;
 import dev.darcosse.common.cobblemonsafari.network.SafariRulesPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariShopBuyPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariShopPayload;
+import dev.darcosse.common.cobblemonsafari.network.SafariTravelPayload;
 import dev.darcosse.common.cobblemonsafari.network.ShopClientBridge;
+import dev.darcosse.common.cobblemonsafari.network.TravelClientBridge;
 import dev.darcosse.common.cobblemonsafari.network.SafariStatsPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariWallScreenOpenPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariWallScreenSetPayload;
@@ -69,6 +71,9 @@ public final class NeoForgeSafariNetworking {
         // Through the bridge for the same reason as the shop.
         registrar.playToClient(SafariBannerOpenPayload.TYPE, SafariBannerOpenPayload.CODEC,
                 (payload, context) -> context.enqueueWork(() -> BannerClientBridge.onOpen(payload)));
+        // Through the bridge for the same reason as the shop.
+        registrar.playToClient(SafariTravelPayload.TYPE, SafariTravelPayload.CODEC,
+                (payload, context) -> context.enqueueWork(() -> TravelClientBridge.onTravel(payload)));
         registrar.playToServer(SafariBannerSetPayload.TYPE, SafariBannerSetPayload.CODEC,
                 (payload, context) -> context.enqueueWork(() -> {
                     if (context.player() instanceof ServerPlayer player) {
