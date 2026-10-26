@@ -6,7 +6,6 @@ A highly configurable Safari Zone for [Cobblemon](https://cobblemon.com): hunt r
 [![Minecraft](https://img.shields.io/badge/Minecraft-1.21.1-green?logo=minecraft)](https://www.minecraft.net)
 [![Fabric](https://img.shields.io/badge/Fabric-supported-dbb37d?logo=fabric)](https://fabricmc.net)
 [![NeoForge](https://img.shields.io/badge/NeoForge-supported-e04e14)](https://neoforged.net)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---
 
@@ -51,7 +50,7 @@ Eight Pokémon Centers stand on every map, the entrance one right where you arri
 ### Missions and Safari points
 
 - Every catch earns **Safari points**, more for rare species, today's specials and shinies.
-- Each rotation brings **three missions** (catch Pokémon of a type, a given species, or one of today's specials), the same for everyone, paid once per player, with a bonus when all are done.
+- Each rotation brings **three missions** drawn among twelve kinds (a species, a type, one of today's specials, a habitat, different species, without a battle, at night...), the same for everyone, paid once per player, with a bonus when all are done. Too hard? The clerk swaps one for you, for a few points. Every kind, its reward and the species it may ask can be configured.
 - The **shop** sells a fixed list plus random Pokémon, items and Poké Balls that change with each rotation, a cooking tab, and the ticket trades. Pokémon cards show the animated Cobblemon model.
 
 ### Safari Wall Screens

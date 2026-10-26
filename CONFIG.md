@@ -18,7 +18,7 @@ How the files behave:
 - **An invalid value** (a negative price, an hour of 25, a colour that is not a colour...) is replaced by its default or clamped into range, a warning names it in the log, and the file is rewritten with the fixed value.
 - **A file that cannot be read at all** (a missing comma, a stray quote) is never overwritten: the mod runs on the defaults, logs the error, and reads the file again once you fix it.
 - **Unknown keys** are ignored and dropped when the file is rewritten.
-- **`configVersion`** is the format version of the file (`3` for `server.json`, `2` for `shop.json`, `1` for `client.json`). It is not a setting: the mod writes it. A `server.json` at version `1` (Cobblemon Safari 1.0.0) is converted once on load: its `spawns` species rules are copied to `featured` (see below), so nothing changes in game until you edit them. A `shop.json` at version `1` gets the fossil ticket trade added once.
+- **`configVersion`** is the format version of the file (`4` for `server.json`, `2` for `shop.json`, `1` for `client.json`). It is not a setting: the mod writes it. A `server.json` at version `1` (Cobblemon Safari 1.0.0) is converted once on load: its `spawns` species rules are copied to `featured` (see below), so nothing changes in game until you edit them. A `server.json` older than version `4` (Cobblemon Safari 1.1.0 and before) has its three bounty rewards moved into `bounties.kinds`. A `shop.json` at version `1` gets the fossil ticket trade added once.
 
 Formats used below:
 
@@ -161,16 +161,67 @@ A file of version 2 had the wait as `escapeRope.restHouseCooldownSeconds`; its v
 
 ### `bounties`: missions
 
-A few missions drawn with each rotation of the specials, the same for every player, each paid once per player.
+`count` missions drawn with each rotation of the specials, the same for every player, each paid once per player. Each mission is of a kind drawn by weight among `allowedKinds`; a rotation draws different kinds first, and repeats a kind only when too few kinds can be drawn. A kind that cannot be met this rotation is skipped (no specials, no habitat with enough species...).
 
 | Key | Default | What it does |
 |---|---|---|
 | `enabled` | `true` | Master switch for the missions, their rewards and their page on the wall screens. |
 | `count` | `3` | Missions per rotation, 0 to 8. |
-| `typeRewardPerCatch` | `30` | Reward of a "catch N Pokémon of a type" mission, per Pokémon asked (N is 3 to 5): 3 Pokémon = 90 points. |
-| `speciesReward` | `120` | Reward of a "catch this species" mission (two of a common species, one of an uncommon one). |
-| `featuredReward` | `250` | Reward of a "catch one of today's specials" mission. There is no such mission when the specials are off. |
+| `allowedKinds` | every kind but `HIDDEN_ABILITY` and `SHINY` | The kinds that may be drawn (table below). An unknown name is dropped with a warning. |
 | `allDoneBonus` | `200` | Extra points once every mission of the rotation is done. |
+| `kinds` | see below | The tuning of each kind. |
+| `speciesFilter` | see below | Which species the missions may ask. |
+| `swap` | see below | Swapping a mission at the clerk. |
+
+The kinds (`allowedKinds` names, `kinds` keys):
+
+| Kind | `kinds` key | Mission | Default tuning |
+|---|---|---|---|
+| `SPECIES` | `species` | Catch N of a species. N follows its rarity: `commonCount` 2, `uncommonCount` 1, `rareCount` 1 (when `speciesFilter.rarities` lets rare ones in). | weight 3, 120 points |
+| `TYPE` | `type` | Catch N Pokémon of a type, the type weighted by how many species have it. | weight 3, 3 to 5, 30 per catch |
+| `FEATURED` | `featured` | Catch N of the current specials (never more than there are specials). Not drawn while the specials are off. | weight 2, 1, 250 points |
+| `HABITAT` | `habitat` | Catch N Pokémon in a Safari habitat (where the Pokémon stands when caught). Only habitats with at least 3 species of the filter are named. | weight 2, 3 to 4, 25 per catch |
+| `ANY` | `any` | Catch N Pokémon. | weight 1, 5 to 8, 15 per catch |
+| `DIFFERENT` | `different` | Catch N different species. | weight 2, 3 to 5, 30 per catch |
+| `OUT_OF_BATTLE` | `outOfBattle` | Catch N Pokémon without battling them. | weight 2, 2 to 4, 30 per catch |
+| `NIGHT` | `night` | Catch N Pokémon at night (Cobblemon's night, about 12500 to 23500 ticks of the day). A rotation shorter than a game day may have no night. | weight 1, 2 to 3, 40 per catch |
+| `EVOLVED` | `evolved` | Catch N fully evolved Pokémon (a species that evolved and evolves no further). | weight 1, 1 to 2, 80 per catch |
+| `LEVEL` | `level` | Catch N Pokémon of at least a level, drawn between `minLevel` 20 and `maxLevel` 40 by steps of 5, and lowered to the highest wild level of the filter's species. | weight 1, 1, 120 points |
+| `HIDDEN_ABILITY` | `hiddenAbility` | Catch N Pokémon with their hidden ability. Rare: Cobblemon gives one only to some fished Pokémon and to those drawn by a honeyed tree. | weight 1, 1, 400 points |
+| `SHINY` | `shiny` | Catch N shiny Pokémon. Luck more than skill. | weight 1, 1, 1000 points |
+
+Every entry of `kinds` has the same keys (`species` and `level` add theirs, above):
+
+| Key | What it does |
+|---|---|
+| `weight` | How often the kind is drawn against the other allowed kinds. 0 never draws it. |
+| `minCount`, `maxCount` | Catches asked, drawn between the two. At least 1. Ignored by `species` (its counts follow the rarity). |
+| `reward` | Points paid on completion, whatever the count. |
+| `rewardPerCatch` | Points paid on completion for each catch asked: `reward + rewardPerCatch × N`. |
+
+Write every key of an entry you change: a key left out of an entry present in the file takes the generic value (weight 1, counts 1, rewards 0), not the kind's default. An entry left out entirely keeps its defaults.
+
+`speciesFilter` decides which species a species mission may name, which types a type mission may ask, which habitats a habitat mission may name, and the levels a level mission may ask. A species is kept when one of its natural spawns in the Safari's surface habitats is of an allowed rarity and passes every switch: a species that also spawns in a plain way somewhere stays, even if its other spawns are fished or nocturnal. Legendary-class species and anything `spawns` refuses are always left out.
+
+| Key | Default | What it does |
+|---|---|---|
+| `rarities` | `["common", "uncommon", "rare"]` | Spawn buckets that may be asked: `common`, `uncommon`, `rare`, `ultra-rare`. |
+| `excludedSpecies` | `[]` | Species never asked, e.g. `"cobblemon:ditto"`. |
+| `excludedTypes` | `[]` | Types never asked, and whose species are never asked either, e.g. `"dragon"`. |
+| `allowWater` | `false` | Species met in the water (fishing, surfacing, diving). |
+| `allowCaves` | `true` | Species met underground (a spawn that wants no sky). |
+| `allowTimeRestricted` | `false` | Species met only at some hours (night, dawn, dusk). |
+| `allowWeatherRestricted` | `false` | Species met only in some weather (rain, thunder). |
+
+`swap`: a player who finds a mission too hard asks the clerk to replace it, for themselves only. The new mission is of another kind when one can be drawn, starts from zero, and a mission already done cannot be swapped.
+
+| Key | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | Whether the clerk offers it. |
+| `cost` | `50` | Safari points it costs. 0 makes it free. |
+| `perRotation` | `1` | Swaps each player may make per rotation, 0 to 8. |
+
+A file of version 3 or older had `typeRewardPerCatch`, `speciesReward` and `featuredReward` here; their values are moved to `kinds.type.rewardPerCatch`, `kinds.species.reward` and `kinds.featured.reward` on load.
 
 ### Species rules: `spawns` and `featured`
 

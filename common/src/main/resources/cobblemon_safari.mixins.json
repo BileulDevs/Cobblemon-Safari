@@ -17,6 +17,7 @@
     "client.GuiPortalOverlayMixin",
     "client.MinecraftMusicMixin",
     "client.ScreenDialogueOptionsMixin",
+    "client.DialogueOptionTextFitMixin",
     "client.LocalPlayerPortalSoundMixin"
   ]
 }

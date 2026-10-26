@@ -1,6 +1,8 @@
 package dev.darcosse.common.cobblemonsafari.config;
 
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
+import dev.darcosse.common.cobblemonsafari.bounty.BountyKind;
+import dev.darcosse.common.cobblemonsafari.bounty.SafariBounties;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
@@ -10,6 +12,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -51,9 +55,10 @@ public final class SafariConfigManager {
 
     /**
      * Most missions per rotation. The clerk lists them in chat; past
-     * about eight lines the list scrolls out of the chat box.
+     * about eight lines the list scrolls out of the chat box. Bound to the
+     * clerk's swap functions, one per mission (SafariBounties.MAX_MISSIONS).
      */
-    private static final int MAX_BOUNTIES = 8;
+    private static final int MAX_BOUNTIES = SafariBounties.MAX_MISSIONS;
 
     /**
      * Format version written to the file. Raise it when a field changes
@@ -65,9 +70,26 @@ public final class SafariConfigManager {
      * and its siblings governed every way into the Safari; from 2 they only
      * govern Cobblemon's natural spawns and {@code featured} carries its own
      * set for the board (see {@link #migrate}). 3 moved the rest house
-     * travel wait from {@code escapeRope} to {@code restHouseTravel}.
+     * travel wait from {@code escapeRope} to {@code restHouseTravel}. 4 gave
+     * each kind of mission its own tuning ({@code bounties.kinds}), where the
+     * three former rewards of {@code bounties} moved.
      */
-    public static final int CURRENT_CONFIG_VERSION = 3;
+    public static final int CURRENT_CONFIG_VERSION = 4;
+
+    /** First version in which every kind of mission has its tuning under {@code bounties.kinds}. */
+    private static final int BOUNTY_KINDS_VERSION = 4;
+
+    /** Most swaps a player may make per rotation: as many as the missions themselves. */
+    private static final int MAX_BOUNTY_SWAPS = 8;
+
+    /**
+     * Highest level a level mission may ask: Cobblemon's maximum. Above it
+     * the mission could never be done.
+     */
+    private static final int MAX_POKEMON_LEVEL = 100;
+
+    /** Spawn buckets a species filter may name: Cobblemon's own. */
+    private static final Set<String> BOUNTY_RARITIES = Set.of("common", "uncommon", "rare", "ultra-rare");
 
     /** First version in which {@code featured} has its own species rules. */
     private static final int SPLIT_SPECIES_RULES_VERSION = 2;
@@ -186,6 +208,44 @@ public final class SafariConfigManager {
             }
             c.escapeRope.restHouseCooldownSeconds = null;
         }
+        migrateBounties(c);
+    }
+
+    /**
+     * Moves the three rewards {@code bounties} had before version 4 into the
+     * kinds they belong to. Read whatever the version, for a file edited by
+     * hand; only a file older than 4 has its values carried over.
+     */
+    private static void migrateBounties(SafariConfig c) {
+        SafariConfig.Bounties b = c.bounties;
+        if (b == null) {
+            return;
+        }
+        if (b.kinds == null) {
+            b.kinds = new BountyKinds();
+        }
+        b.kinds.fillMissing();
+        if (c.configVersion < BOUNTY_KINDS_VERSION) {
+            boolean moved = false;
+            if (b.typeRewardPerCatch != null) {
+                b.kinds.type.rewardPerCatch = b.typeRewardPerCatch;
+                moved = true;
+            }
+            if (b.speciesReward != null) {
+                b.kinds.species.reward = b.speciesReward;
+                moved = true;
+            }
+            if (b.featuredReward != null) {
+                b.kinds.featured.reward = b.featuredReward;
+                moved = true;
+            }
+            if (moved) {
+                CobblemonSafari.LOGGER.info("Moved the bounty rewards of {} into bounties.kinds", FILE_NAME);
+            }
+        }
+        b.typeRewardPerCatch = null;
+        b.speciesReward = null;
+        b.featuredReward = null;
     }
 
     /** Re-reads the file; callers are responsible for re-syncing clients afterwards. */
@@ -539,7 +599,10 @@ public final class SafariConfigManager {
         return corrected;
     }
 
-    /** Fixes the bounties section: sane counts, no negative reward. Returns true if anything changed. */
+    /**
+     * Fixes the bounties section: a count of 0 to 8, known kinds only,
+     * sane tunings, known rarities. Returns true if anything changed.
+     */
     private static boolean validateBounties(SafariConfig c) {
         if (c.bounties == null) {
             c.bounties = new SafariConfig.Bounties();
@@ -553,12 +616,112 @@ public final class SafariConfigManager {
             b.count = fixed;
             corrected = true;
         }
-        if (b.typeRewardPerCatch < 0 || b.speciesReward < 0 || b.featuredReward < 0 || b.allDoneBonus < 0) {
-            warn("bounties rewards", "a negative value", "0");
-            b.typeRewardPerCatch = Math.max(0, b.typeRewardPerCatch);
-            b.speciesReward = Math.max(0, b.speciesReward);
-            b.featuredReward = Math.max(0, b.featuredReward);
-            b.allDoneBonus = Math.max(0, b.allDoneBonus);
+        if (b.allDoneBonus < 0) {
+            warn("bounties.allDoneBonus", b.allDoneBonus, 0);
+            b.allDoneBonus = 0;
+            corrected = true;
+        }
+        if (b.allowedKinds == null) {
+            b.allowedKinds = new SafariConfig.Bounties().allowedKinds;
+            corrected = true;
+        } else {
+            // Gson reads a name that is no kind as null; duplicates would only weigh twice.
+            List<BountyKind> kinds = new ArrayList<>(new LinkedHashSet<>(b.allowedKinds));
+            kinds.removeIf(Objects::isNull);
+            if (kinds.size() != b.allowedKinds.size()) {
+                CobblemonSafari.LOGGER.warn("{}: bounties.allowedKinds had unknown or repeated kinds; kept {}",
+                        FILE_NAME, kinds);
+                b.allowedKinds = kinds;
+                corrected = true;
+            }
+        }
+        if (b.kinds == null) {
+            b.kinds = new BountyKinds();
+            corrected = true;
+        }
+        corrected |= b.kinds.fillMissing();
+        for (BountyKind kind : BountyKind.values()) {
+            corrected |= validateKind("bounties.kinds." + jsonKey(kind), b.kinds.of(kind));
+        }
+        BountyKinds.SpeciesBounty species = b.kinds.species;
+        if (species.commonCount < 1 || species.uncommonCount < 1 || species.rareCount < 1) {
+            warn("bounties.kinds.species counts", "below 1", "1");
+            species.commonCount = Math.max(1, species.commonCount);
+            species.uncommonCount = Math.max(1, species.uncommonCount);
+            species.rareCount = Math.max(1, species.rareCount);
+            corrected = true;
+        }
+        BountyKinds.LevelBounty level = b.kinds.level;
+        int minLevel = Math.max(1, Math.min(MAX_POKEMON_LEVEL, level.minLevel));
+        int maxLevel = Math.max(minLevel, Math.min(MAX_POKEMON_LEVEL, level.maxLevel));
+        if (minLevel != level.minLevel || maxLevel != level.maxLevel) {
+            warn("bounties.kinds.level levels", level.minLevel + "-" + level.maxLevel, minLevel + "-" + maxLevel);
+            level.minLevel = minLevel;
+            level.maxLevel = maxLevel;
+            corrected = true;
+        }
+        if (b.speciesFilter == null) {
+            b.speciesFilter = new BountySpeciesFilter();
+            corrected = true;
+        }
+        BountySpeciesFilter filter = b.speciesFilter;
+        if (filter.rarities == null || filter.excludedSpecies == null || filter.excludedTypes == null) {
+            BountySpeciesFilter defaults = new BountySpeciesFilter();
+            if (filter.rarities == null) filter.rarities = defaults.rarities;
+            if (filter.excludedSpecies == null) filter.excludedSpecies = defaults.excludedSpecies;
+            if (filter.excludedTypes == null) filter.excludedTypes = defaults.excludedTypes;
+            corrected = true;
+        }
+        List<String> rarities = new ArrayList<>();
+        for (String rarity : filter.rarities) {
+            String normal = rarity == null ? "" : rarity.toLowerCase(Locale.ROOT).trim();
+            if (BOUNTY_RARITIES.contains(normal) && !rarities.contains(normal)) {
+                rarities.add(normal);
+            }
+        }
+        if (!rarities.equals(filter.rarities)) {
+            warn("bounties.speciesFilter.rarities", filter.rarities, rarities);
+            filter.rarities = rarities;
+            corrected = true;
+        }
+        if (b.swap == null) {
+            b.swap = new BountySwap();
+            corrected = true;
+        }
+        if (b.swap.cost < 0 || b.swap.perRotation < 0 || b.swap.perRotation > MAX_BOUNTY_SWAPS) {
+            warn("bounties.swap", b.swap.cost + " / " + b.swap.perRotation, "clamped");
+            b.swap.cost = Math.max(0, b.swap.cost);
+            b.swap.perRotation = Math.max(0, Math.min(MAX_BOUNTY_SWAPS, b.swap.perRotation));
+            corrected = true;
+        }
+        return corrected;
+    }
+
+    /** The key of a kind under {@code bounties.kinds}, as the file spells it: OUT_OF_BATTLE is outOfBattle. */
+    private static String jsonKey(BountyKind kind) {
+        StringBuilder key = new StringBuilder();
+        for (String word : kind.name().toLowerCase(Locale.ROOT).split("_")) {
+            key.append(key.isEmpty() ? word : Character.toUpperCase(word.charAt(0)) + word.substring(1));
+        }
+        return key.toString();
+    }
+
+    /** Fixes one kind's tuning: no negative weight or reward, at least one catch, min not above max. */
+    private static boolean validateKind(String field, BountyKindSettings settings) {
+        boolean corrected = false;
+        if (settings.weight < 0 || settings.reward < 0 || settings.rewardPerCatch < 0) {
+            warn(field, "a negative weight or reward", "0");
+            settings.weight = Math.max(0, settings.weight);
+            settings.reward = Math.max(0, settings.reward);
+            settings.rewardPerCatch = Math.max(0, settings.rewardPerCatch);
+            corrected = true;
+        }
+        int min = Math.max(1, settings.minCount);
+        int max = Math.max(min, settings.maxCount);
+        if (min != settings.minCount || max != settings.maxCount) {
+            warn(field + " counts", settings.minCount + "-" + settings.maxCount, min + "-" + max);
+            settings.minCount = min;
+            settings.maxCount = max;
             corrected = true;
         }
         return corrected;

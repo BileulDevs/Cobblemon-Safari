@@ -48,6 +48,12 @@
             ]
           },
           {
+            "text": "cobblemon_safari.dialogue.safari_clerk.option.swap",
+            "value": "swap",
+            "isVisible": "q.player.safari_bounty_can_swap()",
+            "action": "q.dialogue.set_page('swap');"
+          },
+          {
             "text": "example_safari.dialogue.safari_clerk.option.today",
             "value": "today",
             "action": [
@@ -80,6 +86,122 @@
             "text": "cobblemon_safari.dialogue.safari_clerk.option.bye",
             "value": "bye",
             "action": "q.dialogue.set_page('bye');"
+          }
+        ]
+      }
+    },
+    {
+      "id": "swap",
+      "speaker": "npc",
+      "lines": [
+        {
+          "type": "cobblemon_safari:bounty_swap_prompt"
+        }
+      ],
+      "input": {
+        "type": "option",
+        "vertical": true,
+        "options": [
+          {
+            "text": {
+              "type": "cobblemon_safari:bounty_mission",
+              "slot": 0
+            },
+            "value": "swap_0",
+            "isVisible": "q.player.safari_bounty_can_swap_0()",
+            "action": [
+              "q.dialogue.close();",
+              "q.player.safari_bounty_swap_0();"
+            ]
+          },
+          {
+            "text": {
+              "type": "cobblemon_safari:bounty_mission",
+              "slot": 1
+            },
+            "value": "swap_1",
+            "isVisible": "q.player.safari_bounty_can_swap_1()",
+            "action": [
+              "q.dialogue.close();",
+              "q.player.safari_bounty_swap_1();"
+            ]
+          },
+          {
+            "text": {
+              "type": "cobblemon_safari:bounty_mission",
+              "slot": 2
+            },
+            "value": "swap_2",
+            "isVisible": "q.player.safari_bounty_can_swap_2()",
+            "action": [
+              "q.dialogue.close();",
+              "q.player.safari_bounty_swap_2();"
+            ]
+          },
+          {
+            "text": {
+              "type": "cobblemon_safari:bounty_mission",
+              "slot": 3
+            },
+            "value": "swap_3",
+            "isVisible": "q.player.safari_bounty_can_swap_3()",
+            "action": [
+              "q.dialogue.close();",
+              "q.player.safari_bounty_swap_3();"
+            ]
+          },
+          {
+            "text": {
+              "type": "cobblemon_safari:bounty_mission",
+              "slot": 4
+            },
+            "value": "swap_4",
+            "isVisible": "q.player.safari_bounty_can_swap_4()",
+            "action": [
+              "q.dialogue.close();",
+              "q.player.safari_bounty_swap_4();"
+            ]
+          },
+          {
+            "text": {
+              "type": "cobblemon_safari:bounty_mission",
+              "slot": 5
+            },
+            "value": "swap_5",
+            "isVisible": "q.player.safari_bounty_can_swap_5()",
+            "action": [
+              "q.dialogue.close();",
+              "q.player.safari_bounty_swap_5();"
+            ]
+          },
+          {
+            "text": {
+              "type": "cobblemon_safari:bounty_mission",
+              "slot": 6
+            },
+            "value": "swap_6",
+            "isVisible": "q.player.safari_bounty_can_swap_6()",
+            "action": [
+              "q.dialogue.close();",
+              "q.player.safari_bounty_swap_6();"
+            ]
+          },
+          {
+            "text": {
+              "type": "cobblemon_safari:bounty_mission",
+              "slot": 7
+            },
+            "value": "swap_7",
+            "isVisible": "q.player.safari_bounty_can_swap_7()",
+            "action": [
+              "q.dialogue.close();",
+              "q.player.safari_bounty_swap_7();"
+            ]
+          },
+          {
+            "text": "cobblemon_safari.dialogue.safari_clerk.option.swap_back",
+            "value": "swap_back",
+            "action": "q.dialogue.set_page('greeting');"
           }
         ]
       }
