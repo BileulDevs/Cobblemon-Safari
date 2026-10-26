@@ -25,6 +25,7 @@ Update the mod on the server **and** on every client: the network protocol chang
 
 - Talking to the Safari Warden could show a red "too far from the gate" message when he had wandered off or got stuck in water.
 - The Escape Rope could leave a player stuck inside a tree crown.
+- Cobblemon NPC dialogues with many answers (the Safari Guide's destinations) ran off the bottom of the screen: the answers now scroll, with a scroll bar and the mouse wheel.
 - The shop took the first item of a tag in its own order (a "random" evolution stone, as players saw it) instead of letting the player choose.
 
 ### Config
