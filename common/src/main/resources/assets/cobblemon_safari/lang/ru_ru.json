@@ -288,5 +288,15 @@
   "cobblemon_safari.banner_design.cobblemon_safari.ball_throw": "Бросок",
   "block.cobblemon_safari.coat_rack": "Вешалка",
   "block.cobblemon_safari.coat_rack.tooltip": "ПКМ красителем — перекрасить шляпу рейнджера.",
-  "cobblemon_safari.message.coat_rack_locked": "Вы не можете перекрасить эту шляпу."
+  "cobblemon_safari.message.coat_rack_locked": "Вы не можете перекрасить эту шляпу.",
+  "stat.cobblemon_safari.hunts": "Охоты в Сафари",
+  "stat.cobblemon_safari.time_hunted": "Время охоты в Сафари",
+  "stat.cobblemon_safari.pokemon_caught": "Покемонов поймано в Сафари",
+  "stat.cobblemon_safari.shiny_caught": "Шайни-покемонов поймано в Сафари",
+  "stat.cobblemon_safari.specials_caught": "Особых поймано в Сафари",
+  "stat.cobblemon_safari.best_hunt": "Лучшая охота в Сафари (покемоны)",
+  "stat.cobblemon_safari.points_earned": "Заработано очков Сафари",
+  "stat.cobblemon_safari.points_spent": "Потрачено очков Сафари",
+  "stat.cobblemon_safari.missions_completed": "Выполнено миссий Сафари",
+  "stat.cobblemon_safari.rest_house_trips": "Поездок к домам отдыха Сафари"
 }

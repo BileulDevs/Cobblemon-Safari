@@ -288,5 +288,15 @@
   "cobblemon_safari.banner_design.cobblemon_safari.ball_throw": "投球",
   "block.cobblemon_safari.coat_rack": "衣帽架",
   "block.cobblemon_safari.coat_rack.tooltip": "手持染料右键可改变巡护员帽子的颜色。",
-  "cobblemon_safari.message.coat_rack_locked": "你不能染这顶帽子。"
+  "cobblemon_safari.message.coat_rack_locked": "你不能染这顶帽子。",
+  "stat.cobblemon_safari.hunts": "狩猎地带狩猎次数",
+  "stat.cobblemon_safari.time_hunted": "狩猎地带狩猎时间",
+  "stat.cobblemon_safari.pokemon_caught": "在狩猎地带捕捉的宝可梦",
+  "stat.cobblemon_safari.shiny_caught": "在狩猎地带捕捉的异色宝可梦",
+  "stat.cobblemon_safari.specials_caught": "在狩猎地带捕捉的特别宝可梦",
+  "stat.cobblemon_safari.best_hunt": "狩猎地带最佳狩猎（宝可梦）",
+  "stat.cobblemon_safari.points_earned": "获得的狩猎点数",
+  "stat.cobblemon_safari.points_spent": "花费的狩猎点数",
+  "stat.cobblemon_safari.missions_completed": "完成的狩猎任务",
+  "stat.cobblemon_safari.rest_house_trips": "前往狩猎地带休息屋的次数"
 }

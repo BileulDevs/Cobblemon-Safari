@@ -5,11 +5,13 @@ import dev.darcosse.common.cobblemonsafari.session.CatchRecord;
 import dev.darcosse.common.cobblemonsafari.session.SafariSession;
 import dev.darcosse.common.cobblemonsafari.session.SafariSessionListener;
 import dev.darcosse.common.cobblemonsafari.session.SessionEndReason;
+import dev.darcosse.common.cobblemonsafari.spawn.FeaturedRotation;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
- * Feeds {@link SafariStatsStore} from session events, and pushes the new
- * record to the player for the wall screens' STATS page. Registered through
+ * Feeds {@link SafariStatsStore} and the game's statistics
+ * ({@link SafariStatistics}) from session events, and pushes the new record
+ * to the player for the wall screens' STATS page. Registered through
  * the public session listener API, like any third-party feature would be.
  */
 public final class SafariStatsListener implements SafariSessionListener {
@@ -22,6 +24,14 @@ public final class SafariStatsListener implements SafariSessionListener {
         stats.setName(player.getGameProfile().getName());
         stats.addCatch(record.speciesId(), record.shiny());
         store.setDirty();
+        SafariStatistics.increment(player, SafariStatistics.POKEMON_CAUGHT);
+        if (record.shiny()) {
+            SafariStatistics.increment(player, SafariStatistics.SHINY_CAUGHT);
+        }
+        if (FeaturedRotation.today(player.getServer()).stream()
+                .anyMatch(special -> special.species().getResourceIdentifier().toString().equals(record.speciesId()))) {
+            SafariStatistics.increment(player, SafariStatistics.SPECIALS_CAUGHT);
+        }
         SafariNetwork.sendStats(player);
     }
 
@@ -33,6 +43,9 @@ public final class SafariStatsListener implements SafariSessionListener {
         stats.setName(player.getGameProfile().getName());
         stats.addFinishedSession(session.catches().size(), session.ticksUsed());
         store.setDirty();
+        SafariStatistics.increment(player, SafariStatistics.HUNTS);
+        SafariStatistics.add(player, SafariStatistics.TIME_HUNTED, session.ticksUsed());
+        SafariStatistics.raise(player, SafariStatistics.BEST_HUNT, session.catches().size());
         SafariNetwork.sendStats(player);
     }
 }

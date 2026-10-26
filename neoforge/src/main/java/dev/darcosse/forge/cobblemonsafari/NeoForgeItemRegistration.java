@@ -4,14 +4,15 @@ import dev.darcosse.common.cobblemonsafari.block.SafariBlockEntities;
 import dev.darcosse.common.cobblemonsafari.block.SafariBlocks;
 import dev.darcosse.common.cobblemonsafari.item.SafariCreativeTab;
 import dev.darcosse.common.cobblemonsafari.item.SafariItems;
+import dev.darcosse.common.cobblemonsafari.stats.SafariStatistics;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.neoforge.registries.RegisterEvent;
 
 /**
- * Registers the Safari blocks, block entity types, items and creative tab on
- * NeoForge.
+ * Registers the Safari blocks, block entity types, items, creative tab and
+ * statistics on NeoForge.
  */
 public final class NeoForgeItemRegistration {
 
@@ -38,5 +39,7 @@ public final class NeoForgeItemRegistration {
         // whatever row and column the builder is given.
         event.register(Registries.CREATIVE_MODE_TAB, helper -> helper.register(SafariCreativeTab.ID,
                 SafariCreativeTab.build(CreativeModeTab.builder(CreativeModeTab.Row.TOP, 0))));
+        // While the custom stat registry is open; the stats are created with their formatter right after.
+        event.register(Registries.CUSTOM_STAT, helper -> SafariStatistics.register(helper::register));
     }
 }

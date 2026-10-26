@@ -1,5 +1,6 @@
 package dev.darcosse.common.cobblemonsafari.teleport;
 
+import dev.darcosse.common.cobblemonsafari.stats.SafariStatistics;
 import com.cobblemon.mod.common.battles.BattleRegistry;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
@@ -618,6 +619,7 @@ public final class RestHouseTravel {
             return false;
         }
         markTravelled(player);
+        SafariStatistics.increment(player, SafariStatistics.REST_HOUSE_TRIPS);
         trip.arrived.accept(player);
         if (trip.flying) {
             // Invisible where the double will land: the swap at the end shows nothing.

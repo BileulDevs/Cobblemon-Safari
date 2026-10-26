@@ -288,5 +288,15 @@
   "cobblemon_safari.banner_design.cobblemon_safari.ball_throw": "ボールを投げる",
   "block.cobblemon_safari.coat_rack": "コートスタンド",
   "block.cobblemon_safari.coat_rack.tooltip": "染料を持って右クリックすると、レンジャー帽の色を変えられます。",
-  "cobblemon_safari.message.coat_rack_locked": "この帽子は染められません。"
+  "cobblemon_safari.message.coat_rack_locked": "この帽子は染められません。",
+  "stat.cobblemon_safari.hunts": "サファリでの狩り",
+  "stat.cobblemon_safari.time_hunted": "サファリでの狩り時間",
+  "stat.cobblemon_safari.pokemon_caught": "サファリで捕まえたポケモン",
+  "stat.cobblemon_safari.shiny_caught": "サファリで捕まえた色違い",
+  "stat.cobblemon_safari.specials_caught": "サファリで捕まえた特別なポケモン",
+  "stat.cobblemon_safari.best_hunt": "サファリでの最高記録（匹）",
+  "stat.cobblemon_safari.points_earned": "獲得したサファリポイント",
+  "stat.cobblemon_safari.points_spent": "使ったサファリポイント",
+  "stat.cobblemon_safari.missions_completed": "達成したサファリミッション",
+  "stat.cobblemon_safari.rest_house_trips": "サファリ休憩所への移動"
 }
