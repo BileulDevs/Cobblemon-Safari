@@ -1,5 +1,6 @@
 package dev.darcosse.common.cobblemonsafari.config;
 
+import dev.darcosse.common.cobblemonsafari.worldgen.IslandRelief;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.bounty.BountyKind;
 import dev.darcosse.common.cobblemonsafari.bounty.SafariBounties;
@@ -513,6 +514,12 @@ public final class SafariConfigManager {
         }
         if (c.reset == null) {
             c.reset = new SafariConfig.Reset();
+            corrected = true;
+        }
+        if (c.reset.relief == null) {
+            // Gson reads a name that is no relief as null.
+            warn("reset.relief", "an unknown relief", IslandRelief.ROLLING);
+            c.reset.relief = IslandRelief.ROLLING;
             corrected = true;
         }
         if (c.reset.hour < 0 || c.reset.hour > LAST_HOUR) {

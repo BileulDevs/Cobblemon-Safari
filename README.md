@@ -18,7 +18,7 @@ The Safari is its own dimension: a single island in a turquoise sea, with its ow
 - **Fourteen habitats** laid out around a central summit: grassland, savanna, dunes, badlands, jungle, marsh, mushroom grove, flower meadow, woodland, deep forest, taiga, snowfield, glacier and rocky hills, plus the peaks, a volcano, lakes and rivers.
 - **Caves everywhere**, a giant pillared cavern under the summit and a lush cavern in the south, each reached by its own winding passage.
 - **Cobblemon ruins and Gimmighoul towers** scattered over the island.
-- **A new map every day.** At the first server start of a new day, the island is regenerated with a new layout. Sessions, stats, banked time and points are kept.
+- **A new map every day.** At the first server start of a new day, the island is regenerated with a new layout, flat, rolling or mountainous as you choose. Sessions, stats, banked time and points are kept.
 - **Its own soundtrack**: six original tracks, one per zone, and the cries of the Pokémon that actually live in each biome.
 - **Nothing to break.** Inside, players take no damage and cannot change the terrain. Poké Cakes and Poké Snacks can still be placed as bait.
 

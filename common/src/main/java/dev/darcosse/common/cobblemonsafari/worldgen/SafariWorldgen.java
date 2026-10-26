@@ -22,6 +22,9 @@ public final class SafariWorldgen {
     /** Id of {@link IslandCoordinateFunction}; referenced by the generated JSON. */
     public static final ResourceLocation ISLAND_COORDINATE = CobblemonSafari.id("island_coordinate");
 
+    /** Id of {@link ReliefFunction}; referenced by the terrain JSON (offset, jaggedness). */
+    public static final ResourceLocation RELIEF = CobblemonSafari.id("relief");
+
     /** Id of {@link DryJigsawStructure}'s type; referenced by the structure JSON of the gate, ruins and towers. */
     public static final ResourceLocation DRY_JIGSAW = CobblemonSafari.id("dry_jigsaw");
 
@@ -49,5 +52,6 @@ public final class SafariWorldgen {
     public static void registerDensityFunctionTypes(
             BiConsumer<ResourceLocation, MapCodec<? extends DensityFunction>> registrar) {
         registrar.accept(ISLAND_COORDINATE, IslandCoordinateFunction.CODEC.codec());
+        registrar.accept(RELIEF, ReliefFunction.CODEC.codec());
     }
 }

@@ -1,5 +1,6 @@
 package dev.darcosse.common.cobblemonsafari.config;
 
+import dev.darcosse.common.cobblemonsafari.worldgen.IslandRelief;
 import dev.darcosse.common.cobblemonsafari.bounty.BountyKind;
 
 import java.util.ArrayList;
@@ -279,6 +280,14 @@ public class SafariConfig {
 
         /** Time zone of {@link #hour}, e.g. "Europe/Paris"; empty for the server's own. */
         public String timeZone = "";
+
+        /**
+         * How hilly each new map is: FLAT, ROLLING (the island as always) or
+         * MOUNTAINOUS. Only new maps take it: the map on disk keeps the
+         * relief it was generated with, or new chunks would rise as cliffs
+         * against the old ones.
+         */
+        public IslandRelief relief = IslandRelief.ROLLING;
     }
 
     /**

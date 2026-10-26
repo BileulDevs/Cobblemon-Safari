@@ -79,6 +79,7 @@ At the first server start of a new day, the Safari dimension is deleted and rege
 | `enabled` | `true` | `false` keeps the same map forever. |
 | `hour` | `4` | Hour (0 to 23) at which a new map day starts. With 4, a server restarted at 3:00 still belongs to the previous day and keeps its map. |
 | `timeZone` | `""` | Time zone of `hour`, e.g. `"Europe/Paris"`. Empty uses the server's own. |
+| `relief` | `"ROLLING"` | How hilly each new map is. `"FLAT"`: low, gentle land, a few blocks above the sea, no peaks (height ×0.35). `"ROLLING"`: the island as in earlier versions. `"MOUNTAINOUS"`: higher land and sharper peaks (height ×1.6, peaks ×1.8). The coast and the sea floor do not move. Only a new map takes it: the map on disk keeps the relief it was generated with (new chunks would rise as cliffs against the old ones), and the log says so at start. To see a new relief now, `/safari reset` then restart. |
 
 `/safari reset` forces a new map at the next start, whatever this section says.
 
