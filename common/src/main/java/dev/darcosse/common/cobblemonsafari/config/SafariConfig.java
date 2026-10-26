@@ -1,5 +1,7 @@
 package dev.darcosse.common.cobblemonsafari.config;
 
+import dev.darcosse.common.cobblemonsafari.bounty.BountyKind;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -348,33 +350,52 @@ public class SafariConfig {
     }
 
     /**
-     * Bounties: a few missions drawn with each rotation of the specials, the
-     * same for every player, each paid once per player in Safari points.
-     * They make variety pay more than catching the same Pokémon over and over.
+     * The missions of each rotation: {@link #count} drawn at random among the
+     * {@link #allowedKinds}, the same for every player, each paid once per
+     * player. Every kind has its own tuning in {@link #kinds}; the species
+     * the missions name are drawn under {@link #speciesFilter}, and a player
+     * may swap a mission at the clerk ({@link #swap}).
      */
     public static class Bounties {
         /** Master switch for the missions, their rewards and their page on the board. */
         public boolean enabled = true;
 
-        /** Missions per rotation. More missions mean more points per day; the board shows them all. */
+        /** Missions per rotation, 0 to 8. More missions mean more points per day; the board shows them all. */
         public int count = 3;
 
         /**
-         * Points for a "catch N Pokémon of a type" mission, per Pokémon asked
-         * (N between SafariBounties.TYPE_MIN_COUNT and TYPE_MAX_COUNT):
-         * 3 Pokémon at 30 = 90 points.
+         * The kinds of missions that may be drawn. A rotation draws different
+         * kinds first, and the same kind twice only when fewer kinds than
+         * {@link #count} can be drawn. A kind that cannot be met this rotation
+         * (no specials, no species for a habitat) is skipped.
          */
-        public int typeRewardPerCatch = 30;
-
-        /** Points for catching a given species (two of a common one, one of an uncommon one). */
-        public int speciesReward = 120;
-
-        /** Points for catching any of today's specials. Off when the specials are switched off. */
-        public int featuredReward = 250;
+        public List<BountyKind> allowedKinds = new ArrayList<>(List.of(BountyKind.SPECIES, BountyKind.TYPE,
+                BountyKind.FEATURED, BountyKind.HABITAT, BountyKind.ANY, BountyKind.DIFFERENT,
+                BountyKind.OUT_OF_BATTLE, BountyKind.NIGHT, BountyKind.EVOLVED, BountyKind.LEVEL));
 
         /** Extra points once every mission of the rotation is done. */
         public int allDoneBonus = 200;
+
+        /** The tuning of each kind: how often it is drawn, how many catches it asks, what it pays. */
+        public BountyKinds kinds = new BountyKinds();
+
+        /** Which species the missions may name, and which count toward the type and habitat missions' pools. */
+        public BountySpeciesFilter speciesFilter = new BountySpeciesFilter();
+
+        /** Swapping a mission at the rest house clerk. */
+        public BountySwap swap = new BountySwap();
+
+        /** Former reward of a type mission, per catch; moved to {@code kinds.type.rewardPerCatch} (config version 4). */
+        @Deprecated
+        public Integer typeRewardPerCatch = null;
+        /** Former reward of a species mission; moved to {@code kinds.species.reward} (config version 4). */
+        @Deprecated
+        public Integer speciesReward = null;
+        /** Former reward of a specials mission; moved to {@code kinds.featured.reward} (config version 4). */
+        @Deprecated
+        public Integer featuredReward = null;
     }
+
 
     /**
      * The Escape Rope: lent on entry, taken back on exit. Used in the
@@ -432,12 +453,13 @@ public class SafariConfig {
         public int cinematicSeconds = SafariConfigManager.DEFAULT_TRAVEL_CINEMATIC_SECONDS;
 
         /**
-         * How the guide's trips are shown: FLIGHT (the player's double flies
-         * off on their own flying Pokémon, or a Staraptor, seen by everyone
-         * around) or PANORAMA (the painted landscape). FLIGHT falls back to
-         * PANORAMA on its own when the sky is closed, or when the player has
-         * no flyer and Staraptor is missing. The rope always plays its own
-         * scene.
+         * How the trips to a rest house are shown: FLIGHT (the player's
+         * double flies off on their own flying Pokémon, or a Staraptor, seen
+         * by everyone around; from the guide's steps, or from where the rope
+         * was used, after a climb to the open air in a cave) or PANORAMA (the
+         * painted landscape for the guide, the pixel-art scene for the rope).
+         * FLIGHT falls back to PANORAMA's scenes on its own when the sky is
+         * closed, or when the player has no flyer and Staraptor is missing.
          */
         public TravelCinematicStyle cinematicStyle = TravelCinematicStyle.FLIGHT;
     }

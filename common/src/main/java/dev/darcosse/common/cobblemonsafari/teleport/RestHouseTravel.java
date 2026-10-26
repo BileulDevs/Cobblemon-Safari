@@ -64,7 +64,10 @@ import java.util.function.Consumer;
  * in front of the house ({@link TravelFlight}),
  * the screen goes black while the destination gets ready, then the double
  * lands in front of the destination, where the player already stands,
- * invisible, and takes their place. The rope plays its own pixel-art scene.
+ * invisible, and takes their place. The Escape Rope's trips are filmed the
+ * same way, taking off where the rope was used (after a climb to the open
+ * air, under the black, when used in a cave); its pixel-art scene stays for
+ * when the flight cannot be staged.
  *
  * <p>One wait between two trips, whichever way they go
  * ({@code restHouseTravel.cooldownSeconds}): with two, a player could rope to
@@ -103,6 +106,13 @@ public final class RestHouseTravel {
     private static final int TICKET_SPARE_SECONDS = 15;
 
     /**
+     * Ticks of black after the rope brought the player out of a cave, before
+     * the take-off is filmed: time for the client to receive the surroundings
+     * of the new spot, a dozen blocks away at most.
+     */
+    private static final int SURFACE_TICKS = 20;
+
+    /**
      * Ticks between the player's move to the destination and the filming of
      * the landing, under the black screen: time for the destination's chunks
      * to reach their client. Shorter shows the landing over missing terrain.
@@ -129,7 +139,12 @@ public final class RestHouseTravel {
 
     /** Where a trip stands. Painted cinematics go straight to {@link #WAITING}. */
     private enum Phase {
-        /** The double takes off in front of the house the player leaves. */
+        /**
+         * Escape Rope used under cover: the screen is black while the player,
+         * brought to the open air, waits for the take-off to be filmed there.
+         */
+        SURFACING,
+        /** The double takes off where the player stands: the house's steps, or where the rope was used. */
         DEPARTING,
         /** Black screen (or painted scene) while the destination loads and builds. */
         WAITING,
@@ -163,20 +178,28 @@ public final class RestHouseTravel {
         /** The actors of the take-off or landing under way, or null. */
         @Nullable
         TravelFlight.Flight flight;
+        /** Where the double takes off once the player has climbed out of a cave ({@link Phase#SURFACING}). */
+        @Nullable
+        BlockPos takeOffFeet;
         /** Where the player was put down at the destination; set from {@link Phase#SETTLING} on. */
         @Nullable
         BlockPos landingFeet;
 
+        /**
+         * @param flight      the take-off already staged, or null
+         * @param takeOffFeet where the take-off is to be staged after the climb out of a cave, or null
+         */
         Trip(int anchor, int startTick, ChunkPos ticket, Consumer<ServerPlayer> arrived,
-             @Nullable TravelFlight.Flight flight, Vec3 heading) {
+             @Nullable TravelFlight.Flight flight, @Nullable BlockPos takeOffFeet, Vec3 heading) {
             this.anchor = anchor;
             this.startTick = startTick;
             this.ticket = ticket;
             this.arrived = arrived;
             this.flight = flight;
-            this.flying = flight != null;
+            this.takeOffFeet = takeOffFeet;
+            this.flying = flight != null || takeOffFeet != null;
             this.heading = heading;
-            this.phase = flying ? Phase.DEPARTING : Phase.WAITING;
+            this.phase = flight != null ? Phase.DEPARTING : takeOffFeet != null ? Phase.SURFACING : Phase.WAITING;
             this.phaseTick = startTick;
         }
 
@@ -338,11 +361,11 @@ public final class RestHouseTravel {
     // ---- Trips ------------------------------------------------------------
 
     /**
-     * Starts a trip: loads the destination, stages the take-off when the
-     * guide's trip is filmed, and opens the cinematic. Cost: one ticket
-     * added (the chunks load over the next ticks, generated off the server
-     * thread when new); for a flight, a few heightmap and block reads and
-     * two entities spawned.
+     * Starts a trip: loads the destination, stages the take-off when the trip
+     * is filmed, and opens the cinematic. Cost: one ticket added (the chunks
+     * load over the next ticks, generated off the server thread when new);
+     * for a flight, a few heightmap and block reads and two entities spawned,
+     * plus, for the rope, the search for an open-air spot nearby.
      */
     private static void start(ServerPlayer player, RestHouses.HouseSite target, Source source,
                               Consumer<ServerPlayer> arrived) {
@@ -351,45 +374,87 @@ public final class RestHouseTravel {
         ChunkPos centre = new ChunkPos(new BlockPos(target.x(), 0, target.z()));
         level.getChunkSource().addRegionTicket(TICKET, centre, TICKET_RADIUS, centre);
         Vec3 heading = headingTo(player, target);
-        TravelFlight.Flight flight = source == Source.GUIDE ? stageTakeOff(level, player, heading, now) : null;
-        Trip trip = new Trip(target.anchor(), now, centre, arrived, flight, heading);
+        TakeOff plan = planTakeOff(level, player, source, heading);
+        TravelFlight.Flight flight = null;
+        BlockPos climbTo = null;
+        if (plan != null && plan.climb()) {
+            climbTo = plan.feet();
+        } else if (plan != null) {
+            flight = TravelFlight.takeOff(level, player, plan.feet(), heading, now);
+        }
+        Trip trip = new Trip(target.anchor(), now, centre, arrived, flight, climbTo, heading);
         TRIPS.put(player.getUUID(), trip);
         Label label = labelOf(level, target);
         // The client closes the cinematic by itself a little after the server would give up.
         int clientTimeout = Ticks.fromSeconds(MAX_WAIT_SECONDS + TICKET_SPARE_SECONDS)
-                + (flight != null ? TravelFlight.FLIGHT_TICKS * 2 + SETTLE_TICKS : 0);
+                + (trip.flying ? SURFACE_TICKS + TravelFlight.FLIGHT_TICKS * 2 + SETTLE_TICKS : 0);
         SafariTravelPayload payload;
         if (flight != null) {
             payload = SafariTravelPayload.startFlight(label.biomeKey(), label.directionKey(), clientTimeout,
                     flight.bird().getId(), flight.camera(), flight.look());
+        } else if (climbTo != null) {
+            // Opens on black: the climb out of the cave happens under it.
+            payload = SafariTravelPayload.startFlight(label.biomeKey(), label.directionKey(), clientTimeout,
+                    SafariTravelPayload.NO_ACTOR, Vec3.ZERO, Vec3.ZERO);
         } else {
             SafariTravelPayload.Scene scene = source == Source.ROPE ? SafariTravelPayload.Scene.CAVE
                     : SafariTravelPayload.Scene.LANDSCAPE;
             payload = SafariTravelPayload.start(scene, label.biomeKey(), label.directionKey(), clientTimeout);
         }
         Platform.get().sendToPlayer(player, payload);
-        if (flight != null) {
+        if (trip.flying) {
             hide(player);
+        }
+        if (climbTo != null) {
+            // After the payload, so the client is already black when it moves.
+            SafariTeleporter.sendToFeet(player, level, climbTo);
         }
     }
 
     /**
-     * The take-off of the guide's trip, or null when the trip is to be shown
-     * as the painted landscape: the config asks for it, there is no mount
-     * at all (no flyer in the party and no Staraptor), the double's NPC
-     * class is missing, or the mount has no open sky in front of the house.
+     * Where a filmed trip takes off.
+     *
+     * @param feet  the take-off spot
+     * @param climb true when the player must first be brought there (the rope used in a cave)
+     */
+    private record TakeOff(BlockPos feet, boolean climb) {
+    }
+
+    /**
+     * Where the trip's take-off is filmed, or null when the trip is shown as
+     * a painted scene instead: the config asks for it, there is no mount at
+     * all (no flyer in the party and no Staraptor), the double's NPC class is
+     * missing, or the mount has no open sky there.
+     *
+     * <p>The guide's trips take off from the house's steps. The rope's take
+     * off where it was used, in the open air; under cover (a cave, a canopy)
+     * from the best open-air spot within
+     * {@code SafariTeleporter.STANDING_SEARCH_RADIUS} blocks around, the one
+     * the rope's own climb would pick, the player being brought there under
+     * the black screen. With no such spot the rope's trip keeps its pixel-art
+     * scene and the player leaves from where they stand.
      */
     @Nullable
-    private static TravelFlight.Flight stageTakeOff(ServerLevel level, ServerPlayer player, Vec3 heading, int now) {
+    private static TakeOff planTakeOff(ServerLevel level, ServerPlayer player, Source source, Vec3 heading) {
         if (config().cinematicStyle != TravelCinematicStyle.FLIGHT || !TravelFlight.available(player)) {
             return null;
         }
-        RestHouses.HouseSite here = RestHouses.siteAt(player.getBlockX(), player.getBlockZ(), HOUSE_MARGIN);
-        if (here == null) {
+        BlockPos feet;
+        boolean climb = false;
+        if (source == Source.GUIDE) {
+            RestHouses.HouseSite here = RestHouses.siteAt(player.getBlockX(), player.getBlockZ(), HOUSE_MARGIN);
+            feet = here == null ? null : SafariTeleporter.arrivalFeet(level, RestHouses.arrivalOf(here));
+        } else if (player.onGround() && level.canSeeSky(BlockPos.containing(player.getEyePosition()))) {
+            feet = player.blockPosition();
+        } else {
+            // Under cover, swimming or in the air: the nearest good open-air spot.
+            feet = SafariTeleporter.findStandingSpotNear(level, player.getBlockX(), player.getBlockZ());
+            climb = feet != null && !feet.equals(player.blockPosition());
+        }
+        if (feet == null || !TravelFlight.canTakeOff(level, feet, heading)) {
             return null;
         }
-        BlockPos feet = SafariTeleporter.arrivalFeet(level, RestHouses.arrivalOf(here));
-        return feet == null ? null : TravelFlight.takeOff(level, player, feet, heading, now);
+        return new TakeOff(feet, climb);
     }
 
     /** Horizontal unit vector from the player toward the destination; south when they stand on it. */
@@ -447,6 +512,24 @@ public final class RestHouseTravel {
      */
     private static boolean advance(ServerLevel safari, ServerPlayer player, Trip trip, int now) {
         switch (trip.phase) {
+            case SURFACING -> {
+                if (now - trip.phaseTick < SURFACE_TICKS) {
+                    return true;
+                }
+                TravelFlight.Flight flight = trip.takeOffFeet == null ? null
+                        : TravelFlight.takeOff(safari, player, trip.takeOffFeet, trip.heading, now);
+                if (flight == null) {
+                    // The spot changed since the plan (a block placed, a mob in the way): no
+                    // take-off, the black simply lasts until the landing.
+                    trip.enter(Phase.WAITING, now);
+                    return true;
+                }
+                trip.flight = flight;
+                trip.enter(Phase.DEPARTING, now);
+                Platform.get().sendToPlayer(player, SafariTravelPayload.shot(flight.bird().getId(),
+                        flight.camera(), flight.look()));
+                return true;
+            }
             case DEPARTING -> {
                 TravelFlight.Flight flight = trip.flight;
                 boolean done = flight == null || TravelFlight.tick(flight, now);

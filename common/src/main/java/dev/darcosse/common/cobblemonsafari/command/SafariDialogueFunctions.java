@@ -1,6 +1,7 @@
 package dev.darcosse.common.cobblemonsafari.command;
 
 import com.cobblemon.mod.common.api.molang.function.PlayerMoLangFunctions;
+import dev.darcosse.common.cobblemonsafari.bounty.SafariBounties;
 import dev.darcosse.common.cobblemonsafari.item.EscapeRopeActions;
 import dev.darcosse.common.cobblemonsafari.structure.Compass;
 import dev.darcosse.common.cobblemonsafari.teleport.RestHouseTravel;
@@ -21,7 +22,10 @@ import java.util.function.Predicate;
  * {@code safari_rope_can_rest_house()} and {@code safari_rope_rest_house()},
  * and the rest house guide's
  * {@code safari_guide_can_<direction>()} and {@code safari_guide_go_<direction>()}
- * for each of the eight {@link Compass} directions ({@code safari_guide_go_north_east()}).
+ * for each of the eight {@link Compass} directions ({@code safari_guide_go_north_east()}),
+ * and the clerk's mission swap: {@code safari_bounty_can_swap()}, then
+ * {@code safari_bounty_can_swap_<slot>()} and {@code safari_bounty_swap_<slot>()}
+ * for each mission, from 0 ({@code safari_bounty_swap_0()}).
  *
  * <p>Why not commands: a dialogue running a command in the player's name
  * ({@code q.player.run_command}) needs a command every player may type.
@@ -58,6 +62,14 @@ public final class SafariDialogueFunctions {
      */
     public static final String GUIDE_CAN_PREFIX = "safari_guide_can_";
     public static final String GUIDE_GO_PREFIX = "safari_guide_go_";
+    /** Whether the clerk offers to swap a mission at all; the greeting shows that answer only then. */
+    public static final String BOUNTY_CAN_SWAP = "safari_bounty_can_swap";
+    /**
+     * Prefixes of the swap functions, followed by the mission's slot from 0;
+     * one function per slot for the same reason as the guide's.
+     */
+    public static final String BOUNTY_CAN_SWAP_PREFIX = "safari_bounty_can_swap_";
+    public static final String BOUNTY_SWAP_PREFIX = "safari_bounty_swap_";
 
     private static boolean registered;
 
@@ -101,6 +113,12 @@ public final class SafariDialogueFunctions {
                     params -> run(player, p -> RestHouseTravel.canTravelTo(p, direction)));
             functions.put(GUIDE_GO_PREFIX + direction.id(),
                     params -> run(player, p -> RestHouseTravel.travelTo(p, direction)));
+        }
+        functions.put(BOUNTY_CAN_SWAP, params -> run(player, SafariBounties::canSwapAny));
+        for (int slot = 0; slot < SafariBounties.MAX_MISSIONS; slot++) {
+            int index = slot;
+            functions.put(BOUNTY_CAN_SWAP_PREFIX + slot, params -> run(player, p -> SafariBounties.canSwap(p, index)));
+            functions.put(BOUNTY_SWAP_PREFIX + slot, params -> run(player, p -> SafariBounties.swap(p, index)));
         }
         return functions;
     }

@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.2.0
+
+Update the mod on the server **and** on every client: the network protocol changed (`1.4.0`), and a client of another version is refused when it joins on NeoForge.
+
+### New
+
+- **Configurable missions**: twelve kinds (a species, a type, a special, a habitat, any Pokémon, different species, without a battle, at night, fully evolved, of a level, with a hidden ability, shiny), each with its own weight, counts and reward. A rotation draws `bounties.count` of them among `bounties.allowedKinds` (every kind but hidden ability and shiny by default).
+- **Species filter for the missions** (`bounties.speciesFilter`): rarities that may be asked (common, uncommon and rare by default), excluded species and types, and switches for water, cave, hour and weather spawns (only caves allowed by default), so no mission asks for a Pokémon you can only fish, or only meet at night or in the rain.
+- **Swap a mission** at the clerk, for yourself only: 50 Safari points, once per rotation by default (`bounties.swap`). The new mission is of another kind when possible and starts from zero.
+- **Escape Rope trips fly** like the Guide's, taking off where the rope is used; from a cave, after a climb to the open air under a black screen. The pixel-art scene stays as the fallback.
+
+### Changed
+
+- Missions are drawn among all the allowed kinds: the specials mission is no longer always the first one, nor always there.
+
+### Fixed
+
+- Cobblemon NPC dialogues with many answers (the Safari Guide's destinations) ran off the bottom of the screen: the answers now scroll, with a scroll bar and the mouse wheel.
+- Answers too long for their button spilled over its edges: their text now shrinks to fit.
+
+### Config
+
+- `server.json` goes to version 4: new `bounties` keys `allowedKinds`, `kinds`, `speciesFilter` and `swap`. The former `typeRewardPerCatch`, `speciesReward` and `featuredReward` are moved into `bounties.kinds` on load.
+
+See [CONFIG.md](CONFIG.md) for every key.
+
 ## 1.1.0
 
 Update the mod on the server **and** on every client: the network protocol changed (`1.3.0`), and a client of another version is refused when it joins on NeoForge.

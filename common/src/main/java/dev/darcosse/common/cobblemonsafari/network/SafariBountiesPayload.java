@@ -2,6 +2,7 @@ package dev.darcosse.common.cobblemonsafari.network;
 
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.bounty.Bounty;
+import dev.darcosse.common.cobblemonsafari.bounty.BountyKind;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -15,7 +16,7 @@ import java.util.List;
  * change, and when the player's progress moves.
  *
  * @param enabled      whether missions are switched on; when false the board skips their page
- * @param bounties     today's missions, the same for everyone
+ * @param bounties     this player's missions: the shared ones, with those the player swapped
  * @param progress     this player's catches toward each mission, same order and size as {@code bounties}
  * @param allDoneBonus points paid once every mission is done
  */
@@ -28,7 +29,7 @@ public record SafariBountiesPayload(boolean enabled, List<Bounty> bounties, List
      * one means) without raising this makes a peer of another build read
      * garbage without an error. Raise it on every change to write/read.
      */
-    public static final int WIRE_VERSION = 1;
+    public static final int WIRE_VERSION = 2; // 2: nine new mission kinds (ordinals 3 to 11)
 
     /** Guard against corrupted or hostile packets announcing huge lists. */
     private static final int MAX_BOUNTIES = 64;
@@ -68,7 +69,7 @@ public record SafariBountiesPayload(boolean enabled, List<Bounty> bounties, List
         if (count < 0 || count > MAX_BOUNTIES) {
             throw new IllegalStateException("Cobblemon Safari: invalid bounty count " + count);
         }
-        Bounty.Kind[] kinds = Bounty.Kind.values();
+        BountyKind[] kinds = BountyKind.values();
         List<Bounty> bounties = new ArrayList<>(count);
         List<Integer> progress = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
