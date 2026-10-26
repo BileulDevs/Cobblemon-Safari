@@ -33,7 +33,8 @@
     "ballItem": "cobblemon:safari_ball"
   },
   "capture": {
-    "safariBallOutOfBattleMultiplier": 3.0
+    "safariBallOutOfBattleMultiplier": 3.0,
+    "awardSafariMark": true
   },
   "reset": {
     "enabled": true,

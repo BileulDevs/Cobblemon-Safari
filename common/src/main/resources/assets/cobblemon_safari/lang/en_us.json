@@ -298,5 +298,8 @@
   "stat.cobblemon_safari.points_earned": "Safari Points Earned",
   "stat.cobblemon_safari.points_spent": "Safari Points Spent",
   "stat.cobblemon_safari.missions_completed": "Safari Missions Completed",
-  "stat.cobblemon_safari.rest_house_trips": "Safari Rest House Trips"
+  "stat.cobblemon_safari.rest_house_trips": "Safari Rest House Trips",
+  "cobblemon_safari.mark.mark_safari": "Safari Mark",
+  "cobblemon_safari.mark.mark_safari.title": "%1$s the Safari Find",
+  "cobblemon_safari.mark.mark_safari.desc": "A mark for a Pokémon caught in the Safari Zone."
 }

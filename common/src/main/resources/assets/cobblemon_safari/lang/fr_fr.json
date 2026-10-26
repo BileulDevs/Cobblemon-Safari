@@ -298,5 +298,8 @@
   "stat.cobblemon_safari.points_earned": "Points Safari gagnés",
   "stat.cobblemon_safari.points_spent": "Points Safari dépensés",
   "stat.cobblemon_safari.missions_completed": "Missions Safari accomplies",
-  "stat.cobblemon_safari.rest_house_trips": "Trajets vers les refuges du Safari"
+  "stat.cobblemon_safari.rest_house_trips": "Trajets vers les refuges du Safari",
+  "cobblemon_safari.mark.mark_safari": "Insigne Safari",
+  "cobblemon_safari.mark.mark_safari.title": "%1$s la Trouvaille du Safari",
+  "cobblemon_safari.mark.mark_safari.desc": "L'insigne d'un Pokémon capturé dans le Parc Safari."
 }

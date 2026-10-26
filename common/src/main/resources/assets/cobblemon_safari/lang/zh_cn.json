@@ -298,5 +298,8 @@
   "stat.cobblemon_safari.points_earned": "获得的狩猎点数",
   "stat.cobblemon_safari.points_spent": "花费的狩猎点数",
   "stat.cobblemon_safari.missions_completed": "完成的狩猎任务",
-  "stat.cobblemon_safari.rest_house_trips": "前往狩猎地带休息屋的次数"
+  "stat.cobblemon_safari.rest_house_trips": "前往狩猎地带休息屋的次数",
+  "cobblemon_safari.mark.mark_safari": "狩猎地带之证",
+  "cobblemon_safari.mark.mark_safari.title": "%1$s 狩猎地带的发现",
+  "cobblemon_safari.mark.mark_safari.desc": "在狩猎地带捕捉到的宝可梦的证章。"
 }

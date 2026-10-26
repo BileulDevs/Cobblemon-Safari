@@ -298,5 +298,8 @@
   "stat.cobblemon_safari.points_earned": "Punti Safari guadagnati",
   "stat.cobblemon_safari.points_spent": "Punti Safari spesi",
   "stat.cobblemon_safari.missions_completed": "Missioni Safari completate",
-  "stat.cobblemon_safari.rest_house_trips": "Viaggi verso le case di riposo del Safari"
+  "stat.cobblemon_safari.rest_house_trips": "Viaggi verso le case di riposo del Safari",
+  "cobblemon_safari.mark.mark_safari": "Emblema Safari",
+  "cobblemon_safari.mark.mark_safari.title": "%1$s la Scoperta del Safari",
+  "cobblemon_safari.mark.mark_safari.desc": "Un emblema per un Pokémon catturato nella Zona Safari."
 }

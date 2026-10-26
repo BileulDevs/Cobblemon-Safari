@@ -8,6 +8,7 @@ import dev.darcosse.common.cobblemonsafari.gate.SafariGate;
 import dev.darcosse.common.cobblemonsafari.points.SafariPoints;
 import dev.darcosse.common.cobblemonsafari.bounty.SafariBounties;
 import dev.darcosse.common.cobblemonsafari.capture.CatchTracker;
+import dev.darcosse.common.cobblemonsafari.capture.SafariMark;
 import dev.darcosse.common.cobblemonsafari.command.SafariDialogueFunctions;
 import dev.darcosse.common.cobblemonsafari.teleport.RestHouseNameText;
 import dev.darcosse.common.cobblemonsafari.bounty.BountyDialogueTexts;
@@ -59,6 +60,7 @@ public final class CobblemonSafari {
         SafariGate.register();
         SafariPoints.register();
         SafariBounties.register();
+        SafariMark.register();
         SafariDialogueFunctions.register();
         RestHouseNameText.register();
         BountyDialogueTexts.register();

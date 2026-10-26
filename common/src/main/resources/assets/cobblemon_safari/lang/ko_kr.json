@@ -298,5 +298,8 @@
   "stat.cobblemon_safari.points_earned": "획득한 사파리 포인트",
   "stat.cobblemon_safari.points_spent": "사용한 사파리 포인트",
   "stat.cobblemon_safari.missions_completed": "완료한 사파리 미션",
-  "stat.cobblemon_safari.rest_house_trips": "사파리 휴게소 이동"
+  "stat.cobblemon_safari.rest_house_trips": "사파리 휴게소 이동",
+  "cobblemon_safari.mark.mark_safari": "사파리증표",
+  "cobblemon_safari.mark.mark_safari.title": "사파리에서 찾아낸 %1$s",
+  "cobblemon_safari.mark.mark_safari.desc": "사파리존에서 잡은 포켓몬임을 나타내는 증표."
 }

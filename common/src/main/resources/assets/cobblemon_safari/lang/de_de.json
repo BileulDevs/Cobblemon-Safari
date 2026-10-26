@@ -298,5 +298,8 @@
   "stat.cobblemon_safari.points_earned": "Verdiente Safari-Punkte",
   "stat.cobblemon_safari.points_spent": "Ausgegebene Safari-Punkte",
   "stat.cobblemon_safari.missions_completed": "Abgeschlossene Safari-Missionen",
-  "stat.cobblemon_safari.rest_house_trips": "Reisen zu Safari-Rasthäusern"
+  "stat.cobblemon_safari.rest_house_trips": "Reisen zu Safari-Rasthäusern",
+  "cobblemon_safari.mark.mark_safari": "Safari-Abzeichen",
+  "cobblemon_safari.mark.mark_safari.title": "%1$s, der Safari-Fund",
+  "cobblemon_safari.mark.mark_safari.desc": "Ein Abzeichen für ein in der Safari-Zone gefangenes Pokémon."
 }

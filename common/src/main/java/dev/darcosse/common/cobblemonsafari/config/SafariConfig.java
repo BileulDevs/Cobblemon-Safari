@@ -475,6 +475,13 @@ public class SafariConfig {
          * disables it.
          */
         public double safariBallOutOfBattleMultiplier = 3.0;
+
+        /**
+         * Gives the Safari Mark ("the Safari Find") to every Pokémon caught in
+         * the Safari, shown in its summary's marks page. false gives none;
+         * marks already given stay.
+         */
+        public boolean awardSafariMark = true;
     }
 
     /**

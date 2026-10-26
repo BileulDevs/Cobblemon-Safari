@@ -298,5 +298,8 @@
   "stat.cobblemon_safari.points_earned": "獲得したサファリポイント",
   "stat.cobblemon_safari.points_spent": "使ったサファリポイント",
   "stat.cobblemon_safari.missions_completed": "達成したサファリミッション",
-  "stat.cobblemon_safari.rest_house_trips": "サファリ休憩所への移動"
+  "stat.cobblemon_safari.rest_house_trips": "サファリ休憩所への移動",
+  "cobblemon_safari.mark.mark_safari": "サファリのあかし",
+  "cobblemon_safari.mark.mark_safari.title": "サファリでみつけた %1$s",
+  "cobblemon_safari.mark.mark_safari.desc": "サファリゾーンで つかまえた ポケモンである あかし"
 }
