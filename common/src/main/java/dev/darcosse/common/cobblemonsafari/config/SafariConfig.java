@@ -591,6 +591,23 @@ public class SafariConfig {
          * daily, and its ruins would otherwise hand out tickets forever.
          */
         public List<Source> sources = new ArrayList<>(List.of(
+                // Every village chest (16 tables: houses, smiths, temple, fisher...), not only
+                // the houses: a village holds several chests, so a few percent each is enough;
+                // much higher and tickets get common.
+                Source.of("minecraft:chests/village/", 0.04),
+                // Savanna houses keep a little more, as before: their villages are smaller.
+                Source.of("minecraft:chests/village/village_savanna_house", 0.10),
+                Source.of("minecraft:chests/desert_pyramid", 0.12),
+                Source.of("minecraft:chests/jungle_temple", 0.12),
+                Source.of("cobblemon:ruins/common/", 0.18)
+        ));
+
+        /**
+         * The defaults up to 1.2 (config version 4), recognised on load: a
+         * file still holding exactly these gets the new defaults
+         * (SafariConfigManager.migrateTicketLoot). Never change it.
+         */
+        static final List<Source> PRE_1_3_DEFAULTS = List.of(
                 Source.of("minecraft:chests/village/village_plains_house", 0.05),
                 Source.of("minecraft:chests/village/village_savanna_house", 0.08),
                 Source.of("minecraft:chests/village/village_desert_house", 0.05),
@@ -598,8 +615,7 @@ public class SafariConfig {
                 Source.of("minecraft:chests/village/village_snowy_house", 0.05),
                 Source.of("minecraft:chests/desert_pyramid", 0.10),
                 Source.of("minecraft:chests/jungle_temple", 0.10),
-                Source.of("cobblemon:ruins/common/", 0.15)
-        ));
+                Source.of("cobblemon:ruins/common/", 0.15));
 
         /** One loot table (or folder of tables) and its chance. */
         public static class Source {

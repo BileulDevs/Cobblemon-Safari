@@ -73,9 +73,14 @@ public final class SafariConfigManager {
      * set for the board (see {@link #migrate}). 3 moved the rest house
      * travel wait from {@code escapeRope} to {@code restHouseTravel}. 4 gave
      * each kind of mission its own tuning ({@code bounties.kinds}), where the
-     * three former rewards of {@code bounties} moved.
+     * three former rewards of {@code bounties} moved. 5 raised the default
+     * ticket loot (every village chest), applied to files still holding the
+     * old default list.
      */
-    public static final int CURRENT_CONFIG_VERSION = 4;
+    public static final int CURRENT_CONFIG_VERSION = 5;
+
+    /** First version with the 1.3.0 ticket loot defaults. */
+    private static final int TICKET_LOOT_VERSION = 5;
 
     /** First version in which every kind of mission has its tuning under {@code bounties.kinds}. */
     private static final int BOUNTY_KINDS_VERSION = 4;
@@ -210,6 +215,40 @@ public final class SafariConfigManager {
             c.escapeRope.restHouseCooldownSeconds = null;
         }
         migrateBounties(c);
+        if (c.configVersion < TICKET_LOOT_VERSION) {
+            migrateTicketLoot(c);
+        }
+    }
+
+    /**
+     * Puts the 1.3.0 ticket loot defaults (every village chest, slightly
+     * higher chances) in a file that still holds the defaults of earlier
+     * versions, entry for entry. A list someone edited is theirs and is left
+     * alone: only an untouched list can be told to mean "the defaults".
+     */
+    private static void migrateTicketLoot(SafariConfig c) {
+        if (c.ticketLoot == null || c.ticketLoot.sources == null
+                || !sameSources(c.ticketLoot.sources, SafariConfig.TicketLoot.PRE_1_3_DEFAULTS)) {
+            return;
+        }
+        c.ticketLoot.sources = new SafariConfig.TicketLoot().sources;
+        CobblemonSafari.LOGGER.info("Updated ticketLoot.sources in {} to the 1.3.0 defaults (every village chest)",
+                FILE_NAME);
+    }
+
+    /** Whether two lists name the same tables with the same chances, in the same order. */
+    private static boolean sameSources(List<SafariConfig.TicketLoot.Source> a, List<SafariConfig.TicketLoot.Source> b) {
+        if (a.size() != b.size()) {
+            return false;
+        }
+        for (int i = 0; i < a.size(); i++) {
+            SafariConfig.TicketLoot.Source x = a.get(i);
+            SafariConfig.TicketLoot.Source y = b.get(i);
+            if (x == null || !Objects.equals(x.table, y.table) || x.chance != y.chance) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**

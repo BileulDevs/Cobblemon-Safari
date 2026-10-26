@@ -29,7 +29,7 @@ Rare lodges in the overworld's plains, meadows, light forests and savannas. Stan
 ### Timed hunts
 
 - **Safari Tickets** add 30 minutes of Safari time, banked up to 4 hours. Entering at a gate spends the bank, up to 2 hours per hunt.
-- **Earn tickets** by trading overworld goods at the shop (16 Apricorns, 24 Berries, 1 evolution stone or 1 fossil, once per rotation each, choosing which kind you give) or by finding them in village houses, desert and jungle temples and Cobblemon ruins.
+- **Earn tickets** by trading overworld goods at the shop (16 Apricorns, 24 Berries, 1 evolution stone or 1 fossil, once per rotation each, choosing which kind you give) or by finding them in village chests, desert and jungle temples and Cobblemon ruins.
 - **A stopwatch HUD**, made of a Safari Ball, whose hand spins faster as time runs out, with chat warnings from 15 minutes down to 10 seconds.
 - **An end-of-game recap** with every Pokémon caught. Leave early through a rest house clerk and the unused time goes back to your bank.
 

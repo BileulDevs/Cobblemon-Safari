@@ -18,7 +18,7 @@ How the files behave:
 - **An invalid value** (a negative price, an hour of 25, a colour that is not a colour...) is replaced by its default or clamped into range, a warning names it in the log, and the file is rewritten with the fixed value.
 - **A file that cannot be read at all** (a missing comma, a stray quote) is never overwritten: the mod runs on the defaults, logs the error, and reads the file again once you fix it.
 - **Unknown keys** are ignored and dropped when the file is rewritten.
-- **`configVersion`** is the format version of the file (`4` for `server.json`, `2` for `shop.json`, `1` for `client.json`). It is not a setting: the mod writes it. A `server.json` at version `1` (Cobblemon Safari 1.0.0) is converted once on load: its `spawns` species rules are copied to `featured` (see below), so nothing changes in game until you edit them. A `server.json` older than version `4` (Cobblemon Safari 1.1.0 and before) has its three bounty rewards moved into `bounties.kinds`. A `shop.json` at version `1` gets the fossil ticket trade added once.
+- **`configVersion`** is the format version of the file (`5` for `server.json`, `2` for `shop.json`, `1` for `client.json`). It is not a setting: the mod writes it. A `server.json` at version `1` (Cobblemon Safari 1.0.0) is converted once on load: its `spawns` species rules are copied to `featured` (see below), so nothing changes in game until you edit them. A `server.json` older than version `4` (Cobblemon Safari 1.1.0 and before) has its three bounty rewards moved into `bounties.kinds`. A `shop.json` at version `1` gets the fossil ticket trade added once.
 
 Formats used below:
 
@@ -102,7 +102,7 @@ Read when loot tables load: after a change, `/reload` (or restart) for chests ge
 | Key | Default | What it does |
 |---|---|---|
 | `enabled` | `true` | Master switch. |
-| `sources` | 8 sources, see below | Loot tables that may hold a ticket, each with its chance per chest. |
+| `sources` | 5 sources, see below | Loot tables that may hold a ticket, each with its chance per chest. |
 
 Each element of `sources`:
 
@@ -111,7 +111,7 @@ Each element of `sources`:
 | `table` | Loot table id, e.g. `minecraft:chests/desert_pyramid`, or a folder ending in `/` for every table in it, e.g. `cobblemon:ruins/common/`. Tables of other mods work too. |
 | `chance` | Chance per chest, from 0 to 1. When a table matches several sources, the exact one wins, then the longest folder. |
 
-The defaults: village houses (plains, desert, taiga, snowy `0.05`, savanna `0.08`), desert pyramids and jungle temples (`0.10`), Cobblemon ruins (`0.15`). Chests inside the Safari never hold tickets, whatever is listed.
+The defaults: every village chest (`minecraft:chests/village/`, the 16 tables of houses, smiths, temple, fisher and so on: `0.04`), savanna houses a little more (`0.10`), desert pyramids and jungle temples (`0.12`), Cobblemon ruins (`0.18`). A file of version 4 or older that still holds the earlier defaults (village houses only, `0.05` to `0.15`) gets these on load; an edited list is kept. Chests inside the Safari never hold tickets, whatever is listed.
 
 ### `gate`: Safari Gates
 
