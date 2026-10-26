@@ -1,5 +1,6 @@
 package dev.darcosse.common.cobblemonsafari.points;
 
+import dev.darcosse.common.cobblemonsafari.stats.SafariStatistics;
 import dev.darcosse.common.cobblemonsafari.network.SafariNetwork;
 import com.cobblemon.mod.common.api.Priority;
 import com.cobblemon.mod.common.api.events.CobblemonEvents;
@@ -90,6 +91,7 @@ public final class SafariPoints {
         }
         int reward = reward(player, event.getPokemon(), config);
         int added = add(player, reward);
+        SafariStatistics.add(player, SafariStatistics.POINTS_EARNED, added);
         if (added > 0) {
             player.displayClientMessage(Component.translatable(CobblemonSafari.MOD_ID + ".message.points_earned",
                     SafariPointsIcon.amount(added), SafariPointsIcon.amount(balance(player))), true);

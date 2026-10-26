@@ -1,5 +1,6 @@
 package dev.darcosse.common.cobblemonsafari.shop;
 
+import dev.darcosse.common.cobblemonsafari.stats.SafariStatistics;
 import dev.darcosse.common.cobblemonsafari.points.SafariPointsIcon;
 import com.cobblemon.mod.common.Cobblemon;
 import com.cobblemon.mod.common.api.pokemon.PokemonProperties;
@@ -464,6 +465,8 @@ public final class SafariShop {
             player.displayClientMessage(Component.translatable(key("message.shop_failed")), true);
             return;
         }
+        // Only now: a purchase that failed gave its points back above.
+        SafariStatistics.add(player, SafariStatistics.POINTS_SPENT, entry.price);
         if (entry.limitPerRotation != null) {
             ShopLimitStore.get(player.getServer()).record(player.getUUID(), rotation, limitKey(entry));
         }

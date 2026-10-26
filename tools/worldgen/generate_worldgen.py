@@ -166,7 +166,7 @@ NOISE_FIRST_OCTAVE = {
 }
 
 # Density function types provided by the mod (registered in Java).
-CUSTOM_DENSITY_FUNCTION_TYPES = {f"{MOD_ID}:island_coordinate"}
+CUSTOM_DENSITY_FUNCTION_TYPES = {f"{MOD_ID}:island_coordinate", f"{MOD_ID}:relief"}
 # Java structure types of the mod (SafariWorldgen.registerStructureTypes).
 CUSTOM_STRUCTURE_TYPES = {f"{MOD_ID}:dry_jigsaw"}
 
@@ -824,6 +824,59 @@ TUNNEL_DRY_REACH = 3.0
 # Island density functions
 # ---------------------------------------------------------------------------
 
+# The island's relief (reset.relief in server.json, IslandRelief in Java) acts
+# on two of the copied vanilla functions, through the mod's density function
+# cobblemon_safari:relief, which gives the current map's multiplier:
+#   offset:     the land's height above the sea (the positive part of the
+#               continentalness spline) times "height"; the sea floor, below
+#               0, stays as it is, so the coast and the sea do not move;
+#   jaggedness: the peaks' spline times "jaggedness".
+# The spline is the one weighted by blend_alpha in vanilla's functions (the
+# terrain proper, as opposed to the blending with old chunks).
+RELIEF_DF_TYPE = f"{MOD_ID}:relief"
+
+
+def relief(parameter):
+    return {"type": RELIEF_DF_TYPE, "parameter": parameter}
+
+
+def terrain_spline_parent(data):
+    """The node holding the terrain spline of a copied offset or jaggedness, and its key.
+
+    Vanilla writes them flat_cache(cache_2d(add(<blending>, <terrain>))), the
+    terrain branch holding one spline function, found depth first. Splines
+    nested in its points are values of that one, never searched.
+    """
+    def search(node):
+        if isinstance(node, dict):
+            for key, child in node.items():
+                if isinstance(child, dict) and "spline" in child:
+                    return node, key
+                found = search(child)
+                if found:
+                    return found
+        return None
+    found = search(data["argument"]["argument"]["argument2"])
+    if found is None:
+        raise ValueError("no terrain spline in the copied function: vanilla changed its layout")
+    return found
+
+
+def with_relief(name, data):
+    """Applies the relief multipliers to a copied vanilla function (see RELIEF_DF_TYPE)."""
+    if name not in ("offset", "jaggedness"):
+        return data
+    parent, key = terrain_spline_parent(data)
+    spline = parent[key]
+    if name == "offset":
+        parent[key] = df_add({"type": "minecraft:min", "argument1": spline, "argument2": 0.0},
+                             df_mul({"type": "minecraft:max", "argument1": spline, "argument2": 0.0},
+                                    relief("height")))
+    else:
+        parent[key] = df_mul(spline, relief("jaggedness"))
+    return data
+
+
 def island(mode):
     return {"type": f"{MOD_ID}:island_coordinate", "mode": mode,
             "center_x": ISLAND_CENTER_X, "center_z": ISLAND_CENTER_Z, "radius": ISLAND_RADIUS}
@@ -1462,7 +1515,7 @@ def main():
         elif df == "erosion":
             data = erosion_df()
         else:
-            data = rename_refs(vanilla(f"worldgen/density_function/overworld/{df}"))
+            data = with_relief(df, rename_refs(vanilla(f"worldgen/density_function/overworld/{df}")))
         write(f"worldgen/density_function/safari/{df}.json", data, written)
 
     settings = rename_refs(vanilla("worldgen/noise_settings/overworld"))

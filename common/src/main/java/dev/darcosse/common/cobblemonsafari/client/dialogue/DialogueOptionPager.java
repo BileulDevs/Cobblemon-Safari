@@ -64,10 +64,17 @@ public final class DialogueOptionPager {
     private static final int THUMB_SHADE = 0xFF5E5E5E;
 
     /**
-     * Where hidden answers are parked, far above the screen. Hiding alone is
-     * not enough: Cobblemon's answer handles its own clicks from its last
-     * hover state, so an answer must also leave the place a visible one now
-     * takes.
+     * Where answers out of the window are parked, far above the screen.
+     *
+     * <p>Why parked and not hidden: Cobblemon's answer handles a click from
+     * its last hover state alone (DialogueOptionWidget.mouseClicked reads
+     * isHovered, not the mouse), and Minecraft refreshes that state only
+     * while the widget is visible. A hidden answer kept the hover it had
+     * when it scrolled out, so after scrolling with the wheel over the list
+     * a click went to the answer that had left, not to the one shown under
+     * the mouse (the Guide took players to another house than the one they
+     * picked). A parked answer stays visible, far off screen, so its hover
+     * goes false on the next frame; it draws nothing anyone can see.
      */
     private static final int PARKED_Y = -10_000;
 
@@ -179,14 +186,13 @@ public final class DialogueOptionPager {
             apply();
         }
 
-        /** Puts the visible answers in their slots and parks the others. */
+        /** Puts the answers of the window in their slots and parks the others (see {@link #PARKED_Y}). */
         void apply() {
             for (int i = 0; i < options.size(); i++) {
                 DialogueOptionWidget option = options.get(i);
                 int slot = i - first;
-                boolean visible = slot >= 0 && slot < shown;
-                option.visible = visible;
-                option.setY(visible ? top + slot * step : PARKED_Y);
+                boolean inWindow = slot >= 0 && slot < shown;
+                option.setY(inWindow ? top + slot * step : PARKED_Y);
             }
         }
 
@@ -226,12 +232,34 @@ public final class DialogueOptionPager {
 
         /**
          * Grabs the thumb, or jumps by a window when the track is clicked
-         * above or below it. Only on the bar: a click on an answer returns
-         * false so the answer gets it.
+         * above or below it. A click on the answers is given to the answer
+         * of the window under the mouse, and to no other.
+         *
+         * <p>Why the bar hands it over: the screen offers a click to each of
+         * its children in turn, and an answer takes it whenever its last
+         * hover state says so. In the frame where the list scrolled, an
+         * answer that just left the window may still say so (see
+         * {@link #PARKED_Y}); the bar comes first among the children, so it
+         * decides.
          */
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            if (!active || !answersShown() || button != 0 || !overBar(mouseX, mouseY)) {
+            if (!active || !answersShown()) {
+                return false;
+            }
+            if (overOptions(mouseX, mouseY)) {
+                for (int i = first; i < first + shown; i++) {
+                    DialogueOptionWidget option = options.get(i);
+                    if (option.isMouseOver(mouseX, mouseY)) {
+                        option.mouseClicked(mouseX, mouseY, button);
+                        break;
+                    }
+                }
+                // Taken even when no answer is under the mouse (the gap between two):
+                // otherwise a parked answer could still claim it.
+                return true;
+            }
+            if (button != 0 || !overBar(mouseX, mouseY)) {
                 return false;
             }
             int thumbTop = thumbTop();

@@ -288,5 +288,18 @@
   "cobblemon_safari.banner_design.cobblemon_safari.ball_throw": "Rzut",
   "block.cobblemon_safari.coat_rack": "Wieszak",
   "block.cobblemon_safari.coat_rack.tooltip": "Kliknij PPM barwnikiem, aby zmienić kolor kapelusza strażnika.",
-  "cobblemon_safari.message.coat_rack_locked": "Nie możesz zafarbować tego kapelusza."
+  "cobblemon_safari.message.coat_rack_locked": "Nie możesz zafarbować tego kapelusza.",
+  "stat.cobblemon_safari.hunts": "Polowania w Safari",
+  "stat.cobblemon_safari.time_hunted": "Czas polowania w Safari",
+  "stat.cobblemon_safari.pokemon_caught": "Pokémony złapane w Safari",
+  "stat.cobblemon_safari.shiny_caught": "Lśniące Pokémony złapane w Safari",
+  "stat.cobblemon_safari.specials_caught": "Wyjątkowe złapane w Safari",
+  "stat.cobblemon_safari.best_hunt": "Najlepsze polowanie w Safari (Pokémony)",
+  "stat.cobblemon_safari.points_earned": "Zdobyte punkty Safari",
+  "stat.cobblemon_safari.points_spent": "Wydane punkty Safari",
+  "stat.cobblemon_safari.missions_completed": "Ukończone misje Safari",
+  "stat.cobblemon_safari.rest_house_trips": "Podróże do domów odpoczynku Safari",
+  "cobblemon_safari.mark.mark_safari": "Odznaka Safari",
+  "cobblemon_safari.mark.mark_safari.title": "%1$s, Znalezisko z Safari",
+  "cobblemon_safari.mark.mark_safari.desc": "Odznaka Pokémona złapanego w Strefie Safari."
 }

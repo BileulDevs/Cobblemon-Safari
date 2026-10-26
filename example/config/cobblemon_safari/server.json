@@ -1,5 +1,5 @@
 {
-  "configVersion": 4,
+  "configVersion": 5,
   "maxDurationSeconds": 3600,
   "allowedBalls": [
     "cobblemon:safari_ball",
@@ -33,12 +33,14 @@
     "ballItem": "cobblemon:safari_ball"
   },
   "capture": {
-    "safariBallOutOfBattleMultiplier": 3.0
+    "safariBallOutOfBattleMultiplier": 3.0,
+    "awardSafariMark": true
   },
   "reset": {
     "enabled": true,
     "hour": 4,
-    "timeZone": "Europe/Paris"
+    "timeZone": "Europe/Paris",
+    "relief": "ROLLING"
   },
   "ticket": {
     "defaultDurationSeconds": 1800,
@@ -51,36 +53,24 @@
     "enabled": true,
     "sources": [
       {
-        "table": "minecraft:chests/village/village_plains_house",
-        "chance": 0.05
+        "table": "minecraft:chests/village/",
+        "chance": 0.04
       },
       {
         "table": "minecraft:chests/village/village_savanna_house",
-        "chance": 0.08
-      },
-      {
-        "table": "minecraft:chests/village/village_desert_house",
-        "chance": 0.05
-      },
-      {
-        "table": "minecraft:chests/village/village_taiga_house",
-        "chance": 0.05
-      },
-      {
-        "table": "minecraft:chests/village/village_snowy_house",
-        "chance": 0.05
+        "chance": 0.1
       },
       {
         "table": "minecraft:chests/desert_pyramid",
-        "chance": 0.1
+        "chance": 0.12
       },
       {
         "table": "minecraft:chests/jungle_temple",
-        "chance": 0.1
+        "chance": 0.12
       },
       {
         "table": "cobblemon:ruins/common/",
-        "chance": 0.15
+        "chance": 0.18
       },
       {
         "table": "minecraft:chests/shipwreck_treasure",

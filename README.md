@@ -18,7 +18,7 @@ The Safari is its own dimension: a single island in a turquoise sea, with its ow
 - **Fourteen habitats** laid out around a central summit: grassland, savanna, dunes, badlands, jungle, marsh, mushroom grove, flower meadow, woodland, deep forest, taiga, snowfield, glacier and rocky hills, plus the peaks, a volcano, lakes and rivers.
 - **Caves everywhere**, a giant pillared cavern under the summit and a lush cavern in the south, each reached by its own winding passage.
 - **Cobblemon ruins and Gimmighoul towers** scattered over the island.
-- **A new map every day.** At the first server start of a new day, the island is regenerated with a new layout. Sessions, stats, banked time and points are kept.
+- **A new map every day.** At the first server start of a new day, the island is regenerated with a new layout, flat, rolling or mountainous as you choose. Sessions, stats, banked time and points are kept.
 - **Its own soundtrack**: six original tracks, one per zone, and the cries of the Pokémon that actually live in each biome.
 - **Nothing to break.** Inside, players take no damage and cannot change the terrain. Poké Cakes and Poké Snacks can still be placed as bait.
 
@@ -29,7 +29,7 @@ Rare lodges in the overworld's plains, meadows, light forests and savannas. Stan
 ### Timed hunts
 
 - **Safari Tickets** add 30 minutes of Safari time, banked up to 4 hours. Entering at a gate spends the bank, up to 2 hours per hunt.
-- **Earn tickets** by trading overworld goods at the shop (16 Apricorns, 24 Berries, 1 evolution stone or 1 fossil, once per rotation each, choosing which kind you give) or by finding them in village houses, desert and jungle temples and Cobblemon ruins.
+- **Earn tickets** by trading overworld goods at the shop (16 Apricorns, 24 Berries, 1 evolution stone or 1 fossil, once per rotation each, choosing which kind you give) or by finding them in village chests, desert and jungle temples and Cobblemon ruins.
 - **A stopwatch HUD**, made of a Safari Ball, whose hand spins faster as time runs out, with chat warnings from 15 minutes down to 10 seconds.
 - **An end-of-game recap** with every Pokémon caught. Leave early through a rest house clerk and the unused time goes back to your bank.
 
@@ -51,6 +51,8 @@ Eight Pokémon Centers stand on every map, the entrance one right where you arri
 
 - Every catch earns **Safari points**, more for rare species, today's specials and shinies.
 - Each rotation brings **three missions** drawn among twelve kinds (a species, a type, one of today's specials, a habitat, different species, without a battle, at night...), the same for everyone, paid once per player, with a bonus when all are done. Too hard? The clerk swaps one for you, for a few points. Every kind, its reward and the species it may ask can be configured.
+- Every Pokémon you catch there keeps the **Safari Mark**: "Tauros the Safari Find".
+- Your Safari career shows in the game's own **Statistics** screen: hunts, time hunted, Pokémon, shinies and specials caught, best hunt, points earned and spent, missions completed.
 - The **shop** sells a fixed list plus random Pokémon, items and Poké Balls that change with each rotation, a cooking tab, and the ticket trades. Pokémon cards show the animated Cobblemon model.
 
 ### Safari Wall Screens

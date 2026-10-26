@@ -1,5 +1,6 @@
 package dev.darcosse.common.cobblemonsafari.event;
 
+import dev.darcosse.common.cobblemonsafari.stats.SafariStatistics;
 import dev.darcosse.common.cobblemonsafari.network.SafariNetwork;
 import com.mojang.brigadier.CommandDispatcher;
 import dev.darcosse.common.cobblemonsafari.structure.RestHouseStaff;
@@ -123,6 +124,7 @@ public final class SafariServerEvents {
         FeaturedSync.sendTo(player);
         SafariBounties.sendTo(player);
         SafariNetwork.sendStats(player);
+        SafariStatistics.catchUp(player);
         JOINED.add(player.getUUID());
     }
 

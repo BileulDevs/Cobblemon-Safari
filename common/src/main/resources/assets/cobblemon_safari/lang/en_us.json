@@ -288,5 +288,18 @@
   "cobblemon_safari.banner_design.cobblemon_safari.ball_throw": "The Throw",
   "block.cobblemon_safari.coat_rack": "Coat Rack",
   "block.cobblemon_safari.coat_rack.tooltip": "Right-click with a dye to recolour the ranger's hat.",
-  "cobblemon_safari.message.coat_rack_locked": "You can't recolour this hat."
+  "cobblemon_safari.message.coat_rack_locked": "You can't recolour this hat.",
+  "stat.cobblemon_safari.hunts": "Safari Hunts",
+  "stat.cobblemon_safari.time_hunted": "Time Hunted in the Safari",
+  "stat.cobblemon_safari.pokemon_caught": "Pokémon Caught in the Safari",
+  "stat.cobblemon_safari.shiny_caught": "Shiny Pokémon Caught in the Safari",
+  "stat.cobblemon_safari.specials_caught": "Specials Caught in the Safari",
+  "stat.cobblemon_safari.best_hunt": "Best Safari Hunt (Pokémon)",
+  "stat.cobblemon_safari.points_earned": "Safari Points Earned",
+  "stat.cobblemon_safari.points_spent": "Safari Points Spent",
+  "stat.cobblemon_safari.missions_completed": "Safari Missions Completed",
+  "stat.cobblemon_safari.rest_house_trips": "Safari Rest House Trips",
+  "cobblemon_safari.mark.mark_safari": "Safari Mark",
+  "cobblemon_safari.mark.mark_safari.title": "%1$s the Safari Find",
+  "cobblemon_safari.mark.mark_safari.desc": "A mark for a Pokémon caught in the Safari Zone."
 }

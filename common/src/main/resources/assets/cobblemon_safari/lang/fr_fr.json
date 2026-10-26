@@ -288,5 +288,18 @@
   "cobblemon_safari.banner_design.cobblemon_safari.ball_throw": "Le lancer",
   "block.cobblemon_safari.coat_rack": "Portemanteau",
   "block.cobblemon_safari.coat_rack.tooltip": "Clic droit avec une teinture pour changer la couleur du chapeau de ranger.",
-  "cobblemon_safari.message.coat_rack_locked": "Vous ne pouvez pas teindre ce chapeau."
+  "cobblemon_safari.message.coat_rack_locked": "Vous ne pouvez pas teindre ce chapeau.",
+  "stat.cobblemon_safari.hunts": "Chasses au Safari",
+  "stat.cobblemon_safari.time_hunted": "Temps de chasse au Safari",
+  "stat.cobblemon_safari.pokemon_caught": "Pokémon capturés au Safari",
+  "stat.cobblemon_safari.shiny_caught": "Pokémon chromatiques capturés au Safari",
+  "stat.cobblemon_safari.specials_caught": "Spéciaux capturés au Safari",
+  "stat.cobblemon_safari.best_hunt": "Meilleure chasse au Safari (Pokémon)",
+  "stat.cobblemon_safari.points_earned": "Points Safari gagnés",
+  "stat.cobblemon_safari.points_spent": "Points Safari dépensés",
+  "stat.cobblemon_safari.missions_completed": "Missions Safari accomplies",
+  "stat.cobblemon_safari.rest_house_trips": "Trajets vers les refuges du Safari",
+  "cobblemon_safari.mark.mark_safari": "Insigne Safari",
+  "cobblemon_safari.mark.mark_safari.title": "%1$s la Trouvaille du Safari",
+  "cobblemon_safari.mark.mark_safari.desc": "L'insigne d'un Pokémon capturé dans le Parc Safari."
 }

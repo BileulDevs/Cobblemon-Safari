@@ -288,5 +288,18 @@
   "cobblemon_safari.banner_design.cobblemon_safari.ball_throw": "볼 던지기",
   "block.cobblemon_safari.coat_rack": "옷걸이",
   "block.cobblemon_safari.coat_rack.tooltip": "염료를 들고 우클릭하면 레인저 모자의 색을 바꿉니다.",
-  "cobblemon_safari.message.coat_rack_locked": "이 모자는 염색할 수 없습니다."
+  "cobblemon_safari.message.coat_rack_locked": "이 모자는 염색할 수 없습니다.",
+  "stat.cobblemon_safari.hunts": "사파리 사냥 횟수",
+  "stat.cobblemon_safari.time_hunted": "사파리 사냥 시간",
+  "stat.cobblemon_safari.pokemon_caught": "사파리에서 잡은 포켓몬",
+  "stat.cobblemon_safari.shiny_caught": "사파리에서 잡은 색이 다른 포켓몬",
+  "stat.cobblemon_safari.specials_caught": "사파리에서 잡은 특별 포켓몬",
+  "stat.cobblemon_safari.best_hunt": "사파리 최고 기록 (포켓몬)",
+  "stat.cobblemon_safari.points_earned": "획득한 사파리 포인트",
+  "stat.cobblemon_safari.points_spent": "사용한 사파리 포인트",
+  "stat.cobblemon_safari.missions_completed": "완료한 사파리 미션",
+  "stat.cobblemon_safari.rest_house_trips": "사파리 휴게소 이동",
+  "cobblemon_safari.mark.mark_safari": "사파리증표",
+  "cobblemon_safari.mark.mark_safari.title": "사파리에서 찾아낸 %1$s",
+  "cobblemon_safari.mark.mark_safari.desc": "사파리존에서 잡은 포켓몬임을 나타내는 증표."
 }

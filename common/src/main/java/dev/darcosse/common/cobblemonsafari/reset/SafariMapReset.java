@@ -8,6 +8,7 @@ import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
 import dev.darcosse.common.cobblemonsafari.teleport.SafariTeleporter;
+import dev.darcosse.common.cobblemonsafari.worldgen.IslandRelief;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -51,6 +52,8 @@ public final class SafariMapReset {
 
     /** Salt of the map currently on disk; 0 means the world's own seed (the map before any reset). */
     private static volatile long salt;
+    /** Relief of the map on disk, read by the terrain while it generates (ReliefFunction). */
+    private static volatile IslandRelief relief = IslandRelief.ROLLING;
     /** Whether this server run started on a freshly reset map. */
     private static boolean resetThisRun;
     /** Players already moved to the arrival point after a reset, during this run. */
@@ -61,6 +64,11 @@ public final class SafariMapReset {
         /** Map day ("2026-10-08"); empty forces a reset at the next start. */
         String day = "";
         long salt;
+        /**
+         * Relief the map was generated with. Absent in files written before
+         * 1.3.0, whose maps all have the one relief there was: ROLLING.
+         */
+        IslandRelief relief;
     }
 
     private SafariMapReset() {
@@ -72,6 +80,14 @@ public final class SafariMapReset {
      */
     public static long seedFor(ServerLevel level, long worldSeed) {
         return SafariDimensions.isSafari(level) ? worldSeed ^ salt : worldSeed;
+    }
+
+    /**
+     * Relief of the map on disk; changes only when the map is reset, so
+     * that the chunks generated later match the ones already there.
+     */
+    public static IslandRelief relief() {
+        return relief;
     }
 
     /** Salt of the map on disk; changes only when the map is reset. */
@@ -90,6 +106,7 @@ public final class SafariMapReset {
         Path stateFile = worldRoot.resolve(STATE_FILE);
         SafariConfig.Reset config = SafariConfigManager.get().reset;
         String today = today(config);
+        Path folder = DimensionType.getStorageFolder(SafariDimensions.key(), worldRoot);
 
         State state = read(stateFile);
         if (state == null) {
@@ -97,19 +114,30 @@ public final class SafariMapReset {
             state = new State();
             state.day = today;
             state.salt = 0L;
+            // A world from before the state file may already hold a map, generated ROLLING.
+            state.relief = Files.isDirectory(folder) ? IslandRelief.ROLLING : config.relief;
             write(stateFile, state);
         } else if (config.enabled && !today.equals(state.day)) {
-            Path folder = DimensionType.getStorageFolder(SafariDimensions.key(), worldRoot);
             if (deleteFolder(folder)) {
                 state.day = today;
                 state.salt = newSalt();
+                state.relief = config.relief;
                 write(stateFile, state);
                 resetThisRun = true;
-                CobblemonSafari.LOGGER.info("Safari map reset for {}: {} deleted, new terrain will be generated",
-                        today, folder);
+                CobblemonSafari.LOGGER.info("Safari map reset for {}: {} deleted, new terrain will be generated ({})",
+                        today, folder, config.relief);
             }
         }
+        if (state.relief == null) {
+            state.relief = IslandRelief.ROLLING;
+            write(stateFile, state);
+        }
+        if (state.relief != config.relief) {
+            CobblemonSafari.LOGGER.info("Safari relief {} applies from the next map; this one keeps {}"
+                    + " (/safari reset to change it at the next start)", config.relief, state.relief);
+        }
         salt = state.salt;
+        relief = state.relief;
     }
 
     /**

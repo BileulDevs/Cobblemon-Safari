@@ -22,6 +22,7 @@ import dev.darcosse.common.cobblemonsafari.points.SafariPointsIcon;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedRotation;
 import dev.darcosse.common.cobblemonsafari.spawn.HabitatEntry;
 import dev.darcosse.common.cobblemonsafari.spawn.Rarity;
+import dev.darcosse.common.cobblemonsafari.stats.SafariStatistics;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
 import dev.darcosse.common.cobblemonsafari.world.SafariWorldState;
 import net.minecraft.ChatFormatting;
@@ -320,6 +321,7 @@ public final class SafariBounties {
                     SafariPointsIcon.amount(config.swap.cost)).withStyle(ChatFormatting.RED));
             return false;
         }
+        SafariStatistics.add(player, SafariStatistics.POINTS_SPENT, config.swap.cost);
         progress.swapped.put(slot, replacement);
         progress.clearSlot(slot);
         progress.swaps++;
@@ -387,6 +389,7 @@ public final class SafariBounties {
             int bonus = SafariConfigManager.get().bounties.allDoneBonus;
             if (bonus > 0) {
                 int added = SafariPoints.add(player, bonus);
+                SafariStatistics.add(player, SafariStatistics.POINTS_EARNED, added);
                 player.sendSystemMessage(Component.translatable(key("bounty.all_done"), SafariPointsIcon.amount(added))
                         .withStyle(ChatFormatting.GOLD));
             }
@@ -449,6 +452,8 @@ public final class SafariBounties {
     /** Pays a completed mission and celebrates it. */
     private static void complete(ServerPlayer player, Bounty bounty) {
         int added = SafariPoints.add(player, bounty.reward());
+        SafariStatistics.add(player, SafariStatistics.POINTS_EARNED, added);
+        SafariStatistics.increment(player, SafariStatistics.MISSIONS_COMPLETED);
         player.sendSystemMessage(Component.translatable(key("bounty.completed"), bounty.describe(), SafariPointsIcon.amount(added))
                 .withStyle(ChatFormatting.GREEN));
         player.level().playSound(null, player.getX(), player.getY(), player.getZ(),

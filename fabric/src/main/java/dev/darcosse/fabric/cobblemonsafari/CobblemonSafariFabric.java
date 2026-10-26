@@ -22,6 +22,7 @@ import net.fabricmc.fabric.api.loot.v3.LootTableEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
+import dev.darcosse.common.cobblemonsafari.stats.SafariStatistics;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
@@ -58,6 +59,7 @@ public class CobblemonSafariFabric implements ModInitializer {
         // The mod's own tab, after the items it lists.
         Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, SafariCreativeTab.ID,
                 SafariCreativeTab.build(FabricItemGroup.builder()));
+        SafariStatistics.register((id, value) -> Registry.register(BuiltInRegistries.CUSTOM_STAT, id, value));
         FabricSafariNetworking.registerPayloadTypes();
 
         // STARTING fires before the levels load, which the map reset needs.

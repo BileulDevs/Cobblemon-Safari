@@ -288,5 +288,18 @@
   "cobblemon_safari.banner_design.cobblemon_safari.ball_throw": "Il lancio",
   "block.cobblemon_safari.coat_rack": "Appendiabiti",
   "block.cobblemon_safari.coat_rack.tooltip": "Clic destro con una tintura per cambiare colore al cappello da ranger.",
-  "cobblemon_safari.message.coat_rack_locked": "Non puoi tingere questo cappello."
+  "cobblemon_safari.message.coat_rack_locked": "Non puoi tingere questo cappello.",
+  "stat.cobblemon_safari.hunts": "Cacce nel Safari",
+  "stat.cobblemon_safari.time_hunted": "Tempo di caccia nel Safari",
+  "stat.cobblemon_safari.pokemon_caught": "Pokémon catturati nel Safari",
+  "stat.cobblemon_safari.shiny_caught": "Pokémon cromatici catturati nel Safari",
+  "stat.cobblemon_safari.specials_caught": "Speciali catturati nel Safari",
+  "stat.cobblemon_safari.best_hunt": "Miglior caccia nel Safari (Pokémon)",
+  "stat.cobblemon_safari.points_earned": "Punti Safari guadagnati",
+  "stat.cobblemon_safari.points_spent": "Punti Safari spesi",
+  "stat.cobblemon_safari.missions_completed": "Missioni Safari completate",
+  "stat.cobblemon_safari.rest_house_trips": "Viaggi verso le case di riposo del Safari",
+  "cobblemon_safari.mark.mark_safari": "Emblema Safari",
+  "cobblemon_safari.mark.mark_safari.title": "%1$s la Scoperta del Safari",
+  "cobblemon_safari.mark.mark_safari.desc": "Un emblema per un Pokémon catturato nella Zona Safari."
 }

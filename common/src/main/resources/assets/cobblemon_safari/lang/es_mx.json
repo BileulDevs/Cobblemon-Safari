@@ -288,5 +288,18 @@
   "cobblemon_safari.banner_design.cobblemon_safari.ball_throw": "El lanzamiento",
   "block.cobblemon_safari.coat_rack": "Perchero",
   "block.cobblemon_safari.coat_rack.tooltip": "Clic derecho con un tinte para cambiar el color del sombrero de guarda.",
-  "cobblemon_safari.message.coat_rack_locked": "No puedes teñir este sombrero."
+  "cobblemon_safari.message.coat_rack_locked": "No puedes teñir este sombrero.",
+  "stat.cobblemon_safari.hunts": "Cacerías en el Safari",
+  "stat.cobblemon_safari.time_hunted": "Tiempo de caza en el Safari",
+  "stat.cobblemon_safari.pokemon_caught": "Pokémon atrapados en el Safari",
+  "stat.cobblemon_safari.shiny_caught": "Pokémon shiny atrapados en el Safari",
+  "stat.cobblemon_safari.specials_caught": "Especiales atrapados en el Safari",
+  "stat.cobblemon_safari.best_hunt": "Mejor cacería en el Safari (Pokémon)",
+  "stat.cobblemon_safari.points_earned": "Puntos Safari ganados",
+  "stat.cobblemon_safari.points_spent": "Puntos Safari gastados",
+  "stat.cobblemon_safari.missions_completed": "Misiones del Safari completadas",
+  "stat.cobblemon_safari.rest_house_trips": "Viajes a las casas de descanso del Safari",
+  "cobblemon_safari.mark.mark_safari": "Emblema Safari",
+  "cobblemon_safari.mark.mark_safari.title": "%1$s el Hallazgo del Safari",
+  "cobblemon_safari.mark.mark_safari.desc": "Emblema que distingue a un Pokémon atrapado en la Zona Safari."
 }

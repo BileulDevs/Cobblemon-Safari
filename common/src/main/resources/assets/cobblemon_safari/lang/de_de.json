@@ -288,5 +288,18 @@
   "cobblemon_safari.banner_design.cobblemon_safari.ball_throw": "Der Wurf",
   "block.cobblemon_safari.coat_rack": "Garderobenständer",
   "block.cobblemon_safari.coat_rack.tooltip": "Rechtsklick mit einem Farbstoff, um den Ranger-Hut umzufärben.",
-  "cobblemon_safari.message.coat_rack_locked": "Du kannst diesen Hut nicht färben."
+  "cobblemon_safari.message.coat_rack_locked": "Du kannst diesen Hut nicht färben.",
+  "stat.cobblemon_safari.hunts": "Safari-Jagden",
+  "stat.cobblemon_safari.time_hunted": "Jagdzeit in der Safari",
+  "stat.cobblemon_safari.pokemon_caught": "In der Safari gefangene Pokémon",
+  "stat.cobblemon_safari.shiny_caught": "In der Safari gefangene schillernde Pokémon",
+  "stat.cobblemon_safari.specials_caught": "In der Safari gefangene Besondere",
+  "stat.cobblemon_safari.best_hunt": "Beste Safari-Jagd (Pokémon)",
+  "stat.cobblemon_safari.points_earned": "Verdiente Safari-Punkte",
+  "stat.cobblemon_safari.points_spent": "Ausgegebene Safari-Punkte",
+  "stat.cobblemon_safari.missions_completed": "Abgeschlossene Safari-Missionen",
+  "stat.cobblemon_safari.rest_house_trips": "Reisen zu Safari-Rasthäusern",
+  "cobblemon_safari.mark.mark_safari": "Safari-Abzeichen",
+  "cobblemon_safari.mark.mark_safari.title": "%1$s, der Safari-Fund",
+  "cobblemon_safari.mark.mark_safari.desc": "Ein Abzeichen für ein in der Safari-Zone gefangenes Pokémon."
 }

@@ -16,6 +16,7 @@
     "client.CameraTravelMixin",
     "client.GuiPortalOverlayMixin",
     "client.MinecraftMusicMixin",
+    "client.MusicManagerFadeMixin",
     "client.ScreenDialogueOptionsMixin",
     "client.DialogueOptionTextFitMixin",
     "client.LocalPlayerPortalSoundMixin"

@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.3.0
+
+### New
+
+- **Safari statistics** in the game's Statistics screen (General tab): hunts, time hunted, Pokémon, shinies and specials caught, best hunt, Safari points earned and spent, missions completed and rest house trips. Your Safari record from earlier versions is carried over on your next login.
+- **Safari Mark**: every Pokémon caught in the Safari gets a mark, "the Safari Find", in its summary's marks page; its title shows when the Pokémon has no other one (`capture.awardSafariMark`).
+- **Smooth music changes** in the Safari: entering a rest house fades the current track out before the center theme rises, and after 5 s in a habitat with another track the music fades over to it instead of letting the old one finish.
+- **Island relief** (`reset.relief`): `FLAT`, `ROLLING` (as before) or `MOUNTAINOUS`, for each new map.
+
+### Changed
+
+- **Tickets in every village chest**, not only the houses (4 %, savanna houses 10 %), and a little more in desert pyramids and jungle temples (12 %) and Cobblemon ruins (18 %).
+- **Safari Gates are a little more frequent**: one per 40 chunks on average instead of 48 (new chunks only).
+
+### Fixed
+
+- The Safari Guide could take you to another rest house than the one you picked ("Deep Forest" landing in the jungle) after you scrolled his list with the mouse wheel: the click went to the answer that had just scrolled out. The same happened in any long Cobblemon dialogue.
+
+### Config
+
+- `server.json` goes to version 5: new keys `reset.relief` and `capture.awardSafariMark`; a `ticketLoot.sources` list still holding the earlier defaults gets the new ones.
+
 ## 1.2.1
 
 Same network protocol as 1.2.0 (`1.4.0`): a 1.2.1 client joins a 1.2.0 server and the other way round.

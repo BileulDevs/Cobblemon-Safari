@@ -18,7 +18,7 @@ How the files behave:
 - **An invalid value** (a negative price, an hour of 25, a colour that is not a colour...) is replaced by its default or clamped into range, a warning names it in the log, and the file is rewritten with the fixed value.
 - **A file that cannot be read at all** (a missing comma, a stray quote) is never overwritten: the mod runs on the defaults, logs the error, and reads the file again once you fix it.
 - **Unknown keys** are ignored and dropped when the file is rewritten.
-- **`configVersion`** is the format version of the file (`4` for `server.json`, `2` for `shop.json`, `1` for `client.json`). It is not a setting: the mod writes it. A `server.json` at version `1` (Cobblemon Safari 1.0.0) is converted once on load: its `spawns` species rules are copied to `featured` (see below), so nothing changes in game until you edit them. A `server.json` older than version `4` (Cobblemon Safari 1.1.0 and before) has its three bounty rewards moved into `bounties.kinds`. A `shop.json` at version `1` gets the fossil ticket trade added once.
+- **`configVersion`** is the format version of the file (`5` for `server.json`, `2` for `shop.json`, `1` for `client.json`). It is not a setting: the mod writes it. A `server.json` at version `1` (Cobblemon Safari 1.0.0) is converted once on load: its `spawns` species rules are copied to `featured` (see below), so nothing changes in game until you edit them. A `server.json` older than version `4` (Cobblemon Safari 1.1.0 and before) has its three bounty rewards moved into `bounties.kinds`. A `shop.json` at version `1` gets the fossil ticket trade added once.
 
 Formats used below:
 
@@ -68,6 +68,7 @@ The original games' loan of Safari Balls, off by default: players bring their ow
 | Key | Default | What it does |
 |---|---|---|
 | `safariBallOutOfBattleMultiplier` | `3.0` | Multiplies the catch rate when a Safari Ball (`loan.ballItem`) hits a wild Pokémon that is not in a battle, inside the Safari. Cobblemon halves every capture made outside a battle, so at 3 the Safari Ball out of battle works 1.5 times as well as a normal throw in battle, before Cobblemon's own Safari Ball bonus. 1 turns it off; lower values are raised to 1. |
+| `awardSafariMark` | `true` | Gives the Safari Mark ("the Safari Find") to every Pokémon caught in the Safari; its title becomes the active one when the Pokémon has none. `false` gives none; marks already given stay. |
 
 ### `reset`: the daily new map
 
@@ -78,6 +79,7 @@ At the first server start of a new day, the Safari dimension is deleted and rege
 | `enabled` | `true` | `false` keeps the same map forever. |
 | `hour` | `4` | Hour (0 to 23) at which a new map day starts. With 4, a server restarted at 3:00 still belongs to the previous day and keeps its map. |
 | `timeZone` | `""` | Time zone of `hour`, e.g. `"Europe/Paris"`. Empty uses the server's own. |
+| `relief` | `"ROLLING"` | How hilly each new map is. `"FLAT"`: low, gentle land, a few blocks above the sea, no peaks (height ×0.35). `"ROLLING"`: the island as in earlier versions. `"MOUNTAINOUS"`: higher land and sharper peaks (height ×1.6, peaks ×1.8). The coast and the sea floor do not move. Only a new map takes it: the map on disk keeps the relief it was generated with (new chunks would rise as cliffs against the old ones), and the log says so at start. To see a new relief now, `/safari reset` then restart. |
 
 `/safari reset` forces a new map at the next start, whatever this section says.
 
@@ -100,7 +102,7 @@ Read when loot tables load: after a change, `/reload` (or restart) for chests ge
 | Key | Default | What it does |
 |---|---|---|
 | `enabled` | `true` | Master switch. |
-| `sources` | 8 sources, see below | Loot tables that may hold a ticket, each with its chance per chest. |
+| `sources` | 5 sources, see below | Loot tables that may hold a ticket, each with its chance per chest. |
 
 Each element of `sources`:
 
@@ -109,7 +111,7 @@ Each element of `sources`:
 | `table` | Loot table id, e.g. `minecraft:chests/desert_pyramid`, or a folder ending in `/` for every table in it, e.g. `cobblemon:ruins/common/`. Tables of other mods work too. |
 | `chance` | Chance per chest, from 0 to 1. When a table matches several sources, the exact one wins, then the longest folder. |
 
-The defaults: village houses (plains, desert, taiga, snowy `0.05`, savanna `0.08`), desert pyramids and jungle temples (`0.10`), Cobblemon ruins (`0.15`). Chests inside the Safari never hold tickets, whatever is listed.
+The defaults: every village chest (`minecraft:chests/village/`, the 16 tables of houses, smiths, temple, fisher and so on: `0.04`), savanna houses a little more (`0.10`), desert pyramids and jungle temples (`0.12`), Cobblemon ruins (`0.18`). A file of version 4 or older that still holds the earlier defaults (village houses only, `0.05` to `0.15`) gets these on load; an edited list is kept. Chests inside the Safari never hold tickets, whatever is listed.
 
 ### `gate`: Safari Gates
 
