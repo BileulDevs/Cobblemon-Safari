@@ -6,6 +6,7 @@
 
 - **Safari statistics** in the game's Statistics screen (General tab): hunts, time hunted, Pokémon, shinies and specials caught, best hunt, Safari points earned and spent, missions completed and rest house trips. Your Safari record from earlier versions is carried over on your next login.
 - **Safari Mark**: every Pokémon caught in the Safari gets a mark, "the Safari Find", in its summary's marks page; its title shows when the Pokémon has no other one (`capture.awardSafariMark`).
+- **Smooth music changes** in the Safari: entering a rest house fades the current track out before the center theme rises, and after 5 s in a habitat with another track the music fades over to it instead of letting the old one finish.
 - **Island relief** (`reset.relief`): `FLAT`, `ROLLING` (as before) or `MOUNTAINOUS`, for each new map.
 
 ### Changed
