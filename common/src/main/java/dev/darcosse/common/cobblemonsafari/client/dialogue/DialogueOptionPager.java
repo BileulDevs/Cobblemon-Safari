@@ -113,7 +113,7 @@ public final class DialogueOptionPager {
             return;
         }
         DialogueOptionWidget first = options.get(0);
-        ScrollBar bar = new ScrollBar(options, first.getX(), first.getWidth(), top, step, optionHeight, shown);
+        ScrollBar bar = new ScrollBar(dialogue, options, first.getX(), first.getWidth(), top, step, optionHeight, shown);
         addWidget.accept(bar);
         // First among the screen's children: the wheel goes to the first child under the
         // mouse, and over the answers that would be an answer, which ignores it.
@@ -132,6 +132,8 @@ public final class DialogueOptionPager {
      */
     private static final class ScrollBar extends AbstractWidget {
 
+        /** The dialogue, asked whether its answers are on screen yet. */
+        private final DialogueScreen dialogue;
         final List<DialogueOptionWidget> options;
         private final int optionsLeft;
         private final int optionsWidth;
@@ -144,16 +146,26 @@ public final class DialogueOptionPager {
         /** While dragging: how far below the thumb's top it was grabbed, in GUI pixels; -1 otherwise. */
         private double grab = -1.0D;
 
-        ScrollBar(List<DialogueOptionWidget> options, int optionsLeft, int optionsWidth, int top, int step,
-                  int optionHeight, int shown) {
+        ScrollBar(DialogueScreen dialogue, List<DialogueOptionWidget> options, int optionsLeft, int optionsWidth,
+                  int top, int step, int optionHeight, int shown) {
             super(optionsLeft + optionsWidth + BAR_GAP, top, BAR_WIDTH, (shown - 1) * step + optionHeight,
                     Component.empty());
+            this.dialogue = dialogue;
             this.options = options;
             this.optionsLeft = optionsLeft;
             this.optionsWidth = optionsWidth;
             this.top = top;
             this.step = step;
             this.shown = shown;
+        }
+
+        /**
+         * Whether the answers are on screen. Cobblemon shows them only once
+         * the line has finished typing out (DialogueScreen.renderInput); the
+         * bar shows and answers with them, not before.
+         */
+        private boolean answersShown() {
+            return visible && dialogue.renderInput();
         }
 
         /** Highest first index: the last answer at the bottom of the window. */
@@ -199,13 +211,13 @@ public final class DialogueOptionPager {
         /** The bar and the answers' window, so the wheel reaches this widget over either. */
         @Override
         public boolean isMouseOver(double mouseX, double mouseY) {
-            return visible && (overBar(mouseX, mouseY) || overOptions(mouseX, mouseY));
+            return answersShown() && (overBar(mouseX, mouseY) || overOptions(mouseX, mouseY));
         }
 
         /** One answer per notch of the wheel. */
         @Override
         public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-            if (scrollY == 0.0D) {
+            if (scrollY == 0.0D || !answersShown()) {
                 return false;
             }
             scrollTo(first - (int) Math.signum(scrollY));
@@ -219,7 +231,7 @@ public final class DialogueOptionPager {
          */
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            if (!active || !visible || button != 0 || !overBar(mouseX, mouseY)) {
+            if (!active || !answersShown() || button != 0 || !overBar(mouseX, mouseY)) {
                 return false;
             }
             int thumbTop = thumbTop();
@@ -258,6 +270,9 @@ public final class DialogueOptionPager {
         /** The track, then the thumb with a darker lower edge, lit while hovered or dragged. */
         @Override
         protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            if (!answersShown()) {
+                return;
+            }
             int x0 = getX();
             int y0 = getY();
             graphics.fill(x0, y0, x0 + width, y0 + height, TRACK_BORDER);

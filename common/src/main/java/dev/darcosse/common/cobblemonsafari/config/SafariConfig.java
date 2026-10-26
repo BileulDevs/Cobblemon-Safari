@@ -432,12 +432,13 @@ public class SafariConfig {
         public int cinematicSeconds = SafariConfigManager.DEFAULT_TRAVEL_CINEMATIC_SECONDS;
 
         /**
-         * How the guide's trips are shown: FLIGHT (the player's double flies
-         * off on their own flying Pokémon, or a Staraptor, seen by everyone
-         * around) or PANORAMA (the painted landscape). FLIGHT falls back to
-         * PANORAMA on its own when the sky is closed, or when the player has
-         * no flyer and Staraptor is missing. The rope always plays its own
-         * scene.
+         * How the trips to a rest house are shown: FLIGHT (the player's
+         * double flies off on their own flying Pokémon, or a Staraptor, seen
+         * by everyone around; from the guide's steps, or from where the rope
+         * was used, after a climb to the open air in a cave) or PANORAMA (the
+         * painted landscape for the guide, the pixel-art scene for the rope).
+         * FLIGHT falls back to PANORAMA's scenes on its own when the sky is
+         * closed, or when the player has no flyer and Staraptor is missing.
          */
         public TravelCinematicStyle cinematicStyle = TravelCinematicStyle.FLIGHT;
     }

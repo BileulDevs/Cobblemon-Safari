@@ -15,7 +15,7 @@ Update the mod on the server **and** on every client: the network protocol chang
 
 ### Changed
 
-- **Escape Rope** opens a small menu: climb to the nearest safe spot in the open air (instead of straight up), or go to the nearest rest house, with its own pixel-art scene.
+- **Escape Rope** opens a small menu: climb to the nearest safe spot in the open air (instead of straight up), or go to the nearest rest house. That trip flies like the Guide's, taking off where the rope was used (from a cave, after a climb to the open air under a black screen), with a pixel-art scene when it cannot.
 - **Species rules split in two**: `spawns` for Cobblemon's natural spawns, `featured` for the Pokémon of the day, each with its own categories, caps and exclusions. A 1.0.0 `server.json` is converted on load, so nothing changes in game until you edit it.
 - **Per-way caps**: `maxSpawnPerPokemon` counts the natural spawns and the specials apart.
 - **Refused species leave Cobblemon's spawn draw** itself: they no longer show in `/checkspawn` in the Safari, and a species with a huge datapack weight can no longer starve the others. Species at their cap or crowding the player leave the draw the same way until a slot frees up.

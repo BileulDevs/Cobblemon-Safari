@@ -137,6 +137,15 @@ public final class SafariTeleporter {
     }
 
     /**
+     * Moves a player onto feet found beforehand (by {@link #findStandingSpotNear}),
+     * keeping their gaze. For a move decided earlier than it happens, as the
+     * Escape Rope's climb before its flight cinematic.
+     */
+    public static void sendToFeet(ServerPlayer player, ServerLevel level, BlockPos feet) {
+        teleport(player, level, feet.getX() + 0.5, feet.getY(), feet.getZ() + 0.5, player.getYRot(), player.getXRot());
+    }
+
+    /**
      * Moves a player onto the top of the given column, whatever stands there.
      * Only for a move that must happen even when {@link #sendToSurface} finds
      * nothing better, like bringing someone back inside the park.

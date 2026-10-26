@@ -180,6 +180,19 @@ final class TravelFlight {
     }
 
     /**
+     * Whether a take-off could be staged from these feet: the mount has an
+     * open direction and the camera a spot. Spawns nothing; for a take-off
+     * decided before the player is brought there (the Escape Rope's climb out
+     * of a cave). Cost: up to nine paths of 13 heightmap reads and 24 camera
+     * candidates.
+     */
+    static boolean canTakeOff(ServerLevel level, BlockPos feet, Vec3 wished) {
+        Vec3 spot = Vec3.atBottomCenterOf(feet);
+        Vec3 direction = openDirection(level, spot, wished, false);
+        return direction != null && cameraSpot(level, spot, direction, false) != null;
+    }
+
+    /**
      * Stages the take-off from a spot, flying toward the wished direction or
      * the nearest one that is open, or returns null when no direction lets
      * the bird out (a spot under a roof or a tree) or the actors could not
