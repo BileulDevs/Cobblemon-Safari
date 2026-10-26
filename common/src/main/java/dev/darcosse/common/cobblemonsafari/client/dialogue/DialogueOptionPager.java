@@ -83,7 +83,7 @@ public final class DialogueOptionPager {
      * when the screen lays its widgets out; the bar itself draws two
      * rectangles a frame.
      *
-     * @param addWidget adds a widget to the screen (Screen.addRenderableWidget, protected)
+     * @param addWidget adds a widget to the screen's lists, as the protected Screen.addRenderableWidget would
      */
     public static void layout(Screen screen, Consumer<AbstractWidget> addWidget) {
         if (!(screen instanceof DialogueScreen dialogue)) {

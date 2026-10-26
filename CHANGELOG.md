@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.1
+
+Same network protocol as 1.2.0 (`1.4.0`): a 1.2.1 client joins a 1.2.0 server and the other way round.
+
+### Fixed
+
+- The game crashed at launch on Fabric (`@Shadow method addRenderableWidget ... was not located in the target class net.minecraft.class_437`). NeoForge was not affected.
+
 ## 1.2.0
 
 Update the mod on the server **and** on every client: the network protocol changed (`1.4.0`), and a client of another version is refused when it joins on NeoForge.
