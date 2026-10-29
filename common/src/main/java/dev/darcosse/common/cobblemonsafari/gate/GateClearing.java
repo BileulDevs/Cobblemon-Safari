@@ -1,6 +1,7 @@
 package dev.darcosse.common.cobblemonsafari.gate;
 
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
+import dev.darcosse.common.cobblemonsafari.util.LoadedChunks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -393,16 +394,14 @@ public final class GateClearing {
         return result;
     }
 
-    /** Whether every chunk of the scan area is loaded, checked one block per chunk (about 16 checks). */
+    /**
+     * Whether every chunk of the scan area has finished loading, so this
+     * tick's heightmap and block reads cannot make the server thread wait
+     * for a chunk still generating (about 16 lookups). A ticket alone is not
+     * enough; see {@link LoadedChunks}.
+     */
     private boolean loaded(ServerLevel level) {
-        for (int x = scan.minX; x <= scan.maxX + 15; x += 16) {
-            for (int z = scan.minZ; z <= scan.maxZ + 15; z += 16) {
-                if (!level.hasChunkAt(new BlockPos(Math.min(x, scan.maxX), ground, Math.min(z, scan.maxZ)))) {
-                    return false;
-                }
-            }
-        }
-        return true;
+        return LoadedChunks.areaReady(level, scan.minX, scan.minZ, scan.maxX, scan.maxZ);
     }
 
     /** An axis-aligned box of block positions, bounds included. */

@@ -12,6 +12,7 @@ import dev.darcosse.common.cobblemonsafari.platform.Platform;
 import dev.darcosse.common.cobblemonsafari.structure.Compass;
 import dev.darcosse.common.cobblemonsafari.structure.RestHouseStaff;
 import dev.darcosse.common.cobblemonsafari.structure.RestHouses;
+import dev.darcosse.common.cobblemonsafari.util.LoadedChunks;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
@@ -610,7 +611,9 @@ public final class RestHouseTravel {
             return true;
         }
         RestHouses.Arrival arrival = RestHouses.arrivalOf(site);
-        if (!safari.hasChunkAt(arrival.column())) {
+        // Not hasChunkAt: it is true as soon as this trip's ticket exists, while the
+        // chunk may still be generating, and the arrival reads would then wait for it.
+        if (!LoadedChunks.isReady(safari, arrival.column())) {
             return true;
         }
         BlockPos feet = SafariTeleporter.arrivalFeet(safari, arrival);

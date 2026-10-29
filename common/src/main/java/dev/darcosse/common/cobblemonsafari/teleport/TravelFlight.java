@@ -16,6 +16,7 @@ import com.cobblemon.mod.common.pokemon.Pokemon;
 import com.cobblemon.mod.common.pokemon.properties.UncatchableProperty;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.structure.RestHouses;
+import dev.darcosse.common.cobblemonsafari.util.LoadedChunks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -351,7 +352,9 @@ final class TravelFlight {
         for (int i = 0; i <= PATH_SAMPLES; i++) {
             Vec3 point = position(spot, direction, landing, i / (double) PATH_SAMPLES);
             BlockPos column = BlockPos.containing(point);
-            if (!level.hasChunkAt(column)) {
+            // Not hasChunkAt: the destination's chunks get a ticket at take-off and
+            // may still be generating; getHeight would wait for them on the server thread.
+            if (!LoadedChunks.isReady(level, column)) {
                 continue;
             }
             int ground = level.getHeight(Heightmap.Types.MOTION_BLOCKING, column.getX(), column.getZ());
@@ -419,7 +422,7 @@ final class TravelFlight {
      */
     private static int cameraScore(ServerLevel level, Vec3 camera, Vec3 rider, Vec3 midway) {
         BlockPos block = BlockPos.containing(camera);
-        if (!level.hasChunkAt(block) || !level.getBlockState(block).isAir()
+        if (!LoadedChunks.isReady(level, block) || !level.getBlockState(block).isAir()
                 || !level.getBlockState(block.above()).isAir()) {
             return SCORE_UNUSABLE;
         }
@@ -434,9 +437,14 @@ final class TravelFlight {
         return sees(level, camera, midway) ? SCORE_BEST : SCORE_SEES_RIDER;
     }
 
-    /** Whether nothing solid stands between two points. Unloaded chunks on the way count as clear. */
+    /**
+     * Whether nothing solid stands between two points. An end point in a
+     * chunk not fully loaded counts as clear, so the ray never makes the
+     * server thread wait for a chunk still generating.
+     */
     private static boolean sees(ServerLevel level, Vec3 from, Vec3 to) {
-        if (!level.hasChunkAt(BlockPos.containing(to))) {
+        if (!LoadedChunks.isReady(level, BlockPos.containing(from))
+                || !LoadedChunks.isReady(level, BlockPos.containing(to))) {
             return true;
         }
         BlockHitResult hit = level.clip(new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE,
