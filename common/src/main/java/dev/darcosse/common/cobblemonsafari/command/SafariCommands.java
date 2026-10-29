@@ -354,7 +354,9 @@ public final class SafariCommands {
         SafariBorder.apply(ctx.getSource().getServer());
         // Slots, categories and exclusions may have changed: redraw today's specials.
         FeaturedRotation.invalidate();
-        RestHouses.prepare(ctx.getSource().getServer());
+        // Not prepare(): that one may build the entrance on the spot, generating
+        // chunks on the server thread while players are online.
+        RestHouses.refresh(ctx.getSource().getServer());
         SafariNetwork.broadcastRules(ctx.getSource().getServer());
         ctx.getSource().sendSuccess(() -> Component.translatable(key("command.reload.success")), true);
         return 1;

@@ -148,7 +148,7 @@ public final class RestHouses {
      * <p>Cost, on a new map: the site searches (noise reads, about a second,
      * all houses at once on background threads), then the entrance house:
      * its chunks generated (about 16) and its build. Called at server start
-     * and after /safari reload, never per tick.
+     * only, never per tick; {@code /safari reload} uses {@link #refresh}.
      */
     public static void prepare(MinecraftServer server) {
         ServerLevel safari = SafariDimensions.level(server);
@@ -160,6 +160,39 @@ public final class RestHouses {
         planMissingSites(safari, state);
         buildEntrance(safari, state);
         refreshSites(state);
+    }
+
+    /**
+     * What {@link #prepare} does, for a server already running
+     * ({@code /safari reload}): plans the sites still missing, but never
+     * builds on the spot. A missing entrance house is left to {@link #tick},
+     * which builds it in steps once its area is fully loaded, like any other
+     * house.
+     *
+     * <p>Why not {@link #prepare}: building the entrance there generates its
+     * chunks and those of every wet candidate on the server thread, several
+     * seconds with players online (the same stall as issue #5, from a
+     * command). At server start nobody is waiting; here everybody is.
+     *
+     * <p>Cost: nothing when every house is planned (the normal case, since the
+     * start plans them all); otherwise the noise searches of the start.
+     */
+    public static void refresh(MinecraftServer server) {
+        ServerLevel safari = SafariDimensions.level(server);
+        if (safari == null) {
+            sites = List.of();
+            return;
+        }
+        SafariWorldState state = SafariWorldState.get(server);
+        planMissingSites(safari, state);
+        refreshSites(state);
+        ParkGeometry.Column entrance = ParkGeometry.REST_HOUSES.get(0);
+        if (!state.isHouseBuilt(entrance.x(), entrance.z())) {
+            // Only after a failed build at start (template missing): players arriving
+            // meanwhile land at a random dry spot around the arrival point, as before.
+            CobblemonSafari.LOGGER.info("The entrance rest house is not built yet; it will be built in the "
+                    + "background once its area is loaded");
+        }
     }
 
     /**

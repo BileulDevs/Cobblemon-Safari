@@ -2,6 +2,7 @@ package dev.darcosse.common.cobblemonsafari.structure;
 
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.gate.GateClearing;
+import dev.darcosse.common.cobblemonsafari.util.LoadedChunks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.core.Direction;
@@ -251,13 +252,20 @@ final class RestHouseBuilder {
     }
 
     /**
-     * Whether every chunk a build of this house changes is loaded: the
-     * template and its skirt. Cheap (one lookup per chunk, about 16); never
-     * loads anything.
+     * Whether every chunk a build of this house reads or changes has
+     * finished loading: the template and its skirt. Cheap (one lookup per
+     * chunk, about 16); never loads anything.
+     *
+     * <p>Must mean "finished loading", not "has a ticket": the build reads
+     * heightmaps and blocks right after this answers true, on the server
+     * thread. With {@code hasChunksAt} it answered true as soon as the
+     * prebuild or travel ticket was added, and the survey then waited on the
+     * server thread for the chunks still generating (issue #5); see
+     * {@link LoadedChunks}.
      */
     static boolean areaLoaded(ServerLevel level, int centerX, int centerZ, Direction facing) {
         int[] rect = templateRect(centerX, centerZ, rotationFor(facing));
-        return level.hasChunksAt(rect[0] - SKIRT, rect[1] - SKIRT, rect[2] + SKIRT, rect[3] + SKIRT);
+        return LoadedChunks.areaReady(level, rect[0] - SKIRT, rect[1] - SKIRT, rect[2] + SKIRT, rect[3] + SKIRT);
     }
 
     /**

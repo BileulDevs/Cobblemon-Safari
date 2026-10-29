@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.1
+
+Same network protocol as 1.3.0 (`1.4.0`): a 1.3.1 client joins a 1.3.0 server and the other way round. Only the server needs the update.
+
+### Fixed
+
+- The server could freeze, then be shut down by its watchdog ("A single server tick took ... seconds"), while a rest house was being built in the background, mostly with C2ME installed ([#5](https://github.com/BileulDevs/Cobblemon-Safari/issues/5)). The build read the terrain of chunks that had been asked for but were still generating, and the server waited for them in the middle of a tick. It now waits until the whole area is loaded. The same check is used by the tree removal around Safari Gates and rest houses, the spawning of specials, and the arrival and flight of rest house trips.
+- `/safari reload` could freeze the server for several seconds when the entrance rest house was missing (its template failed to load at start): it built it on the spot, generating its chunks on the server thread. It now leaves it to the background build, like the other houses.
+
 ## 1.3.0
 
 ### New
