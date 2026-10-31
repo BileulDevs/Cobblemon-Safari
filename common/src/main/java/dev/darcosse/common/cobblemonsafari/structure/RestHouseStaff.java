@@ -17,6 +17,7 @@ import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -63,8 +64,16 @@ public final class RestHouseStaff {
     private static final int MIN_HEADROOM = 2;
 
     /**
+     * Distance from their spot, in blocks, beyond which a staff member is
+     * put back on it. Staff do not walk, so only a wrong spot (a roof, from
+     * before this check) gets that far; smaller would fight the small moves
+     * of their head-turning.
+     */
+    private static final double MISPLACED_DISTANCE = 1.5D;
+
+    /**
      * Height of the template's roof above its ground layer (its top layer):
-     * where the floor search starts in an underground house.
+     * where the floor search starts in a house whose height is known.
      */
     private static final int HOUSE_ROOF_ABOVE_GROUND = RestHouses.TEMPLATE_HEIGHT - 1;
 
@@ -131,7 +140,10 @@ public final class RestHouseStaff {
         }
     }
 
-    /** Spawns one role of one house if it is loaded and has none; removes extra ones. */
+    /**
+     * Spawns one role of one house if it is loaded and has none, removes
+     * extra ones, and puts back one standing away from their spot.
+     */
     private static void maintain(ServerLevel level, RestHouses.HouseSite site, Role role) {
         int centerX = site.x();
         int centerZ = site.z();
@@ -159,15 +171,38 @@ public final class RestHouseStaff {
         if (keep == 0) {
             return;
         }
-        if (!found.isEmpty()) {
+        BlockPos feet = floorUnderRoof(level, column, roofOf(level, site, column));
+        if (feet == null) {
             return;
         }
-        int top = site.underground() ? roofTop(level, column, site.groundY())
-                : level.getHeight(Heightmap.Types.MOTION_BLOCKING, column.getX(), column.getZ()) - 1;
-        BlockPos feet = floorUnderRoof(level, column, top);
-        if (feet != null) {
+        if (found.isEmpty()) {
             spawn(level, feet, role.facing().apply(door), role);
+            return;
         }
+        // A clerk put on the roof by an older version is in the house's box,
+        // so found and kept: without this, they stayed there for good.
+        NPCEntity staff = found.get(0);
+        if (staff.distanceToSqr(Vec3.atBottomCenterOf(feet)) > MISPLACED_DISTANCE * MISPLACED_DISTANCE) {
+            place(staff, feet, role.facing().apply(door));
+        }
+    }
+
+    /**
+     * The top of the house's roof at a staff column, where the floor search
+     * starts. From the house's own height when it is known (every house
+     * built since 1.4.0, and every underground one): the highest block
+     * within the template. The sky's heightmap is only a fallback for older
+     * houses, without leaves: a jungle tree or a big oak left standing
+     * beside the house spreads its leaves over the roof, and the air
+     * between them and the roof was taken for the room, which put the clerk
+     * on the roof. Underground, the sky's heightmap gives the cave's roof,
+     * far above.
+     */
+    private static int roofOf(ServerLevel level, RestHouses.HouseSite site, BlockPos column) {
+        if (site.groundY() != RestHouses.UNKNOWN_Y) {
+            return roofTop(level, column, site.groundY());
+        }
+        return level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, column.getX(), column.getZ()) - 1;
     }
 
     /**
@@ -194,10 +229,9 @@ public final class RestHouseStaff {
     }
 
     /**
-     * The top of an underground house's roof at a column: the highest block
-     * within the template's height. Underground the sky's heightmap gives
-     * the cave's roof, far above; the chamber's air between it and the house
-     * would then be taken for the room.
+     * The top of a house's roof at a column: the highest block within the
+     * template's height above its ground layer. Whatever stands higher (a
+     * cave's roof, a tree's leaves) is never reached.
      */
     private static int roofTop(ServerLevel level, BlockPos column, int groundY) {
         int y = groundY + HOUSE_ROOF_ABOVE_GROUND;
@@ -220,13 +254,18 @@ public final class RestHouseStaff {
             return;
         }
         NPCEntity npc = new NPCEntity(level);
-        float yaw = facing.toYRot();
-        npc.moveTo(feet.getX() + 0.5D, feet.getY(), feet.getZ() + 0.5D, yaw, 0.0F);
-        npc.setYHeadRot(yaw);
+        place(npc, feet, facing);
         npc.setNpc(npcClass);
         npc.initialize(1);
         npc.addTag(role.tag());
         level.addFreshEntity(npc);
+    }
+
+    /** Puts a staff member on a block, looking the given way. */
+    private static void place(NPCEntity npc, BlockPos feet, Direction facing) {
+        float yaw = facing.toYRot();
+        npc.moveTo(feet.getX() + 0.5D, feet.getY(), feet.getZ() + 0.5D, yaw, 0.0F);
+        npc.setYHeadRot(yaw);
     }
 
     /**
