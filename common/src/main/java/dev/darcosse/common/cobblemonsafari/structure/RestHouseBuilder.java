@@ -843,8 +843,9 @@ final class RestHouseBuilder {
 
         /**
          * Digs the next chamber columns: floor block at the chamber's floor
-         * height, filled down to solid ground (the cavern's caves may lie
-         * under it), air up to its ceiling. Blocks are set without updates,
+         * height, filled down to solid ground or, over a void (the cavern's
+         * caves may lie under it), down to the chamber's rounded underside
+         * ({@link CaveChamber#undersideAt}), air up to its ceiling. Blocks are set without updates,
          * as for every build: cave vines or dripstone left hanging over the
          * dug space stay as they are rather than breaking into items.
          *
@@ -872,8 +873,12 @@ final class RestHouseBuilder {
                 done++;
                 int floor = chamber.floorAt(x, z);
                 level.setBlock(cursor.set(x, floor, z), floorBlock(x, z), PLACE_FLAGS);
-                for (int depth = 1; depth <= MAX_FOUNDATION_DEPTH; depth++) {
-                    cursor.set(x, floor - depth, z);
+                // Down to solid rock, but no deeper than the chamber's rounded
+                // underside: a straight fill to MAX_FOUNDATION_DEPTH hung a
+                // block of vertical columns into the cavern below.
+                int underside = chamber.undersideAt(x, z);
+                for (int y = floor - 1; y >= underside; y--) {
+                    cursor.set(x, y, z);
                     BlockState existing = level.getBlockState(cursor);
                     if (existing.getFluidState().isEmpty() && existing.isFaceSturdy(level, cursor, Direction.UP)) {
                         break;

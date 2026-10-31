@@ -18,6 +18,7 @@ New network protocol (`1.5.0`): clients and servers must both update.
 
 ### Fixed
 
+- Where an underground rest house's chamber sits over a cave, the rock under it hung into the cave as a block of straight columns up to 24 blocks deep: its underside is now a rounded, uneven bulge, thin at the edges. Shows on the next map.
 - The answers of a long NPC dialogue (the Safari Guide's destinations) ran over the hotbar at large GUI scales: they now stop above it and scroll.
 - Water could be left hanging in the air next to a tree cut around a Safari Gate or a rest house (a trunk or waterlogged leaves standing in a pond), or next to the ground reshaped around a rest house, until a block beside it changed and it poured. Cut trees now leave their water and let it settle as when a player cuts them; the reshaped ground and a house's volume stop short of any water.
 - The caverns could open into the sky in wide holes, with floating rock between them, where they come near the ground: their caves now always end under a solid roof.

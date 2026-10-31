@@ -108,11 +108,48 @@ public final class CaveChamber {
      */
     private static final int HOUSE_HEADROOM = 14;
 
-    /** Seed salts of the four noises, so they do not share their shapes. */
+    /**
+     * Rock kept under the floor at the chamber's wall, where the chamber
+     * hangs over a void. Lower leaves a floor a player can dig through by
+     * accident; the underside thickens from there toward the middle.
+     */
+    private static final int SHELL_DEPTH = 3;
+
+    /**
+     * Extra rock under the middle of the chamber, on top of
+     * {@link #SHELL_DEPTH}, where it hangs over a void: the underside is a
+     * rounded bowl, as the bottom of a rock ledge, not a block of columns.
+     * Higher gives a deeper bulge seen from the cavern below; the old fill
+     * went straight down 24 blocks.
+     */
+    private static final int BULGE_DEPTH = 12;
+
+    /**
+     * Blocks in from the wall over which the underside reaches its full
+     * depth. Shorter gives steeper, almost vertical sides (the look this
+     * replaces); longer than half the chamber's width never reaches the
+     * full depth.
+     */
+    private static final double BULGE_REACH = 14.0D;
+
+    /** Height of the underside's bumps, in blocks each way, so its curve is not a smooth bowl. */
+    private static final double UNDERSIDE_ROUGHNESS = 2.5D;
+
+    /** Wavelength of the underside's bumps, in blocks. Shorter gives one-block spikes. */
+    private static final double UNDERSIDE_SCALE = 7.0D;
+
+    /**
+     * Blocks in from the wall over which the underside's bumps fade in, so
+     * the shell at the wall keeps its full {@link #SHELL_DEPTH}.
+     */
+    private static final double UNDERSIDE_ROUGHNESS_FADE = 4.0D;
+
+    /** Seed salts of the five noises, so they do not share their shapes. */
     private static final long EDGE_SALT = 0x51A7E1L;
     private static final long FLOOR_SALT = 0x5F1008L;
     private static final long CEILING_SALT = 0xC311L;
     private static final long PATCH_SALT = 0x9A7C4L;
+    private static final long UNDERSIDE_SALT = 0x0BD5E1L;
 
     /** The house this chamber surrounds. */
     public final ParkGeometry.CaveHouse house;
@@ -131,6 +168,7 @@ public final class CaveChamber {
     private final SimplexNoise floorNoise;
     private final SimplexNoise ceilingNoise;
     private final SimplexNoise patchNoise;
+    private final SimplexNoise undersideNoise;
 
     /**
      * The chamber of an underground rest house.
@@ -155,6 +193,7 @@ public final class CaveChamber {
         this.floorNoise = new SimplexNoise(new LegacyRandomSource(seed ^ FLOOR_SALT));
         this.ceilingNoise = new SimplexNoise(new LegacyRandomSource(seed ^ CEILING_SALT));
         this.patchNoise = new SimplexNoise(new LegacyRandomSource(seed ^ PATCH_SALT));
+        this.undersideNoise = new SimplexNoise(new LegacyRandomSource(seed ^ UNDERSIDE_SALT));
     }
 
     /** The door's direction of an underground house: toward its passage. */
@@ -170,9 +209,36 @@ public final class CaveChamber {
         if (x < minX || x > maxX || z < minZ || z > maxZ) {
             return false;
         }
+        return fromWall(x, z) >= 0.0D;
+    }
+
+    /**
+     * Blocks from a column to the chamber's wobbling wall, negative outside.
+     * Measured to the nearest side of the box, the wobble taken off.
+     */
+    private double fromWall(int x, int z) {
         int fromBox = Math.min(Math.min(x - minX, maxX - x), Math.min(z - minZ, maxZ - z));
         double inset = EDGE_WOBBLE * (1.0D + edgeNoise.getValue(x / EDGE_SCALE, z / EDGE_SCALE));
-        return fromBox >= inset;
+        return fromBox - inset;
+    }
+
+    /**
+     * Lowest block of rock the build may add under the floor of a column,
+     * where the chamber hangs over a void (the build stops higher on solid
+     * ground). Shallow at the wall, deepest in the middle along a rounded
+     * curve, with bumps: from the cavern below, the chamber reads as the
+     * bulging bottom of a rock ledge.
+     */
+    public int undersideAt(int x, int z) {
+        double fromWall = Math.max(fromWall(x, z), 0.0D);
+        double t = Math.min(fromWall / BULGE_REACH, 1.0D);
+        // 1 - (1 - t)^2: a bowl whose sides slope (two blocks down per block
+        // in at the wall) instead of standing vertical.
+        double bowl = 1.0D - (1.0D - t) * (1.0D - t);
+        double rough = Math.min(fromWall / UNDERSIDE_ROUGHNESS_FADE, 1.0D)
+                * UNDERSIDE_ROUGHNESS * undersideNoise.getValue(x / UNDERSIDE_SCALE, z / UNDERSIDE_SCALE);
+        double depth = Math.max(SHELL_DEPTH + BULGE_DEPTH * bowl + rough, SHELL_DEPTH);
+        return floorAt(x, z) - (int) Math.round(depth);
     }
 
     /**
