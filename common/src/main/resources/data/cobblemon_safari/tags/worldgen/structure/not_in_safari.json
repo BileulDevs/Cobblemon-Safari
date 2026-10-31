@@ -1,7 +1,33 @@
 {
   "replace": false,
   "values": [
-    {"id": "cobblemon:ruins/crumbling_arch_ruins", "required": false},
-    {"id": "cobblemon:ruins/rooted_arch_ruins", "required": false}
+    {
+      "id": "cobblemon:ruins/crumbling_arch_ruins",
+      "required": false
+    },
+    {
+      "id": "cobblemon:ruins/rooted_arch_ruins",
+      "required": false
+    },
+    {
+      "id": "cobblemon:ruins/decaying_crypt_ruins",
+      "required": false
+    },
+    {
+      "id": "cobblemon:ruins/hidden_bunker_ruins",
+      "required": false
+    },
+    {
+      "id": "cobblemon:ruins/mossy_oubliette_ruins",
+      "required": false
+    },
+    {
+      "id": "cobblemon:habitats/lush_cenote",
+      "required": false
+    },
+    {
+      "id": "cobblemon:habitats/fungal_dwelling",
+      "required": false
+    }
   ]
 }

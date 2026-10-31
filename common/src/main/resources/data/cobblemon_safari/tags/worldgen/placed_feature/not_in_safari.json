@@ -1,0 +1,41 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "cobblemon:ruins/deep_crypt",
+      "required": false
+    },
+    {
+      "id": "cobblemon:ruins/rooted_arch",
+      "required": false
+    },
+    {
+      "id": "cobblemon:ruins/crumbling_arch",
+      "required": false
+    },
+    {
+      "id": "cobblemon:habitats/ancient_wellsprings",
+      "required": false
+    },
+    {
+      "id": "cobblemon:habitats/deep_roots",
+      "required": false
+    },
+    {
+      "id": "cobblemon:habitats/earthen_hives",
+      "required": false
+    },
+    {
+      "id": "cobblemon:fossils/prehistoric_dripstone_oasis",
+      "required": false
+    },
+    {
+      "id": "cobblemon:fossils/prehistoric_enhydro_agate",
+      "required": false
+    },
+    {
+      "id": "cobblemon:fossils/prehistoric_mossy_pond",
+      "required": false
+    }
+  ]
+}
