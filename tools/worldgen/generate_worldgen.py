@@ -1467,6 +1467,12 @@ def write_safari_structures(written):
             "max_relief": dry["max_relief"],
             "jigsaw": jigsaw,
         }, written)
+    # Every Safari ruin and tower, for the structure tags written by hand that
+    # name them all (keeps_lakes_away, see worldgen/LakeGuard).
+    write(f"tags/worldgen/structure/{SAFARI_STRUCTURE_DIR}.json", {
+        "replace": False,
+        "values": [f"{MOD_ID}:{SAFARI_STRUCTURE_DIR}/{n}" for n in SAFARI_STRUCTURES],
+    }, written)
     for set_name, placement in SAFARI_STRUCTURE_SETS.items():
         members = [n for n, v in SAFARI_STRUCTURES.items() if v[0] == set_name]
         # Several variants per set: at a candidate spot, Minecraft tries them in

@@ -1,0 +1,19 @@
+{
+  "replace": false,
+  "values": [
+    "cobblemon_safari:safari_ruins/tower_temperate",
+    "cobblemon_safari:safari_ruins/tower_lush",
+    "cobblemon_safari:safari_ruins/tower_rooted",
+    "cobblemon_safari:safari_ruins/tower_deserted",
+    "cobblemon_safari:safari_ruins/tower_sunscorched",
+    "cobblemon_safari:safari_ruins/tower_frozen",
+    "cobblemon_safari:safari_ruins/ruin_stone_henge",
+    "cobblemon_safari:safari_ruins/ruin_moon_henge",
+    "cobblemon_safari:safari_ruins/ruin_sun_henge",
+    "cobblemon_safari:safari_ruins/ruin_toppled_pillars",
+    "cobblemon_safari:safari_ruins/ruin_shaded",
+    "cobblemon_safari:safari_ruins/ruin_town_center",
+    "cobblemon_safari:safari_ruins/ruin_frozen_altar",
+    "cobblemon_safari:safari_ruins/ruin_overgrown_trial"
+  ]
+}

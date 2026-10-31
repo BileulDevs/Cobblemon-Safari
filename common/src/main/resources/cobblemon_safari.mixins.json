@@ -10,7 +10,8 @@
     "ChunkMapMixin",
     "PlacedFeatureMixin",
     "ExplosionMixin",
-    "FireBlockMixin"
+    "FireBlockMixin",
+    "LakeFeatureMixin"
   ],
   "injectors": {
     "defaultRequire": 1

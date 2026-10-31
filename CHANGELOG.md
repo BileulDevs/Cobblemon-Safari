@@ -18,6 +18,7 @@ New network protocol (`1.5.0`): clients and servers must both update.
 
 ### Fixed
 
+- A Safari Gate could be built over a lava lake, the lava showing through its floor and around it; the Safari's ruins and towers had the same flaw. Lava lakes are no longer placed where they would reach one of them. Shows in newly generated chunks.
 - A player taken out of the Safari by other means than the clerk (a `/tp`, a home or waystone command, another mod's teleport) lost the time left of their hunt: it now goes back to their bank, as when leaving through the clerk.
 - Where an underground rest house's chamber sits over a cave, the rock under it hung into the cave as a block of straight columns up to 24 blocks deep: its underside is now a rounded, uneven bulge, thin at the edges. Shows on the next map.
 - The answers of a long NPC dialogue (the Safari Guide's destinations) ran over the hotbar at large GUI scales: they now stop above it and scroll.
