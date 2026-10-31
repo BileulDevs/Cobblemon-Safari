@@ -564,6 +564,19 @@ E_DEEP_CAVERN = [-1.0, E_DEEP_CAVERN_MAX]
 E_NOT_DEEP_CAVERN = [E_DEEP_CAVERN_MAX, 1.0]
 # Humidity above which caves are lush: the southern sectors (direction_z > 0.5).
 LUSH_HUMIDITY = 0.5 * CLIMATE_SCALE
+# Humidity written underground inside the lush cavern (humidity_router_df),
+# so the whole cave system is lush grotto whatever the sector borders and
+# the erosion under it. Natural humidity never leaves about
+# +-CLIMATE_SCALE * (1 + CLIMATE_NOISE), some 0.06: anything far above it
+# is reserved for the cavern, and only its own climate point (and the
+# ordinary lush ones) can match it. Lowered near natural values, the
+# southern caves around the cavern would turn into its forced point too.
+LUSH_FORCED_FROM = 0.5
+LUSH_FORCED_HUMIDITY = 1.0
+# How far around the lush cavern the forced humidity reaches, in squared
+# zone radii like CAVERN_DRY_REACH: a little past its edge, so the walls
+# and the rock around its last chambers are lush too.
+LUSH_BIOME_REACH = 1.3
 
 
 def point(biome, t, h, c=C_INLAND, e=E_ALL, w=W_ALL, depth=D_SURFACE):
@@ -598,7 +611,11 @@ def climate_points():
         point("lush_grotto", ANY, [LUSH_HUMIDITY, 2.0], c=C_COAST_AND_INLAND, depth=D_SHALLOW),
         point("cavern", ANY, [-2.0, LUSH_HUMIDITY], c=C_COAST_AND_INLAND, e=E_NOT_DEEP_CAVERN, depth=D_DEEP),
         point("lush_grotto", ANY, [LUSH_HUMIDITY, 2.0], c=C_COAST_AND_INLAND, e=E_NOT_DEEP_CAVERN, depth=D_DEEP),
-        point("deep_cavern", ANY, ANY, c=C_COAST_AND_INLAND, e=E_DEEP_CAVERN, depth=D_DEEP),
+        # Never at the lush cavern's forced humidity, or its deepest chambers
+        # under the inner rocky ring (low erosion) would turn deep cavern.
+        point("deep_cavern", ANY, [-2.0, LUSH_FORCED_FROM], c=C_COAST_AND_INLAND, e=E_DEEP_CAVERN, depth=D_DEEP),
+        # The lush cavern itself, at any erosion and depth underground.
+        point("lush_grotto", ANY, [LUSH_FORCED_FROM, 2.0], c=C_COAST_AND_INLAND, e=ANY, depth=D_UNDERGROUND),
     ]
     for biome, angle in ROCKY_RING:
         t, h = on_circle(angle)
@@ -782,9 +799,21 @@ GIANT_CAVERN_TUNNEL = {"name": "giant_cavern_passage", "x": 90, "z": 0, "y": 10,
 # opens between the southern and eastern rest houses. Like vanilla's cheese
 # caves, its caves stay a dozen blocks under the ground (the sloped_cheese
 # guard in cavern_df), river beds included, so no river pours into them.
-LUSH_CAVERN_Z = round(0.35 * ISLAND_RADIUS)
-LUSH_CAVERN = {"x": 0, "z": LUSH_CAVERN_Z, "radius": 80, "center_y": 30, "half_height": 45, "boost": 0.35}
-LUSH_CAVERN_TUNNEL = {"name": "lush_cavern_passage", "x": -60, "z": LUSH_CAVERN_Z, "y": 14, "direction": 1, "slope": 0.25, "length": 320,
+# It is as large as the giant cavern (same radius, height and boost), so
+# both cave systems play alike. Its centre sits at 0.4 of the radius: the
+# two zones then keep about 67 blocks of rock between their edges (centre
+# distance minus both radii); back at 0.35 they would nearly touch (about
+# 29 blocks) and their dry zones (CAVERN_DRY_REACH, about 137 blocks each
+# at this radius) would overlap. Its southern edge (about z 427) passes
+# under the southern rest house's anchor (z 422): harmless, the caves stay
+# a dozen blocks under the ground, but moving it further south puts more
+# of it under that house.
+LUSH_CAVERN_Z = round(0.4 * ISLAND_RADIUS)
+LUSH_CAVERN = {"x": 0, "z": LUSH_CAVERN_Z, "radius": 120, "center_y": 30, "half_height": 60, "boost": 0.3}
+# Starts at the same share of the radius from the centre as the giant
+# cavern's passage (0.75), and is lengthened by as much as it moved its
+# start, so its mouth opens where it did before (around x 260).
+LUSH_CAVERN_TUNNEL = {"name": "lush_cavern_passage", "x": -90, "z": LUSH_CAVERN_Z, "y": 14, "direction": 1, "slope": 0.25, "length": 350,
                       "half_width": 4.0, "half_height": 3.5}
 # How much of vanilla's cave layering (cave_layer, which flattens cheese
 # caves into horizontal sheets) is removed at a cavern's centre: 0 keeps
@@ -819,6 +848,17 @@ TUNNEL_WALL_NOISE = 0.35
 # the walls.
 CAVERN_DRY_REACH = 1.3
 TUNNEL_DRY_REACH = 3.0
+# Strength of the rock kept under the surface over a cavern, as a multiple
+# of vanilla's guard (sloped_cheese, at most 0.5). Vanilla's 0.5 suits its
+# own threshold; with a cavern's boost, cheese noise down to -1 beat it, and
+# a cavern reaching near the ground (the lush one, under the low south)
+# opened into the sky in wide holes with floating rock between them. At 3,
+# the guard tops out at 1.5, more than the cheese can ever cancel, over the
+# same band of ground as vanilla's: caverns end under a solid roof. Lower
+# values bring the holes back; higher ones change nothing more (the band is
+# set by sloped_cheese, not by this factor). Passages are not affected:
+# their mouths still open.
+CAVERN_ROOF_STRENGTH = 3.0
 
 # ---------------------------------------------------------------------------
 # Island density functions
@@ -949,6 +989,28 @@ def humidity_df():
     return df_mul(CLIMATE_SCALE, df_add(island("direction_z"), df_mul(CLIMATE_NOISE, noise_df("vegetation"))))
 
 
+# The router's depth: 0 at the surface, 0.2 and more underground (D_UNDERGROUND).
+DEPTH_DF = f"{MOD_ID}:safari/depth"
+
+
+def humidity_router_df():
+    """
+    The humidity of the noise router: humidity_df, except underground in and
+    around the lush cavern, where it is LUSH_FORCED_HUMIDITY so the whole
+    cavern is lush grotto. Only underground (depth past D_UNDERGROUND's
+    start): the surface above the cavern keeps its own sector's biome.
+    Both choices evaluate only the branch they pick, so the rest of the
+    island pays one distance per sample.
+    """
+    natural = humidity_df()
+    underground = {"type": "minecraft:range_choice", "input": DEPTH_DF,
+                   "min_inclusive": D_UNDERGROUND[0], "max_exclusive": 1000.0,
+                   "when_in_range": LUSH_FORCED_HUMIDITY, "when_out_of_range": natural}
+    return {"type": "minecraft:range_choice", "input": zone_distance(LUSH_CAVERN),
+            "min_inclusive": 0.0, "max_exclusive": LUSH_BIOME_REACH,
+            "when_in_range": underground, "when_out_of_range": natural}
+
+
 
 CARVED_CAVES_DF = f"{MOD_ID}:safari/carved_caves"
 CAVES_DRY_DF = f"{MOD_ID}:safari/carved_caves_dry"
@@ -1006,9 +1068,11 @@ def cavern_df(c):
     layer = df_mul(layer, df_add(1.0, df_mul(-CAVERN_LAYER_CUT, weight)))
     cheese = df_clamp(df_add(VANILLA_CHEESE_OFFSET - c["boost"],
                              noise3(f"{MOD_ID}:{CAVERN_NOISE}", 1.0, 0.6666666666666666)), -1.0, 1.0)
-    # Vanilla's guard keeping cheese caves about a dozen blocks under the
-    # surface, so the caverns never open into the sky by themselves.
-    guard = df_clamp(df_add(1.5, df_mul(-0.64, f"{MOD_ID}:safari/sloped_cheese")), 0.0, 0.5)
+    # Vanilla's guard keeping cheese caves under the surface, made strong
+    # enough for the cavern's lower threshold (CAVERN_ROOF_STRENGTH), so the
+    # caverns never open into the sky by themselves.
+    guard = df_mul(CAVERN_ROOF_STRENGTH,
+                   df_clamp(df_add(1.5, df_mul(-0.64, f"{MOD_ID}:safari/sloped_cheese")), 0.0, 0.5))
     fade = df_mul(CAVERN_FADE, df_add(1.0, df_mul(-1.0, weight)))
     return df_add(df_add(layer, cheese), df_add(guard, fade))
 
@@ -1528,7 +1592,7 @@ def main():
     settings["noise_router"]["fluid_level_floodedness"] = carved_caves_dry(
         settings["noise_router"]["fluid_level_floodedness"])
     settings["noise_router"]["temperature"] = temperature_df()
-    settings["noise_router"]["vegetation"] = humidity_df()
+    settings["noise_router"]["vegetation"] = humidity_router_df()
     settings["surface_rule"] = surface_rule(vanilla("worldgen/noise_settings/overworld")["surface_rule"])
     write("worldgen/noise_settings/safari.json", settings, written)
 

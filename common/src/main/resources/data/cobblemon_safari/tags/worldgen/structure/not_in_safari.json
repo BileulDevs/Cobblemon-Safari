@@ -1,0 +1,7 @@
+{
+  "replace": false,
+  "values": [
+    {"id": "cobblemon:ruins/crumbling_arch_ruins", "required": false},
+    {"id": "cobblemon:ruins/rooted_arch_ruins", "required": false}
+  ]
+}

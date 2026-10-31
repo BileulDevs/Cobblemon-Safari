@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **The lush cavern is as large as the giant cavern** (radius 120 instead of 80, 120 blocks tall instead of 90), lush from end to end, and lies a little further south (around z 307), so the two cave systems keep solid rock between them. Shows on the next map.
+- **No more Cobblemon cave arches in the Safari**: the same ruin repeated every few chunks in the caves. Other mods' structures can be kept out the same way with the structure tag `cobblemon_safari:not_in_safari`.
+- **The Escape Rope comes first in the shop's items tab**, as the Safari Balls do in theirs.
+
+### Fixed
+
+- The caverns could open into the sky in wide holes, with floating rock between them, where they come near the ground: their caves now always end under a solid roof.
+
 ## 1.3.1
 
 Same network protocol as 1.3.0 (`1.4.0`): a 1.3.1 client joins a 1.3.0 server and the other way round. Only the server needs the update.

@@ -5,6 +5,7 @@
   "refmap": "cobblemon_safari-refmap.json",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "ChunkGeneratorStructureStateMixin",
     "ChunkMapMixin",
     "ExplosionMixin",
     "FireBlockMixin"

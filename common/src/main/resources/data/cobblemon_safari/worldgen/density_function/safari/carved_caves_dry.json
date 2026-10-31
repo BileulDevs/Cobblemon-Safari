@@ -39,16 +39,16 @@
             "type": "cobblemon_safari:island_coordinate",
             "mode": "radial",
             "center_x": 0,
-            "center_z": 269,
-            "radius": 80
+            "center_z": 307,
+            "radius": 120
           }
         },
         "argument2": {
           "type": "minecraft:square",
           "argument": {
             "type": "minecraft:y_clamped_gradient",
-            "from_y": -60,
-            "to_y": 120,
+            "from_y": -90,
+            "to_y": 150,
             "from_value": -2.0,
             "to_value": 2.0
           }
@@ -156,7 +156,7 @@
                 "type": "cobblemon_safari:island_coordinate",
                 "mode": "z",
                 "center_x": 0,
-                "center_z": 269,
+                "center_z": 307,
                 "radius": 1.0,
                 "limit": 100000.0
               },
