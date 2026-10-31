@@ -18,7 +18,7 @@ import java.util.function.Consumer;
 
 /**
  * Scrolls the answers of a Cobblemon NPC dialogue when they do not fit under
- * the dialogue box: only as many as fit are shown, with a scroll bar beside
+ * the dialogue box, above the hotbar: only as many as fit are shown, with a scroll bar beside
  * them; the mouse wheel over the answers, dragging the thumb or clicking the
  * track show the others.
  *
@@ -40,8 +40,16 @@ import java.util.function.Consumer;
  */
 public final class DialogueOptionPager {
 
-    /** Space kept free under the last answer, in GUI pixels, so it does not touch the screen edge. */
-    private static final int BOTTOM_MARGIN = 6;
+    /** Height of Minecraft's hotbar, in GUI pixels: drawn under the dialogue, at the bottom of the screen. */
+    private static final int HOTBAR_HEIGHT = 22;
+
+    /**
+     * Space kept free under the last answer, in GUI pixels: the hotbar and a
+     * gap of 6 above it, so the answers stop before it instead of covering
+     * the inventory bar (with the gap alone they ran over it at large GUI
+     * scales). Larger shows fewer answers at once.
+     */
+    private static final int BOTTOM_MARGIN = HOTBAR_HEIGHT + 6;
 
     /**
      * The scroll bar: its width and its gap to the answers, in GUI pixels.
