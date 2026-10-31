@@ -669,8 +669,9 @@ public class SafariConfig {
 
         /**
          * Gives the unused time of a hunt paid with banked time back to the bank
-         * when the player leaves on purpose (through the clerk) or dies
-         * inside. Time running out or an operator ending the hunt never refund.
+         * when the player leaves on purpose (through the clerk), dies inside,
+         * or is taken out by other means (a /tp, a home or waystone command).
+         * Time running out or an operator ending the hunt never refund.
          */
         public boolean refundUnusedTimeOnLeave = true;
     }

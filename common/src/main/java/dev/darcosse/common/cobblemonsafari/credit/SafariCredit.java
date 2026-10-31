@@ -31,13 +31,17 @@ public final class SafariCredit {
         SafariSessionManager.addListener(new SafariSessionListener() {
             /**
              * Gives back the unused time of a hunt paid with credit, when the
-             * player left on purpose or died inside. Death counts as leaving:
-             * players inside are invulnerable by default, so only /kill or the
-             * void kill them there, and neither should cost the hunt.
+             * player left on purpose, died inside, or was taken out by other
+             * means. Death counts as leaving: players inside are invulnerable
+             * by default, so only /kill or the void kill them there, and
+             * neither should cost the hunt. Being taken out (a /tp, a home or
+             * waystone command, another mod's teleport) counts too: the hunt
+             * ends at the next sweep whoever moved the player, and the time
+             * left used to be lost with it.
              */
             @Override
             public void onEnd(ServerPlayer player, SafariSession session, SessionEndReason reason) {
-                if ((reason == SessionEndReason.VOLUNTARY || reason == SessionEndReason.DEATH)
+                if (refunds(reason)
                         && SOURCE.equals(session.source())
                         && SafariConfigManager.get().ticket.refundUnusedTimeOnLeave
                         && session.remainingTicks() > 0) {
@@ -49,6 +53,16 @@ public final class SafariCredit {
                 }
             }
         });
+    }
+
+    /**
+     * Whether a hunt ended this way gives its unused time back. Time running
+     * out leaves none, and an operator ending a hunt ({@code /safari exit})
+     * means to take it away.
+     */
+    private static boolean refunds(SessionEndReason reason) {
+        return reason == SessionEndReason.VOLUNTARY || reason == SessionEndReason.DEATH
+                || reason == SessionEndReason.LEFT;
     }
 
     /** A player's banked time, in ticks. */

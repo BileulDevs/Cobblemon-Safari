@@ -93,7 +93,7 @@ A Safari Ticket used outside the Safari banks its time; entering spends the bank
 | `minAddedSeconds` | `1200` (20 min) | Least time a ticket may add. When the bank or the hunt is nearly full, a ticket adds only what fits; if that is less than this, the ticket is refused and kept. 0 accepts any amount. |
 | `extendsActiveSession` | `true` | Using a ticket inside adds its time to the running hunt (up to `maxDurationSeconds`). `false` refuses tickets inside. |
 | `maxCreditSeconds` | `14400` (4 h) | Most Safari time a player can bank. |
-| `refundUnusedTimeOnLeave` | `true` | When a hunt paid with banked time ends early because the player left through the clerk or died inside, the unused time goes back to the bank. Time running out, or an operator ending the hunt, never refunds. |
+| `refundUnusedTimeOnLeave` | `true` | When a hunt paid with banked time ends early because the player left through the clerk, died inside, or was taken out by other means (a `/tp`, a home or waystone command, another mod's teleport), the unused time goes back to the bank. Time running out, or an operator ending the hunt, never refunds. |
 
 ### `ticketLoot`: tickets in chests
 
