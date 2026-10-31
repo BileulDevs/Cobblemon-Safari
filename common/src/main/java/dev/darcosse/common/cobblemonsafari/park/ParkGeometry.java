@@ -41,8 +41,34 @@ public final class ParkGeometry {
             new Column(-298, -298)
     );
 
+    /**
+     * Rest houses underground, one per cavern, each in a chamber dug beside
+     * its cavern's passage (structure.CaveChamber). Fixed positions: no site
+     * search, the chamber is dug whatever the rock. Also identified in the
+     * saved world state by their column, after the surface anchors.
+     */
+    public static final List<CaveHouse> CAVE_REST_HOUSES = List.of(
+            new CaveHouse("giant_cavern", 0, 28, 34, 0, -0.25, 18),
+            new CaveHouse("lush_cavern", 0, 32, 341, 307, 0.25, 18)
+    );
+
     /** A column of the park, x and z in blocks. */
     public record Column(int x, int z) {
+    }
+
+    /**
+     * An underground rest house and the passage its chamber opens on.
+     *
+     * @param id            name of the cavern, as dialogue functions and translation keys write it
+     * @param x             centre column of the house
+     * @param groundY       height of the house's ground layer: players walk out at groundY + 1
+     * @param z             centre column of the house
+     * @param passageZ      z of the passage's axis, which runs along x past the house's door
+     * @param passageRise   blocks the passage's floor climbs per block toward +x
+     * @param passageReach  how far, in blocks, the passage's walls can stray from its axis
+     */
+    public record CaveHouse(String id, int x, int groundY, int z, int passageZ, double passageRise,
+                            int passageReach) {
     }
 
     private ParkGeometry() {

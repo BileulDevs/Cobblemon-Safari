@@ -3,6 +3,7 @@ package dev.darcosse.common.cobblemonsafari.command;
 import com.cobblemon.mod.common.api.molang.function.PlayerMoLangFunctions;
 import dev.darcosse.common.cobblemonsafari.bounty.SafariBounties;
 import dev.darcosse.common.cobblemonsafari.item.EscapeRopeActions;
+import dev.darcosse.common.cobblemonsafari.park.ParkGeometry;
 import dev.darcosse.common.cobblemonsafari.structure.Compass;
 import dev.darcosse.common.cobblemonsafari.teleport.RestHouseTravel;
 import kotlin.jvm.functions.Function1;
@@ -23,6 +24,8 @@ import java.util.function.Predicate;
  * and the rest house guide's
  * {@code safari_guide_can_<direction>()} and {@code safari_guide_go_<direction>()}
  * for each of the eight {@link Compass} directions ({@code safari_guide_go_north_east()}),
+ * and {@code safari_guide_can_cave_<cavern>()} and {@code safari_guide_go_cave_<cavern>()}
+ * for each underground house ({@code safari_guide_go_cave_lush_cavern()}),
  * and the clerk's mission swap: {@code safari_bounty_can_swap()}, then
  * {@code safari_bounty_can_swap_<slot>()} and {@code safari_bounty_swap_<slot>()}
  * for each mission, from 0 ({@code safari_bounty_swap_0()}).
@@ -62,6 +65,13 @@ public final class SafariDialogueFunctions {
      */
     public static final String GUIDE_CAN_PREFIX = "safari_guide_can_";
     public static final String GUIDE_GO_PREFIX = "safari_guide_go_";
+    /**
+     * Prefixes of the guide's functions for the underground houses, followed
+     * by the cavern's id ({@code ParkGeometry.CaveHouse.id}). Kept apart from
+     * the compass ones so a cavern can never be named like a direction.
+     */
+    public static final String GUIDE_CAN_CAVE_PREFIX = "safari_guide_can_cave_";
+    public static final String GUIDE_GO_CAVE_PREFIX = "safari_guide_go_cave_";
     /** Whether the clerk offers to swap a mission at all; the greeting shows that answer only then. */
     public static final String BOUNTY_CAN_SWAP = "safari_bounty_can_swap";
     /**
@@ -113,6 +123,13 @@ public final class SafariDialogueFunctions {
                     params -> run(player, p -> RestHouseTravel.canTravelTo(p, direction)));
             functions.put(GUIDE_GO_PREFIX + direction.id(),
                     params -> run(player, p -> RestHouseTravel.travelTo(p, direction)));
+        }
+        for (ParkGeometry.CaveHouse cave : ParkGeometry.CAVE_REST_HOUSES) {
+            String caveId = cave.id();
+            functions.put(GUIDE_CAN_CAVE_PREFIX + caveId,
+                    params -> run(player, p -> RestHouseTravel.canTravelToCave(p, caveId)));
+            functions.put(GUIDE_GO_CAVE_PREFIX + caveId,
+                    params -> run(player, p -> RestHouseTravel.travelToCave(p, caveId)));
         }
         functions.put(BOUNTY_CAN_SWAP, params -> run(player, SafariBounties::canSwapAny));
         for (int slot = 0; slot < SafariBounties.MAX_MISSIONS; slot++) {

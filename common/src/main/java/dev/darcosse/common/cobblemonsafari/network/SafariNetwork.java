@@ -29,7 +29,7 @@ public final class SafariNetwork {
      * version, so that a client of another build is refused at login with a
      * clear message instead of failing on the first packet.
      */
-    public static final String PROTOCOL_VERSION = "1.4.0";
+    public static final String PROTOCOL_VERSION = "1.5.0";
 
     private SafariNetwork() {
     }
@@ -117,14 +117,15 @@ public final class SafariNetwork {
     }
 
     /**
-     * Centre columns of the rest houses where they stand or will stand,
+     * Centre columns and height spans of the rest houses where they stand or will stand,
      * built or not yet (the site search may move them from their generated
      * anchors); none when the Safari level is missing.
      */
     private static List<SafariRulesPayload.HouseColumn> restHouseColumns() {
         List<SafariRulesPayload.HouseColumn> columns = new ArrayList<>();
         for (RestHouses.HouseSite site : RestHouses.sites()) {
-            columns.add(new SafariRulesPayload.HouseColumn(site.x(), site.z()));
+            int minY = site.minY() == RestHouses.UNKNOWN_Y ? Integer.MIN_VALUE : site.minY();
+            columns.add(new SafariRulesPayload.HouseColumn(site.x(), site.z(), minY, site.maxY()));
         }
         return List.copyOf(columns);
     }

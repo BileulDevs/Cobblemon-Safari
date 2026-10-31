@@ -4,7 +4,6 @@ import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
-import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.TicketType;
@@ -88,7 +87,7 @@ public final class RestHousePrebuilder {
 
     /**
      * Moves the background building along. Called each server tick. Cost: a
-     * counter increment per tick; once a second, a scan of the eight houses
+     * counter increment per tick; once a second, a scan of the ten houses
      * and, while a house is loading, at most one ticket change.
      */
     public static void tick(MinecraftServer server) {
@@ -168,8 +167,8 @@ public final class RestHousePrebuilder {
         anchor = -1;
     }
 
-    /** Centre chunk of a house. */
+    /** Centre chunk of a house's ticket: the house, or the middle of its chamber underground. */
     private static ChunkPos chunkOf(RestHouses.HouseSite site) {
-        return new ChunkPos(new BlockPos(site.x(), 0, site.z()));
+        return site.ticketCentre();
     }
 }

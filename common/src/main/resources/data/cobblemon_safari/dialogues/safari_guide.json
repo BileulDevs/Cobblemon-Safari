@@ -129,6 +129,30 @@
             ]
           },
           {
+            "text": {
+              "type": "cobblemon_safari:rest_house_name",
+              "cave": "giant_cavern"
+            },
+            "value": "cave_giant_cavern",
+            "isVisible": "q.player.safari_guide_can_cave_giant_cavern()",
+            "action": [
+              "q.dialogue.close();",
+              "q.player.safari_guide_go_cave_giant_cavern();"
+            ]
+          },
+          {
+            "text": {
+              "type": "cobblemon_safari:rest_house_name",
+              "cave": "lush_cavern"
+            },
+            "value": "cave_lush_cavern",
+            "isVisible": "q.player.safari_guide_can_cave_lush_cavern()",
+            "action": [
+              "q.dialogue.close();",
+              "q.player.safari_guide_go_cave_lush_cavern();"
+            ]
+          },
+          {
             "text": "cobblemon_safari.dialogue.safari_guide.option.bye",
             "value": "bye",
             "action": "q.dialogue.set_page('bye');"

@@ -45,7 +45,7 @@ Cobblemon's natural spawns fill the park too, faster than usual, and they favour
 
 ### Rest houses
 
-Eight Pokémon Centers stand on every map, the entrance one right where you arrive. Each has two Healing Machines, a PC, a cooking corner with a Poké Pot, a **Safari Clerk** who runs the shop, lists the missions and can walk you out early, and a **Safari Guide** who takes you to any other rest house of the island, named by its biome, with a short travel cinematic: a double of you flies off on your own flying Pokémon (or a Staraptor if you have none), seen by everyone around, and lands at the destination. One trip every 30 seconds by default, a wait shared with the Escape Rope, whose trips fly too.
+Ten Pokémon Centers stand on every map: eight on the surface, the entrance one right where you arrive, and one deep in each of the two great caverns, beside the passage that leads down to it. Each has two Healing Machines, a PC, a cooking corner with a Poké Pot, a **Safari Clerk** who runs the shop, lists the missions and can walk you out early, and a **Safari Guide** who takes you to any other rest house of the island, named by its biome, with a short travel cinematic: a double of you flies off on your own flying Pokémon (or a Staraptor if you have none), seen by everyone around, and lands at the destination. One trip every 30 seconds by default, a wait shared with the Escape Rope, whose trips fly too.
 
 ### Missions and Safari points
 

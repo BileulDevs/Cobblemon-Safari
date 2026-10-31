@@ -429,7 +429,7 @@ final class TravelFlight {
         boolean openSky = block.getY() >= level.getHeight(Heightmap.Types.MOTION_BLOCKING, block.getX(), block.getZ());
         if (!openSky) {
             // Under cover in a house's square is under its roof: the hall.
-            return RestHouses.siteAt(block.getX(), block.getZ(), 0) != null ? SCORE_UNUSABLE : SCORE_COVERED;
+            return RestHouses.siteAt(block.getX(), block.getY(), block.getZ(), 0) != null ? SCORE_UNUSABLE : SCORE_COVERED;
         }
         if (!sees(level, camera, rider)) {
             return SCORE_OPEN;

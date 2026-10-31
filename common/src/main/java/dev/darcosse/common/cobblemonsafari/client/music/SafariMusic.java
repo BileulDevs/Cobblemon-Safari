@@ -95,7 +95,7 @@ public final class SafariMusic {
         if (minecraft.screen != null && minecraft.screen.getBackgroundMusic() != null) {
             return null;
         }
-        if (SafariClientState.isInRestHouse(player.getBlockX(), player.getBlockZ())) {
+        if (SafariClientState.isInRestHouse(player.getBlockX(), player.getBlockY(), player.getBlockZ())) {
             pending = null;
             return CENTER;
         }

@@ -187,7 +187,7 @@ public final class SafariShop {
         }
         // Margin 0: the house and its plaza, i.e. within reach of the clerk's counter.
         return SafariDimensions.isSafari(player.level())
-                && RestHouses.isNear(player.getBlockX(), player.getBlockZ(), 0);
+                && RestHouses.isNear(player.getBlockX(), player.getBlockY(), player.getBlockZ(), 0);
     }
 
     /** The item drawn on a tab; empty when the config names none or an unknown item. */

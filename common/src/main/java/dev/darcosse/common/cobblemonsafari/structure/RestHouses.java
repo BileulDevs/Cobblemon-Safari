@@ -10,6 +10,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.ChunkPos;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayDeque;
@@ -39,6 +40,15 @@ import java.util.concurrent.CompletableFuture;
  * them, one at a time, in small steps over a few ticks. Building them all at
  * start would mean generating some 150 chunks on the server thread, about 25
  * seconds before a new map could be played.
+ *
+ * <p>Two more houses stand underground, one per cavern
+ * ({@link ParkGeometry#CAVE_REST_HOUSES}), each in a chamber dug beside its
+ * cavern's passage ({@link CaveChamber}). They have fixed positions (no
+ * site search) and are built like the others once their chamber is loaded.
+ * Their anchors follow the surface ones: index
+ * {@code REST_HOUSES.size() + i}. Because a house can now lie under the
+ * ground, every "is this position at a house" query takes the height too;
+ * a surface house built before its height was saved spans every height.
  */
 public final class RestHouses {
 
@@ -86,6 +96,23 @@ public final class RestHouses {
      */
     private static final int LOOK_INTERVAL_TICKS = 20;
 
+    /** Height of a house whose ground layer is not known (a surface house built before 1.4.0, or planned). */
+    public static final int UNKNOWN_Y = Integer.MIN_VALUE;
+
+    /**
+     * Height a surface house spans above its ground layer: the template (11)
+     * and the air cleared above it (4), plus a block. A position higher than
+     * this above a house's square is not in the house (flying over it, or in
+     * a cave under it when measured from below).
+     */
+    private static final int SURFACE_HOUSE_HEIGHT = 16;
+
+    /** Blocks below a house's ground layer still counted as at the house: its foundation and steps. */
+    private static final int BELOW_GROUND = 2;
+
+    /** The chambers of the underground houses, in the order of ParkGeometry.CAVE_REST_HOUSES. */
+    private static final List<CaveChamber> CHAMBERS = chambers();
+
     /**
      * Centres of the houses of the current map, built or planned, entrance
      * first. Read by the per-spawn checks, so kept in memory; refreshed by
@@ -113,10 +140,62 @@ public final class RestHouses {
      * @param z        centre column
      * @param entrance whether it is the entrance house (the one nearest the arrival point)
      * @param built    whether it stands already; a planned house is only a spot kept clear
-     * @param anchor   index of its anchor in ParkGeometry.REST_HOUSES: what stays the same when a
-     *                 build finds the spot wet and moves the house to its next candidate
+     * @param anchor   index of its anchor: in ParkGeometry.REST_HOUSES, then the underground ones after
+     *                 them; what stays the same when a build finds the spot wet and moves the house to
+     *                 its next candidate
+     * @param groundY  height of its ground layer, or {@link #UNKNOWN_Y}
+     * @param chamber  its chamber when it lies underground, else null
      */
-    public record HouseSite(int x, int z, boolean entrance, boolean built, int anchor) {
+    public record HouseSite(int x, int z, boolean entrance, boolean built, int anchor, int groundY,
+                            @Nullable CaveChamber chamber) {
+
+        /** Whether this house stands underground, in a cavern's chamber. */
+        public boolean underground() {
+            return chamber != null;
+        }
+
+        /** The id of its cavern ("giant_cavern"), or null at the surface. */
+        @Nullable
+        public String caveId() {
+            return chamber == null ? null : chamber.house.id();
+        }
+
+        /** Where its door opens: toward the centre of the park, or toward its passage underground. */
+        public Direction facing() {
+            return chamber != null ? chamber.facing : doorFacing(x, z);
+        }
+
+        /** Lowest height counted as at this house; {@link #UNKNOWN_Y} when its height is not known. */
+        public int minY() {
+            if (chamber != null) {
+                return chamber.bottomY() - BELOW_GROUND;
+            }
+            return groundY == UNKNOWN_Y ? UNKNOWN_Y : groundY - BELOW_GROUND;
+        }
+
+        /** Highest height counted as at this house; {@link Integer#MAX_VALUE} when its height is not known. */
+        public int maxY() {
+            if (chamber != null) {
+                return chamber.topY();
+            }
+            return groundY == UNKNOWN_Y ? Integer.MAX_VALUE : groundY + SURFACE_HOUSE_HEIGHT;
+        }
+
+        /** Whether a height lies within this house's span; any height when the span is not known. */
+        public boolean spans(int y) {
+            return y >= minY() && y <= maxY();
+        }
+
+        /**
+         * Centre chunk of a ticket loading everything its build and its
+         * arrival touch, within {@link #AREA_TICKET_RADIUS}: the house's own
+         * chunk, or the middle of its chamber, which reaches far in front
+         * of the door to cut the passage.
+         */
+        public ChunkPos ticketCentre() {
+            return chamber != null ? new ChunkPos(new BlockPos(chamber.centreX(), 0, chamber.centreZ()))
+                    : new ChunkPos(new BlockPos(x, 0, z));
+        }
     }
 
     /** A build under way, and the anchor whose house it is. */
@@ -205,6 +284,11 @@ public final class RestHouses {
     private static void planMissingSites(ServerLevel level, SafariWorldState state) {
         List<ParkGeometry.Column> anchors = ParkGeometry.REST_HOUSES;
         List<int[]> taken = new ArrayList<>();
+        // A surface house over an underground one would share its square:
+        // both would answer the column queries made with an unknown height.
+        for (ParkGeometry.CaveHouse cave : ParkGeometry.CAVE_REST_HOUSES) {
+            taken.add(new int[]{cave.x(), cave.z()});
+        }
         Map<Integer, CompletableFuture<List<int[]>>> searches = new HashMap<>();
         for (int i = 0; i < anchors.size(); i++) {
             ParkGeometry.Column anchor = anchors.get(i);
@@ -334,7 +418,7 @@ public final class RestHouses {
         // Paused builds first: they already changed the terrain.
         for (Map.Entry<String, PendingBuild> entry : paused.entrySet()) {
             RestHouseBuilder.Job job = entry.getValue().job();
-            if (RestHouseBuilder.areaLoaded(safari, job.centerX, job.centerZ, job.facing)) {
+            if (job.isAreaLoaded(safari)) {
                 builds.add(paused.remove(entry.getKey()));
                 return;
             }
@@ -360,6 +444,19 @@ public final class RestHouses {
                 builds.add(new PendingBuild(anchor, job));
             }
             // One build at a time: two at once would double the cost of the ticks they share.
+            return;
+        }
+        for (CaveChamber chamber : CHAMBERS) {
+            ParkGeometry.CaveHouse cave = chamber.house;
+            ParkGeometry.Column anchor = new ParkGeometry.Column(cave.x(), cave.z());
+            if (state.isHouseBuilt(cave.x(), cave.z()) || paused.containsKey(key(anchor))
+                    || !RestHouseBuilder.areaLoaded(safari, chamber)) {
+                continue;
+            }
+            RestHouseBuilder.Job job = RestHouseBuilder.Job.startCave(safari, chamber);
+            if (job != null) {
+                builds.add(new PendingBuild(anchor, job));
+            }
             return;
         }
     }
@@ -407,7 +504,7 @@ public final class RestHouses {
 
     /** Records a house as standing, logs it and refreshes {@link #sites()}. */
     private static void markBuilt(SafariWorldState state, ParkGeometry.Column anchor, RestHouseBuilder.Job job) {
-        state.markHouseBuilt(anchor.x(), anchor.z(), job.centerX, job.centerZ);
+        state.markHouseBuilt(anchor.x(), anchor.z(), job.centerX, job.centerZ, job.groundY());
         CobblemonSafari.LOGGER.info("Built Safari rest house at {}, {} (anchor {}, {})",
                 job.centerX, job.centerZ, anchor.x(), anchor.z());
         refreshSites(state);
@@ -422,13 +519,19 @@ public final class RestHouses {
             ParkGeometry.Column position = ParkGeometry.REST_HOUSES.get(i);
             int[] site = state.houseSite(position.x(), position.z());
             if (site != null) {
-                list.add(new HouseSite(site[0], site[1], i == 0, true, i));
+                list.add(new HouseSite(site[0], site[1], i == 0, true, i,
+                        state.houseGroundY(position.x(), position.z()), null));
                 continue;
             }
             List<int[]> plan = state.housePlan(position.x(), position.z());
             if (!plan.isEmpty()) {
-                list.add(new HouseSite(plan.get(0)[0], plan.get(0)[1], i == 0, false, i));
+                list.add(new HouseSite(plan.get(0)[0], plan.get(0)[1], i == 0, false, i, UNKNOWN_Y, null));
             }
+        }
+        for (int i = 0; i < CHAMBERS.size(); i++) {
+            ParkGeometry.CaveHouse cave = CHAMBERS.get(i).house;
+            list.add(new HouseSite(cave.x(), cave.z(), false, state.isHouseBuilt(cave.x(), cave.z()),
+                    ParkGeometry.REST_HOUSES.size() + i, cave.groundY(), CHAMBERS.get(i)));
         }
         sites = List.copyOf(list);
     }
@@ -445,21 +548,28 @@ public final class RestHouses {
         List<HouseSite> anchors = new ArrayList<>();
         for (int i = 0; i < ParkGeometry.REST_HOUSES.size(); i++) {
             ParkGeometry.Column anchor = ParkGeometry.REST_HOUSES.get(i);
-            anchors.add(new HouseSite(anchor.x(), anchor.z(), i == 0, false, i));
+            anchors.add(new HouseSite(anchor.x(), anchor.z(), i == 0, false, i, UNKNOWN_Y, null));
+        }
+        for (int i = 0; i < CHAMBERS.size(); i++) {
+            ParkGeometry.CaveHouse cave = CHAMBERS.get(i).house;
+            anchors.add(new HouseSite(cave.x(), cave.z(), false, false, ParkGeometry.REST_HOUSES.size() + i,
+                    cave.groundY(), CHAMBERS.get(i)));
         }
         return anchors;
     }
 
     /**
-     * Whether a column lies on a rest house (plaza included) or within
-     * {@code margin} blocks of it, built or planned: the spot of a house
-     * still to build is kept clear too. Cheap (a few comparisons per house),
-     * safe to call per spawn attempt.
+     * Whether a column lies on a surface rest house (plaza included) or
+     * within {@code margin} blocks of it, built or planned: the spot of a
+     * house still to build is kept clear too. Underground houses are left
+     * out: the callers place things at the surface (arrivals, specials),
+     * where a cave house far below is no obstacle. Cheap (a few comparisons
+     * per house), safe to call per spawn attempt.
      */
-    public static boolean isNear(int x, int z, int margin) {
+    public static boolean isNearSurfaceHouse(int x, int z, int margin) {
         int reach = FOOTPRINT_REACH + margin;
         for (HouseSite site : sites()) {
-            if (Math.abs(x - site.x()) <= reach && Math.abs(z - site.z()) <= reach) {
+            if (!site.underground() && Math.abs(x - site.x()) <= reach && Math.abs(z - site.z()) <= reach) {
                 return true;
             }
         }
@@ -467,13 +577,31 @@ public final class RestHouses {
     }
 
     /**
-     * Where players arrive in the Safari: on the ground in front of the
-     * entrance house's steps, on the axis of its door.
-     *
-     * @param column the column to stand on (y 0: the caller finds the ground)
-     * @param yaw    the rotation that faces the doorway
+     * Whether a position lies on a rest house (plaza included) or within
+     * {@code margin} blocks of it, at the surface or underground, height
+     * included. Cheap: a few comparisons per house.
      */
-    public record Arrival(BlockPos column, float yaw) {
+    public static boolean isNear(int x, int y, int z, int margin) {
+        int reach = FOOTPRINT_REACH + margin;
+        for (HouseSite site : sites()) {
+            if (Math.abs(x - site.x()) <= reach && Math.abs(z - site.z()) <= reach && site.spans(y)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Where players arrive at a house: on the ground in front of its steps,
+     * on the axis of its door.
+     *
+     * @param column the column to stand on: at y 0 when the caller finds the ground, at the feet'
+     *               height when {@code exact}
+     * @param yaw    the rotation that faces the doorway
+     * @param exact  true for an underground house, whose ground cannot be found from the sky:
+     *               {@code column} then holds the feet's height
+     */
+    public record Arrival(BlockPos column, float yaw, boolean exact) {
     }
 
     /**
@@ -499,7 +627,19 @@ public final class RestHouses {
     @Nullable
     public static HouseSite siteIn(Compass direction) {
         for (HouseSite site : sites()) {
-            if (Compass.of(site.x(), site.z()) == direction) {
+            // Underground houses are named by their cavern, not by a direction.
+            if (!site.underground() && Compass.of(site.x(), site.z()) == direction) {
+                return site;
+            }
+        }
+        return null;
+    }
+
+    /** The underground house of a cavern ({@link ParkGeometry.CaveHouse#id()}), or null. */
+    @Nullable
+    public static HouseSite caveSite(String caveId) {
+        for (HouseSite site : sites()) {
+            if (caveId.equals(site.caveId())) {
                 return site;
             }
         }
@@ -521,12 +661,18 @@ public final class RestHouses {
      * The rest house nearest to a column, built or planned, or null when
      * none is known. A planned one is built when its area is loaded, which
      * a trip there does (RestHouseTravel).
+     *
+     * @param underground whether underground houses may be chosen: only for a player in a cave,
+     *                    or one standing above a cavern would be sent down into it
      */
     @Nullable
-    public static HouseSite nearestSite(int x, int z) {
+    public static HouseSite nearestSite(int x, int z, boolean underground) {
         HouseSite nearest = null;
         long nearestDistance = Long.MAX_VALUE;
         for (HouseSite site : sites()) {
+            if (site.underground() && !underground) {
+                continue;
+            }
             long dx = site.x() - x;
             long dz = site.z() - z;
             long distance = dx * dx + dz * dz;
@@ -540,13 +686,14 @@ public final class RestHouses {
 
     /**
      * The house whose square (walls and plaza, {@link #HALF_SIZE} around its
-     * centre, plus {@code margin}) holds a column, or null.
+     * centre, plus {@code margin}) holds a position, height included, or
+     * null.
      */
     @Nullable
-    public static HouseSite siteAt(int x, int z, int margin) {
+    public static HouseSite siteAt(int x, int y, int z, int margin) {
         int reach = HALF_SIZE + margin;
         for (HouseSite site : sites()) {
-            if (Math.abs(x - site.x()) <= reach && Math.abs(z - site.z()) <= reach) {
+            if (Math.abs(x - site.x()) <= reach && Math.abs(z - site.z()) <= reach && site.spans(y)) {
                 return site;
             }
         }
@@ -555,10 +702,15 @@ public final class RestHouses {
 
     /** The arrival in front of one house's steps, facing its door. */
     public static Arrival arrivalOf(HouseSite site) {
-        Direction facing = doorFacing(site.x(), site.z());
+        Direction facing = site.facing();
+        BlockPos column = RestHouseBuilder.arrivalColumn(site.x(), site.z(), facing);
         // Looking back at the house: the opposite of where its door opens.
-        return new Arrival(RestHouseBuilder.arrivalColumn(site.x(), site.z(), facing),
-                facing.getOpposite().toYRot());
+        float yaw = facing.getOpposite().toYRot();
+        if (site.underground()) {
+            // On the plaza, one block above the house's ground layer.
+            return new Arrival(column.atY(site.groundY() + 1), yaw, true);
+        }
+        return new Arrival(column, yaw, false);
     }
 
     /**
@@ -572,5 +724,14 @@ public final class RestHouses {
             return dx > 0 ? Direction.EAST : Direction.WEST;
         }
         return dz >= 0 ? Direction.SOUTH : Direction.NORTH;
+    }
+
+    /** The chambers of the generated underground houses. */
+    private static List<CaveChamber> chambers() {
+        List<CaveChamber> list = new ArrayList<>();
+        for (ParkGeometry.CaveHouse cave : ParkGeometry.CAVE_REST_HOUSES) {
+            list.add(RestHouseBuilder.chamberOf(cave));
+        }
+        return List.copyOf(list);
     }
 }

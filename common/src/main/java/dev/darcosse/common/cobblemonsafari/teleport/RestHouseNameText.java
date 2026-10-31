@@ -14,8 +14,10 @@ import java.util.Locale;
 
 /**
  * A Cobblemon dialogue text naming the rest house of a compass direction by
- * its biome ("Jungle Safari"), for the Safari Guide's options:
+ * its biome ("Jungle Safari"), or an underground house by its cavern ("Lush
+ * Cavern"), for the Safari Guide's options:
  * <pre>{"type": "cobblemon_safari:rest_house_name", "direction": "north_east"}</pre>
+ * <pre>{"type": "cobblemon_safari:rest_house_name", "cave": "lush_cavern"}</pre>
  *
  * <p>Why a text type of its own: the houses move from map to map, so their
  * biome is only known on the server, while names must be read in each
@@ -31,8 +33,11 @@ public final class RestHouseNameText implements DialogueText {
     /** The type's id in dialogue files. Renaming it breaks every dialogue using it. */
     public static final String TYPE = CobblemonSafari.MOD_ID + ":rest_house_name";
 
-    /** A {@link Compass#id()}, as written in the dialogue file. */
+    /** A {@link Compass#id()}, as written in the dialogue file; ignored when {@link #cave} is set. */
     public String direction = "";
+
+    /** The id of a cavern (ParkGeometry.CaveHouse.id) whose underground house this names, or empty. */
+    public String cave = "";
 
     /** Gson's constructor. */
     public RestHouseNameText() {
@@ -47,14 +52,19 @@ public final class RestHouseNameText implements DialogueText {
         DialogueText.Companion.getTypes().put(TYPE, RestHouseNameText.class);
     }
 
-    /** The house's name, or the bare direction when there is no house there or no Safari level. */
+    /** The house's name, or the bare direction (or cavern) when there is no house there or no Safari level. */
     @Override
     public MutableComponent invoke(ActiveDialogue dialogue) {
-        Compass compass = compass();
         ServerLevel safari = SafariDimensions.level(dialogue.getPlayerEntity().getServer());
-        RestHouses.HouseSite site = compass == null ? null : RestHouses.siteIn(compass);
+        RestHouses.HouseSite site;
+        if (cave != null && !cave.isEmpty()) {
+            site = RestHouses.caveSite(cave);
+        } else {
+            Compass compass = compass();
+            site = compass == null ? null : RestHouses.siteIn(compass);
+        }
         if (safari == null || site == null) {
-            return Component.literal(direction);
+            return Component.literal(cave != null && !cave.isEmpty() ? cave : direction);
         }
         return RestHouseTravel.labelOf(safari, site).component().copy();
     }

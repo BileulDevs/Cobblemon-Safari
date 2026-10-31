@@ -1,6 +1,7 @@
 package dev.darcosse.common.cobblemonsafari.world;
 
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
+import dev.darcosse.common.cobblemonsafari.structure.RestHouses;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -68,6 +69,12 @@ public final class SafariWorldState extends SavedData {
      * sent to clients.
      */
     private final Map<String, List<String>> housePlans = new HashMap<>();
+    /**
+     * Height of the ground layer of each built house, per anchor: what tells
+     * a position in a house from one in a cave under it or in the air above
+     * it. Absent for houses built before 1.4.0, which then span every height.
+     */
+    private final Map<String, Integer> houseGroundY = new HashMap<>();
     /** Map salt the built houses belong to; a reset map has none of them. */
     private long housesMapSalt;
 
@@ -133,6 +140,7 @@ public final class SafariWorldState extends SavedData {
         if (housesMapSalt != mapSalt) {
             builtHouses.clear();
             houseSites.clear();
+            houseGroundY.clear();
             // Sites were chosen on the old terrain.
             housePlans.clear();
             housesMapSalt = mapSalt;
@@ -148,13 +156,17 @@ public final class SafariWorldState extends SavedData {
     /**
      * Remembers that the house of an anchor is built, and where.
      *
-     * @param anchorX anchor of the house (park.ParkGeometry.REST_HOUSES)
+     * @param anchorX anchor of the house (park.ParkGeometry.REST_HOUSES, or an underground house's column)
      * @param siteX   centre column of the house actually built
+     * @param groundY height of its ground layer, or RestHouses.UNKNOWN_Y
      */
-    public void markHouseBuilt(int anchorX, int anchorZ, int siteX, int siteZ) {
+    public void markHouseBuilt(int anchorX, int anchorZ, int siteX, int siteZ, int groundY) {
         String anchor = houseKey(anchorX, anchorZ);
         builtHouses.add(anchor);
         houseSites.put(anchor, houseKey(siteX, siteZ));
+        if (groundY != RestHouses.UNKNOWN_Y) {
+            houseGroundY.put(anchor, groundY);
+        }
         housePlans.remove(anchor);
         setDirty();
     }
@@ -205,6 +217,17 @@ public final class SafariWorldState extends SavedData {
         return parseColumn(site);
     }
 
+    /**
+     * Height of the ground layer of the house built for an anchor, or
+     * RestHouses.UNKNOWN_Y when it is not built or was built before its
+     * height was saved.
+     */
+    public int houseGroundY(int anchorX, int anchorZ) {
+        String anchor = houseKey(anchorX, anchorZ);
+        Integer y = builtHouses.contains(anchor) ? houseGroundY.get(anchor) : null;
+        return y == null ? RestHouses.UNKNOWN_Y : y;
+    }
+
     /** A column {x, z} from its key, see {@link #houseKey}. */
     private static int[] parseColumn(String key) {
         String[] parts = key.split(",");
@@ -230,6 +253,9 @@ public final class SafariWorldState extends SavedData {
         CompoundTag plans = new CompoundTag();
         housePlans.forEach((anchor, planned) -> plans.put(anchor, strings(planned)));
         nbt.put("house_plans", plans);
+        CompoundTag groundYs = new CompoundTag();
+        houseGroundY.forEach(groundYs::putInt);
+        nbt.put("house_ground_y", groundYs);
         nbt.putLong("houses_map_salt", housesMapSalt);
         return nbt;
     }
@@ -257,6 +283,11 @@ public final class SafariWorldState extends SavedData {
         CompoundTag sites = nbt.getCompound("house_sites");
         for (String anchor : sites.getAllKeys()) {
             state.houseSites.put(anchor, sites.getString(anchor));
+        }
+        // Absent (before 1.4.0): built houses span every height (RestHouses.UNKNOWN_Y).
+        CompoundTag groundYs = nbt.getCompound("house_ground_y");
+        for (String anchor : groundYs.getAllKeys()) {
+            state.houseGroundY.put(anchor, groundYs.getInt(anchor));
         }
         // Absent: unbuilt houses get their sites chosen again.
         CompoundTag plans = nbt.getCompound("house_plans");

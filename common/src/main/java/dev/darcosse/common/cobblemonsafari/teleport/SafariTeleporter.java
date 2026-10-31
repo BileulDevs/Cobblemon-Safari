@@ -57,6 +57,16 @@ public final class SafariTeleporter {
      */
     private static final int STANDING_SEARCH_RADIUS = 12;
 
+    /**
+     * How far around an underground house's arrival a free spot is searched
+     * when the arrival itself is blocked, in blocks. The plaza in front of
+     * the steps is wider; further would reach the passage's ramp.
+     */
+    private static final int CAVERN_ARRIVAL_REACH = 4;
+
+    /** Heights tried at each spot of that search, relative to the arrival's feet, in order. */
+    private static final int[] CAVERN_ARRIVAL_STEPS = {0, 1, -1};
+
     private SafariTeleporter() {
     }
 
@@ -182,8 +192,43 @@ public final class SafariTeleporter {
     public static BlockPos arrivalFeet(ServerLevel level, RestHouses.Arrival front) {
         int x = front.column().getX();
         int z = front.column().getZ();
+        if (front.exact()) {
+            return cavernFeet(level, front.column());
+        }
         BlockPos feet = surface(level, x, z);
         return isSafe(level, feet) ? feet : findStandingSpotNear(level, x, z);
+    }
+
+    /**
+     * Where to stand in front of an underground house: its plaza at the
+     * given feet, or, when something stands there (a Pokémon's block, a
+     * player's), the nearest free spot within {@link #CAVERN_ARRIVAL_REACH}
+     * blocks at about the same height. Never the surface search, which
+     * would find the ground far above the cave. Null when the whole plaza
+     * around is blocked.
+     */
+    @Nullable
+    private static BlockPos cavernFeet(ServerLevel level, BlockPos feet) {
+        if (canStandAt(level, feet)) {
+            return feet;
+        }
+        for (int radius = 1; radius <= CAVERN_ARRIVAL_REACH; radius++) {
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != radius) {
+                        continue;
+                    }
+                    // Same height first, then a step up or down (the ramp in front of the plaza).
+                    for (int dy : CAVERN_ARRIVAL_STEPS) {
+                        BlockPos candidate = feet.offset(dx, dy, dz);
+                        if (canStandAt(level, candidate)) {
+                            return candidate;
+                        }
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     /**
@@ -214,7 +259,7 @@ public final class SafariTeleporter {
                     }
                     int cx = x + dx;
                     int cz = z + dz;
-                    if (ParkBoundary.isOutside(cx, cz) || RestHouses.isNear(cx, cz, ARRIVAL_HOUSE_MARGIN)) {
+                    if (ParkBoundary.isOutside(cx, cz) || RestHouses.isNearSurfaceHouse(cx, cz, ARRIVAL_HOUSE_MARGIN)) {
                         continue;
                     }
                     BlockPos feet = surface(level, cx, cz);
@@ -304,7 +349,7 @@ public final class SafariTeleporter {
             int z = ParkGeometry.ARRIVAL_Z + random.nextInt(spread * 2 + 1) - spread;
             // Outside the park the boundary would immediately pull the player back;
             // on a rest house the "ground" found would be its roof.
-            if (ParkBoundary.isOutside(x, z) || RestHouses.isNear(x, z, ARRIVAL_HOUSE_MARGIN)) {
+            if (ParkBoundary.isOutside(x, z) || RestHouses.isNearSurfaceHouse(x, z, ARRIVAL_HOUSE_MARGIN)) {
                 continue;
             }
             BlockPos candidate = surface(level, x, z);

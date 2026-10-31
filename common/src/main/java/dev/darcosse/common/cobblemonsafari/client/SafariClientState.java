@@ -85,13 +85,16 @@ public final class SafariClientState {
     }
 
     /**
-     * Whether a column lies inside the walls of a rest house (its plaza is
-     * outside). A few comparisons per house: cheap enough for the per-tick
-     * music check. Does not look at the dimension; callers do.
+     * Whether a position lies inside the walls of a rest house (its plaza is
+     * outside), height included: a house underground does not count for a
+     * player walking above it, nor a surface house for one in a cave below.
+     * A few comparisons per house: cheap enough for the per-tick music
+     * check. Does not look at the dimension; callers do.
      */
-    public static boolean isInRestHouse(int x, int z) {
+    public static boolean isInRestHouse(int x, int y, int z) {
         for (SafariRulesPayload.HouseColumn house : restHouses) {
-            if (Math.abs(x - house.x()) <= RestHouses.HALF_SIZE && Math.abs(z - house.z()) <= RestHouses.HALF_SIZE) {
+            if (Math.abs(x - house.x()) <= RestHouses.HALF_SIZE && Math.abs(z - house.z()) <= RestHouses.HALF_SIZE
+                    && y >= house.minY() && y <= house.maxY()) {
                 return true;
             }
         }

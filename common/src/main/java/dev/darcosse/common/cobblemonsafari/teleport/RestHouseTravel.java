@@ -13,6 +13,7 @@ import dev.darcosse.common.cobblemonsafari.structure.Compass;
 import dev.darcosse.common.cobblemonsafari.structure.RestHouseStaff;
 import dev.darcosse.common.cobblemonsafari.structure.RestHouses;
 import dev.darcosse.common.cobblemonsafari.util.LoadedChunks;
+import dev.darcosse.common.cobblemonsafari.util.SafariCaves;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
@@ -302,6 +303,17 @@ public final class RestHouseTravel {
      * @return whether a trip started
      */
     public static boolean travelTo(ServerPlayer player, Compass direction) {
+        return guideTrip(player, RestHouses.siteIn(direction));
+    }
+
+    /**
+     * Starts the guide's trip to a house, if the player stands by a guide,
+     * is not in a battle nor already on the way, and their wait is over.
+     *
+     * @param target the house, or null when there is none (refused, with a message)
+     * @return whether a trip started
+     */
+    private static boolean guideTrip(ServerPlayer player, @Nullable RestHouses.HouseSite target) {
         if (!config().guideEnabled || !SafariDimensions.isSafari(player.level())
                 || !RestHouseStaff.isNearGuide(player) || isTravelling(player)) {
             return false;
@@ -316,7 +328,6 @@ public final class RestHouseTravel {
                     true);
             return false;
         }
-        RestHouses.HouseSite target = RestHouses.siteIn(direction);
         if (target == null || isCurrentHouse(player, target)) {
             player.displayClientMessage(Component.translatable(key("message.guide_unreachable")), true);
             return false;
@@ -324,6 +335,29 @@ public final class RestHouseTravel {
         start(player, target, Source.GUIDE, ignored -> {
         });
         return true;
+    }
+
+    /**
+     * Whether the guide can take the player to the underground house of a
+     * cavern ({@code ParkGeometry.CaveHouse.id}): the guide is on, the house
+     * exists, and it is not the one the player stands in.
+     */
+    public static boolean canTravelToCave(ServerPlayer player, String caveId) {
+        if (!config().guideEnabled || !SafariDimensions.isSafari(player.level())) {
+            return false;
+        }
+        RestHouses.HouseSite target = RestHouses.caveSite(caveId);
+        return target != null && !isCurrentHouse(player, target);
+    }
+
+    /**
+     * Starts the guide's trip to the underground house of a cavern; same
+     * checks as {@link #travelTo}.
+     *
+     * @return whether a trip started
+     */
+    public static boolean travelToCave(ServerPlayer player, String caveId) {
+        return guideTrip(player, RestHouses.caveSite(caveId));
     }
 
     // ---- The rope ---------------------------------------------------------
@@ -351,7 +385,10 @@ public final class RestHouseTravel {
                     Ticks.format(remaining)), true);
             return false;
         }
-        RestHouses.HouseSite target = RestHouses.nearestSite(player.getBlockX(), player.getBlockZ());
+        // Underground houses only from a cave: from the surface above a
+        // cavern, the nearest house would otherwise be the one under the feet.
+        RestHouses.HouseSite target = RestHouses.nearestSite(player.getBlockX(), player.getBlockZ(),
+                SafariCaves.isInCave(player));
         if (target == null) {
             player.displayClientMessage(Component.translatable(key("message.rope_no_rest_house")), true);
             return false;
@@ -373,7 +410,7 @@ public final class RestHouseTravel {
                               Consumer<ServerPlayer> arrived) {
         ServerLevel level = (ServerLevel) player.level();
         int now = player.getServer().getTickCount();
-        ChunkPos centre = new ChunkPos(new BlockPos(target.x(), 0, target.z()));
+        ChunkPos centre = target.ticketCentre();
         level.getChunkSource().addRegionTicket(TICKET, centre, TICKET_RADIUS, centre);
         Vec3 heading = headingTo(player, target);
         TakeOff plan = planTakeOff(level, player, source, heading);
@@ -444,7 +481,8 @@ public final class RestHouseTravel {
         BlockPos feet;
         boolean climb = false;
         if (source == Source.GUIDE) {
-            RestHouses.HouseSite here = RestHouses.siteAt(player.getBlockX(), player.getBlockZ(), HOUSE_MARGIN);
+            RestHouses.HouseSite here = RestHouses.siteAt(player.getBlockX(), player.getBlockY(), player.getBlockZ(),
+                    HOUSE_MARGIN);
             feet = here == null ? null : SafariTeleporter.arrivalFeet(level, RestHouses.arrivalOf(here));
         } else if (player.onGround() && level.canSeeSky(BlockPos.containing(player.getEyePosition()))) {
             feet = player.blockPosition();
@@ -601,7 +639,7 @@ public final class RestHouseTravel {
         // A wet spot moved the house to its next candidate, maybe beyond
         // the ticket: follow it, or the new spot never loads and the trip
         // waits until it gives up.
-        ChunkPos siteChunk = new ChunkPos(new BlockPos(site.x(), 0, site.z()));
+        ChunkPos siteChunk = site.ticketCentre();
         if (!siteChunk.equals(trip.ticket)) {
             safari.getChunkSource().removeRegionTicket(TICKET, trip.ticket, TICKET_RADIUS, trip.ticket);
             safari.getChunkSource().addRegionTicket(TICKET, siteChunk, TICKET_RADIUS, siteChunk);
@@ -719,12 +757,17 @@ public final class RestHouseTravel {
      * built yet, so no chunk is loaded for a name.
      */
     public static Label labelOf(ServerLevel level, RestHouses.HouseSite site) {
+        if (site.underground()) {
+            // Named by its cavern: the surface biome above it says nothing of where it is.
+            return new Label(key("rest_house.cave." + site.caveId()), "");
+        }
         Optional<ResourceKey<Biome>> biome = biomeAt(level, site.x(), site.z());
         String biomeKey = biome.map(key -> Util.makeDescriptionId("biome", key.location()))
                 .orElse(key("travel.unknown_biome"));
         boolean shared = false;
         for (RestHouses.HouseSite other : RestHouses.sites()) {
-            if (other.anchor() != site.anchor() && biomeAt(level, other.x(), other.z()).equals(biome)) {
+            if (other.anchor() != site.anchor() && !other.underground()
+                    && biomeAt(level, other.x(), other.z()).equals(biome)) {
                 shared = true;
                 break;
             }
@@ -744,7 +787,8 @@ public final class RestHouseTravel {
 
     /** Whether the player stands at this house: its square, steps and plaza. */
     private static boolean isCurrentHouse(ServerPlayer player, RestHouses.HouseSite house) {
-        RestHouses.HouseSite here = RestHouses.siteAt(player.getBlockX(), player.getBlockZ(), HOUSE_MARGIN);
+        RestHouses.HouseSite here = RestHouses.siteAt(player.getBlockX(), player.getBlockY(), player.getBlockZ(),
+                HOUSE_MARGIN);
         return here != null && here.anchor() == house.anchor();
     }
 

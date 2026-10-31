@@ -63,6 +63,13 @@ public final class RestHouseStaff {
     private static final int MIN_HEADROOM = 2;
 
     /**
+     * Height of the template's roof above its ground layer (the template is
+     * 11 high, layers 0 to 10): where the floor search starts in an
+     * underground house. Must follow the template if its height changes.
+     */
+    private static final int HOUSE_ROOF_ABOVE_GROUND = 10;
+
+    /**
      * How close, in blocks, a player must be to a guide for the guide's
      * travel to work (see {@link #isNearGuide}). Survival players reach an
      * entity from 3 blocks; the margin covers the time the dialogue stays
@@ -120,14 +127,16 @@ public final class RestHouseStaff {
                 continue;
             }
             for (Role role : ROLES) {
-                maintain(safari, site.x(), site.z(), role);
+                maintain(safari, site, role);
             }
         }
     }
 
     /** Spawns one role of one house if it is loaded and has none; removes extra ones. */
-    private static void maintain(ServerLevel level, int centerX, int centerZ, Role role) {
-        Direction door = RestHouses.doorFacing(centerX, centerZ);
+    private static void maintain(ServerLevel level, RestHouses.HouseSite site, Role role) {
+        int centerX = site.x();
+        int centerZ = site.z();
+        Direction door = site.facing();
         BlockPos column = role.column().apply(new BlockPos(centerX, 0, centerZ), door);
         // Entity ticking: the chunk AND its entities are loaded, so someone
         // already there is seen and a new one is saved with the chunk.
@@ -135,8 +144,12 @@ public final class RestHouseStaff {
             return;
         }
         int half = RestHouses.HALF_SIZE;
-        AABB house = new AABB(centerX - half, level.getMinBuildHeight(), centerZ - half,
-                centerX + half + 1, level.getMaxBuildHeight(), centerZ + half + 1);
+        // The house's own height only when known: staff of a house in a cave
+        // below (or above) must not be counted as this one's.
+        int minY = site.minY() == RestHouses.UNKNOWN_Y ? level.getMinBuildHeight() : site.minY();
+        int maxY = Math.min(site.maxY(), level.getMaxBuildHeight());
+        AABB house = new AABB(centerX - half, minY, centerZ - half,
+                centerX + half + 1, maxY, centerZ + half + 1);
         List<NPCEntity> found = level.getEntitiesOfClass(NPCEntity.class, house,
                 entity -> entity.getTags().contains(role.tag()));
         // Switched off in the config: the role goes, and is not brought back.
@@ -150,7 +163,9 @@ public final class RestHouseStaff {
         if (!found.isEmpty()) {
             return;
         }
-        BlockPos feet = floorUnderRoof(level, column);
+        int top = site.underground() ? roofTop(level, column, site.groundY())
+                : level.getHeight(Heightmap.Types.MOTION_BLOCKING, column.getX(), column.getZ()) - 1;
+        BlockPos feet = floorUnderRoof(level, column, top);
         if (feet != null) {
             spawn(level, feet, role.facing().apply(door), role);
         }
@@ -163,8 +178,7 @@ public final class RestHouseStaff {
      * there), so nobody is put on a roof.
      */
     @Nullable
-    private static BlockPos floorUnderRoof(ServerLevel level, BlockPos column) {
-        int top = level.getHeight(Heightmap.Types.MOTION_BLOCKING, column.getX(), column.getZ()) - 1;
+    private static BlockPos floorUnderRoof(ServerLevel level, BlockPos column, int top) {
         int y = top;
         while (y > top - MAX_ROOF_DEPTH && !level.getBlockState(column.atY(y)).isAir()) {
             y--;
@@ -178,6 +192,20 @@ public final class RestHouseStaff {
             y--;
         }
         return headroom >= MIN_HEADROOM ? column.atY(y + 1) : null;
+    }
+
+    /**
+     * The top of an underground house's roof at a column: the highest block
+     * within the template's height. Underground the sky's heightmap gives
+     * the cave's roof, far above; the chamber's air between it and the house
+     * would then be taken for the room.
+     */
+    private static int roofTop(ServerLevel level, BlockPos column, int groundY) {
+        int y = groundY + HOUSE_ROOF_ABOVE_GROUND;
+        while (y > groundY && level.getBlockState(column.atY(y)).isAir()) {
+            y--;
+        }
+        return y;
     }
 
     /**

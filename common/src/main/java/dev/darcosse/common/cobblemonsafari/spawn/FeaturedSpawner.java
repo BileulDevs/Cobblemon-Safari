@@ -133,7 +133,7 @@ public final class FeaturedSpawner {
         double distance = MIN_DISTANCE + random.nextDouble() * (MAX_DISTANCE - MIN_DISTANCE);
         int x = (int) Math.floor(player.getX() + Math.cos(angle) * distance);
         int z = (int) Math.floor(player.getZ() + Math.sin(angle) * distance);
-        if (ParkBoundary.isOutside(x, z) || RestHouses.isNear(x, z, HOUSE_MARGIN)) {
+        if (ParkBoundary.isOutside(x, z) || RestHouses.isNearSurfaceHouse(x, z, HOUSE_MARGIN)) {
             return;
         }
         // Only loaded chunks: generating terrain for a spawn would stall the tick.

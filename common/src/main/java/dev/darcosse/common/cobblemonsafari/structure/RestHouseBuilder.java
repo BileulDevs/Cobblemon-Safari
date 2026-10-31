@@ -1,7 +1,10 @@
 package dev.darcosse.common.cobblemonsafari.structure;
 
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
+import dev.darcosse.common.cobblemonsafari.biome.SafariBiomeTags;
 import dev.darcosse.common.cobblemonsafari.gate.GateClearing;
+import dev.darcosse.common.cobblemonsafari.park.ParkGeometry;
+import dev.darcosse.common.cobblemonsafari.util.FluidGuard;
 import dev.darcosse.common.cobblemonsafari.util.LoadedChunks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
@@ -16,6 +19,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LightBlock;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
@@ -235,6 +239,42 @@ final class RestHouseBuilder {
     private static final String[] FOSSIL_LINK_KEYS = {"ControllerBlock", "MultiblockStore"};
     private static final String FOSSIL_FORMED_KEY = "Formed";
 
+    /**
+     * Columns of an underground house's chamber dug per tick. The chamber has
+     * about 2,000, each a few dozen block changes (floor, foundation, air up
+     * to the dome). Higher finishes in fewer ticks, each longer.
+     */
+    private static final int CHAMBER_COLUMNS_PER_TICK = 300;
+
+    /**
+     * Spacing, in blocks, of the hidden light blocks hung in an underground
+     * house's chamber, and their height above its floor. Caves are dark:
+     * without them the plaza is pitch black outside the house. Wider spacing
+     * leaves dark patches between the lights.
+     */
+    private static final int CHAMBER_LIGHT_SPACING = 7;
+    private static final int CHAMBER_LIGHT_HEIGHT = 3;
+
+    /**
+     * Brightness of those lights, out of 15. Lower keeps the cave mood; at
+     * 15 the chamber is as bright as daylight.
+     */
+    private static final int CHAMBER_LIGHT_LEVEL = 12;
+
+    /**
+     * Where the chamber's floor turns to another block, on its patch noise
+     * (-1 to 1): clay or tuff above this, stone or andesite below minus this.
+     * Lower makes the patches cover more of the floor; above 1, none.
+     */
+    private static final double FLOOR_PATCH_THRESHOLD = 0.45D;
+
+    /**
+     * Share of the lush chamber's moss blocks, in percent, given a moss
+     * carpet, then a tuft of short grass. Higher clutters the floor.
+     */
+    private static final int MOSS_CARPET_PERCENT = 12;
+    private static final int SHORT_GRASS_PERCENT = 6;
+
     private RestHouseBuilder() {
     }
 
@@ -266,6 +306,28 @@ final class RestHouseBuilder {
     static boolean areaLoaded(ServerLevel level, int centerX, int centerZ, Direction facing) {
         int[] rect = templateRect(centerX, centerZ, rotationFor(facing));
         return LoadedChunks.areaReady(level, rect[0] - SKIRT, rect[1] - SKIRT, rect[2] + SKIRT, rect[3] + SKIRT);
+    }
+
+    /**
+     * The house's columns, as {minX, minZ, maxX, maxZ}: the template turned
+     * so its door opens toward {@code facing}.
+     */
+    static int[] houseRect(int centerX, int centerZ, Direction facing) {
+        return templateRect(centerX, centerZ, rotationFor(facing));
+    }
+
+    /** The chamber dug around an underground house; see {@link CaveChamber}. */
+    static CaveChamber chamberOf(ParkGeometry.CaveHouse house) {
+        return new CaveChamber(house, houseRect(house.x(), house.z(), CaveChamber.facingOf(house)));
+    }
+
+    /**
+     * Whether every chunk an underground house's build changes has finished
+     * loading: its whole chamber, one block around. Same rule as
+     * {@link #areaLoaded}: never loads anything.
+     */
+    static boolean areaLoaded(ServerLevel level, CaveChamber chamber) {
+        return LoadedChunks.areaReady(level, chamber.minX - 1, chamber.minZ - 1, chamber.maxX + 1, chamber.maxZ + 1);
     }
 
     /**
@@ -466,6 +528,20 @@ final class RestHouseBuilder {
             this.snow = new boolean[count];
         }
 
+        /**
+         * A survey for an underground house, which reads nothing: its height
+         * and ground blocks are fixed by its chamber. No column is water,
+         * none is snowy.
+         */
+        static Survey fixed(int[] rect, int groundY, BlockState top, BlockState sub) {
+            Survey survey = new Survey(rect);
+            survey.groundY = groundY;
+            survey.groundTop = top;
+            survey.groundSub = sub;
+            survey.snowy = false;
+            return survey;
+        }
+
         /** Index of a world column in the survey's arrays. */
         int index(int x, int z) {
             return (x - minX) + (z - minZ) * sizeX;
@@ -567,7 +643,7 @@ final class RestHouseBuilder {
     static final class Job {
 
         /** Steps of a build, in order; see {@link #step}. */
-        private enum Stage { SURVEY, FELL, GROUND, SKIRT, PLACE, TREES }
+        private enum Stage { SURVEY, FELL, GROUND, SKIRT, CHAMBER, PLACE, TREES }
 
         final int centerX;
         final int centerZ;
@@ -585,9 +661,15 @@ final class RestHouseBuilder {
         private GateClearing clearing;
         /** Game time the build started at; items younger than the build are its own drops. */
         private long startTime = Long.MIN_VALUE;
+        /** The chamber to dig, for an underground house; null at the surface. */
+        @Nullable
+        private final CaveChamber chamber;
+        /** Next chamber column to dig, as an index over its box. */
+        private int nextChamberColumn;
 
         /** A build not started yet; see {@link #start}. */
-        private Job(int centerX, int centerZ, Direction facing, StructureTemplate template, boolean acceptWater) {
+        private Job(int centerX, int centerZ, Direction facing, StructureTemplate template, boolean acceptWater,
+                    @Nullable CaveChamber chamber) {
             this.centerX = centerX;
             this.centerZ = centerZ;
             this.facing = facing;
@@ -595,6 +677,7 @@ final class RestHouseBuilder {
             this.template = template;
             this.acceptWater = acceptWater;
             this.rect = templateRect(centerX, centerZ, rotation);
+            this.chamber = chamber;
         }
 
         /**
@@ -606,6 +689,27 @@ final class RestHouseBuilder {
          */
         @Nullable
         static Job start(ServerLevel level, int centerX, int centerZ, Direction facing, boolean acceptWater) {
+            StructureTemplate template = template(level, centerX, centerZ);
+            return template == null ? null : new Job(centerX, centerZ, facing, template, acceptWater, null);
+        }
+
+        /**
+         * A build of an underground house in its chamber, nothing done yet;
+         * null (logged) when the template is missing. It reads no terrain:
+         * the chamber is dug whatever the rock holds, its floor at the
+         * house's fixed height.
+         */
+        @Nullable
+        static Job startCave(ServerLevel level, CaveChamber chamber) {
+            ParkGeometry.CaveHouse house = chamber.house;
+            StructureTemplate template = template(level, house.x(), house.z());
+            return template == null ? null
+                    : new Job(house.x(), house.z(), chamber.facing, template, true, chamber);
+        }
+
+        /** The Pokémon Center template, size checked; null (logged) when it is missing. */
+        @Nullable
+        private static StructureTemplate template(ServerLevel level, int centerX, int centerZ) {
             Optional<StructureTemplate> found = level.getStructureManager().get(TEMPLATE_ID);
             if (found.isEmpty()) {
                 CobblemonSafari.LOGGER.error("Structure template {} is missing; no rest house built at {}, {}",
@@ -619,7 +723,7 @@ final class RestHouseBuilder {
                 CobblemonSafari.LOGGER.warn("Structure template {} is {} instead of {}x{}x{}; check RestHouseBuilder",
                         TEMPLATE_ID, template.getSize(), SIZE_X, SIZE_Y, SIZE_Z);
             }
-            return new Job(centerX, centerZ, facing, template, acceptWater);
+            return template;
         }
 
         /**
@@ -630,6 +734,9 @@ final class RestHouseBuilder {
          * (GateClearing's budget).
          */
         Progress step(ServerLevel level) {
+            if (chamber != null) {
+                return stepCave(level);
+            }
             if (stage == Stage.TREES) {
                 return stepTrees(level);
             }
@@ -677,6 +784,187 @@ final class RestHouseBuilder {
                 }
                 default -> {
                     return Progress.RUNNING;
+                }
+            }
+        }
+
+        /** Whether everything this build changes is loaded: its skirt, or its chamber underground. */
+        boolean isAreaLoaded(ServerLevel level) {
+            return chamber != null ? RestHouseBuilder.areaLoaded(level, chamber)
+                    : RestHouseBuilder.areaLoaded(level, centerX, centerZ, facing);
+        }
+
+        /** Height of the house's ground layer; meaningful once the build has placed the house. */
+        int groundY() {
+            return survey == null ? RestHouses.UNKNOWN_Y : survey.groundY;
+        }
+
+        /**
+         * One step of an underground house: the fixed survey, then the
+         * chamber dug in slices, the template, done. No felling, skirt nor
+         * tree removal: nothing grows into a chamber the build itself empties.
+         */
+        private Progress stepCave(ServerLevel level) {
+            if (stage == Stage.TREES) {
+                return Progress.DONE;
+            }
+            if (!areaLoaded(level, chamber)) {
+                return Progress.WAITING;
+            }
+            switch (stage) {
+                case SURVEY -> {
+                    startTime = level.getGameTime();
+                    BlockPos centre = new BlockPos(centerX, chamber.house.groundY() + 1, centerZ);
+                    // Moss in the lush cavern, bare stone elsewhere: the plaza looks like the cave's floor.
+                    boolean lush = level.getBiome(centre).is(SafariBiomeTags.LUSH_CAVE);
+                    survey = Survey.fixed(rect, chamber.house.groundY(),
+                            (lush ? Blocks.MOSS_BLOCK : Blocks.STONE).defaultBlockState(),
+                            Blocks.STONE.defaultBlockState());
+                    stage = Stage.CHAMBER;
+                    return Progress.RUNNING;
+                }
+                case CHAMBER -> {
+                    if (digChamber(level)) {
+                        stage = Stage.PLACE;
+                    }
+                    return Progress.RUNNING;
+                }
+                case PLACE -> {
+                    place(level);
+                    lightChamber(level);
+                    stage = Stage.TREES;
+                    return Progress.PLACED;
+                }
+                default -> {
+                    return Progress.RUNNING;
+                }
+            }
+        }
+
+        /**
+         * Digs the next chamber columns: floor block at the chamber's floor
+         * height, filled down to solid ground (the cavern's caves may lie
+         * under it), air up to its ceiling. Blocks are set without updates,
+         * as for every build: cave vines or dripstone left hanging over the
+         * dug space stay as they are rather than breaking into items.
+         *
+         * <p>Water and lava around the chamber are never opened: an air
+         * block that would touch a fluid outside the chamber is left as rock
+         * instead ({@link #touchesOutsideFluid}). Opened without an update,
+         * the fluid would hang in the air at the chamber's edge until a
+         * block next to it changed, then pour in.
+         *
+         * @return true once every column is dug
+         */
+        private boolean digChamber(ServerLevel level) {
+            int sizeX = chamber.maxX - chamber.minX + 1;
+            int total = sizeX * (chamber.maxZ - chamber.minZ + 1);
+            int done = 0;
+            BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+            BlockState air = Blocks.AIR.defaultBlockState();
+            while (nextChamberColumn < total && done < CHAMBER_COLUMNS_PER_TICK) {
+                int i = nextChamberColumn++;
+                int x = chamber.minX + i % sizeX;
+                int z = chamber.minZ + i / sizeX;
+                if (!chamber.contains(x, z)) {
+                    continue;
+                }
+                done++;
+                int floor = chamber.floorAt(x, z);
+                level.setBlock(cursor.set(x, floor, z), floorBlock(x, z), PLACE_FLAGS);
+                for (int depth = 1; depth <= MAX_FOUNDATION_DEPTH; depth++) {
+                    cursor.set(x, floor - depth, z);
+                    BlockState existing = level.getBlockState(cursor);
+                    if (existing.getFluidState().isEmpty() && existing.isFaceSturdy(level, cursor, Direction.UP)) {
+                        break;
+                    }
+                    level.setBlock(cursor, survey.groundSub, PLACE_FLAGS);
+                }
+                int ceiling = chamber.ceilingAt(x, z);
+                for (int y = floor + 1; y <= ceiling; y++) {
+                    cursor.set(x, y, z);
+                    level.setBlock(cursor, touchesOutsideFluid(level, cursor) ? survey.groundSub : air, PLACE_FLAGS);
+                }
+                if (!chamber.onPlaza(x, z)) {
+                    scatter(level, cursor, x, floor + 1, z);
+                }
+            }
+            return nextChamberColumn >= total;
+        }
+
+        /**
+         * Whether a block of the chamber touches, on one of its six sides, a
+         * fluid that is not part of the chamber (and so is kept). Six fluid
+         * reads; the chamber's own blocks are recognised from its geometry,
+         * so water in a column not dug yet (about to be emptied) does not
+         * count as outside.
+         */
+        private boolean touchesOutsideFluid(ServerLevel level, BlockPos pos) {
+            // FluidGuard reads the fluid first: the geometry (a few noise
+            // samples) is only needed next to a fluid.
+            return FluidGuard.touchesFluid(level, pos, side -> chamber.holdsAir(side.getX(), side.getY(), side.getZ()));
+        }
+
+        /**
+         * The floor's top block at a column: the house's ground under the
+         * house, else the cave's floor (moss in the lush cavern, stone
+         * elsewhere) broken by patches of another block, so the floor is not
+         * a single block from wall to wall.
+         */
+        private BlockState floorBlock(int x, int z) {
+            if (chamber.underHouse(x, z)) {
+                return survey.groundSub;
+            }
+            if (chamber.onPlaza(x, z)) {
+                return survey.groundTop;
+            }
+            double patch = chamber.patchAt(x, z);
+            boolean lush = survey.groundTop.is(Blocks.MOSS_BLOCK);
+            if (patch > FLOOR_PATCH_THRESHOLD) {
+                return (lush ? Blocks.CLAY : Blocks.TUFF).defaultBlockState();
+            }
+            if (patch < -FLOOR_PATCH_THRESHOLD) {
+                return (lush ? Blocks.STONE : Blocks.ANDESITE).defaultBlockState();
+            }
+            return survey.groundTop;
+        }
+
+        /**
+         * Puts a plant on a moss floor block, now and then: moss carpet or
+         * short grass, as lush caves grow. Chosen from the column's position,
+         * so a rebuild gives the same floor. Nothing on stone, nor where the
+         * spot is not free air.
+         */
+        private void scatter(ServerLevel level, BlockPos.MutableBlockPos cursor, int x, int y, int z) {
+            if (!level.getBlockState(cursor.set(x, y - 1, z)).is(Blocks.MOSS_BLOCK)
+                    || !level.getBlockState(cursor.set(x, y, z)).isAir()) {
+                return;
+            }
+            int roll = (int) Math.floorMod(Mth.getSeed(x, y, z), 100L);
+            if (roll < MOSS_CARPET_PERCENT) {
+                level.setBlock(cursor, Blocks.MOSS_CARPET.defaultBlockState(), PLACE_FLAGS);
+            } else if (roll < MOSS_CARPET_PERCENT + SHORT_GRASS_PERCENT) {
+                level.setBlock(cursor, Blocks.SHORT_GRASS.defaultBlockState(), PLACE_FLAGS);
+            }
+        }
+
+        /**
+         * Hangs hidden light blocks over the chamber's floor, on a grid,
+         * outside the house (which has its own lamps). A light block has no
+         * collision and only shows to a player holding one.
+         */
+        private void lightChamber(ServerLevel level) {
+            BlockState light = Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL, CHAMBER_LIGHT_LEVEL);
+            BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+            for (int x = chamber.minX + CHAMBER_LIGHT_SPACING / 2; x <= chamber.maxX; x += CHAMBER_LIGHT_SPACING) {
+                for (int z = chamber.minZ + CHAMBER_LIGHT_SPACING / 2; z <= chamber.maxZ; z += CHAMBER_LIGHT_SPACING) {
+                    if (!chamber.contains(x, z) || chamber.underHouse(x, z)) {
+                        continue;
+                    }
+                    cursor.set(x, chamber.floorAt(x, z) + CHAMBER_LIGHT_HEIGHT, z);
+                    if (level.getBlockState(cursor).isAir()) {
+                        level.setBlock(cursor, light, PLACE_FLAGS);
+                    }
                 }
             }
         }
@@ -730,14 +1018,26 @@ final class RestHouseBuilder {
          * Empties the volume above the template's ground layer, a ring of
          * {@link #CLEAR_MARGIN} around it and {@link #CLEAR_ABOVE} blocks above
          * it. The template then places its own blocks and air inside.
+         *
+         * <p>A block of the volume touching water or lava outside it is
+         * filled with the ground instead of emptied (only possible on the
+         * last site left, built on despite its water): opened without an
+         * update, the fluid would hang at the edge, then pour into the house.
          */
         private void clear(ServerLevel level, BlockPos origin) {
             BlockState air = Blocks.AIR.defaultBlockState();
+            int minY = origin.getY() + 1;
+            int maxY = origin.getY() + SIZE_Y + CLEAR_ABOVE - 1;
+            FluidGuard.Inside inside = pos -> pos.getY() >= minY && pos.getY() <= maxY
+                    && pos.getX() >= rect[0] - CLEAR_MARGIN && pos.getX() <= rect[2] + CLEAR_MARGIN
+                    && pos.getZ() >= rect[1] - CLEAR_MARGIN && pos.getZ() <= rect[3] + CLEAR_MARGIN;
             for (int lx = -CLEAR_MARGIN; lx < SIZE_X + CLEAR_MARGIN; lx++) {
                 for (int lz = -CLEAR_MARGIN; lz < SIZE_Z + CLEAR_MARGIN; lz++) {
                     BlockPos column = local(origin, rotation, lx, lz);
-                    for (int y = 1; y < SIZE_Y + CLEAR_ABOVE; y++) {
-                        level.setBlock(column.atY(origin.getY() + y), air, PLACE_FLAGS);
+                    for (int y = minY; y <= maxY; y++) {
+                        BlockPos pos = column.atY(y);
+                        level.setBlock(pos, FluidGuard.touchesFluid(level, pos, inside) ? survey.groundSub : air,
+                                PLACE_FLAGS);
                     }
                 }
             }
@@ -783,6 +1083,14 @@ final class RestHouseBuilder {
             if (target < natural) {
                 // Cut, but never below a neighbouring pond: it would flow in at the next block update.
                 target = Math.max(target, waterFloor(x, z));
+                // Nor next to any other fluid (a spring in a bank, water deeper than the pond's
+                // surface read by the survey): the cut stops at the highest block touching one.
+                for (int y = natural; y > target; y--) {
+                    if (FluidGuard.touchesFluid(level, cursor.set(x, y, z))) {
+                        target = y;
+                        break;
+                    }
+                }
             }
             if (target == natural) {
                 return;
@@ -835,6 +1143,10 @@ final class RestHouseBuilder {
                 BlockState state = level.getBlockState(cursor.set(x, y, z));
                 if (state.isAir() || isTreePart(state) || !state.getFluidState().isEmpty()
                         || !state.getCollisionShape(level, cursor).isEmpty()) {
+                    return;
+                }
+                // A plant on a bank holds no water back, but its gap would leave the water beside it hanging.
+                if (FluidGuard.touchesFluid(level, cursor)) {
                     return;
                 }
                 level.setBlock(cursor, Blocks.AIR.defaultBlockState(), PLACE_FLAGS);
@@ -977,7 +1289,8 @@ final class RestHouseBuilder {
                 }
                 trees++;
                 for (long log : group) {
-                    level.setBlock(cursor.set(log), Blocks.AIR.defaultBlockState(), PLACE_FLAGS);
+                    // Water around a trunk standing in a pond fills its spot, as when a player cuts it.
+                    FluidGuard.remove(level, cursor.set(log), PLACE_FLAGS);
                     removeAttached(level, cursor);
                 }
                 felled += group.size();
@@ -1041,7 +1354,7 @@ final class RestHouseBuilder {
                 BlockPos next = log.relative(side);
                 BlockState state = level.getBlockState(next);
                 if (state.is(Blocks.COCOA) || state.is(Blocks.BEE_NEST)) {
-                    level.setBlock(next, Blocks.AIR.defaultBlockState(), PLACE_FLAGS);
+                    FluidGuard.remove(level, next, PLACE_FLAGS);
                 }
             }
         }

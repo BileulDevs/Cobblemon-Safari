@@ -23,7 +23,7 @@ import java.util.List;
  * @param protectBlocks              whether the terrain cannot be changed
  * @param exemptCreativeAndSpectator whether creative/spectator players ignore terrain protection
  * @param placeableBlocks            block ids that may be placed and broken despite the protection
- * @param restHouses                 centre columns of the rest houses, for their music
+ * @param restHouses                 centre columns and height spans of the rest houses, for their music
  */
 public record SafariRulesPayload(ResourceLocation dimension, List<ResourceLocation> allowedBalls,
                                  boolean protectBlocks, boolean exemptCreativeAndSpectator,
@@ -31,12 +31,15 @@ public record SafariRulesPayload(ResourceLocation dimension, List<ResourceLocati
         implements CustomPacketPayload {
 
     /**
-     * Centre column of one rest house.
+     * Centre column of one rest house and the heights it spans: a house
+     * underground must not play its music to players walking above it.
      *
-     * @param x block x of the centre
-     * @param z block z of the centre
+     * @param x    block x of the centre
+     * @param z    block z of the centre
+     * @param minY lowest height counted as in the house; Integer.MIN_VALUE when not known (every height)
+     * @param maxY highest height counted as in the house; Integer.MAX_VALUE when not known
      */
-    public record HouseColumn(int x, int z) {
+    public record HouseColumn(int x, int z, int minY, int maxY) {
     }
 
     /**
@@ -45,7 +48,7 @@ public record SafariRulesPayload(ResourceLocation dimension, List<ResourceLocati
      * one means) without raising this makes a peer of another build read
      * garbage without an error. Raise it on every change to write/read.
      */
-    public static final int WIRE_VERSION = 1;
+    public static final int WIRE_VERSION = 2;
 
     /**
      * Upper bound on the list size accepted when reading. A corrupted or hostile
@@ -84,6 +87,9 @@ public record SafariRulesPayload(ResourceLocation dimension, List<ResourceLocati
         for (HouseColumn house : restHouses) {
             buf.writeVarInt(house.x());
             buf.writeVarInt(house.z());
+            // Fixed width: the "unknown" bounds are the int extremes, five bytes each as varints.
+            buf.writeInt(house.minY());
+            buf.writeInt(house.maxY());
         }
     }
 
@@ -119,7 +125,7 @@ public record SafariRulesPayload(ResourceLocation dimension, List<ResourceLocati
         }
         List<HouseColumn> houses = new ArrayList<>(houseCount);
         for (int i = 0; i < houseCount; i++) {
-            houses.add(new HouseColumn(buf.readVarInt(), buf.readVarInt()));
+            houses.add(new HouseColumn(buf.readVarInt(), buf.readVarInt(), buf.readInt(), buf.readInt()));
         }
         return new SafariRulesPayload(dimension, List.copyOf(balls), protectBlocks, exemptCreativeAndSpectator,
                 List.copyOf(placeable), List.copyOf(houses));

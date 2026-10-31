@@ -860,6 +860,31 @@ TUNNEL_DRY_REACH = 3.0
 # their mouths still open.
 CAVERN_ROOF_STRENGTH = 3.0
 
+# Rest houses underground, one per cavern, built in a chamber the mod digs
+# beside the cavern's passage (CaveChamber in Java), so a player walking in
+# through the passage always finds it. Each is placed where its passage
+# crosses the cavern's centre column (x of the zone), at the passage's
+# floor there, beside it on the side given by "side" (+1: south), door
+# turned toward it. Written to ParkGeometry.CAVE_REST_HOUSES with what the
+# chamber needs of the passage: its z, its slope along x, how far it can
+# wind sideways.
+CAVE_REST_HOUSES = [
+    {"id": "giant_cavern", "cavern": GIANT_CAVERN, "passage": GIANT_CAVERN_TUNNEL, "side": 1},
+    {"id": "lush_cavern", "cavern": LUSH_CAVERN, "passage": LUSH_CAVERN_TUNNEL, "side": 1},
+]
+# How far a passage's walls can stray sideways from its axis, in blocks:
+# the bends (TUNNEL_WIGGLE, on noise that rarely exceeds 1.2) plus its
+# half width roughened by TUNNEL_WALL_NOISE. The chamber's ramp covers
+# this band, so it cuts the passage wherever its bends put it.
+CAVE_HOUSE_PASSAGE_REACH = math.ceil(TUNNEL_WIGGLE * 1.2 + 4.0 * (1.0 + TUNNEL_WALL_NOISE))
+# Blocks between the passage's band and the house's door. The chamber's
+# floor goes from the passage's slope to the plaza's level across them
+# (CaveChamber.RAMP_BLEND); less brings the passage against the steps.
+CAVE_HOUSE_GAP = 6
+# Distance from the house's centre to its door side: half the template's
+# depth (RestHouseBuilder SIZE_X 20, pivot 10).
+CAVE_HOUSE_HALF_DEPTH = 10
+
 # ---------------------------------------------------------------------------
 # Island density functions
 # ---------------------------------------------------------------------------
@@ -1652,6 +1677,21 @@ def write_park_geometry():
         houses.append((ISLAND_CENTER_X + round(ring * math.sin(angle)),
                        ISLAND_CENTER_Z - round(ring * math.cos(angle))))
     house_lines = ",\n".join(f"            new Column({x}, {z})" for x, z in houses)
+    cave_lines = []
+    for cave in CAVE_REST_HOUSES:
+        t = cave["passage"]
+        x = cave["cavern"]["x"]
+        along = t["direction"] * (x - t["x"])
+        # The passage's floor where it crosses the house's column: its axis
+        # minus its half height. The house's ground layer is the block under
+        # it, so players walk out of the door at the passage's level.
+        floor = t["y"] + t["slope"] * along - t["half_height"]
+        ground_y = math.floor(floor) - 1
+        z = t["z"] + cave["side"] * (CAVE_HOUSE_PASSAGE_REACH + CAVE_HOUSE_GAP + CAVE_HOUSE_HALF_DEPTH)
+        rise = t["slope"] * t["direction"]
+        cave_lines.append(f'            new CaveHouse("{cave["id"]}", {x}, {ground_y}, {z}, {t["z"]}, {rise}, '
+                          f'{CAVE_HOUSE_PASSAGE_REACH})')
+    cave_house_lines = ",\n".join(cave_lines)
     source = f"""package dev.darcosse.common.cobblemonsafari.park;
 
 import java.util.List;
@@ -1688,8 +1728,33 @@ public final class ParkGeometry {{
 {house_lines}
     );
 
+    /**
+     * Rest houses underground, one per cavern, each in a chamber dug beside
+     * its cavern's passage (structure.CaveChamber). Fixed positions: no site
+     * search, the chamber is dug whatever the rock. Also identified in the
+     * saved world state by their column, after the surface anchors.
+     */
+    public static final List<CaveHouse> CAVE_REST_HOUSES = List.of(
+{cave_house_lines}
+    );
+
     /** A column of the park, x and z in blocks. */
     public record Column(int x, int z) {{
+    }}
+
+    /**
+     * An underground rest house and the passage its chamber opens on.
+     *
+     * @param id            name of the cavern, as dialogue functions and translation keys write it
+     * @param x             centre column of the house
+     * @param groundY       height of the house's ground layer: players walk out at groundY + 1
+     * @param z             centre column of the house
+     * @param passageZ      z of the passage's axis, which runs along x past the house's door
+     * @param passageRise   blocks the passage's floor climbs per block toward +x
+     * @param passageReach  how far, in blocks, the passage's walls can stray from its axis
+     */
+    public record CaveHouse(String id, int x, int groundY, int z, int passageZ, double passageRise,
+                            int passageReach) {{
     }}
 
     private ParkGeometry() {{
