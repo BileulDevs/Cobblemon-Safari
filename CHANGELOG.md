@@ -12,6 +12,7 @@ New network protocol (`1.5.0`): clients and servers must both update.
 
 ### Changed
 
+- **A new map is created faster**: the entrance rest house is no longer built during the server start, which generated its chunks on the server thread for several seconds. It is built in the background right after, like the other houses; a player entering before it stands has it built on arrival.
 - **The lush cavern is as large as the giant cavern** (radius 120 instead of 80, 120 blocks tall instead of 90), lush from end to end, and lies a little further south (around z 307), so the two cave systems keep solid rock between them. Shows on the next map.
 - **No more Cobblemon structures in the Safari's caves**: the cave arches (the same ruin repeated every few chunks) and the ruins Cobblemon buries deep under the ground (crypt, bunker, oubliette, cenote, mushroom dwelling), which cut into the caves. Cobblemon's template features that land in the caves are refused too: the deep crypt (deepslate walls around an altar, in one chunk out of three of the deep cavern), the rooted arch, the ancient wellsprings, deep roots and earthen hives, and the dripstone oasis, enhydro agate and mossy pond fossil sites. Other mods' structures and features can be kept out the same way with the structure tag and the placed feature tag `cobblemon_safari:not_in_safari`.
 - **The Escape Rope comes first in the shop's items tab**, as the Safari Balls do in theirs.

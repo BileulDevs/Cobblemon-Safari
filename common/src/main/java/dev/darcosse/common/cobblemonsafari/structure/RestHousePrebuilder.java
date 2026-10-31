@@ -19,6 +19,12 @@ import java.util.Set;
  * that every house can be reached by the Safari Guide without waiting
  * ({@code restHouseTravel.prebuildHouses}).
  *
+ * <p>The entrance house comes first, right after the start and whatever
+ * {@code prebuildHouses} says: the server start no longer builds it (it
+ * held up the creation of a new map for several seconds), and players
+ * arrive in front of it. The other houses follow after
+ * {@link #START_DELAY_SECONDS}, when {@code prebuildHouses} is on.
+ *
  * <p>How: it keeps the area of the next unbuilt house loaded with a chunk
  * ticket. New chunks are generated off the server thread; once they are
  * loaded, {@link RestHouses#tick} sees the area and builds the house as it
@@ -31,9 +37,9 @@ import java.util.Set;
 public final class RestHousePrebuilder {
 
     /**
-     * Seconds after the server starts before the first house is loaded, so
-     * the background work does not add to the start's own (entrance house,
-     * spawn chunks, players logging in).
+     * Seconds after the server starts before the houses other than the
+     * entrance are loaded, so the background work does not add to the
+     * start's own (the entrance house, spawn chunks, players logging in).
      */
     private static final int START_DELAY_SECONDS = 30;
 
@@ -99,36 +105,46 @@ public final class RestHousePrebuilder {
         if (safari == null) {
             return;
         }
-        if (!SafariConfigManager.get().restHouseTravel.prebuildHouses) {
-            release(safari);
-            return;
-        }
-        if (server.getTickCount() < Ticks.fromSeconds(START_DELAY_SECONDS)) {
-            return;
-        }
         if (anchor >= 0) {
             follow(server, safari);
             return;
         }
+        // The entrance first, at once and even with prebuilding off: see the class comment.
         for (RestHouses.HouseSite site : RestHouses.sites()) {
-            if (!site.built() && !SKIPPED.contains(site.anchor())) {
-                anchor = site.anchor();
-                startedAt = server.getTickCount();
-                hold(safari, chunkOf(site));
+            if (site.entrance() && !site.built() && !SKIPPED.contains(site.anchor())) {
+                start(server, safari, site);
                 return;
             }
         }
+        if (!SafariConfigManager.get().restHouseTravel.prebuildHouses
+                || server.getTickCount() < Ticks.fromSeconds(START_DELAY_SECONDS)) {
+            return;
+        }
+        for (RestHouses.HouseSite site : RestHouses.sites()) {
+            if (!site.built() && !SKIPPED.contains(site.anchor())) {
+                start(server, safari, site);
+                return;
+            }
+        }
+    }
+
+    /** Starts loading a house's area. */
+    private static void start(MinecraftServer server, ServerLevel safari, RestHouses.HouseSite site) {
+        anchor = site.anchor();
+        startedAt = server.getTickCount();
+        hold(safari, chunkOf(site));
     }
 
     /**
      * Watches the house being prebuilt: done once it stands and no build is
      * running (its cut trees are removed after it is marked built), skipped
      * when it takes too long, and its ticket moved when the build found the
-     * spot wet and took the next candidate.
+     * spot wet and took the next candidate. Prebuilding switched off in the
+     * config stops it, unless it is the entrance.
      */
     private static void follow(MinecraftServer server, ServerLevel safari) {
         RestHouses.HouseSite site = RestHouses.siteOf(anchor);
-        if (site == null) {
+        if (site == null || (!site.entrance() && !SafariConfigManager.get().restHouseTravel.prebuildHouses)) {
             release(safari);
             return;
         }

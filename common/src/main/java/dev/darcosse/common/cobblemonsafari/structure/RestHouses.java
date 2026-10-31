@@ -34,12 +34,15 @@ import java.util.concurrent.CompletableFuture;
  * seed produced (see {@link RestHouseBuilder}).
  *
  * <p>When: at server start, every house gets its site, chosen from the
- * noise without generating a chunk (the searches run in parallel), and only
- * the entrance house is built, since players arrive in front of it. The
- * others are built the first time a player has loaded the chunks around
- * them, one at a time, in small steps over a few ticks. Building them all at
- * start would mean generating some 150 chunks on the server thread, about 25
- * seconds before a new map could be played.
+ * noise without generating a chunk (the searches run in parallel). None is
+ * built then: the entrance house is the first one {@link RestHousePrebuilder}
+ * loads in the background, right after the start, and it is built in steps
+ * like the others; the others are built the first time a player has loaded
+ * the chunks around them, or by the prebuilder. Building the entrance during
+ * the start generated its chunks on the server thread, several seconds
+ * before a new map could be played; building them all, some 150 chunks,
+ * about 25 seconds. A player entering before the entrance stands has it
+ * built on the spot ({@link #ensureEntrance}): they arrive in front of it.
  *
  * <p>Two more houses stand underground, one per cavern
  * ({@link ParkGeometry#CAVE_REST_HOUSES}), each in a chamber dug beside its
@@ -226,13 +229,13 @@ public final class RestHouses {
     }
 
     /**
-     * Chooses a site for every house that has none, then builds the entrance
-     * house if it is missing. The other houses are built later, by
-     * {@link #tick}, as players come near.
+     * Chooses a site for every house that has none. No house is built here:
+     * the entrance is loaded and built in the background right after the
+     * start ({@link RestHousePrebuilder}), the others by {@link #tick} as
+     * players or the prebuilder come near.
      *
      * <p>Cost, on a new map: the site searches (noise reads, about a second,
-     * all houses at once on background threads), then the entrance house:
-     * its chunks generated (about 16) and its build. Called at server start
+     * all houses at once on background threads). Called at server start
      * only, never per tick; {@code /safari reload} uses {@link #refresh}.
      */
     public static void prepare(MinecraftServer server) {
@@ -243,8 +246,53 @@ public final class RestHouses {
         }
         SafariWorldState state = SafariWorldState.get(server);
         planMissingSites(safari, state);
-        buildEntrance(safari, state);
         refreshSites(state);
+    }
+
+    /**
+     * Makes sure the entrance house stands, for a player about to arrive in
+     * front of it: nothing when it is built (the usual case, the prebuilder
+     * builds it within seconds of the start), else it is built now, its
+     * chunks generated on the spot. A background build of it already under
+     * way is finished here rather than started over, so its half-changed
+     * terrain is not built on twice.
+     *
+     * <p>Cost: nothing once built; before that, the stall the server start
+     * used to take (about 16 chunks and the build), paid by the first player
+     * entering within the first seconds of a new map.
+     */
+    public static void ensureEntrance(ServerLevel level) {
+        SafariWorldState state = SafariWorldState.get(level.getServer());
+        ParkGeometry.Column anchor = ParkGeometry.REST_HOUSES.get(0);
+        if (state.isHouseBuilt(anchor.x(), anchor.z())) {
+            return;
+        }
+        PendingBuild running = paused.remove(key(anchor));
+        if (running == null) {
+            for (PendingBuild build : builds) {
+                if (build.anchor().equals(anchor)) {
+                    running = build;
+                    break;
+                }
+            }
+            if (running != null) {
+                builds.remove(running);
+            }
+        }
+        if (running != null) {
+            RestHouseBuilder.Job job = running.job();
+            RestHouseBuilder.loadArea(level, job.centerX, job.centerZ, job.facing);
+            if (job.runUntilPlaced(level)) {
+                markBuilt(state, anchor, job);
+                // Its height is known now: the arriving player's music and shop follow it.
+                SafariNetwork.broadcastRules(level.getServer());
+                // The cut trees are removed over the next ticks, as for any build.
+                builds.addFirst(running);
+                return;
+            }
+            // Its spot turned out wet: the start's way picks the driest of the sites.
+        }
+        buildEntrance(level, state);
     }
 
     /**
@@ -343,7 +391,8 @@ public final class RestHouses {
     /**
      * Builds the entrance house now, if missing, at the first of its sites
      * with no water on the real terrain (the driest if all are wet). Its
-     * chunks are generated on the spot: players arrive in front of it.
+     * chunks are generated on the spot: a player arrives in front of it.
+     * Only for {@link #ensureEntrance}.
      */
     private static void buildEntrance(ServerLevel level, SafariWorldState state) {
         ParkGeometry.Column anchor = ParkGeometry.REST_HOUSES.get(0);
@@ -359,6 +408,9 @@ public final class RestHouses {
             return;
         }
         markBuilt(state, anchor, job);
+        // The house may stand at another of its sites than planned, and its height
+        // is known now: the arriving player's music and shop follow it.
+        SafariNetwork.broadcastRules(level.getServer());
         // The cut trees are removed over the next ticks, with the chunks loaded by then.
         builds.add(new PendingBuild(anchor, job));
     }

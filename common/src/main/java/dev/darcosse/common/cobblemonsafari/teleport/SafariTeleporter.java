@@ -112,6 +112,9 @@ public final class SafariTeleporter {
                     SafariDimensions.key().location());
             return false;
         }
+        // Built in the background after the start; a player entering before
+        // it stands has it built now, rather than watching it rise around them.
+        RestHouses.ensureEntrance(safari);
         RestHouses.Arrival front = RestHouses.entranceArrival();
         if (front != null) {
             BlockPos feet = surface(safari, front.column().getX(), front.column().getZ());
