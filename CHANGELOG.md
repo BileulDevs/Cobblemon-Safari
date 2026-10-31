@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased
+## 1.4.0
+
+New network protocol (`1.5.0`): clients and servers must both update.
+
+### New
+
+- **Two underground rest houses**, one in the giant cavern and one in the lush cavern, each in a chamber dug beside the passage that leads down to it. The Safari Guide offers them as their own destinations ("Safari Giant Cavern", "Safari Lush Cavern"), and the Escape Rope's nearest rest house includes them when used in a cave. On a map generated before 1.4.0, the lush cavern's house is dug where the new, larger cavern will be, so it may not meet the old passage until the next map: the guide still reaches it.
 
 ### Changed
 
