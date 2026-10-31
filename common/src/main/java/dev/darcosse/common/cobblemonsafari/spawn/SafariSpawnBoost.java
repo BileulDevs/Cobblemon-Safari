@@ -55,6 +55,7 @@ public final class SafariSpawnBoost {
         BOOSTED.clear();
         NoveltyInfluence.clear();
         SafariSpawnFilter.clear();
+        SnackBubble.reset();
         tickCounter = 0;
     }
 
@@ -107,6 +108,7 @@ public final class SafariSpawnBoost {
         if (!BOOSTED.isEmpty()) {
             SafariSpawnFilter.refresh(server);
         }
+        SnackBubble.refresh(server);
     }
 
     /**

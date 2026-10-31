@@ -5,6 +5,7 @@ import com.cobblemon.mod.common.api.spawning.detail.PokemonSpawnDetail;
 import com.cobblemon.mod.common.api.spawning.detail.SpawnDetail;
 import com.cobblemon.mod.common.api.spawning.influence.SpawningInfluence;
 import com.cobblemon.mod.common.api.spawning.position.SpawnablePosition;
+import com.cobblemon.mod.common.api.spawning.position.calculators.SpawnablePositionCalculator;
 import com.cobblemon.mod.common.api.spawning.spawner.PlayerSpawner;
 import com.cobblemon.mod.common.api.spawning.spawner.Spawner;
 import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
@@ -12,7 +13,9 @@ import com.cobblemon.mod.common.pokemon.Species;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.AABB;
 
@@ -46,6 +49,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * The last two are snapshots refreshed once a second, so {@link NativeSpawnRules}
  * stays in place behind this filter for the moment they lag, and for spawners
  * that do not carry it (Poké Snacks, other mods).
+ *
+ * <p>It also keeps natural spawns away from the Safari's Poké Snacks
+ * ({@link #isAllowedPosition}, see {@link SnackBubble}).
  *
  * <p>One shared instance sits on each player's spawner, put there by
  * {@link SafariSpawnBoost} like {@link NoveltyInfluence}. Outside the Safari,
@@ -172,6 +178,17 @@ public final class SafariSpawnFilter implements SpawningInfluence {
         builtFor = null;
         builtSpeciesCount = -1;
         dirty = true;
+    }
+
+    /**
+     * Keeps natural spawns out of the bubble around the Safari's Poké Snacks
+     * ({@link SnackBubble}), so the snacks have room to bring their own.
+     * Only on players' spawners, which alone carry this influence; the
+     * snacks' own spawners do not.
+     */
+    @Override
+    public boolean isAllowedPosition(ServerLevel world, BlockPos pos, SpawnablePositionCalculator<?, ?> calculator) {
+        return !SafariDimensions.isSafari(world) || SnackBubble.allows(pos);
     }
 
     /**
