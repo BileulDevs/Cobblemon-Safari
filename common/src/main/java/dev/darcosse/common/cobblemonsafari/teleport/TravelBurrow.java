@@ -6,8 +6,6 @@ import com.cobblemon.mod.common.api.moves.MoveTemplate;
 import com.cobblemon.mod.common.api.pokemon.PokemonProperties;
 import com.cobblemon.mod.common.api.pokemon.PokemonSpecies;
 import com.cobblemon.mod.common.api.riding.RidingStyle;
-import com.cobblemon.mod.common.api.riding.behaviour.RidingBehaviourSettings;
-import com.cobblemon.mod.common.api.riding.behaviour.RidingController;
 import com.cobblemon.mod.common.entity.npc.NPCEntity;
 import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
 import com.cobblemon.mod.common.pokemon.Pokemon;
@@ -28,7 +26,6 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -164,6 +161,12 @@ final class TravelBurrow {
     private static final double[] CAMERA_DISTANCES = {4.5D, 3.5D, 6.0D};
     private static final double[] CAMERA_HEIGHTS = {1.8D, 2.8D, 1.2D};
 
+    /**
+     * Heights above the hole tried last for the camera, in blocks, when no
+     * spot around sees it: lowest first, in a tunnel the ceiling is close.
+     */
+    private static final double[] OVERHEAD_HEIGHTS = {3.0D, 4.0D, 2.5D};
+
     /** Height above the ground the camera aims at: the digger and its rider. */
     private static final double LOOK_HEIGHT = 0.9D;
 
@@ -290,7 +293,7 @@ final class TravelBurrow {
         }
         Vec3 look = spot.add(0.0D, LOOK_HEIGHT, 0.0D);
         return new TravelFlight.Flight(digger, rider, spot, direction, landing, now, camera, look, DIG_TICKS,
-                new Dig(ground, depth, seated, lift));
+                new Dig(ground, depth, seated, lift), null);
     }
 
     /**
@@ -335,39 +338,10 @@ final class TravelBurrow {
      * land only) is then left with no style and ejects its passengers, ten
      * ticks after the mount (RidingController.tick, Cobblemon 1.8.0). A
      * digger moved through the air and the ground is never on the ground.
-     *
-     * <p>The controller only looks for a new style ten ticks after its last
-     * change; setting its land style again each tick
-     * ({@code changeBehaviour}, public) keeps it from ever looking. Its
-     * setter is private, so dropping it was not an option. The double is put
-     * back should it have been thrown off all the same. Cost per tick: a new
-     * riding state for an actor nobody steers, and a vehicle check.
+     * See {@link TravelFlight#keepSeated}.
      */
     private static void keepSeated(PokemonEntity digger, NPCEntity rider) {
-        RidingController controller = digger.getRidingController();
-        if (controller != null) {
-            ResourceLocation style = landStyle(controller);
-            if (style != null) {
-                controller.changeBehaviour(style);
-            }
-        }
-        if (rider.getVehicle() != digger) {
-            rider.startRiding(digger, true);
-        }
-    }
-
-    /** The key of the controller's land riding behaviour, else of any of them, or null when it has none. */
-    @Nullable
-    private static ResourceLocation landStyle(RidingController controller) {
-        Map<RidingStyle, RidingBehaviourSettings> behaviours = controller.getBehaviours();
-        RidingBehaviourSettings land = behaviours.get(RidingStyle.LAND);
-        if (land != null) {
-            return land.getKey();
-        }
-        for (RidingBehaviourSettings any : behaviours.values()) {
-            return any.getKey();
-        }
-        return null;
+        TravelFlight.keepSeated(digger, rider, RidingStyle.LAND);
     }
 
     /**
@@ -422,8 +396,9 @@ final class TravelBurrow {
 
     /**
      * Where the camera stands to film the hole: the first candidate that is
-     * free air (two blocks), not under a house's roof, and sees the hole.
-     * Null when none does: the trip then goes on in black. Unlike the
+     * free air (two blocks), not under a house's roof, and sees the hole;
+     * failing all, a spot straight above the hole. Null when none does: the
+     * trip then goes on in black. Unlike the
      * flight's, it needs no open sky: the burrow is filmed in caves.
      * Cost: at most 72 candidates, two block reads and a short ray cast each.
      */
@@ -439,6 +414,14 @@ final class TravelBurrow {
                         return camera;
                     }
                 }
+            }
+        }
+        // Nothing around sees the hole (a narrow tunnel, a bend): straight above
+        // it, looking down, rather than no shot at all.
+        for (double height : OVERHEAD_HEIGHTS) {
+            Vec3 camera = spot.add(0.0D, height, 0.0D);
+            if (usable(level, camera) && TravelFlight.sees(level, camera, target)) {
+                return camera;
             }
         }
         return null;

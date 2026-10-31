@@ -9,6 +9,7 @@ import com.cobblemon.mod.common.api.pokemon.PokemonSpecies;
 import com.cobblemon.mod.common.api.riding.RidingProperties;
 import com.cobblemon.mod.common.api.riding.RidingStyle;
 import com.cobblemon.mod.common.api.riding.behaviour.RidingBehaviourSettings;
+import com.cobblemon.mod.common.api.riding.behaviour.RidingController;
 import com.cobblemon.mod.common.entity.npc.NPCEntity;
 import com.cobblemon.mod.common.entity.pokemon.PokemonBehaviourFlag;
 import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
@@ -131,7 +132,9 @@ final class TravelFlight {
 
     /**
      * One shot under way: a flight, or a burrow when {@code burrow} is set
-     * (TravelBurrow: the mount digs into the ground or comes out of it).
+     * (TravelBurrow: the mount digs into the ground or comes out of it), or a
+     * dive when {@code dive} is set (TravelSwim: the mount swims under water
+     * to a shore).
      *
      * @param bird      the mount: a copy of the player's flyer (or digger), or the fallback species
      * @param rider     the player's double on its back
@@ -142,10 +145,12 @@ final class TravelFlight {
      * @param camera    where the client's camera stands
      * @param look      what the camera aims at until the bird reaches the client
      * @param duration  length of the shot, in ticks
-     * @param burrow    what a burrow needs on top, or null for a flight
+     * @param burrow    what a burrow needs on top, or null
+     * @param dive      what a dive needs on top, or null
      */
     record Flight(PokemonEntity bird, NPCEntity rider, Vec3 spot, Vec3 direction, boolean landing, int startTick,
-                  Vec3 camera, Vec3 look, int duration, @Nullable TravelBurrow.Dig burrow) {
+                  Vec3 camera, Vec3 look, int duration, @Nullable TravelBurrow.Dig burrow,
+                  @Nullable TravelSwim.Dive dive) {
     }
 
     private TravelFlight() {
@@ -249,7 +254,7 @@ final class TravelFlight {
         level.playSound(null, spot.x, spot.y, spot.z, SoundEvents.ENDER_DRAGON_FLAP, SoundSource.NEUTRAL,
                 FLAP_VOLUME, FLAP_PITCH);
         Vec3 look = landing ? first : spot.add(0.0D, LOOK_HEIGHT, 0.0D);
-        return new Flight(bird, rider, spot, direction, landing, now, camera, look, FLIGHT_TICKS, null);
+        return new Flight(bird, rider, spot, direction, landing, now, camera, look, FLIGHT_TICKS, null, null);
     }
 
     /**
@@ -260,6 +265,9 @@ final class TravelFlight {
     static boolean tick(Flight flight, int now) {
         if (flight.burrow() != null) {
             return TravelBurrow.tick(flight, now);
+        }
+        if (flight.dive() != null) {
+            return TravelSwim.tick(flight, now);
         }
         double progress = Math.min(1.0D, (now - flight.startTick()) / (double) FLIGHT_TICKS);
         Vec3 next = position(flight.spot(), flight.direction(), flight.landing(), progress);
@@ -566,6 +574,39 @@ final class TravelFlight {
         }
         TravelSkins.dress(level.getServer(), player, rider);
         return rider;
+    }
+
+    /**
+     * Keeps a double in the seat of a mount moved by the server, whatever
+     * Cobblemon's riding controller decides. With nobody steering, the
+     * controller picks the mount's riding style from where it is (on the
+     * ground: land; in water: liquid; neither: air) and ejects its
+     * passengers when the mount has no such style (RidingController.tick,
+     * Cobblemon 1.8.0): a digger, never on the ground, or a swimmer leaving
+     * the water, would throw the double off. The controller only looks for
+     * a new style ten ticks after its last change, so setting the wished
+     * style again each tick ({@code changeBehaviour}, public; its setter is
+     * private) keeps it from ever looking. The double is put back should it
+     * have been thrown off all the same. Cost per tick: a new riding state
+     * for an actor nobody steers, and a vehicle check.
+     *
+     * @param style the style to hold, or any style of the mount when it has not this one
+     */
+    static void keepSeated(PokemonEntity mount, NPCEntity rider, RidingStyle style) {
+        RidingController controller = mount.getRidingController();
+        if (controller != null) {
+            Map<RidingStyle, RidingBehaviourSettings> behaviours = controller.getBehaviours();
+            RidingBehaviourSettings held = behaviours.get(style);
+            if (held == null && !behaviours.isEmpty()) {
+                held = behaviours.values().iterator().next();
+            }
+            if (held != null) {
+                controller.changeBehaviour(held.getKey());
+            }
+        }
+        if (rider.getVehicle() != mount) {
+            rider.startRiding(mount, true);
+        }
     }
 
     /** What both actors share: nothing moves them but this class, nothing hurts them. */

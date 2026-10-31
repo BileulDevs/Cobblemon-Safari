@@ -8,6 +8,7 @@ New network protocol (`1.5.0`): clients and servers must both update.
 
 - **Two underground rest houses**, one in the giant cavern and one in the lush cavern, each in a chamber dug beside the passage that leads down to it. The Safari Guide offers them as their own destinations ("Safari Giant Cavern", "Safari Lush Cavern"), and the Escape Rope's nearest rest house includes them when used in a cave. On a map generated before 1.4.0, the lush cavern's house is dug where the new, larger cavern will be, so it may not meet the old passage until the next map: the guide still reaches it.
 - **Burrow cinematic** for trips into or out of a cave (the Safari Guide to or from an underground rest house, the Escape Rope's nearest rest house from a cave, and the Escape Rope's climb to the open air from a cave): your double rides a Pokémon that digs into the ground in front of the house, throwing up earth, and comes out of the ground in front of the destination. The Pokémon is the first of your party that digs naturally (Dugtrio, Hippowdon, Rhydon, Krookodile, Sandslash, Excadrill, Steelix, Sandaconda, Dudunsparce, Orthworm, Trapinch...) and could learn Dig, or a Dugtrio; small ones are grown to the size of a double-sized Dugtrio, and your double sits on its back.
+- **Dive cinematic** for the Escape Rope used in the water: your double rides a Pokémon of your party that could learn Dive and swims with a rider (or a Wailmer) under the water to the nearest shore, then the trip goes on from there, flying or, in a cave, burrowing.
 
 ### Changed
 

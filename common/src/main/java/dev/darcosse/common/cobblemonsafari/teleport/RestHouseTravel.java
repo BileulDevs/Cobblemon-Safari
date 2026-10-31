@@ -152,6 +152,12 @@ public final class RestHouseTravel {
     /** Where a trip stands. Painted cinematics go straight to {@link #WAITING}. */
     private enum Phase {
         /**
+         * Escape Rope used in the water: the double rides a swimmer under
+         * the water to the nearest shore (TravelSwim); the player is then
+         * brought there under the black, and the trip goes on as a climb.
+         */
+        SWIMMING,
+        /**
          * Escape Rope used under cover: the screen is black while the player,
          * brought to the open air, waits for the take-off to be filmed there.
          */
@@ -209,6 +215,8 @@ public final class RestHouseTravel {
         BlockPos landingFeet;
         /** The player's rotation there, facing the house: where the digger comes out facing. */
         float landingYaw;
+        /** Server tick the swim's fade to black was sent, or -1 before; see {@link Phase#SWIMMING}. */
+        int blackTick = -1;
 
         /**
          * @param flight      the take-off already staged, or null
@@ -485,7 +493,12 @@ public final class RestHouseTravel {
         TravelFlight.Flight flight = null;
         BlockPos climbTo = null;
         boolean burrow = burrows(player, source, target);
-        if (burrow) {
+        Swim swim = source == Source.ROPE ? planSwim(level, player, heading, now) : null;
+        if (swim != null) {
+            // The take-off (or the dig) is staged at the shore once the swim is over.
+            flight = swim.flight();
+            climbTo = swim.shore();
+        } else if (burrow) {
             BlockPos feet = burrowFeet(level, player, source);
             // No spot to dig from (the rope used while swimming or falling): the trip
             // opens on black and the digger still comes out at the destination.
@@ -499,11 +512,15 @@ public final class RestHouseTravel {
             }
         }
         Trip trip = new Trip(target.anchor(), now, centre, arrived, flight, climbTo, heading, burrow, null);
+        if (swim != null) {
+            trip.enter(Phase.SWIMMING, now);
+        }
         TRIPS.put(player.getUUID(), trip);
         Label label = labelOf(level, target);
         // The client closes the cinematic by itself a little after the server would give up.
         int clientTimeout = Ticks.fromSeconds(MAX_WAIT_SECONDS + TICKET_SPARE_SECONDS)
-                + (trip.flying ? SURFACE_TICKS + TravelFlight.FLIGHT_TICKS * 2 + SETTLE_TICKS : 0);
+                + (trip.flying ? SURFACE_TICKS + TravelFlight.FLIGHT_TICKS * 2 + SETTLE_TICKS : 0)
+                + (swim != null ? swim.flight().duration() : 0);
         SafariTravelPayload payload;
         if (flight != null) {
             payload = SafariTravelPayload.startFlight(label.biomeKey(), label.directionKey(), clientTimeout,
@@ -521,10 +538,60 @@ public final class RestHouseTravel {
         if (trip.flying) {
             hide(player);
         }
-        if (climbTo != null) {
+        if (climbTo != null && swim == null) {
             // After the payload, so the client is already black when it moves.
             SafariTeleporter.sendToFeet(player, level, climbTo);
         }
+    }
+
+    /**
+     * The swim to the shore, staged, and the shore it reaches.
+     *
+     * @param flight the swimmer and the double, already in the water
+     * @param shore  the feet the player is brought to once the swim is over; null in open water,
+     *               where the player stays put, hidden, until moved to the destination
+     */
+    private record Swim(TravelFlight.Flight flight, @Nullable BlockPos shore) {
+    }
+
+    /**
+     * The rope's swim to the shore when the player is in the water, at the
+     * surface or deep down, or null when the trip starts as usual: not in
+     * the water, cinematics off, no swimmer, or no camera spot. The shore is
+     * the nearest bank within 32 blocks, else the first land met swimming
+     * toward the destination (loaded chunks only); with neither, the swimmer
+     * heads off toward the destination all the same.
+     * Cost: the shore search (rings of a few dozen columns, loading their
+     * chunks once, then a line of columns) and two entities spawned.
+     */
+    @Nullable
+    private static Swim planSwim(ServerLevel level, ServerPlayer player, Vec3 heading, int now) {
+        if (!player.isInWater() || config().cinematicStyle != TravelCinematicStyle.FLIGHT
+                || !TravelSwim.available(player)) {
+            return null;
+        }
+        Double surface = TravelSwim.waterSurface(player);
+        if (surface == null) {
+            return null;
+        }
+        // The surface block is the last water block: one under the surface's height.
+        int waterY = (int) Math.floor(surface) - 1;
+        BlockPos shore = SafariTeleporter.findShoreNear(level, player.getBlockX(), waterY, player.getBlockZ());
+        if (shore == null) {
+            // Open water (the lagoon, the sea): swim toward the destination until land.
+            shore = SafariTeleporter.findShoreToward(level, player.getX(), waterY, player.getZ(), heading);
+        }
+        TravelFlight.Flight flight;
+        if (shore != null) {
+            flight = TravelSwim.dive(level, player, surface, shore, now);
+        } else {
+            // No land in reach (the open sea, or land beyond the loaded chunks): the
+            // swimmer still dives and heads off toward the destination, the screen
+            // fades as it leaves the frame and the trip goes on in black. Without it
+            // the trip fell back to the rope's painted scene.
+            flight = TravelSwim.diveToward(level, player, surface, heading, now);
+        }
+        return flight == null ? null : new Swim(flight, shore);
     }
 
     /**
@@ -548,8 +615,9 @@ public final class RestHouseTravel {
 
     /**
      * Where the digger goes down: in front of the house's steps for the
-     * guide, where the player stands for the rope; null when the player is
-     * not on the ground (swimming, falling).
+     * guide, where the player stands for the rope (the ground under them
+     * when they are jumping or falling); null when there is none near
+     * (high in the air).
      */
     @Nullable
     private static BlockPos burrowFeet(ServerLevel level, ServerPlayer player, Source source) {
@@ -557,7 +625,9 @@ public final class RestHouseTravel {
             RestHouses.HouseSite here = houseHere(player);
             return here == null ? null : SafariTeleporter.arrivalFeet(level, RestHouses.arrivalOf(here));
         }
-        return player.onGround() ? player.blockPosition() : null;
+        // Jumping or falling: the ground under them, or the nearest spot around.
+        return player.onGround() ? player.blockPosition()
+                : SafariTeleporter.groundNear(level, player.blockPosition());
     }
 
     /** The house the player stands at (its square, steps and plaza), or null. */
@@ -606,10 +676,18 @@ public final class RestHouseTravel {
             feet = SafariTeleporter.findStandingSpotNear(level, player.getBlockX(), player.getBlockZ());
             climb = feet != null && !feet.equals(player.blockPosition());
         }
-        if (feet == null || !TravelFlight.canTakeOff(level, feet, heading)) {
-            return null;
+        if (feet != null && TravelFlight.canTakeOff(level, feet, heading)) {
+            return new TakeOff(feet, climb);
         }
-        return new TakeOff(feet, climb);
+        // The spot cannot be filmed (trees close all around block every direction
+        // of the bird, or leave no camera spot): the best open-air spot nearby,
+        // reached under the black, rather than the painted scene.
+        BlockPos around = feet != null ? feet : player.blockPosition();
+        BlockPos other = SafariTeleporter.findStandingSpotNear(level, around.getX(), around.getZ());
+        if (other != null && !other.equals(feet) && TravelFlight.canTakeOff(level, other, heading)) {
+            return new TakeOff(other, !other.equals(player.blockPosition()));
+        }
+        return null;
     }
 
     /** Horizontal unit vector from the player toward the destination; south when they stand on it. */
@@ -667,12 +745,44 @@ public final class RestHouseTravel {
      */
     private static boolean advance(ServerLevel safari, ServerPlayer player, Trip trip, int now) {
         switch (trip.phase) {
+            case SWIMMING -> {
+                TravelFlight.Flight flight = trip.flight;
+                boolean done = flight == null || TravelFlight.tick(flight, now);
+                // Black as soon as the swimmer is too far to be seen, or a little
+                // before it arrives: watching empty water until the shore wastes time.
+                if (flight != null && trip.blackTick < 0
+                        && (now - trip.phaseTick >= flight.duration() - BLACK_LEAD_TICKS
+                        || TravelSwim.outOfSight(flight))) {
+                    Platform.get().sendToPlayer(player, SafariTravelPayload.black());
+                    trip.blackTick = now;
+                }
+                // Once black, the rest of the swim is not shown: it ends when the fade does.
+                if (trip.blackTick >= 0 && now - trip.blackTick >= BLACK_LEAD_TICKS) {
+                    done = true;
+                }
+                if (done) {
+                    dropFlight(trip);
+                    if (trip.takeOffFeet != null) {
+                        // Under the black: the player stands on the shore the swimmer reached.
+                        SafariTeleporter.sendToFeet(player, safari, trip.takeOffFeet);
+                    }
+                    trip.enter(Phase.SURFACING, now);
+                }
+                return true;
+            }
             case SURFACING -> {
                 if (now - trip.phaseTick < SURFACE_TICKS) {
                     return true;
                 }
-                TravelFlight.Flight flight = trip.takeOffFeet == null ? null
-                        : TravelFlight.takeOff(safari, player, trip.takeOffFeet, trip.heading, now);
+                TravelFlight.Flight flight;
+                if (trip.takeOffFeet == null) {
+                    flight = null;
+                } else if (trip.burrow) {
+                    // From a cave's shore (or toward a cave): the trip goes on underground.
+                    flight = TravelBurrow.dig(safari, player, trip.takeOffFeet, trip.heading, now);
+                } else {
+                    flight = TravelFlight.takeOff(safari, player, trip.takeOffFeet, trip.heading, now);
+                }
                 if (flight == null) {
                     // The spot changed since the plan (a block placed, a mob in the way): no
                     // take-off, the black simply lasts until the landing.

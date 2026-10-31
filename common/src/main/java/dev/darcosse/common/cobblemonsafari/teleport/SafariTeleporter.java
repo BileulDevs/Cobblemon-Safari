@@ -7,6 +7,7 @@ import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
 import dev.darcosse.common.cobblemonsafari.park.ParkBoundary;
 import dev.darcosse.common.cobblemonsafari.structure.RestHouses;
+import dev.darcosse.common.cobblemonsafari.util.LoadedChunks;
 import dev.darcosse.common.cobblemonsafari.util.Surface;
 import dev.darcosse.common.cobblemonsafari.session.ReturnPoint;
 import net.minecraft.core.BlockPos;
@@ -14,9 +15,11 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -66,6 +69,30 @@ public final class SafariTeleporter {
 
     /** Heights tried at each spot of that search, relative to the arrival's feet, in order. */
     private static final int[] CAVERN_ARRIVAL_STEPS = {0, 1, -1};
+
+    /**
+     * How far, in blocks, {@link #findShoreNear} looks for a shore around a
+     * swimmer. Larger finds the bank of a wide lake, but makes the swim in
+     * the cinematic longer and loads more chunks once.
+     */
+    private static final int SHORE_SEARCH_RADIUS = 32;
+
+    /**
+     * Blocks above and below the water's surface where a shore's feet may
+     * be: a bank a little higher than the water, or a beach just at its
+     * level. Higher reaches the top of steep banks.
+     */
+    private static final int SHORE_HEIGHT_REACH = 3;
+
+    /**
+     * How far, in blocks, {@link #findShoreToward} swims toward the
+     * destination looking for a shore. About the width of the lagoon around
+     * the island; further is usually beyond the loaded chunks anyway.
+     */
+    private static final int SHORE_MARCH_DISTANCE = 192;
+
+    /** How far down {@link #groundNear} looks for the ground under someone in the air, in blocks. */
+    private static final int GROUND_DROP = 4;
 
     private SafariTeleporter() {
     }
@@ -287,6 +314,114 @@ public final class SafariTeleporter {
             }
         }
         return covered;
+    }
+
+    /**
+     * Ground under someone who is not standing on it (jumping, falling,
+     * climbing a ladder): the first feet a player could stand on going down
+     * from the given ones, at most {@link #GROUND_DROP} blocks, else the
+     * nearest such feet around at about the same height. Null when there is
+     * none: the player is high in the air, or in the water. Reads loaded
+     * chunks only (the player's own).
+     */
+    @Nullable
+    public static BlockPos groundNear(ServerLevel level, BlockPos feet) {
+        for (int drop = 0; drop <= GROUND_DROP; drop++) {
+            BlockPos below = feet.below(drop);
+            if (!LoadedChunks.isReady(level, below)) {
+                return null;
+            }
+            if (canStandAt(level, below)) {
+                return below;
+            }
+        }
+        return cavernFeet(level, feet);
+    }
+
+    /**
+     * A shore reached by swimming from a spot toward a heading, for water
+     * too wide for {@link #findShoreNear} (a lagoon, the open sea): columns
+     * are read one block apart along the heading, up to
+     * {@link #SHORE_MARCH_DISTANCE} blocks, and the first with dry feet at
+     * about the water's level is the shore. Only fully loaded chunks are
+     * read: the march stops at the first that is not, rather than make the
+     * server thread generate terrain. Null when no shore is met.
+     *
+     * @param waterY  height of the water's surface block
+     * @param heading horizontal unit vector, toward the destination
+     */
+    @Nullable
+    public static BlockPos findShoreToward(ServerLevel level, double x, int waterY, double z, Vec3 heading) {
+        for (int step = 1; step <= SHORE_MARCH_DISTANCE; step++) {
+            int cx = Mth.floor(x + heading.x * step);
+            int cz = Mth.floor(z + heading.z * step);
+            if (!LoadedChunks.isReady(level, cx, cz)) {
+                return null;
+            }
+            if (ParkBoundary.isOutside(cx, cz)) {
+                continue;
+            }
+            for (int dy = 1 - SHORE_HEIGHT_REACH; dy <= SHORE_HEIGHT_REACH; dy++) {
+                BlockPos feet = new BlockPos(cx, waterY + dy, cz);
+                if (canStandAt(level, feet)) {
+                    if (RestHouses.isNearSurfaceHouse(cx, cz, ARRIVAL_HOUSE_MARGIN)) {
+                        // A house's plaza: the shore goes on beside it.
+                        break;
+                    }
+                    return feet;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * The nearest shore of the water a player swims in: dry feet, at about
+     * the water's level ({@link #SHORE_HEIGHT_REACH} blocks up or down),
+     * searched ring by ring up to {@link #SHORE_SEARCH_RADIUS} blocks from
+     * the column given. Not the surface of the columns: in a cave the
+     * surface lies far above, and the shore of an underground lake is
+     * beside it. Outside the park and on surface rest houses is skipped;
+     * a spot under cover counts (caves are covered). Null when there is no
+     * shore that close. Loads the chunks it reads: a rare action, not for
+     * the tick loop.
+     *
+     * @param waterY height of the water's surface block (the last water block going up)
+     */
+    @Nullable
+    public static BlockPos findShoreNear(ServerLevel level, int x, int waterY, int z) {
+        for (int radius = 1; radius <= SHORE_SEARCH_RADIUS; radius++) {
+            BlockPos best = null;
+            int bestDistance = Integer.MAX_VALUE;
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != radius) {
+                        continue;
+                    }
+                    int cx = x + dx;
+                    int cz = z + dz;
+                    if (ParkBoundary.isOutside(cx, cz) || RestHouses.isNearSurfaceHouse(cx, cz, ARRIVAL_HOUSE_MARGIN)) {
+                        continue;
+                    }
+                    // Lowest first: the bank just above the water, not the top of a cliff over it.
+                    for (int dy = 1 - SHORE_HEIGHT_REACH; dy <= SHORE_HEIGHT_REACH; dy++) {
+                        BlockPos feet = new BlockPos(cx, waterY + dy, cz);
+                        if (canStandAt(level, feet)) {
+                            int distance = dx * dx + dz * dz;
+                            if (distance < bestDistance) {
+                                best = feet;
+                                bestDistance = distance;
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+            if (best != null) {
+                return best;
+            }
+        }
+        return null;
     }
 
     /**
