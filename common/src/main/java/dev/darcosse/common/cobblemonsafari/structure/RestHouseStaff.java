@@ -63,11 +63,10 @@ public final class RestHouseStaff {
     private static final int MIN_HEADROOM = 2;
 
     /**
-     * Height of the template's roof above its ground layer (the template is
-     * 11 high, layers 0 to 10): where the floor search starts in an
-     * underground house. Must follow the template if its height changes.
+     * Height of the template's roof above its ground layer (its top layer):
+     * where the floor search starts in an underground house.
      */
-    private static final int HOUSE_ROOF_ABOVE_GROUND = 10;
+    private static final int HOUSE_ROOF_ABOVE_GROUND = RestHouses.TEMPLATE_HEIGHT - 1;
 
     /**
      * How close, in blocks, a player must be to a guide for the guide's

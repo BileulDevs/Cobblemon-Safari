@@ -97,9 +97,11 @@ public final class EscapeRopeActions {
     /**
      * Climbs to the best place to stand in the open air near the player
      * (SafariTeleporter.sendToSurface), not straight up: straight up can be
-     * the inside of a tree crown.
+     * the inside of a tree crown. From a cave, the climb is a burrow
+     * cinematic (RestHouseTravel.climbOutOfCave) ending on that same spot;
+     * the player is then moved a few seconds later.
      *
-     * @return whether the player was moved
+     * @return whether the player was moved, or the burrow toward the open air started
      */
     public static boolean climb(ServerPlayer player) {
         if (refuse(player)) {
@@ -108,6 +110,11 @@ public final class EscapeRopeActions {
         if (!canClimb(player)) {
             player.displayClientMessage(Component.translatable(key("message.rope_open_air")), true);
             return false;
+        }
+        // In a cave, the climb is filmed as a burrow; under a tree or an
+        // overhang (or with the cinematics off) it stays an instant move.
+        if (RestHouseTravel.climbOutOfCave(player, EscapeRopeActions::startCooldown)) {
+            return true;
         }
         if (!SafariTeleporter.sendToSurface(player, (ServerLevel) player.level(),
                 player.getBlockX(), player.getBlockZ())) {

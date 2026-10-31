@@ -115,7 +115,7 @@ final class TravelFlight {
     private static final double CAMERA_SEES_PATH_AT = 0.5D;
 
     /** Height above the feet the camera aims at before the bird shows up: a rider's chest. */
-    private static final double LOOK_HEIGHT = 1.5D;
+    static final double LOOK_HEIGHT = 1.5D;
 
     /** Ticks between two sweeps for orphan actors; a sweep walks every entity of the Safari. */
     private static final int SWEEP_INTERVAL_TICKS = 100;
@@ -130,19 +130,22 @@ final class TravelFlight {
     private static int sweepTicks;
 
     /**
-     * One flight under way.
+     * One shot under way: a flight, or a burrow when {@code burrow} is set
+     * (TravelBurrow: the mount digs into the ground or comes out of it).
      *
-     * @param bird      the mount: a copy of the player's flyer, or the fallback Staraptor
+     * @param bird      the mount: a copy of the player's flyer (or digger), or the fallback species
      * @param rider     the player's double on its back
      * @param spot      the feet position it takes off from or lands on
-     * @param direction where it flies toward, horizontal unit vector
-     * @param landing   true when it comes down onto the spot
-     * @param startTick server tick the flight began
+     * @param direction where it flies (or digs) toward, horizontal unit vector
+     * @param landing   true when it comes down onto the spot (or out of the ground there)
+     * @param startTick server tick the shot began
      * @param camera    where the client's camera stands
      * @param look      what the camera aims at until the bird reaches the client
+     * @param duration  length of the shot, in ticks
+     * @param burrow    what a burrow needs on top, or null for a flight
      */
     record Flight(PokemonEntity bird, NPCEntity rider, Vec3 spot, Vec3 direction, boolean landing, int startTick,
-                  Vec3 camera, Vec3 look) {
+                  Vec3 camera, Vec3 look, int duration, @Nullable TravelBurrow.Dig burrow) {
     }
 
     private TravelFlight() {
@@ -156,6 +159,11 @@ final class TravelFlight {
     static boolean available(ServerPlayer player) {
         return NPCClasses.getByIdentifier(TRAVELLER_CLASS) != null
                 && (mountOf(player) != null || PokemonSpecies.getByIdentifier(BIRD_SPECIES) != null);
+    }
+
+    /** Whether the double's NPC class is loaded. */
+    static boolean riderClassLoaded() {
+        return NPCClasses.getByIdentifier(TRAVELLER_CLASS) != null;
     }
 
     /**
@@ -241,7 +249,7 @@ final class TravelFlight {
         level.playSound(null, spot.x, spot.y, spot.z, SoundEvents.ENDER_DRAGON_FLAP, SoundSource.NEUTRAL,
                 FLAP_VOLUME, FLAP_PITCH);
         Vec3 look = landing ? first : spot.add(0.0D, LOOK_HEIGHT, 0.0D);
-        return new Flight(bird, rider, spot, direction, landing, now, camera, look);
+        return new Flight(bird, rider, spot, direction, landing, now, camera, look, FLIGHT_TICKS, null);
     }
 
     /**
@@ -250,6 +258,9 @@ final class TravelFlight {
      * @return true once the flight is over (the actors stay where they are until {@link #discard})
      */
     static boolean tick(Flight flight, int now) {
+        if (flight.burrow() != null) {
+            return TravelBurrow.tick(flight, now);
+        }
         double progress = Math.min(1.0D, (now - flight.startTick()) / (double) FLIGHT_TICKS);
         Vec3 next = position(flight.spot(), flight.direction(), flight.landing(), progress);
         PokemonEntity bird = flight.bird();
@@ -442,7 +453,7 @@ final class TravelFlight {
      * chunk not fully loaded counts as clear, so the ray never makes the
      * server thread wait for a chunk still generating.
      */
-    private static boolean sees(ServerLevel level, Vec3 from, Vec3 to) {
+    static boolean sees(ServerLevel level, Vec3 from, Vec3 to) {
         if (!LoadedChunks.isReady(level, BlockPos.containing(from))
                 || !LoadedChunks.isReady(level, BlockPos.containing(to))) {
             return true;
@@ -464,9 +475,24 @@ final class TravelFlight {
      */
     @Nullable
     private static PokemonEntity spawnBird(ServerLevel level, ServerPlayer player, Vec3 at, float yaw) {
+        return spawnMount(level, mountOf(player), BIRD_PROPERTIES, at, yaw, true, 0.0D);
+    }
+
+    /**
+     * Spawns a mount, frozen where it is put until moved, or null when it
+     * could not be built or the level refused it: a copy of the party
+     * Pokémon given (see {@link #spawnBird}), else the fallback species.
+     *
+     * @param fallback  Cobblemon properties of the fallback mount
+     * @param flying    whether it holds the flying pose
+     * @param minHeight height the mount is grown to, in blocks, when it is smaller (Cobblemon's
+     *                  {@code scale_modifier}, which grows its hitbox too); 0 keeps its size
+     */
+    @Nullable
+    static PokemonEntity spawnMount(ServerLevel level, @Nullable Pokemon mount, String fallback, Vec3 at, float yaw,
+                                    boolean flying, double minHeight) {
         PokemonEntity bird;
         try {
-            Pokemon mount = mountOf(player);
             PokemonProperties properties;
             if (mount != null) {
                 properties = mount.createPokemonProperties(PokemonPropertyExtractor.SPECIES,
@@ -475,17 +501,29 @@ final class TravelFlight {
                         PokemonPropertyExtractor.LEVEL);
                 properties.getCustomProperties().add(UncatchableProperty.INSTANCE.uncatchable());
             } else {
-                properties = PokemonProperties.Companion.parse(BIRD_PROPERTIES);
+                properties = PokemonProperties.Companion.parse(fallback);
             }
             bird = properties.createEntity(level);
+            double height = bird.getBbHeight();
+            if (height > 0.0D && height < minHeight) {
+                // Built again rather than rescaled: the size must be in the Pokémon
+                // before its entity exists, or clients would get it a moment late.
+                // The first entity was never added to the level: nothing to remove.
+                Float current = properties.getScaleModifier();
+                float base = current == null ? 1.0F : current;
+                properties.setScaleModifier((float) (base * minHeight / height));
+                bird = properties.createEntity(level);
+            }
         } catch (RuntimeException e) {
-            CobblemonSafari.LOGGER.warn("Could not create the travel cinematic's bird: {}", e.toString());
+            CobblemonSafari.LOGGER.warn("Could not create the travel cinematic's mount: {}", e.toString());
             return null;
         }
         bird.moveTo(at.x, at.y, at.z, yaw, 0.0F);
         prepareActor(bird);
-        bird.setBehaviourFlag(PokemonBehaviourFlag.FLYING, true);
-        // Wild, but not to be battled: a player could otherwise start a fight mid-air.
+        if (flying) {
+            bird.setBehaviourFlag(PokemonBehaviourFlag.FLYING, true);
+        }
+        // Wild, but not to be battled: a player could otherwise start a fight mid-trip.
         bird.getEntityData().set(PokemonEntity.getUNBATTLEABLE(), true);
         return level.addFreshEntity(bird) ? bird : null;
     }
@@ -494,6 +532,19 @@ final class TravelFlight {
     @Nullable
     private static NPCEntity spawnRider(ServerLevel level, ServerPlayer player, Vec3 at, float yaw,
                                         PokemonEntity bird) {
+        return spawnRider(level, player, at, yaw, bird, true);
+    }
+
+    /**
+     * Spawns the double, named and dressed like the player, in its seated
+     * pose, or null: riding the mount in its seat, or, when the mount has no
+     * seat, put at the given spot without riding (the caller then keeps it
+     * on the mount's back, see TravelBurrow). The pose is the same either
+     * way: the traveller's poser sits in every pose type.
+     */
+    @Nullable
+    static NPCEntity spawnRider(ServerLevel level, ServerPlayer player, Vec3 at, float yaw, PokemonEntity bird,
+                                boolean seated) {
         NPCClass npcClass = NPCClasses.getByIdentifier(TRAVELLER_CLASS);
         if (npcClass == null) {
             return null;
@@ -508,9 +559,11 @@ final class TravelFlight {
         if (!level.addFreshEntity(rider)) {
             return null;
         }
-        // Forced: Pokémon only take passengers on their free seats, and a
-        // wild one may not offer them to an NPC; the seat is free here.
-        rider.startRiding(bird, true);
+        if (seated) {
+            // Forced: Pokémon only take passengers on their free seats, and a
+            // wild one may not offer them to an NPC; the seat is free here.
+            rider.startRiding(bird, true);
+        }
         TravelSkins.dress(level.getServer(), player, rider);
         return rider;
     }
@@ -524,7 +577,7 @@ final class TravelFlight {
     }
 
     /** The yaw facing a horizontal direction, in Minecraft's convention (0 = south). */
-    private static float yawOf(Vec3 direction) {
+    static float yawOf(Vec3 direction) {
         return (float) (Mth.atan2(-direction.x, direction.z) * Mth.RAD_TO_DEG);
     }
 

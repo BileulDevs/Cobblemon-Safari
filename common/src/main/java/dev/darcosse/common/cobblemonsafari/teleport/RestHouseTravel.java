@@ -72,6 +72,12 @@ import java.util.function.Consumer;
  * air, under the black, when used in a cave); its pixel-art scene stays for
  * when the flight cannot be staged.
  *
+ * <p>A trip into or out of a cave (an underground house, or the rope used in
+ * a cave) is filmed as a burrow instead ({@link TravelBurrow}): the double
+ * rides a digger into the ground in front of the house it leaves (or where
+ * the rope was used) and out of it in front of the destination, since no
+ * bird could fly there.
+ *
  * <p>One wait between two trips, whichever way they go
  * ({@code restHouseTravel.cooldownSeconds}): with two, a player could rope to
  * a house and take its guide straight on.
@@ -140,6 +146,9 @@ public final class RestHouseTravel {
      */
     private static final int HOUSE_MARGIN = 2;
 
+    /** Anchor of a trip that goes to a spot rather than a house (the rope's climb to the open air). */
+    private static final int NO_ANCHOR = -1;
+
     /** Where a trip stands. Painted cinematics go straight to {@link #WAITING}. */
     private enum Phase {
         /**
@@ -163,14 +172,25 @@ public final class RestHouseTravel {
      * next candidate.
      */
     private static final class Trip {
-        /** The destination house, by its anchor. */
+        /** The destination house, by its anchor; {@link #NO_ANCHOR} for a climb to the open air. */
         final int anchor;
+        /**
+         * Where the player is brought, for a trip that goes to a spot rather
+         * than to a house (the rope's climb out of a cave); null for a house.
+         */
+        @Nullable
+        final BlockPos destination;
         /** Server tick it began. */
         final int startTick;
         /** What the source adds once the player is moved (the rope's cooldown). */
         final Consumer<ServerPlayer> arrived;
-        /** Whether this trip plays the flight; false for the painted scenes. */
+        /** Whether this trip is filmed (flight or burrow); false for the painted scenes. */
         final boolean flying;
+        /**
+         * Whether it is filmed as a burrow (TravelBurrow) rather than a
+         * flight: the trip goes into or out of a cave, where no bird flies.
+         */
+        final boolean burrow;
         /** Horizontal unit vector from the house left to the destination: where the double flies. */
         final Vec3 heading;
         /** Centre chunk of its ticket, to remove it. */
@@ -187,20 +207,26 @@ public final class RestHouseTravel {
         /** Where the player was put down at the destination; set from {@link Phase#SETTLING} on. */
         @Nullable
         BlockPos landingFeet;
+        /** The player's rotation there, facing the house: where the digger comes out facing. */
+        float landingYaw;
 
         /**
          * @param flight      the take-off already staged, or null
          * @param takeOffFeet where the take-off is to be staged after the climb out of a cave, or null
+         * @param burrow      whether the trip is filmed as a burrow, even when its departure could not be
          */
         Trip(int anchor, int startTick, ChunkPos ticket, Consumer<ServerPlayer> arrived,
-             @Nullable TravelFlight.Flight flight, @Nullable BlockPos takeOffFeet, Vec3 heading) {
+             @Nullable TravelFlight.Flight flight, @Nullable BlockPos takeOffFeet, Vec3 heading, boolean burrow,
+             @Nullable BlockPos destination) {
             this.anchor = anchor;
+            this.destination = destination;
             this.startTick = startTick;
             this.ticket = ticket;
             this.arrived = arrived;
             this.flight = flight;
             this.takeOffFeet = takeOffFeet;
-            this.flying = flight != null || takeOffFeet != null;
+            this.burrow = burrow;
+            this.flying = flight != null || takeOffFeet != null || burrow;
             this.heading = heading;
             this.phase = flight != null ? Phase.DEPARTING : takeOffFeet != null ? Phase.SURFACING : Phase.WAITING;
             this.phaseTick = startTick;
@@ -397,6 +423,49 @@ public final class RestHouseTravel {
         return true;
     }
 
+    /**
+     * Starts the rope's climb out of a cave as a burrow: the digger goes down
+     * where the player stands and comes out at the open-air spot above
+     * (or the nearest one), instead of the instant move of a climb from
+     * under a tree. Only in a cave ({@link SafariCaves}), with the
+     * cinematics on and a digger available, and not during another trip.
+     * It is not a rest house trip: it starts neither the guide's and rope's
+     * shared wait nor the trips statistic.
+     *
+     * @param arrived what the rope does once the player is out (its cooldown)
+     * @return whether the climb started; false leaves the rope to its instant climb
+     */
+    public static boolean climbOutOfCave(ServerPlayer player, Consumer<ServerPlayer> arrived) {
+        if (config().cinematicStyle != TravelCinematicStyle.FLIGHT || isTravelling(player)
+                || !SafariCaves.isInCave(player) || !TravelBurrow.available(player)) {
+            return false;
+        }
+        ServerLevel level = (ServerLevel) player.level();
+        BlockPos surface = SafariTeleporter.findStandingSpotNear(level, player.getBlockX(), player.getBlockZ());
+        if (surface == null) {
+            return false;
+        }
+        int now = player.getServer().getTickCount();
+        ChunkPos centre = new ChunkPos(surface);
+        level.getChunkSource().addRegionTicket(TICKET, centre, TICKET_RADIUS, centre);
+        // The double digs on the way the player looks: the climb has no direction of its own.
+        Vec3 heading = Vec3.directionFromRotation(0.0F, player.getYRot());
+        TravelFlight.Flight flight = player.onGround()
+                ? TravelBurrow.dig(level, player, player.blockPosition(), heading, now) : null;
+        Trip trip = new Trip(NO_ANCHOR, now, centre, arrived, flight, null, heading, true, surface);
+        TRIPS.put(player.getUUID(), trip);
+        int clientTimeout = Ticks.fromSeconds(MAX_WAIT_SECONDS + TICKET_SPARE_SECONDS)
+                + TravelBurrow.DIG_TICKS * 2 + SETTLE_TICKS;
+        String label = key("travel.surface");
+        Platform.get().sendToPlayer(player, flight != null
+                ? SafariTravelPayload.startFlight(label, "", clientTimeout, flight.bird().getId(), flight.camera(),
+                flight.look())
+                : SafariTravelPayload.startFlight(label, "", clientTimeout, SafariTravelPayload.NO_ACTOR,
+                Vec3.ZERO, Vec3.ZERO));
+        hide(player);
+        return true;
+    }
+
     // ---- Trips ------------------------------------------------------------
 
     /**
@@ -413,15 +482,23 @@ public final class RestHouseTravel {
         ChunkPos centre = target.ticketCentre();
         level.getChunkSource().addRegionTicket(TICKET, centre, TICKET_RADIUS, centre);
         Vec3 heading = headingTo(player, target);
-        TakeOff plan = planTakeOff(level, player, source, heading);
         TravelFlight.Flight flight = null;
         BlockPos climbTo = null;
-        if (plan != null && plan.climb()) {
-            climbTo = plan.feet();
-        } else if (plan != null) {
-            flight = TravelFlight.takeOff(level, player, plan.feet(), heading, now);
+        boolean burrow = burrows(player, source, target);
+        if (burrow) {
+            BlockPos feet = burrowFeet(level, player, source);
+            // No spot to dig from (the rope used while swimming or falling): the trip
+            // opens on black and the digger still comes out at the destination.
+            flight = feet == null ? null : TravelBurrow.dig(level, player, feet, heading, now);
+        } else {
+            TakeOff plan = planTakeOff(level, player, source, heading);
+            if (plan != null && plan.climb()) {
+                climbTo = plan.feet();
+            } else if (plan != null) {
+                flight = TravelFlight.takeOff(level, player, plan.feet(), heading, now);
+            }
         }
-        Trip trip = new Trip(target.anchor(), now, centre, arrived, flight, climbTo, heading);
+        Trip trip = new Trip(target.anchor(), now, centre, arrived, flight, climbTo, heading, burrow, null);
         TRIPS.put(player.getUUID(), trip);
         Label label = labelOf(level, target);
         // The client closes the cinematic by itself a little after the server would give up.
@@ -431,8 +508,8 @@ public final class RestHouseTravel {
         if (flight != null) {
             payload = SafariTravelPayload.startFlight(label.biomeKey(), label.directionKey(), clientTimeout,
                     flight.bird().getId(), flight.camera(), flight.look());
-        } else if (climbTo != null) {
-            // Opens on black: the climb out of the cave happens under it.
+        } else if (climbTo != null || burrow) {
+            // Opens on black: the climb out of the cave happens under it, or the burrow could not be filmed here.
             payload = SafariTravelPayload.startFlight(label.biomeKey(), label.directionKey(), clientTimeout,
                     SafariTravelPayload.NO_ACTOR, Vec3.ZERO, Vec3.ZERO);
         } else {
@@ -448,6 +525,45 @@ public final class RestHouseTravel {
             // After the payload, so the client is already black when it moves.
             SafariTeleporter.sendToFeet(player, level, climbTo);
         }
+    }
+
+    /**
+     * Whether a trip is filmed as a burrow: the config films trips, a digger
+     * can be staged, and the trip goes into a cave (an underground house) or
+     * out of one (the guide of an underground house, the rope used in a cave).
+     */
+    private static boolean burrows(ServerPlayer player, Source source, RestHouses.HouseSite target) {
+        if (config().cinematicStyle != TravelCinematicStyle.FLIGHT || !TravelBurrow.available(player)) {
+            return false;
+        }
+        if (target.underground()) {
+            return true;
+        }
+        if (source == Source.GUIDE) {
+            RestHouses.HouseSite here = houseHere(player);
+            return here != null && here.underground();
+        }
+        return SafariCaves.isInCave(player);
+    }
+
+    /**
+     * Where the digger goes down: in front of the house's steps for the
+     * guide, where the player stands for the rope; null when the player is
+     * not on the ground (swimming, falling).
+     */
+    @Nullable
+    private static BlockPos burrowFeet(ServerLevel level, ServerPlayer player, Source source) {
+        if (source == Source.GUIDE) {
+            RestHouses.HouseSite here = houseHere(player);
+            return here == null ? null : SafariTeleporter.arrivalFeet(level, RestHouses.arrivalOf(here));
+        }
+        return player.onGround() ? player.blockPosition() : null;
+    }
+
+    /** The house the player stands at (its square, steps and plaza), or null. */
+    @Nullable
+    private static RestHouses.HouseSite houseHere(ServerPlayer player) {
+        return RestHouses.siteAt(player.getBlockX(), player.getBlockY(), player.getBlockZ(), HOUSE_MARGIN);
     }
 
     /**
@@ -481,8 +597,7 @@ public final class RestHouseTravel {
         BlockPos feet;
         boolean climb = false;
         if (source == Source.GUIDE) {
-            RestHouses.HouseSite here = RestHouses.siteAt(player.getBlockX(), player.getBlockY(), player.getBlockZ(),
-                    HOUSE_MARGIN);
+            RestHouses.HouseSite here = houseHere(player);
             feet = here == null ? null : SafariTeleporter.arrivalFeet(level, RestHouses.arrivalOf(here));
         } else if (player.onGround() && level.canSeeSky(BlockPos.containing(player.getEyePosition()))) {
             feet = player.blockPosition();
@@ -574,7 +689,7 @@ public final class RestHouseTravel {
                 TravelFlight.Flight flight = trip.flight;
                 boolean done = flight == null || TravelFlight.tick(flight, now);
                 // Black a little before the bird is gone, so the fade ends as it does.
-                if (now - trip.phaseTick == TravelFlight.FLIGHT_TICKS - BLACK_LEAD_TICKS) {
+                if (flight != null && now - trip.phaseTick == flight.duration() - BLACK_LEAD_TICKS) {
                     Platform.get().sendToPlayer(player, SafariTravelPayload.black());
                 }
                 if (done) {
@@ -590,10 +705,19 @@ public final class RestHouseTravel {
                 if (now - trip.phaseTick < SETTLE_TICKS) {
                     return true;
                 }
-                TravelFlight.Flight landing = trip.landingFeet == null ? null
-                        : TravelFlight.land(safari, player, trip.landingFeet, trip.heading, now);
+                TravelFlight.Flight landing;
+                if (trip.landingFeet == null) {
+                    landing = null;
+                } else if (trip.burrow) {
+                    // Out of the ground facing the house, as the player will stand.
+                    landing = TravelBurrow.emerge(safari, player, trip.landingFeet,
+                            Vec3.directionFromRotation(0.0F, trip.landingYaw), now);
+                } else {
+                    landing = TravelFlight.land(safari, player, trip.landingFeet, trip.heading, now);
+                }
                 if (landing == null) {
-                    // No open sky at the destination: straight from black to the player's eyes.
+                    // No open sky (or no ground to dig out of, or no camera spot) at the destination:
+                    // straight from black to the player's eyes.
                     end(safari, trip, player, null);
                     return false;
                 }
@@ -626,11 +750,15 @@ public final class RestHouseTravel {
                 + (trip.flying ? TravelFlight.FLIGHT_TICKS : 0)) {
             CobblemonSafari.LOGGER.warn("Trip of {} to rest house {} given up after {} s: the house never got ready",
                     player.getGameProfile().getName(), trip.anchor, MAX_WAIT_SECONDS);
-            end(safari, trip, player, "message.guide_unreachable");
+            // A climb to the open air speaks of its spot, not of a rest house.
+            end(safari, trip, player, trip.destination != null ? "message.rope_no_spot" : "message.guide_unreachable");
             return false;
         }
         if (elapsed < Ticks.fromSeconds(config().cinematicSeconds)) {
             return true;
+        }
+        if (trip.destination != null) {
+            return reachSpot(safari, player, trip, now);
         }
         RestHouses.HouseSite site = RestHouses.siteOf(trip.anchor);
         if (site == null) {
@@ -665,6 +793,7 @@ public final class RestHouseTravel {
         if (trip.flying) {
             // Invisible where the double will land: the swap at the end shows nothing.
             trip.landingFeet = feet;
+            trip.landingYaw = arrival.yaw();
             trip.enter(Phase.SETTLING, now);
             return true;
         }
@@ -672,6 +801,27 @@ public final class RestHouseTravel {
                 SoundEvents.CHORUS_FRUIT_TELEPORT, SoundSource.PLAYERS, 1.0F, 1.0F);
         end(safari, trip, player, null);
         return false;
+    }
+
+    /**
+     * Brings the player of a trip to a spot (the rope's climb) once its
+     * chunk is loaded, then lets the digger come out there. Unlike a house,
+     * the spot was chosen at the start and does not move.
+     *
+     * @return false when the trip is over (ended here)
+     */
+    private static boolean reachSpot(ServerLevel safari, ServerPlayer player, Trip trip, int now) {
+        BlockPos feet = trip.destination;
+        // Not hasChunkAt: see waitForDestination.
+        if (!LoadedChunks.isReady(safari, feet)) {
+            return true;
+        }
+        SafariTeleporter.sendToFeet(player, safari, feet);
+        trip.arrived.accept(player);
+        trip.landingFeet = feet;
+        trip.landingYaw = player.getYRot();
+        trip.enter(Phase.SETTLING, now);
+        return true;
     }
 
     /**
@@ -787,8 +937,7 @@ public final class RestHouseTravel {
 
     /** Whether the player stands at this house: its square, steps and plaza. */
     private static boolean isCurrentHouse(ServerPlayer player, RestHouses.HouseSite house) {
-        RestHouses.HouseSite here = RestHouses.siteAt(player.getBlockX(), player.getBlockY(), player.getBlockZ(),
-                HOUSE_MARGIN);
+        RestHouses.HouseSite here = houseHere(player);
         return here != null && here.anchor() == house.anchor();
     }
 

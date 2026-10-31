@@ -71,6 +71,12 @@ public final class RestHouses {
     public static final int FOOTPRINT_REACH = HALF_SIZE + 2;
 
     /**
+     * Height of the Pokémon Center template, ground layer included (layers 0
+     * to 10). Must follow the template if its height changes.
+     */
+    public static final int TEMPLATE_HEIGHT = 11;
+
+    /**
      * Radius, in chunks around a house's centre chunk, of a ticket that
      * loads everything its build touches (RestHouseTravel, RestHousePrebuilder).
      * A house and its cleared ring span at most 2 chunks from its centre on
