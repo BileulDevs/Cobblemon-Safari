@@ -1,4 +1,29 @@
 {
   "replace": false,
-  "values": []
+  "values": [
+    {
+      "id": "cobblemon_safari:safari_ruins/ruin_stone_henge",
+      "required": false
+    },
+    {
+      "id": "cobblemon_safari:safari_ruins/ruin_moon_henge",
+      "required": false
+    },
+    {
+      "id": "cobblemon_safari:safari_ruins/ruin_sun_henge",
+      "required": false
+    },
+    {
+      "id": "cobblemon_safari:safari_ruins/ruin_toppled_pillars",
+      "required": false
+    },
+    {
+      "id": "cobblemon_safari:safari_ruins/ruin_shaded",
+      "required": false
+    },
+    {
+      "id": "cobblemon_safari:safari_ruins/ruin_overgrown_trial",
+      "required": false
+    }
+  ]
 }
