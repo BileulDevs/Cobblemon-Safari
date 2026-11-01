@@ -5,6 +5,7 @@
   "cobblemon_safari.message.time_warning": "Zona Safari: restano %s.",
   "cobblemon_safari.message.time_up_after_battle": "Zona Safari: Din-don! Tempo scaduto! Verrai accompagnato all'uscita alla fine della lotta.",
   "cobblemon_safari.message.ball_not_allowed": "Non puoi usare %s nella Zona Safari.",
+  "cobblemon_safari.capture.fled": "Il %s selvatico è fuggito!",
   "cobblemon_safari.message.battle_not_allowed": "Le lotte non sono permesse nella Zona Safari.",
   "cobblemon_safari.message.boundary": "Il parco finisce qui. Torna indietro!",
   "cobblemon_safari.message.already_inside": "Sei già nella Zona Safari.",

@@ -5,6 +5,7 @@
   "cobblemon_safari.message.time_warning": "狩猎地带：还剩%s。",
   "cobblemon_safari.message.time_up_after_battle": "狩猎地带：叮咚！时间到！对战结束后会有人送你出去。",
   "cobblemon_safari.message.ball_not_allowed": "狩猎地带内不能使用%s。",
+  "cobblemon_safari.capture.fled": "野生的%s逃走了！",
   "cobblemon_safari.message.battle_not_allowed": "狩猎地带内禁止对战。",
   "cobblemon_safari.message.boundary": "公园到此为止，请回头！",
   "cobblemon_safari.message.already_inside": "已经在狩猎地带内了。",

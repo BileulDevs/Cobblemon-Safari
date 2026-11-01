@@ -36,7 +36,18 @@
   },
   "capture": {
     "safariBallOutOfBattleMultiplier": 3.0,
-    "awardSafariMark": true
+    "awardSafariMark": true,
+    "flee": {
+      "enabled": true,
+      "commonChance": 0.05,
+      "uncommonChance": 0.08,
+      "rareChance": 0.12,
+      "ultraRareChance": 0.18,
+      "perFailedBall": 0.05,
+      "maxChance": 0.5,
+      "specialCategories": false,
+      "shinies": false
+    }
   },
   "reset": {
     "enabled": true,

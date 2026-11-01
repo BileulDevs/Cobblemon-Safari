@@ -5,6 +5,7 @@
   "cobblemon_safari.message.time_warning": "Safari-Zone: noch %s.",
   "cobblemon_safari.message.time_up_after_battle": "Safari-Zone: Ding-dong! Die Zeit ist um! Nach deinem Kampf wirst du hinausbegleitet.",
   "cobblemon_safari.message.ball_not_allowed": "%s kann in der Safari-Zone nicht benutzt werden.",
+  "cobblemon_safari.capture.fled": "Das wilde %s ist geflohen!",
   "cobblemon_safari.message.battle_not_allowed": "Kämpfe sind in der Safari-Zone nicht erlaubt.",
   "cobblemon_safari.message.boundary": "Hier endet der Park. Kehr um!",
   "cobblemon_safari.message.already_inside": "Bereits in der Safari-Zone.",

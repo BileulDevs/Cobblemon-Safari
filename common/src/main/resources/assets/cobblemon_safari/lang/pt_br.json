@@ -5,6 +5,7 @@
   "cobblemon_safari.message.time_warning": "Zona Safári: faltam %s.",
   "cobblemon_safari.message.time_up_after_battle": "Zona Safári: Plim-plom! Acabou o tempo! Você será acompanhado até a saída quando sua batalha terminar.",
   "cobblemon_safari.message.ball_not_allowed": "%s não pode ser usada na Zona Safári.",
+  "cobblemon_safari.capture.fled": "O %s selvagem fugiu!",
   "cobblemon_safari.message.battle_not_allowed": "Batalhas não são permitidas na Zona Safári.",
   "cobblemon_safari.message.boundary": "O parque termina aqui. Volte!",
   "cobblemon_safari.message.already_inside": "Já está na Zona Safári.",

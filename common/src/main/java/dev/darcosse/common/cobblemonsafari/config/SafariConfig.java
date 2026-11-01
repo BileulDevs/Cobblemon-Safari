@@ -517,6 +517,48 @@ public class SafariConfig {
          * marks already given stay.
          */
         public boolean awardSafariMark = true;
+
+        /** Wild Pokémon running away after a failed throw. */
+        public Flee flee = new Flee();
+    }
+
+    /**
+     * After a ball fails on a wild Pokémon outside of a battle, inside the
+     * Safari, the Pokémon may run away (it vanishes in a puff), as in the
+     * Safari Zone of the games. The chance depends on how rare the species
+     * is in the Safari, and grows with each ball that already failed on it.
+     * Never in a battle: Cobblemon handles fleeing there.
+     */
+    public static class Flee {
+        /** Master switch. False: no Pokémon ever runs away after a failed ball. */
+        public boolean enabled = true;
+
+        /**
+         * Chance, from 0 to 1, that a Pokémon runs away after a failed
+         * ball, by its rarity in the Safari (a species the habitat index
+         * does not know counts as common). Higher makes rare Pokémon a
+         * one-or-two-ball affair.
+         */
+        public double commonChance = 0.05;
+        public double uncommonChance = 0.08;
+        public double rareChance = 0.12;
+        public double ultraRareChance = 0.18;
+
+        /**
+         * Added to the chance for each ball that already failed on the same
+         * Pokémon: 0.05 makes the fourth failed ball on a rare one a 27 %
+         * risk. 0 keeps the chance flat.
+         */
+        public double perFailedBall = 0.05;
+
+        /** Highest chance, whatever the rarity and the failed balls: keeps a long chase possible. */
+        public double maxChance = 0.5;
+
+        /** Whether legendary, mythical, ultra beast and paradox Pokémon may run away. */
+        public boolean specialCategories = false;
+
+        /** Whether shiny Pokémon may run away. */
+        public boolean shinies = false;
     }
 
     /**

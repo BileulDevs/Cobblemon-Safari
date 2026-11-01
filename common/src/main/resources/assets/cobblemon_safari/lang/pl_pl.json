@@ -5,6 +5,7 @@
   "cobblemon_safari.message.time_warning": "Strefa Safari: zostało %s.",
   "cobblemon_safari.message.time_up_after_battle": "Strefa Safari: Ding-dong! Koniec czasu! Po zakończeniu walki zostaniesz odprowadzony do wyjścia.",
   "cobblemon_safari.message.ball_not_allowed": "Nie można użyć %s w Strefie Safari.",
+  "cobblemon_safari.capture.fled": "Dziki %s uciekł!",
   "cobblemon_safari.message.battle_not_allowed": "Walki w Strefie Safari są zabronione.",
   "cobblemon_safari.message.boundary": "Tu kończy się park. Zawróć!",
   "cobblemon_safari.message.already_inside": "Jesteś już w Strefie Safari.",

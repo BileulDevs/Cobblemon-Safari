@@ -72,6 +72,22 @@ The original games' loan of Safari Balls, off by default: players bring their ow
 | `safariBallOutOfBattleMultiplier` | `3.0` | Multiplies the catch rate when a Safari Ball (`loan.ballItem`) hits a wild Pokémon that is not in a battle, inside the Safari. Cobblemon halves every capture made outside a battle, so at 3 the Safari Ball out of battle works 1.5 times as well as a normal throw in battle, before Cobblemon's own Safari Ball bonus. 1 turns it off; lower values are raised to 1. |
 | `awardSafariMark` | `true` | Gives the Safari Mark ("the Safari Find") to every Pokémon caught in the Safari; its title becomes the active one when the Pokémon has none. `false` gives none; marks already given stay. |
 
+### `capture.flee`: Pokémon running away
+
+After a ball fails on a wild Pokémon outside of a battle, inside the Safari, the Pokémon may run away (it vanishes in a puff, and the thrower is told), as in the Safari Zone of the games. Never in a battle.
+
+| Key | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | `false`: no Pokémon ever runs away. |
+| `commonChance` | `0.05` | Chance (0 to 1) that a common Pokémon runs away after a failed ball. A species the Safari does not know counts as common. |
+| `uncommonChance` | `0.08` | Same, for an uncommon one. |
+| `rareChance` | `0.12` | Same, for a rare one. |
+| `ultraRareChance` | `0.18` | Same, for an ultra-rare one. |
+| `perFailedBall` | `0.05` | Added to the chance for each ball that already failed on the same Pokémon: at 0.05, the fourth failed ball on a rare one is a 27 % risk. 0 keeps it flat. 0 to 1. |
+| `maxChance` | `0.5` | Highest chance, whatever the rarity and the failed balls. 0 to 1. |
+| `specialCategories` | `false` | Whether legendary, mythical, ultra beast and paradox Pokémon may run away. |
+| `shinies` | `false` | Whether shiny Pokémon may run away. |
+
 ### `reset`: the daily new map
 
 At the first server start of a new day, the Safari dimension is deleted and regenerated with another layout. Everything built or dropped inside is lost; sessions, statistics, banked time and points are kept.

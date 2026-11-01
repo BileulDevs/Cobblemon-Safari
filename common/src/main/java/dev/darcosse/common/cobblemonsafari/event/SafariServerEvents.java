@@ -6,6 +6,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import dev.darcosse.common.cobblemonsafari.structure.RestHouseStaff;
 import dev.darcosse.common.cobblemonsafari.advancement.SafariAdvancements;
 import dev.darcosse.common.cobblemonsafari.capture.CaptureGuard;
+import dev.darcosse.common.cobblemonsafari.capture.SafariFlee;
 import dev.darcosse.common.cobblemonsafari.capture.ThrowTracker;
 import dev.darcosse.common.cobblemonsafari.battle.FishingBattleGuard;
 import dev.darcosse.common.cobblemonsafari.dex.SafariDex;
@@ -77,6 +78,7 @@ public final class SafariServerEvents {
         SafariAdvancements.reset();
         FishingBattleGuard.reset();
         SafariDex.reset();
+        SafariFlee.reset();
         SafariSpawnBoost.reset();
         SpecialSpawnCounter.reset();
         RestHouseTravel.reset();
@@ -106,6 +108,7 @@ public final class SafariServerEvents {
         SpecialSpawnCounter.tick(server);
         FeaturedSync.tick(server);
         SafariDex.tick(server);
+        SafariFlee.tick(server);
         SafariBounties.tick(server);
         SafariSpawnBoost.tick(server);
         RestHouses.tick(server);

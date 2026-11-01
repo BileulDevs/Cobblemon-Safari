@@ -607,6 +607,7 @@ public final class SafariConfigManager {
         corrected |= validateTravel(c);
         corrected |= validateSpawns(c);
         corrected |= validateFeatured(c);
+        corrected |= validateFlee(c);
         return corrected;
     }
 
@@ -936,6 +937,40 @@ public final class SafariConfigManager {
             corrected = true;
         }
         corrected |= validateSpeciesRules("featured", f);
+        return corrected;
+    }
+
+    /** Fixes the capture.flee section; returns true if anything changed. */
+    private static boolean validateFlee(SafariConfig c) {
+        if (c.capture == null) {
+            c.capture = new SafariConfig.Capture();
+            return true;
+        }
+        if (c.capture.flee == null) {
+            c.capture.flee = new SafariConfig.Flee();
+            return true;
+        }
+        SafariConfig.Flee f = c.capture.flee;
+        boolean corrected = false;
+        double[] values = {f.commonChance, f.uncommonChance, f.rareChance, f.ultraRareChance, f.perFailedBall,
+                f.maxChance};
+        String[] names = {"commonChance", "uncommonChance", "rareChance", "ultraRareChance", "perFailedBall",
+                "maxChance"};
+        for (int i = 0; i < values.length; i++) {
+            // Also catches NaN, which reads as 0 (no flight).
+            if (!(values[i] >= 0.0D && values[i] <= 1.0D)) {
+                double fixed = Double.isNaN(values[i]) ? 0.0D : Math.max(0.0D, Math.min(1.0D, values[i]));
+                warn("capture.flee." + names[i], values[i], fixed);
+                values[i] = fixed;
+                corrected = true;
+            }
+        }
+        f.commonChance = values[0];
+        f.uncommonChance = values[1];
+        f.rareChance = values[2];
+        f.ultraRareChance = values[3];
+        f.perFailedBall = values[4];
+        f.maxChance = values[5];
         return corrected;
     }
 

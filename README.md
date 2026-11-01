@@ -34,7 +34,7 @@ Rare lodges in the overworld's plains, meadows, light forests and savannas. Stan
 
 ### Restricted Poké Balls
 
-Only Safari Balls and Master Balls work inside by default (configurable). A Safari Ball thrown at a Pokémon outside of battle gets a strong catch bonus, so hunting without battling feels right. The shop hands out 30 free Safari Balls once a day.
+Only Safari Balls and Master Balls work inside by default (configurable). A Safari Ball thrown at a Pokémon outside of battle gets a strong catch bonus, so hunting without battling feels right. But miss, and the Pokémon may run away, all the more likely the rarer it is and the more balls you already wasted on it (configurable; legendaries and shinies stay by default). The shop hands out 30 free Safari Balls once a day.
 
 ### Rare Pokémon of the day
 

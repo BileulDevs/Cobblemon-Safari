@@ -5,6 +5,7 @@
   "cobblemon_safari.message.time_warning": "Сафари-зона: осталось %s.",
   "cobblemon_safari.message.time_up_after_battle": "Сафари-зона: Динь-дон! Время вышло! Вас проводят к выходу, когда бой закончится.",
   "cobblemon_safari.message.ball_not_allowed": "%s нельзя использовать в Сафари-зоне.",
+  "cobblemon_safari.capture.fled": "Дикий %s сбежал!",
   "cobblemon_safari.message.battle_not_allowed": "В Сафари-зоне бои запрещены.",
   "cobblemon_safari.message.boundary": "Здесь парк заканчивается. Поворачивайте назад!",
   "cobblemon_safari.message.already_inside": "Вы уже в Сафари-зоне.",

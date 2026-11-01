@@ -5,6 +5,7 @@
   "cobblemon_safari.message.time_warning": "사파리존: %s 남았습니다.",
   "cobblemon_safari.message.time_up_after_battle": "사파리존: 딩동! 시간이 다 됐습니다! 배틀이 끝나면 출구로 안내해 드립니다.",
   "cobblemon_safari.message.ball_not_allowed": "사파리존에서는 %s을(를) 사용할 수 없습니다.",
+  "cobblemon_safari.capture.fled": "야생 %s(은)는 도망쳤다!",
   "cobblemon_safari.message.battle_not_allowed": "사파리존에서는 배틀이 금지되어 있습니다.",
   "cobblemon_safari.message.boundary": "공원은 여기까지입니다. 돌아가세요!",
   "cobblemon_safari.message.already_inside": "이미 사파리존 안에 있습니다.",

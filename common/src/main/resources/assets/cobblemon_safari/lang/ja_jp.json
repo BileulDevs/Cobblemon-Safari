@@ -5,6 +5,7 @@
   "cobblemon_safari.message.time_warning": "サファリゾーン：残り%s。",
   "cobblemon_safari.message.time_up_after_battle": "サファリゾーン：ピンポーン！時間です！バトルが終わったら出口までご案内します。",
   "cobblemon_safari.message.ball_not_allowed": "サファリゾーンでは%sは使えません。",
+  "cobblemon_safari.capture.fled": "やせいの %sは にげだした！",
   "cobblemon_safari.message.battle_not_allowed": "サファリゾーンではバトルは禁止です。",
   "cobblemon_safari.message.boundary": "ここで園内は終わりです。引き返しましょう！",
   "cobblemon_safari.message.already_inside": "すでにサファリゾーンにいます。",
