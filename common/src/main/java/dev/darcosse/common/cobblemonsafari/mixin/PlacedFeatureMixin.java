@@ -12,8 +12,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * Refuses, in the Safari, the features tagged
- * {@code cobblemon_safari:not_in_safari}: see {@link SafariFeatureFilter}.
+ * Refuses, in the Safari, the building features it does not allow: see
+ * {@link SafariFeatureFilter}.
  *
  * <p>{@code placeWithBiomeCheck} is the entry the chunk generator uses to
  * decorate a chunk with its biomes' features; {@code place}, used by

@@ -2,6 +2,7 @@ package dev.darcosse.common.cobblemonsafari.structure;
 
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.park.ParkBoundary;
+import dev.darcosse.common.cobblemonsafari.worldgen.SafariStructureFilter;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
@@ -269,7 +270,10 @@ final class RestHouseSites {
             var registry = level.registryAccess().registryOrThrow(Registries.STRUCTURE_SET);
             for (ResourceKey<StructureSet> key : SAFARI_STRUCTURE_SETS) {
                 // Missing only if the data pack was altered: houses then ignore structures.
-                registry.getHolder(key).ifPresent(structureSets::add);
+                // A set the Safari does not allow generates nothing: no room to keep for it.
+                registry.getHolder(key)
+                        .filter(set -> !SafariStructureFilter.refuses(set.value(), generator.getBiomeSource()))
+                        .ifPresent(structureSets::add);
             }
         }
 

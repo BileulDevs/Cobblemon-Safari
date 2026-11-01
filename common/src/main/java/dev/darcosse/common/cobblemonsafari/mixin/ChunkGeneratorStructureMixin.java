@@ -18,12 +18,11 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * Refuses, in the Safari, each start of a structure tagged
- * {@code cobblemon_safari:not_in_safari} that shares its structure set with
- * structures the Safari keeps ({@link SafariStructureFilter#refuses(
- * net.minecraft.core.Holder, BiomeSource)}). Sets made only of tagged
- * structures never get this far: ChunkGeneratorStructureStateMixin drops
- * them.
+ * Refuses, in the Safari, each start of a structure not tagged
+ * {@code cobblemon_safari:allowed_in_safari} that shares its structure set
+ * with allowed ones ({@link SafariStructureFilter#refuses(
+ * net.minecraft.core.Holder, BiomeSource)}). Sets with no allowed structure
+ * never get this far: ChunkGeneratorStructureStateMixin drops them.
  *
  * <p>{@code tryGenerateStructure} is where the generator tries one
  * structure of a set in a chunk; answering "no" there is what it does
