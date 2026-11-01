@@ -90,6 +90,14 @@ public final class SafariSessionManager {
      */
     private static final Queue<UUID> PENDING_LEAVES = new ConcurrentLinkedQueue<>();
 
+    /**
+     * Players inside whose clock is stopped by their game mode, as of the
+     * last tick: a change is what triggers the message and the HUD update.
+     * Server thread only; trimmed to the online players by the consistency
+     * sweep.
+     */
+    private static final Set<UUID> FROZEN = new HashSet<>();
+
     private static int tickCounter;
 
     private SafariSessionManager() {
@@ -122,7 +130,11 @@ public final class SafariSessionManager {
         if (BattleRegistry.getBattleByParticipatingPlayer(player) != null) {
             return EntryResult.denied(Component.translatable(key("message.in_battle")));
         }
-        int ticks = clampDuration(durationTicks);
+        // An exempt player (creative or spectator) may come in with no time at
+        // all: the session then holds 0 and stays frozen until they change
+        // game mode, at which point it expires like any other.
+        boolean freeEntry = durationTicks <= 0 && isClockExempt(player);
+        int ticks = freeEntry ? 0 : clampDuration(durationTicks);
         boolean alreadyInside = SafariDimensions.isSafari(player.level());
         // A player already standing in the Safari (an exempt builder) has no
         // meaningful return point inside it; exiting then falls back to world spawn.
@@ -144,8 +156,17 @@ public final class SafariSessionManager {
         // arrival point, inside the Safari, where the reclaim rules still apply.
         int lent = LoanedBalls.lend(player, ballsLoaned);
         EscapeRopes.Lent rope = EscapeRopes.lend(player);
-        SafariNetwork.sendTimer(player, session, true);
-        player.sendSystemMessage(Component.translatable(key("message.entered"), Ticks.format(ticks)));
+        boolean frozen = isClockExempt(player);
+        setFrozen(player.getUUID(), frozen);
+        SafariNetwork.sendTimer(player, session, !frozen);
+        if (freeEntry) {
+            player.sendSystemMessage(Component.translatable(key("message.entered_exempt")));
+        } else {
+            player.sendSystemMessage(Component.translatable(key("message.entered"), Ticks.format(ticks)));
+            if (frozen) {
+                player.sendSystemMessage(Component.translatable(key("message.clock_paused_exempt")));
+            }
+        }
         if (lent > 0) {
             player.sendSystemMessage(Component.translatable(key("message.balls_lent"), lent));
         } else if (!BallRules.carriesAllowed(player, SafariConfigManager.allowedBalls())) {
@@ -192,7 +213,7 @@ public final class SafariSessionManager {
         int previous = session.remainingTicks();
         session.setRemainingTicks(Math.min(ticks, SafariConfigManager.maxDurationTicks()));
         store.setDirty();
-        SafariNetwork.sendTimer(player, session, SafariDimensions.isSafari(player.level()));
+        SafariNetwork.sendTimer(player, session, isClockRunning(player));
         for (SafariSessionListener listener : LISTENERS) {
             listener.onTimeChanged(player, session, previous);
         }
@@ -244,7 +265,7 @@ public final class SafariSessionManager {
         }
         SafariSession session = getSession(player);
         if (session != null) {
-            SafariNetwork.sendTimer(player, session, SafariDimensions.isSafari(player.level()));
+            SafariNetwork.sendTimer(player, session, isClockRunning(player));
         } else {
             SafariNetwork.sendNoSession(player);
         }
@@ -281,7 +302,7 @@ public final class SafariSessionManager {
         }
         session.recordCatch(record);
         store.setDirty();
-        SafariNetwork.sendTimer(player, session, SafariDimensions.isSafari(player.level()));
+        SafariNetwork.sendTimer(player, session, isClockRunning(player));
         for (SafariSessionListener listener : LISTENERS) {
             listener.onCatch(player, session, record);
         }
@@ -380,7 +401,11 @@ public final class SafariSessionManager {
         for (SafariSession session : store.all()) {
             ServerPlayer player = server.getPlayerList().getPlayer(session.playerId());
             boolean inside = player != null && SafariDimensions.isSafari(player.level());
-            boolean counting = inside || (player == null && !config.pauseTimeWhileOffline);
+            boolean frozen = inside && isClockExempt(player);
+            if (inside && setFrozen(session.playerId(), frozen)) {
+                announceFrozen(player, session, frozen);
+            }
+            boolean counting = (inside && !frozen) || (player == null && !config.pauseTimeWhileOffline);
 
             if (counting && session.remainingTicks() > 0) {
                 session.tickDown();
@@ -390,10 +415,12 @@ public final class SafariSessionManager {
                             Ticks.format(session.remainingTicks())).withStyle(warningColour(session.remainingTicks())));
                 }
             }
-            if (inside && session.remainingTicks() == 0) {
+            // A frozen clock never runs out: a free entry holds 0 until the
+            // player leaves creative or spectator.
+            if (inside && !frozen && session.remainingTicks() == 0) {
                 outOfTime.add(player);
             } else if (inside && resync) {
-                SafariNetwork.sendTimer(player, session, true);
+                SafariNetwork.sendTimer(player, session, !frozen);
             }
         }
         if (changed) {
@@ -434,13 +461,12 @@ public final class SafariSessionManager {
      */
     private static void enforceConsistency(MinecraftServer server, SafariSessionStore store) {
         SafariBorder.enforce(server);
-        SafariConfig config = SafariConfigManager.get();
         // Copy: evictions and ends below change the player's level and the store.
         List<ServerPlayer> players = new ArrayList<>(server.getPlayerList().getPlayers());
         for (ServerPlayer player : players) {
             boolean inside = SafariDimensions.isSafari(player.level());
             boolean hasSession = store.get(player.getUUID()) != null;
-            boolean exempt = config.exemptCreativeAndSpectator && (player.isCreative() || player.isSpectator());
+            boolean exempt = isClockExempt(player);
 
             // Loaned balls never survive outside the Safari, however the player
             // got out (end of session, crash, a mod teleport, a ball tossed to
@@ -470,6 +496,47 @@ public final class SafariSessionManager {
             online.add(player.getUUID());
         }
         LAST_OUTSIDE.keySet().retainAll(online);
+        FROZEN.retainAll(online);
+    }
+
+    /**
+     * Whether this player's Safari clock is stopped by their game mode:
+     * {@code exemptCreativeAndSpectator} on, and in creative or spectator.
+     * Such a player may also enter with no banked time, and roam without a
+     * session.
+     */
+    public static boolean isClockExempt(ServerPlayer player) {
+        return SafariConfigManager.get().exemptCreativeAndSpectator && (player.isCreative() || player.isSpectator());
+    }
+
+    /** Whether a player's clock is counting down: inside the Safari and not exempt by game mode. */
+    private static boolean isClockRunning(ServerPlayer player) {
+        return SafariDimensions.isSafari(player.level()) && !isClockExempt(player);
+    }
+
+    /**
+     * Records whether a player's clock is frozen by their game mode.
+     *
+     * @return true when this changes what was recorded
+     */
+    private static boolean setFrozen(UUID playerId, boolean frozen) {
+        return frozen ? FROZEN.add(playerId) : FROZEN.remove(playerId);
+    }
+
+    /**
+     * Tells a player inside that their clock just stopped or started again
+     * after a game mode change, and updates their HUD at once rather than at
+     * the next resync. Nothing is said when it starts again at zero: the
+     * time-up message follows on the same tick.
+     */
+    private static void announceFrozen(ServerPlayer player, SafariSession session, boolean frozen) {
+        SafariNetwork.sendTimer(player, session, !frozen);
+        if (frozen) {
+            player.sendSystemMessage(Component.translatable(key("message.clock_paused_exempt")));
+        } else if (session.remainingTicks() > 0) {
+            player.sendSystemMessage(Component.translatable(key("message.clock_resumed"),
+                    Ticks.format(session.remainingTicks())));
+        }
     }
 
     /** Keeps a requested duration between one second and the configured maximum. */

@@ -201,12 +201,15 @@ public final class SafariCommands {
      * <p>Entry requirements are bypassed (operator recovery tool) but the
      * time is not: a player with an empty bank stays out, so no operator, the
      * owner of a single-player world included, can skip tickets this way.
+     * Except a player exempt by game mode, who enters with a frozen clock at
+     * zero, exactly as through a gate.
      */
     private static int enterWithCredit(CommandContext<CommandSourceStack> ctx, Collection<ServerPlayer> targets) {
         int entered = 0;
         for (ServerPlayer target : targets) {
             int before = SafariCredit.balance(target);
-            if (before <= 0) {
+            boolean free = before <= 0 && SafariSessionManager.isClockExempt(target);
+            if (before <= 0 && !free) {
                 ctx.getSource().sendFailure(Component.translatable(key("command.enter.no_credit"),
                         target.getDisplayName()));
                 continue;
@@ -215,8 +218,13 @@ public final class SafariCommands {
             if (result.success()) {
                 entered++;
                 int spent = before - SafariCredit.balance(target);
-                ctx.getSource().sendSuccess(() -> Component.translatable(key("command.enter.success"),
-                        target.getDisplayName(), Ticks.format(spent)), true);
+                if (free) {
+                    ctx.getSource().sendSuccess(() -> Component.translatable(key("command.enter.exempt"),
+                            target.getDisplayName()), true);
+                } else {
+                    ctx.getSource().sendSuccess(() -> Component.translatable(key("command.enter.success"),
+                            target.getDisplayName(), Ticks.format(spent)), true);
+                }
             } else if (result.reason() != null) {
                 ctx.getSource().sendFailure(Component.translatable(key("command.enter.failed"),
                         target.getDisplayName(), result.reason()));

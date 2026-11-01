@@ -108,13 +108,21 @@ public final class SafariCredit {
      *
      * <p>Banked time is the only currency: no entry path hands out free time,
      * so a hunt always traces back to a ticket (or an operator's explicit
-     * {@code /safari credit add}).
+     * {@code /safari credit add}). The one exception is a player exempt by
+     * game mode ({@code exemptCreativeAndSpectator}), who enters with an
+     * empty bank and a session of zero that stays frozen; it runs out as
+     * soon as they switch to survival or adventure.
      *
      * @param bypassRequirements true for operator commands, which must keep working when a fee is misconfigured
      */
     public static EntryResult enter(ServerPlayer player, boolean bypassRequirements) {
         int banked = balance(player);
         if (banked <= 0) {
+            // Creative and spectator players exempt by the config come in
+            // without time: their clock is frozen while they stay in that mode.
+            if (SafariSessionManager.isClockExempt(player)) {
+                return SafariAccess.requestEntry(player, 0, SOURCE, bypassRequirements);
+            }
             return EntryResult.denied(Component.translatable(key("message.no_credit")));
         }
         int spent = Math.min(banked, SafariConfigManager.maxDurationTicks());

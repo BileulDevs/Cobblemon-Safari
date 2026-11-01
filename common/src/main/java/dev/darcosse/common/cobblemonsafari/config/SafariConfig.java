@@ -68,9 +68,13 @@ public class SafariConfig {
     public ExitDestination exitDestination = ExitDestination.RETURN_POINT;
 
     /**
-     * Creative and spectator players may enter and roam without a session
-     * (building, moderation). Not on login: a player who logs in inside
-     * without a session is sent out whatever their game mode.
+     * Creative and spectator players (building, moderation) may roam inside
+     * without a session, may enter through a gate, its warden or
+     * {@code /safari enter} with an empty time bank (a session holding no
+     * time, which ends once they switch to survival or adventure), and keep
+     * their clock stopped while they stay in that mode. Not on login: a
+     * player who logs in inside without a session is sent out whatever their
+     * game mode.
      */
     public boolean exemptCreativeAndSpectator = true;
 
