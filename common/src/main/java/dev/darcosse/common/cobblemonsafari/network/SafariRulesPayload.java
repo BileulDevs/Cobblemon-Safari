@@ -23,11 +23,14 @@ import java.util.List;
  * @param protectBlocks              whether the terrain cannot be changed
  * @param exemptCreativeAndSpectator whether creative/spectator players ignore terrain protection
  * @param placeableBlocks            block ids that may be placed and broken despite the protection
+ * @param harvestMask                {@code protection.interact} as a bit set by
+ *                                   {@code HarvestCategory} ordinal
  * @param restHouses                 centre columns and height spans of the rest houses, for their music
  */
 public record SafariRulesPayload(ResourceLocation dimension, List<ResourceLocation> allowedBalls,
                                  boolean protectBlocks, boolean exemptCreativeAndSpectator,
-                                 List<ResourceLocation> placeableBlocks, List<HouseColumn> restHouses)
+                                 List<ResourceLocation> placeableBlocks, int harvestMask,
+                                 List<HouseColumn> restHouses)
         implements CustomPacketPayload {
 
     /**
@@ -48,7 +51,7 @@ public record SafariRulesPayload(ResourceLocation dimension, List<ResourceLocati
      * one means) without raising this makes a peer of another build read
      * garbage without an error. Raise it on every change to write/read.
      */
-    public static final int WIRE_VERSION = 2;
+    public static final int WIRE_VERSION = 3;
 
     /**
      * Upper bound on the list size accepted when reading. A corrupted or hostile
@@ -83,6 +86,7 @@ public record SafariRulesPayload(ResourceLocation dimension, List<ResourceLocati
         for (ResourceLocation block : placeableBlocks) {
             buf.writeResourceLocation(block);
         }
+        buf.writeVarInt(harvestMask);
         buf.writeVarInt(restHouses.size());
         for (HouseColumn house : restHouses) {
             buf.writeVarInt(house.x());
@@ -119,6 +123,7 @@ public record SafariRulesPayload(ResourceLocation dimension, List<ResourceLocati
         for (int i = 0; i < placeableCount; i++) {
             placeable.add(buf.readResourceLocation());
         }
+        int harvestMask = buf.readVarInt();
         int houseCount = buf.readVarInt();
         if (houseCount < 0 || houseCount > MAX_HOUSES) {
             throw new IllegalStateException("Cobblemon Safari: invalid rest house count " + houseCount);
@@ -128,7 +133,7 @@ public record SafariRulesPayload(ResourceLocation dimension, List<ResourceLocati
             houses.add(new HouseColumn(buf.readVarInt(), buf.readVarInt(), buf.readInt(), buf.readInt()));
         }
         return new SafariRulesPayload(dimension, List.copyOf(balls), protectBlocks, exemptCreativeAndSpectator,
-                List.copyOf(placeable), List.copyOf(houses));
+                List.copyOf(placeable), harvestMask, List.copyOf(houses));
     }
 
     /** Type under which each loader registers this payload. */

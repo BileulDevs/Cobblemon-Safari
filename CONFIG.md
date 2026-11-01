@@ -55,6 +55,24 @@ A complete, commented example of the three files is in [`example/config/`](examp
 | `hunger` | `false` | Whether hunger is frozen inside. `true`: the food bar and its saturation stay where they were on entering (eating still fills them). `false`: the bar goes down as everywhere else. |
 | `protectBlocks` | `true` | Players cannot break or place blocks, fill or empty buckets, or use tools that change blocks (hoe, shovel, axe stripping, flint and steel, bone meal). Fire does not spread or burn blocks, and explosions break nothing. |
 | `placeableBlocks` | `["cobblemon:poke_cake", "cobblemon:poke_snack"]` | Blocks players may still place and break while `protectBlocks` is on. By default Cobblemon's baits. Anything placed disappears with the daily map. |
+| `interact` | see below | Which Cobblemon plants players may still harvest while `protectBlocks` is on. |
+
+`protection.interact`: one switch per Cobblemon plant. The first three are picked with a click and grow back, so they are allowed by default; the others are harvested by breaking them, which leaves nothing for the next player until the daily map, so they are protected by default. Only read while `protectBlocks` is on. Holding a block or a block-changing tool against a plant is still refused, whatever the switch.
+
+| Key | Default | What it allows |
+|---|---|---|
+| `berries` | `true` | Picking ripe berries with a right-click. |
+| `apricorns` | `true` | Picking ripe apricorns with a right- or left-click. |
+| `galaricaNuts` | `true` | Picking ripe Galarica nuts with a right-click. |
+| `mints` | `false` | Breaking mint plants (their harvest). |
+| `revivalHerbs` | `false` | Breaking Revival Herbs. |
+| `medicinalLeeks` | `false` | Breaking Medicinal Leeks. |
+| `vivichokes` | `false` | Breaking Vivichokes. |
+| `heartyGrains` | `false` | Breaking Hearty Grains. |
+| `bugwort` | `false` | Breaking Bugwort. |
+| `roots` | `false` | Shearing big and energy roots (which leaves a smaller root and drops one) and breaking them. |
+
+Turning off one of the first three refuses every click on that plant.
 
 ### `loan`
 

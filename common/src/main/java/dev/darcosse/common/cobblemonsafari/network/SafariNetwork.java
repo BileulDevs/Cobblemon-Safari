@@ -2,6 +2,7 @@ package dev.darcosse.common.cobblemonsafari.network;
 
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
+import dev.darcosse.common.cobblemonsafari.protection.HarvestCategory;
 import dev.darcosse.common.cobblemonsafari.platform.Platform;
 import dev.darcosse.common.cobblemonsafari.points.SafariPoints;
 import dev.darcosse.common.cobblemonsafari.stats.PlayerSafariStats;
@@ -113,6 +114,7 @@ public final class SafariNetwork {
                 SafariConfigManager.get().protection.protectBlocks,
                 SafariConfigManager.get().exemptCreativeAndSpectator,
                 List.copyOf(SafariConfigManager.placeableBlocks()),
+                HarvestCategory.maskOf(SafariConfigManager.get().protection.interact),
                 restHouseColumns());
     }
 

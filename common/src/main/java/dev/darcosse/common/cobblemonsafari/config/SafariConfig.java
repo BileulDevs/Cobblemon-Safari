@@ -932,5 +932,45 @@ public class SafariConfig {
                 "cobblemon:poke_cake",
                 "cobblemon:poke_snack"
         ));
+
+        /**
+         * Cobblemon plants players may harvest despite {@link #protectBlocks},
+         * one switch each. Only read while the terrain is protected.
+         */
+        public Interact interact = new Interact();
+    }
+
+    /**
+     * The switches of {@code protection.interact}. The defaults keep what
+     * the protection always allowed: plants picked with a click (berries,
+     * apricorns, Galarica nuts) stay pickable, plants harvested by breaking
+     * them stay protected, so they are there for every player until the
+     * next map. Roots are the exception: shears used to strip them, a hole
+     * in the protection, now closed unless {@link #roots} is on.
+     */
+    public static class Interact {
+        /** Picking ripe berries with a right-click. The tree is never broken. */
+        public boolean berries = true;
+        /** Picking ripe apricorns with a right- or left-click. The tree is never broken. */
+        public boolean apricorns = true;
+        /** Picking ripe Galarica nuts with a right-click. The bush is never broken. */
+        public boolean galaricaNuts = true;
+        /** Breaking mint plants, which is how they are harvested. Gone until the next map. */
+        public boolean mints = false;
+        /** Breaking Revival Herbs. Gone until the next map. */
+        public boolean revivalHerbs = false;
+        /** Breaking Medicinal Leeks. Gone until the next map. */
+        public boolean medicinalLeeks = false;
+        /** Breaking Vivichokes. Gone until the next map. */
+        public boolean vivichokes = false;
+        /** Breaking Hearty Grains. Gone until the next map. */
+        public boolean heartyGrains = false;
+        /** Breaking Bugwort. Gone until the next map. */
+        public boolean bugwort = false;
+        /**
+         * Shearing big and energy roots (which leaves a smaller root) and
+         * breaking them.
+         */
+        public boolean roots = false;
     }
 }

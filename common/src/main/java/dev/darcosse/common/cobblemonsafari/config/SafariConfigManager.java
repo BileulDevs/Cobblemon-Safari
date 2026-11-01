@@ -578,6 +578,10 @@ public final class SafariConfigManager {
             c.protection = new SafariConfig.Protection();
             corrected = true;
         }
+        if (c.protection.interact == null) {
+            c.protection.interact = new SafariConfig.Interact();
+            corrected = true;
+        }
         if (c.protection.placeableBlocks == null) {
             c.protection.placeableBlocks = new SafariConfig.Protection().placeableBlocks;
             corrected = true;

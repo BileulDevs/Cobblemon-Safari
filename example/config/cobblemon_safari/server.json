@@ -28,7 +28,19 @@
       "cobblemon:poke_cake",
       "cobblemon:poke_snack",
       "minecraft:torch"
-    ]
+    ],
+    "interact": {
+      "berries": true,
+      "apricorns": true,
+      "galaricaNuts": true,
+      "mints": false,
+      "revivalHerbs": false,
+      "medicinalLeeks": false,
+      "vivichokes": false,
+      "heartyGrains": false,
+      "bugwort": false,
+      "roots": false
+    }
   },
   "loan": {
     "count": 30,

@@ -41,6 +41,8 @@ public final class SafariClientState {
     private static boolean protectBlocks;
     private static boolean exemptCreativeAndSpectator;
     private static Set<ResourceLocation> placeableBlocks = Set.of();
+    /** {@code protection.interact} as sent by the server; nothing allowed before the rules arrive. */
+    private static int harvestMask;
     private static List<SafariRulesPayload.HouseColumn> restHouses = List.of();
 
     private SafariClientState() {
@@ -64,6 +66,7 @@ public final class SafariClientState {
         protectBlocks = payload.protectBlocks();
         exemptCreativeAndSpectator = payload.exemptCreativeAndSpectator();
         placeableBlocks = Set.copyOf(payload.placeableBlocks());
+        harvestMask = payload.harvestMask();
         restHouses = payload.restHouses();
     }
 
@@ -81,6 +84,7 @@ public final class SafariClientState {
         protectBlocks = false;
         exemptCreativeAndSpectator = false;
         placeableBlocks = Set.of();
+        harvestMask = 0;
         restHouses = List.of();
     }
 
@@ -157,6 +161,11 @@ public final class SafariClientState {
     /** Block ids the server lets players place and break despite the protection; empty before the rules arrive. */
     public static Set<ResourceLocation> placeableBlocks() {
         return placeableBlocks;
+    }
+
+    /** The server's {@code protection.interact} switches, as a bit set by {@code HarvestCategory} ordinal. */
+    public static int harvestMask() {
+        return harvestMask;
     }
 
     /** Whether creative/spectator players are exempt from terrain protection. */
