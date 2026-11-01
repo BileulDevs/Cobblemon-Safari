@@ -40,6 +40,18 @@
     {
       "id": "cobblemon:fossils/prehistoric_vibrant_hydrothermal_vents",
       "required": false
+    },
+    {
+      "id": "cobblemon:habitats/root_nurseries",
+      "required": false
+    },
+    {
+      "id": "cobblemon:habitats/sandy_tidepools",
+      "required": false
+    },
+    {
+      "id": "cobblemon:habitats/rocky_outcrops",
+      "required": false
     }
   ]
 }

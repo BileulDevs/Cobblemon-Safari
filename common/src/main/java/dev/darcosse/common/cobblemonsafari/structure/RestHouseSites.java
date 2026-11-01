@@ -104,7 +104,8 @@ final class RestHouseSites {
     /** Structure sets written by tools/worldgen/generate_worldgen.py (SAFARI_STRUCTURE_SETS). */
     private static final List<ResourceKey<StructureSet>> SAFARI_STRUCTURE_SETS = List.of(
             ResourceKey.create(Registries.STRUCTURE_SET, CobblemonSafari.id("safari_ruins/towers")),
-            ResourceKey.create(Registries.STRUCTURE_SET, CobblemonSafari.id("safari_ruins/ruins")));
+            ResourceKey.create(Registries.STRUCTURE_SET, CobblemonSafari.id("safari_ruins/ruins")),
+            ResourceKey.create(Registries.STRUCTURE_SET, CobblemonSafari.id("safari_ruins/habitats")));
 
     private RestHouseSites() {
     }
@@ -240,7 +241,7 @@ final class RestHouseSites {
         return false;
     }
 
-    /** Whether a Safari ruin or tower may generate within {@link #STRUCTURE_CLEARANCE_CHUNKS} of a column. */
+    /** Whether a Safari ruin, tower or habitat may generate within {@link #STRUCTURE_CLEARANCE_CHUNKS} of a column. */
     private static boolean nearStructure(Context context, int x, int z) {
         int chunkX = x >> 4;
         int chunkZ = z >> 4;

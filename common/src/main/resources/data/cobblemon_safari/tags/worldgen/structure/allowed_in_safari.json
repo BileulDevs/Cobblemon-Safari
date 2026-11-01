@@ -24,6 +24,86 @@
     {
       "id": "cobblemon_safari:safari_ruins/ruin_overgrown_trial",
       "required": false
+    },
+    {
+      "id": "cobblemon_safari:safari_ruins/habitat_berry_patch",
+      "required": false
+    },
+    {
+      "id": "cobblemon_safari:safari_ruins/habitat_freshwater_pond",
+      "required": false
+    },
+    {
+      "id": "cobblemon_safari:safari_ruins/habitat_sunflowerbed_clearing",
+      "required": false
+    },
+    {
+      "id": "cobblemon_safari:safari_ruins/habitat_flowerbed_clearing",
+      "required": false
+    },
+    {
+      "id": "cobblemon_safari:safari_ruins/habitat_pinkflowerbed_clearing",
+      "required": false
+    },
+    {
+      "id": "cobblemon_safari:safari_ruins/habitat_sandpit_clearing",
+      "required": false
+    },
+    {
+      "id": "cobblemon_safari:safari_ruins/habitat_oak_wildfire_scar",
+      "required": false
+    },
+    {
+      "id": "cobblemon_safari:safari_ruins/habitat_birch_wildfire_scar",
+      "required": false
+    },
+    {
+      "id": "cobblemon_safari:safari_ruins/habitat_parched_peat_bog",
+      "required": false
+    },
+    {
+      "id": "cobblemon_safari:safari_ruins/habitat_bug_mound",
+      "required": false
+    },
+    {
+      "id": "cobblemon_safari:safari_ruins/habitat_fae_mounds",
+      "required": false
+    },
+    {
+      "id": "cobblemon_safari:safari_ruins/habitat_carved_ice_spikes",
+      "required": false
+    },
+    {
+      "id": "cobblemon_safari:safari_ruins/habitat_badlands_shaded_rock",
+      "required": false
+    },
+    {
+      "id": "cobblemon_safari:safari_ruins/habitat_meteorite_impact",
+      "required": false
+    },
+    {
+      "id": "cobblemon_safari:safari_ruins/habitat_lush_canopy",
+      "required": false
+    },
+    {
+      "id": "cobblemon_safari:safari_ruins/habitat_lush_peat_bog",
+      "required": false
+    },
+    {
+      "id": "cobblemon_safari:safari_ruins/habitat_zen_garden",
+      "required": false
+    },
+    {
+      "id": "cobblemon_safari:safari_ruins/habitat_thermal_crevices",
+      "required": false
+    },
+    {
+      "id": "cobblemon:fishing_boat/beach",
+      "required": false
+    },
+    {
+      "id": "cobblemon:fishing_boat/warm_ocean",
+      "required": false
     }
   ]
 }

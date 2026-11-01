@@ -1387,9 +1387,32 @@ SAFARI_STRUCTURE_SETS = {
                "dry": {"footprint_radius": 8, "max_relief": 4}},
     "ruins": {"spacing": 14, "separation": 6, "salt": 1729384751,
               "dry": {"footprint_radius": 10, "max_relief": 6}},
+    # Cobblemon's small habitats (clearings, ponds, mounds...), drawn at
+    # random among those that suit the spot. One candidate per 256 blocks:
+    # about eleven on the island, of which about two thirds land in a habitat
+    # that has one and pass the dry check, so seven or eight per map. A
+    # smaller spacing gives more; separation keeps two of them at least
+    # that many chunks apart, and the exclusion zone keeps them off the ruins.
+    "habitats": {"spacing": 16, "separation": 8, "salt": 1904417263,
+                 "dry": {"footprint_radius": 8, "max_relief": 5},
+                 "exclusion_zone": {"other_set": "ruins", "chunk_count": 3}},
 }
 SURFACE_JIGSAW = {"step": "surface_structures", "start_height": {"absolute": 0}, "size": 7,
                   "terrain_adaptation": "beard_thin"}
+# Settings shared by Cobblemon's habitats: decorations of the ground, placed
+# in its local modifications step and projected onto the surface.
+HABITAT_JIGSAW = {"step": "local_modifications", "start_height": {"absolute": 0}, "size": 3,
+                  "terrain_adaptation": "beard_box"}
+
+
+def habitat(pool, habitats, **settings):
+    """A Safari habitat entry: Cobblemon's start pool, the Safari habitats it suits, its own jigsaw settings."""
+    return ("habitats", pool, habitats, dict(HABITAT_JIGSAW, **settings))
+
+
+TEMPERATE_LAND = ["grassland", "flower_meadow", "rocky_hills", "woodland", "deep_forest"]
+OPEN_LAND = ["grassland", "flower_meadow", "rocky_hills", "savanna"]
+
 SAFARI_STRUCTURES = {
     # Gimmighoul towers, one look per climate.
     "tower_temperate": ("towers", "cobblemon:ruins/temperate_gimmi_tower",
@@ -1423,6 +1446,39 @@ SAFARI_STRUCTURES = {
                           dict(SURFACE_JIGSAW, step="underground_structures", terrain_adaptation="beard_box")),
     "ruin_overgrown_trial": ("ruins", "cobblemon:ruins/overgrown_trial_ruins", ["jungle", "mushroom_grove"],
                              dict(SURFACE_JIGSAW, step="underground_structures")),
+    # Cobblemon's habitats, each with the settings of its own structure file
+    # (data/cobblemon/worldgen/structure/habitats) and the Safari habitats its
+    # biome tag reaches through the bridge.
+    "habitat_berry_patch": habitat("cobblemon:habitats/berry_patches_start", TEMPERATE_LAND,
+                                   size=1, start_height={"absolute": -1}, terrain_adaptation="none"),
+    "habitat_freshwater_pond": habitat("cobblemon:habitats/freshwater_pond_start", TEMPERATE_LAND, size=1),
+    "habitat_sunflowerbed_clearing": habitat("cobblemon:habitats/sunflowerbed_clearing_start", OPEN_LAND,
+                                             size=1, terrain_adaptation="none"),
+    "habitat_flowerbed_clearing": habitat("cobblemon:habitats/flowerbed_clearing_start", ["flower_meadow"],
+                                          size=1, terrain_adaptation="none"),
+    "habitat_pinkflowerbed_clearing": habitat("cobblemon:habitats/pinkflowerbed_clearing_start", ["flower_meadow"],
+                                              size=1, terrain_adaptation="none"),
+    "habitat_sandpit_clearing": habitat("cobblemon:habitats/sandpit_clearing_start", OPEN_LAND,
+                                        size=2, terrain_adaptation="none"),
+    "habitat_oak_wildfire_scar": habitat("cobblemon:habitats/oak_wildlife_scar_start", OPEN_LAND),
+    "habitat_birch_wildfire_scar": habitat("cobblemon:habitats/birch_wildlife_scar_start", ["rocky_hills"]),
+    "habitat_parched_peat_bog": habitat("cobblemon:habitats/parched_peat_bog_connector_start", OPEN_LAND),
+    "habitat_bug_mound": habitat("cobblemon:habitats/bug_mound_start", ["savanna"],
+                                 size=5, terrain_adaptation="beard_thin"),
+    "habitat_fae_mounds": habitat("cobblemon:habitats/fae_mounds_start", ["mushroom_grove"],
+                                  terrain_adaptation="beard_thin"),
+    "habitat_carved_ice_spikes": habitat("cobblemon:habitats/carved_ice_spikes_start", ["snowfield", "glacier"],
+                                         start_height={"absolute": -4}, terrain_adaptation="beard_thin",
+                                         liquid_settings="apply_waterlogging"),
+    "habitat_badlands_shaded_rock": habitat("cobblemon:habitats/badlands_shaded_rock_start", ["badlands", "volcanic"],
+                                            size=2, terrain_adaptation="beard_thin"),
+    "habitat_meteorite_impact": habitat("cobblemon:habitats/meteorite_impact_start", ["badlands", "volcanic"],
+                                        size=5, terrain_adaptation="beard_thin"),
+    "habitat_lush_canopy": habitat("cobblemon:habitats/lush_canopy_start", ["jungle"], size=5),
+    "habitat_lush_peat_bog": habitat("cobblemon:habitats/lush_peat_bog_connector_start", ["jungle"]),
+    "habitat_zen_garden": habitat("cobblemon:habitats/zen_garden_start", ["jungle"], size=1),
+    "habitat_thermal_crevices": habitat("cobblemon:habitats/thermal_crevices_start", ["jungle"],
+                                        size=2, start_height={"absolute": -1}, terrain_adaptation="none"),
 }
 # Folders owned by write_safari_structures, rebuilt from scratch on each run.
 SAFARI_STRUCTURE_DIR = "safari_ruins"
@@ -1453,6 +1509,8 @@ def write_safari_structures(written):
             "terrain_adaptation": settings["terrain_adaptation"],
             "use_expansion_hack": False,
         }
+        if "liquid_settings" in settings:
+            jigsaw["liquid_settings"] = settings["liquid_settings"]
         # Wrapped in the mod's dry_jigsaw type (DryJigsawStructure): a land
         # biome still has ponds and flooded hollows, and a structure projected
         # onto water would float in them.
@@ -1477,14 +1535,21 @@ def write_safari_structures(written):
         members = [n for n, v in SAFARI_STRUCTURES.items() if v[0] == set_name]
         # Several variants per set: at a candidate spot, Minecraft tries them in
         # turn until one suits the biome there.
+        spread = {
+            "type": "minecraft:random_spread",
+            "spacing": placement["spacing"],
+            "separation": placement["separation"],
+            "salt": placement["salt"],
+        }
+        if "exclusion_zone" in placement:
+            zone = placement["exclusion_zone"]
+            if zone["other_set"] not in SAFARI_STRUCTURE_SETS:
+                sys.exit(f"Structure set {set_name} excludes unknown set {zone['other_set']}")
+            spread["exclusion_zone"] = {"other_set": f"{MOD_ID}:{SAFARI_STRUCTURE_DIR}/{zone['other_set']}",
+                                        "chunk_count": zone["chunk_count"]}
         write(f"worldgen/structure_set/{SAFARI_STRUCTURE_DIR}/{set_name}.json", {
             "structures": [{"structure": f"{MOD_ID}:{SAFARI_STRUCTURE_DIR}/{m}", "weight": 1} for m in members],
-            "placement": {
-                "type": "minecraft:random_spread",
-                "spacing": placement["spacing"],
-                "separation": placement["separation"],
-                "salt": placement["salt"],
-            },
+            "placement": spread,
         }, written)
 
 
