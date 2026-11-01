@@ -224,6 +224,24 @@ public class SafariConfig {
          * same.
          */
         public double caughtSpeciesWeight = SafariConfigManager.DEFAULT_CAUGHT_SPECIES_WEIGHT;
+
+        /**
+         * Distance from a Poké Snack, in blocks, within which no natural
+         * Pokémon spawns in the Safari, so the snack's own spawner has room
+         * to bring some. 16 is twice the snack's spawn radius. Larger empties
+         * more of the surroundings (and searches a little further for
+         * snacks each second); smaller leaves natural Pokémon close enough to
+         * fill the snack's count again. 0 turns the clearing off. 0 to 32.
+         */
+        public int snackClearRadius = SafariConfigManager.DEFAULT_SNACK_CLEAR_RADIUS;
+
+        /**
+         * Cap of a Poké Snack's spawner in the Safari, as a multiple of the
+         * Safari's density (Cobblemon's Pokémon per chunk times
+         * pokemonPerChunkMultiplier). Above 1 the snack still brings
+         * Pokémon in a full area; higher packs more around it. 1 to 4.
+         */
+        public double snackDensityMultiplier = SafariConfigManager.DEFAULT_SNACK_DENSITY_MULTIPLIER;
     }
 
     /**

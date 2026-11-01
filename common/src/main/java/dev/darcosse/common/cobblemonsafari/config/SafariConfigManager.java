@@ -119,6 +119,22 @@ public final class SafariConfigManager {
      */
     public static final double DEFAULT_CAUGHT_SPECIES_WEIGHT = 0.4;
 
+    /** Default spawns.snackClearRadius, in blocks: twice a Poké Snack's own spawn radius (8). */
+    public static final int DEFAULT_SNACK_CLEAR_RADIUS = 16;
+
+    /**
+     * Largest spawns.snackClearRadius. Beyond it the cleared disc covers most
+     * of a player's spawn area and the snack search reaches extra chunks.
+     */
+    private static final int MAX_SNACK_CLEAR_RADIUS = 32;
+
+    /** Default spawns.snackDensityMultiplier: enough for a snack to bite in an area the Safari keeps full. */
+    public static final double DEFAULT_SNACK_DENSITY_MULTIPLIER = 1.5;
+
+    /** Bounds of spawns.snackDensityMultiplier: below 1 Cobblemon's own cap wins; above 4 a snack draws a crowd. */
+    private static final double MIN_SNACK_DENSITY_MULTIPLIER = 1.0;
+    private static final double MAX_SNACK_DENSITY_MULTIPLIER = 4.0;
+
     /**
      * Default restHouseTravel.cooldownSeconds. Long enough that the houses
      * are not an instant network; short enough to come back to a house
@@ -839,6 +855,22 @@ public final class SafariConfigManager {
                     : Math.max(0.0D, Math.min(1.0D, c.spawns.caughtSpeciesWeight));
             warn("spawns.caughtSpeciesWeight", c.spawns.caughtSpeciesWeight, fixed);
             c.spawns.caughtSpeciesWeight = fixed;
+            corrected = true;
+        }
+        if (c.spawns.snackClearRadius < 0 || c.spawns.snackClearRadius > MAX_SNACK_CLEAR_RADIUS) {
+            int fixed = Math.max(0, Math.min(MAX_SNACK_CLEAR_RADIUS, c.spawns.snackClearRadius));
+            warn("spawns.snackClearRadius", c.spawns.snackClearRadius, fixed);
+            c.spawns.snackClearRadius = fixed;
+            corrected = true;
+        }
+        if (!(c.spawns.snackDensityMultiplier >= MIN_SNACK_DENSITY_MULTIPLIER
+                && c.spawns.snackDensityMultiplier <= MAX_SNACK_DENSITY_MULTIPLIER)) {
+            // Also catches NaN, which falls back to the default.
+            double fixed = Double.isNaN(c.spawns.snackDensityMultiplier) ? DEFAULT_SNACK_DENSITY_MULTIPLIER
+                    : Math.max(MIN_SNACK_DENSITY_MULTIPLIER,
+                    Math.min(MAX_SNACK_DENSITY_MULTIPLIER, c.spawns.snackDensityMultiplier));
+            warn("spawns.snackDensityMultiplier", c.spawns.snackDensityMultiplier, fixed);
+            c.spawns.snackDensityMultiplier = fixed;
             corrected = true;
         }
         if (c.spawns.maxSameSpeciesNearby < 0) {

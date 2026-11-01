@@ -2,6 +2,7 @@ package dev.darcosse.common.cobblemonsafari.spawn;
 
 import com.cobblemon.mod.common.Cobblemon;
 import com.cobblemon.mod.common.block.entity.PokeSnackBlockEntity;
+import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
 import net.minecraft.core.BlockPos;
@@ -30,12 +31,13 @@ import java.util.Set;
  *
  * <p>Two things, both only in the Safari:
  * <ul>
- *   <li>a bubble: no natural spawn within {@link #BUBBLE_RADIUS} blocks of a
- *       snack ({@link SafariSpawnFilter#isAllowedPosition}), so the area
- *       empties as its Pokémon wander off or despawn, and fills again
- *       with the snack's own;</li>
- *   <li>a higher cap for the snack's spawner, {@link #SNACK_CAP_FACTOR} times
- *       the Safari's density, so it bites before the bubble has emptied.</li>
+ *   <li>a bubble: no natural spawn within {@code spawns.snackClearRadius}
+ *       blocks of a snack ({@link SafariSpawnFilter#isAllowedPosition}), so
+ *       the area empties as its Pokémon wander off or despawn, and fills
+ *       again with the snack's own;</li>
+ *   <li>a higher cap for the snack's spawner,
+ *       {@code spawns.snackDensityMultiplier} times the Safari's density, so
+ *       it bites before the bubble has emptied.</li>
  * </ul>
  *
  * <p>The snacks are found once a second around the players in the Safari,
@@ -44,33 +46,16 @@ import java.util.Set;
  */
 public final class SnackBubble {
 
-    /**
-     * Distance from a snack within which no natural Pokémon spawns, in
-     * blocks: twice the snack's own spawn radius (8). Larger empties more of
-     * the player's surroundings; smaller leaves natural Pokémon close enough
-     * to fill the snack's count.
-     */
-    private static final int BUBBLE_RADIUS = 16;
-
-    private static final long BUBBLE_RADIUS_SQUARED = (long) BUBBLE_RADIUS * BUBBLE_RADIUS;
+    /** No snack known: what the spawn threads read before the first refresh and after a reset. */
+    private static final Bubbles NONE = new Bubbles(List.of(), 0L);
 
     /**
-     * Cap of a snack's spawner, as a multiple of the Safari's density. Above
-     * 1 the snack spawns even in a full area; higher packs more Pokémon
-     * around it.
+     * Snacks found around the players in the Safari at the last refresh,
+     * with the squared clearing radius of that refresh: published together,
+     * so a spawn thread never pairs a new list with an old radius after a
+     * config reload.
      */
-    private static final float SNACK_CAP_FACTOR = 1.5F;
-
-    /**
-     * Blocks around a player searched for snacks: as far as Cobblemon puts
-     * spawn zones ({@code maximumSpawningZoneDistanceFromPlayer}, 64 by
-     * default) plus the bubble, so a zone's candidate spots near a snack
-     * are always known.
-     */
-    private static final int SEARCH_MARGIN = BUBBLE_RADIUS;
-
-    /** Snacks found around the players in the Safari at the last refresh. */
-    private static volatile List<BlockPos> snacks = List.of();
+    private static volatile Bubbles bubbles = NONE;
 
     private SnackBubble() {
     }
@@ -84,12 +69,16 @@ public final class SnackBubble {
     static void refresh(MinecraftServer server) {
         ServerLevel safari = SafariDimensions.level(server);
         if (safari == null) {
-            snacks = List.of();
+            bubbles = NONE;
             return;
         }
+        SafariConfig.Spawns config = SafariConfigManager.get().spawns;
+        int radius = config.snackClearRadius;
         float cap = (float) (Cobblemon.INSTANCE.getConfig().getPokemonPerChunk()
-                * SafariConfigManager.get().spawns.pokemonPerChunkMultiplier * SNACK_CAP_FACTOR);
-        int reach = (int) Cobblemon.INSTANCE.getConfig().getMaximumSpawningZoneDistanceFromPlayer() + SEARCH_MARGIN;
+                * config.pokemonPerChunkMultiplier * config.snackDensityMultiplier);
+        // As far as Cobblemon puts spawn zones (maximumSpawningZoneDistanceFromPlayer,
+        // 64 by default) plus the clearing, so a zone's candidate spots near a snack are known.
+        int reach = (int) Cobblemon.INSTANCE.getConfig().getMaximumSpawningZoneDistanceFromPlayer() + radius;
         int chunkReach = SectionPos.blockToSectionCoord(reach) + 1;
         Set<BlockPos> found = new HashSet<>();
         Set<Long> scanned = new HashSet<>();
@@ -115,7 +104,7 @@ public final class SnackBubble {
                 }
             }
         }
-        snacks = List.copyOf(found);
+        bubbles = new Bubbles(List.copyOf(found), (long) radius * radius);
     }
 
     /**
@@ -132,13 +121,18 @@ public final class SnackBubble {
 
     /**
      * Whether a natural spawn may happen at a spot: not within
-     * {@link #BUBBLE_RADIUS} of a snack. Called by Cobblemon for every
-     * candidate spot of a player's spawner, possibly off the server thread:
-     * reads the published list only, usually empty.
+     * {@code spawns.snackClearRadius} of a snack. Called by Cobblemon for
+     * every candidate spot of a player's spawner, possibly off the server
+     * thread: reads the published snapshot only, usually empty.
      */
     static boolean allows(BlockPos pos) {
-        for (BlockPos snack : snacks) {
-            if (snack.distSqr(pos) <= BUBBLE_RADIUS_SQUARED) {
+        Bubbles current = bubbles;
+        // A radius of 0 turns the clearing off: the snacks are still found, for their cap.
+        if (current.radiusSquared() == 0L) {
+            return true;
+        }
+        for (BlockPos snack : current.snacks()) {
+            if (snack.distSqr(pos) <= current.radiusSquared()) {
                 return false;
             }
         }
@@ -147,6 +141,15 @@ public final class SnackBubble {
 
     /** Forgets the snacks; for a server start, as single player reuses this class. */
     static void reset() {
-        snacks = List.of();
+        bubbles = NONE;
+    }
+
+    /**
+     * The snacks of one refresh and the clearing radius they were found with.
+     *
+     * @param snacks        positions of the snacks around the players in the Safari
+     * @param radiusSquared squared {@code spawns.snackClearRadius} at that refresh; 0 means no clearing
+     */
+    private record Bubbles(List<BlockPos> snacks, long radiusSquared) {
     }
 }
