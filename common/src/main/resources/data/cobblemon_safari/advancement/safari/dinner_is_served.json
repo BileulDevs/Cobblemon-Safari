@@ -1,0 +1,24 @@
+{
+  "parent": "cobblemon_safari:safari/snack_time",
+  "display": {
+    "icon": {
+      "id": "cobblemon:oran_berry"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.dinner_is_served.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.dinner_is_served.description"
+    },
+    "frame": "goal"
+  },
+  "criteria": {
+    "catch": {
+      "trigger": "cobblemon_safari:safari_event",
+      "conditions": {
+        "event": "catch_snack_visitor"
+      }
+    }
+  },
+  "sends_telemetry_event": false
+}

@@ -1,0 +1,27 @@
+{
+  "parent": "cobblemon_safari:safari/first_catch",
+  "display": {
+    "icon": {
+      "id": "cobblemon:great_ball"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.good_haul.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.good_haul.description"
+    },
+    "frame": "goal"
+  },
+  "criteria": {
+    "catches": {
+      "trigger": "cobblemon_safari:safari_event",
+      "conditions": {
+        "event": "hunt_catches",
+        "value": {
+          "min": 10
+        }
+      }
+    }
+  },
+  "sends_telemetry_event": false
+}

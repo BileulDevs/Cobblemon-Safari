@@ -1,0 +1,24 @@
+{
+  "parent": "cobblemon_safari:safari/special_of_the_day",
+  "display": {
+    "icon": {
+      "id": "cobblemon:dream_ball"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.ultra_rare.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.ultra_rare.description"
+    },
+    "frame": "challenge"
+  },
+  "criteria": {
+    "catch": {
+      "trigger": "cobblemon_safari:safari_event",
+      "conditions": {
+        "event": "catch_ultra_rare_special"
+      }
+    }
+  },
+  "sends_telemetry_event": false
+}

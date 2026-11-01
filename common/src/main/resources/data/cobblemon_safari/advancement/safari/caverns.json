@@ -1,0 +1,58 @@
+{
+  "parent": "cobblemon_safari:safari/enter",
+  "display": {
+    "icon": {
+      "id": "minecraft:glow_berries"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.caverns.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.caverns.description"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "deep_cavern": {
+      "trigger": "minecraft:location",
+      "conditions": {
+        "player": [
+          {
+            "condition": "minecraft:entity_properties",
+            "entity": "this",
+            "predicate": {
+              "location": {
+                "dimension": "cobblemon_safari:safari",
+                "biomes": "cobblemon_safari:deep_cavern"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "lush_grotto": {
+      "trigger": "minecraft:location",
+      "conditions": {
+        "player": [
+          {
+            "condition": "minecraft:entity_properties",
+            "entity": "this",
+            "predicate": {
+              "location": {
+                "dimension": "cobblemon_safari:safari",
+                "biomes": "cobblemon_safari:lush_grotto"
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "deep_cavern",
+      "lush_grotto"
+    ]
+  ],
+  "sends_telemetry_event": false
+}

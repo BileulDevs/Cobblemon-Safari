@@ -5,13 +5,15 @@ import com.cobblemon.mod.common.api.events.CobblemonEvents;
 import com.cobblemon.mod.common.api.events.pokemon.PokemonCapturedEvent;
 import com.cobblemon.mod.common.pokemon.Pokemon;
 import com.cobblemon.mod.common.pokemon.Species;
+import dev.darcosse.common.cobblemonsafari.advancement.SafariAdvancements;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
 import dev.darcosse.common.cobblemonsafari.session.CatchRecord;
 import dev.darcosse.common.cobblemonsafari.session.SafariSessionManager;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
- * Turns Cobblemon captures made inside the Safari into session catch records.
+ * Turns Cobblemon captures made inside the Safari into session catch records,
+ * then tells the advancements.
  */
 public final class CatchTracker {
 
@@ -38,5 +40,7 @@ public final class CatchTracker {
         Species species = pokemon.getSpecies();
         SafariSessionManager.recordCatch(player, new CatchRecord(
                 species.getResourceIdentifier().toString(), species.getTranslationKey(), pokemon.getShiny()));
+        // After the record: the advancements read the hunt's catch count and the species log it updates.
+        SafariAdvancements.onCatch(player, pokemon, event.getPokeBallEntity());
     }
 }

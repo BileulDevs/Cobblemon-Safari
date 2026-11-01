@@ -1,0 +1,24 @@
+{
+  "parent": "cobblemon_safari:safari/first_catch",
+  "display": {
+    "icon": {
+      "id": "cobblemon:shiny_stone"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.wild_shine.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.wild_shine.description"
+    },
+    "frame": "challenge"
+  },
+  "criteria": {
+    "catch": {
+      "trigger": "cobblemon_safari:safari_event",
+      "conditions": {
+        "event": "catch_shiny"
+      }
+    }
+  },
+  "sends_telemetry_event": false
+}

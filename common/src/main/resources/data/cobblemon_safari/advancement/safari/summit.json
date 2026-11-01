@@ -1,0 +1,58 @@
+{
+  "parent": "cobblemon_safari:safari/enter",
+  "display": {
+    "icon": {
+      "id": "minecraft:magma_block"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.summit.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.summit.description"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "peaks": {
+      "trigger": "minecraft:location",
+      "conditions": {
+        "player": [
+          {
+            "condition": "minecraft:entity_properties",
+            "entity": "this",
+            "predicate": {
+              "location": {
+                "dimension": "cobblemon_safari:safari",
+                "biomes": "cobblemon_safari:peaks"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "volcanic": {
+      "trigger": "minecraft:location",
+      "conditions": {
+        "player": [
+          {
+            "condition": "minecraft:entity_properties",
+            "entity": "this",
+            "predicate": {
+              "location": {
+                "dimension": "cobblemon_safari:safari",
+                "biomes": "cobblemon_safari:volcanic"
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "peaks",
+      "volcanic"
+    ]
+  ],
+  "sends_telemetry_event": false
+}

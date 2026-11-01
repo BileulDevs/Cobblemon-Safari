@@ -1,0 +1,24 @@
+{
+  "parent": "cobblemon_safari:safari/first_catch",
+  "display": {
+    "icon": {
+      "id": "cobblemon:dusk_ball"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.night_owl.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.night_owl.description"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "catch": {
+      "trigger": "cobblemon_safari:safari_event",
+      "conditions": {
+        "event": "catch_at_night"
+      }
+    }
+  },
+  "sends_telemetry_event": false
+}

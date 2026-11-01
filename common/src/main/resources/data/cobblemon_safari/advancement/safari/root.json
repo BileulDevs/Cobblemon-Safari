@@ -1,0 +1,42 @@
+{
+  "display": {
+    "icon": {
+      "id": "cobblemon:safari_ball"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.root.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.root.description"
+    },
+    "frame": "task",
+    "background": "minecraft:textures/block/moss_block.png",
+    "show_toast": false,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "has_ticket": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "cobblemon_safari:safari_ticket"
+          }
+        ]
+      }
+    },
+    "entered": {
+      "trigger": "minecraft:changed_dimension",
+      "conditions": {
+        "to": "cobblemon_safari:safari"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_ticket",
+      "entered"
+    ]
+  ],
+  "sends_telemetry_event": false
+}

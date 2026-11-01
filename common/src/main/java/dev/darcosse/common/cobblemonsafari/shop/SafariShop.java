@@ -7,6 +7,7 @@ import com.cobblemon.mod.common.api.pokemon.PokemonProperties;
 import com.cobblemon.mod.common.pokemon.Pokemon;
 import com.cobblemon.mod.common.util.PlayerExtensionsKt;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
+import dev.darcosse.common.cobblemonsafari.advancement.SafariAdvancements;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.config.SafariShopConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariShopConfigManager;
@@ -479,9 +480,11 @@ public final class SafariShop {
         } else if (costs.isEmpty()) {
             player.sendSystemMessage(Component.translatable(key("message.shop_bought"), bought,
                     SafariPointsIcon.amount(entry.price), SafariPointsIcon.amount(SafariPoints.balance(player))));
+            SafariAdvancements.fire(player, SafariAdvancements.SHOP_PURCHASE);
         } else {
             // What was really taken, kind by kind: the player sees which stone went.
             player.sendSystemMessage(Component.translatable(key("message.shop_traded"), describeTaken(taken), bought));
+            SafariAdvancements.fire(player, SafariAdvancements.SHOP_TRADE);
         }
     }
 

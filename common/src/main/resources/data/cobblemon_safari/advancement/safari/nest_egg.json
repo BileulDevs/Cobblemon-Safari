@@ -1,0 +1,27 @@
+{
+  "parent": "cobblemon_safari:safari/enter",
+  "display": {
+    "icon": {
+      "id": "minecraft:gold_nugget"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.nest_egg.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.nest_egg.description"
+    },
+    "frame": "goal"
+  },
+  "criteria": {
+    "points": {
+      "trigger": "cobblemon_safari:safari_event",
+      "conditions": {
+        "event": "points_earned",
+        "value": {
+          "min": 1000
+        }
+      }
+    }
+  },
+  "sends_telemetry_event": false
+}

@@ -2,7 +2,6 @@ package dev.darcosse.common.cobblemonsafari.bounty;
 
 import com.cobblemon.mod.common.api.Priority;
 import com.cobblemon.mod.common.api.events.CobblemonEvents;
-import com.cobblemon.mod.common.api.events.pokeball.PokemonCatchRateEvent;
 import com.cobblemon.mod.common.api.events.pokemon.PokemonCapturedEvent;
 import com.cobblemon.mod.common.api.types.ElementalType;
 import com.cobblemon.mod.common.entity.pokeball.EmptyPokeBallEntity;
@@ -10,6 +9,8 @@ import com.cobblemon.mod.common.pokemon.Pokemon;
 import com.cobblemon.mod.common.pokemon.Species;
 import com.cobblemon.mod.common.pokemon.properties.HiddenAbilityProperty;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
+import dev.darcosse.common.cobblemonsafari.advancement.SafariAdvancements;
+import dev.darcosse.common.cobblemonsafari.capture.ThrowTracker;
 import dev.darcosse.common.cobblemonsafari.config.BountyKindSettings;
 import dev.darcosse.common.cobblemonsafari.config.BountyKinds;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
@@ -41,7 +42,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.WeakHashMap;
 
 /**
  * Bounties: the missions of the rotation, drawn with each rotation of the
@@ -90,14 +90,6 @@ public final class SafariBounties {
     /** The level a level mission asks is a multiple of this: "level 25 or higher" reads better than 27. */
     private static final int LEVEL_STEP = 5;
 
-    /**
-     * Night as Cobblemon's spawner counts it (its "night" time range, in
-     * ticks of the day), so that a night mission and the night spawns agree.
-     */
-    private static final long NIGHT_START = 12_542L;
-    private static final long NIGHT_END = 23_459L;
-    private static final long TICKS_PER_DAY = 24_000L;
-
     private static List<Bounty> current = List.of();
     private static long currentPeriod = Long.MIN_VALUE;
     private static long currentRevision = Long.MIN_VALUE;
@@ -105,22 +97,13 @@ public final class SafariBounties {
     /** Missions last broadcast, to push only when they change. */
     private static List<Bounty> sent;
 
-    /**
-     * Balls thrown at a Pokémon in a battle, recorded when Cobblemon computes
-     * the catch rate (which it does for every throw, in battle or not) and
-     * read on capture. Weak: a ball that missed or broke free is forgotten
-     * with its entity.
-     */
-    private static final Map<EmptyPokeBallEntity, Boolean> IN_BATTLE = new WeakHashMap<>();
-
     private SafariBounties() {
     }
 
-    /** Subscribes to throws and captures. Called once from common init. */
+    /** Subscribes to captures. Called once from common init; throws are recorded by {@link ThrowTracker}. */
     public static void register() {
         // LOWEST: the capture is final, as for points and catch records.
         CobblemonEvents.POKEMON_CAPTURED.subscribe(Priority.LOWEST, SafariBounties::onCaptured);
-        CobblemonEvents.POKEMON_CATCH_RATE.subscribe(Priority.LOWEST, SafariBounties::onCatchRate);
     }
 
     /** Forgets cached missions; call when a server starts, since single player reuses this class. */
@@ -130,7 +113,6 @@ public final class SafariBounties {
         currentRevision = Long.MIN_VALUE;
         tickCounter = 0;
         sent = null;
-        IN_BATTLE.clear();
         BountyPool.invalidate();
     }
 
@@ -326,6 +308,7 @@ public final class SafariBounties {
         progress.clearSlot(slot);
         progress.swaps++;
         store.changed();
+        SafariAdvancements.fire(player, SafariAdvancements.MISSION_SWAP);
         player.sendSystemMessage(Component.translatable(key("bounty.swap.done"), replacement.describe(),
                 SafariPointsIcon.amount(replacement.reward())).withStyle(ChatFormatting.GREEN));
         sendTo(player);
@@ -343,13 +326,6 @@ public final class SafariBounties {
     }
 
     // ------------------------------------------------------------- captures
-
-    /** Remembers whether a ball was thrown in a battle, for the out-of-battle missions. */
-    private static void onCatchRate(PokemonCatchRateEvent event) {
-        if (event.getPokeBallEntity() != null && event.getPokemonEntity() != null) {
-            IN_BATTLE.put(event.getPokeBallEntity(), event.getPokemonEntity().getBattleId() != null);
-        }
-    }
 
     /** Counts a capture made inside the Safari toward every matching mission, paying those it completes. */
     private static void onCaptured(PokemonCapturedEvent event) {
@@ -386,6 +362,8 @@ public final class SafariBounties {
         }
         if (!progress.bonusPaid && allDone(bounties, progress)) {
             progress.bonusPaid = true;
+            // Even with no bonus configured: the feat is finishing them all, not the payout.
+            SafariAdvancements.fire(player, SafariAdvancements.ALL_MISSIONS);
             int bonus = SafariConfigManager.get().bounties.allDoneBonus;
             if (bonus > 0) {
                 int added = SafariPoints.add(player, bonus);
@@ -411,14 +389,13 @@ public final class SafariBounties {
             boolean featured = FeaturedRotation.today(server).stream().anyMatch(entry -> entry.species() == species);
             EmptyPokeBallEntity ball = event.getPokeBallEntity();
             // A ball the catch rate never saw (another mod's capture) counts as out of battle.
-            Boolean inBattle = ball == null ? null : IN_BATTLE.remove(ball);
+            Boolean inBattle = ThrowTracker.wasInBattle(ball);
             // Where the Pokémon was: the ball lies on it. The player when there is no ball.
             Entity where = ball != null ? ball : player;
-            long time = Math.floorMod(where.level().getDayTime(), TICKS_PER_DAY);
             String biome = where.level().getBiome(where.blockPosition()).unwrapKey()
                     .map(ResourceKey::location).map(Object::toString).orElse("");
             return new Capture(pokemon, species.getResourceIdentifier().toString(), featured,
-                    Boolean.TRUE.equals(inBattle), time >= NIGHT_START && time <= NIGHT_END, biome);
+                    Boolean.TRUE.equals(inBattle), ThrowTracker.isNight(where), biome);
         }
     }
 
@@ -458,6 +435,9 @@ public final class SafariBounties {
                 .withStyle(ChatFormatting.GREEN));
         player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                 SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.6F, 1.2F);
+        if (bounty.kind() == BountyKind.OUT_OF_BATTLE) {
+            SafariAdvancements.fire(player, SafariAdvancements.MISSION_OUT_OF_BATTLE);
+        }
     }
 
     /** Whether the player has completed every mission of the rotation. */

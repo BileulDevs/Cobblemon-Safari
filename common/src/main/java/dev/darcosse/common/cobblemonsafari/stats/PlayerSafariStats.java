@@ -14,7 +14,8 @@ import java.util.Set;
  * had, shown by {@code /safari stats}, {@code /safari top} and the wall
  * screens' STATS page.
  *
- * <p>Mutated only by {@link SafariStatsListener}, which marks the store dirty.
+ * <p>Mutated only through {@link SafariStatsListener} and {@link SafariStatsStore},
+ * which mark the store dirty.
  */
 public final class PlayerSafariStats {
 
@@ -26,6 +27,16 @@ public final class PlayerSafariStats {
     private int bestSessionCatches;
     private long ticksHunted;
     private final Set<String> speciesCaught = new LinkedHashSet<>();
+    /** Distinct maps hunted on, counted when a hunt starts on a map other than the last one. */
+    private int mapsHunted;
+    /**
+     * Salt of the map of the last hunt, or {@link #NO_MAP}. A sentinel and
+     * not 0: the first map of a world has salt 0.
+     */
+    private long lastMapSalt = NO_MAP;
+
+    /** {@link #lastMapSalt} of a player who never hunted since maps were counted. */
+    private static final long NO_MAP = Long.MIN_VALUE;
 
     /** Last known player name. */
     public String name() {
@@ -60,6 +71,27 @@ public final class PlayerSafariStats {
     /** Distinct species ever caught inside the Safari. Read-only view. */
     public Set<String> speciesCaught() {
         return Collections.unmodifiableSet(speciesCaught);
+    }
+
+    /** Distinct maps the player has hunted on (since 1.4.0, when they started being counted). */
+    public int mapsHunted() {
+        return mapsHunted;
+    }
+
+    /**
+     * Notes a hunt on the map of the given salt, counting it when it is not
+     * the map of the previous hunt. Maps only ever move on, so "not the last
+     * one" means "a new one".
+     *
+     * @return whether the count changed
+     */
+    boolean markMapHunted(long mapSalt) {
+        if (mapSalt == lastMapSalt) {
+            return false;
+        }
+        lastMapSalt = mapSalt;
+        mapsHunted++;
+        return true;
     }
 
     /** Refreshes the last known name, so a renamed player shows up under the new one. */
@@ -97,6 +129,8 @@ public final class PlayerSafariStats {
             species.add(StringTag.valueOf(id));
         }
         tag.put("species", species);
+        tag.putInt("maps", mapsHunted);
+        tag.putLong("last_map", lastMapSalt);
         return tag;
     }
 
@@ -109,6 +143,9 @@ public final class PlayerSafariStats {
         stats.shinyCatches = tag.getInt("shiny");
         stats.bestSessionCatches = tag.getInt("best_session");
         stats.ticksHunted = tag.getLong("ticks");
+        stats.mapsHunted = tag.getInt("maps");
+        // contains: a missing key must read as "no map", not as salt 0, the first map's.
+        stats.lastMapSalt = tag.contains("last_map", Tag.TAG_LONG) ? tag.getLong("last_map") : NO_MAP;
         for (Tag species : tag.getList("species", Tag.TAG_STRING)) {
             stats.speciesCaught.add(species.getAsString());
         }

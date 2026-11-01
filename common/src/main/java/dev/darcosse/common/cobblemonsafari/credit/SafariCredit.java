@@ -1,6 +1,7 @@
 package dev.darcosse.common.cobblemonsafari.credit;
 
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
+import dev.darcosse.common.cobblemonsafari.advancement.SafariAdvancements;
 import dev.darcosse.common.cobblemonsafari.access.EntryResult;
 import dev.darcosse.common.cobblemonsafari.access.SafariAccess;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
@@ -49,6 +50,10 @@ public final class SafariCredit {
                     if (refunded > 0) {
                         player.sendSystemMessage(Component.translatable(key("message.credit_refunded"),
                                 Ticks.format(refunded), Ticks.format(balance(player))));
+                        // Only a chosen exit earns it: dying or being moved out is no feat.
+                        if (reason == SessionEndReason.VOLUNTARY) {
+                            SafariAdvancements.fire(player, SafariAdvancements.REFUND);
+                        }
                     }
                 }
             }
@@ -83,6 +88,9 @@ public final class SafariCredit {
         int after = (int) Math.min(cap, (long) before + Math.max(0, deltaTicks));
         if (after > before) {
             store.set(player.getUUID(), after);
+            if (after >= cap) {
+                SafariAdvancements.fire(player, SafariAdvancements.BANK_FULL);
+            }
         }
         return Math.max(0, after - before);
     }

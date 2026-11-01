@@ -1,0 +1,25 @@
+{
+  "parent": "cobblemon_safari:safari/root",
+  "display": {
+    "icon": {
+      "id": "minecraft:wooden_sword"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.hands_off.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.hands_off.description"
+    },
+    "frame": "task",
+    "hidden": true
+  },
+  "criteria": {
+    "hit": {
+      "trigger": "cobblemon_safari:safari_event",
+      "conditions": {
+        "event": "gate_resident_hit"
+      }
+    }
+  },
+  "sends_telemetry_event": false
+}

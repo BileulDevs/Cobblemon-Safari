@@ -1,0 +1,54 @@
+{
+  "parent": "cobblemon_safari:safari/enter",
+  "display": {
+    "icon": {
+      "id": "minecraft:sweet_berries"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.habitat.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.habitat.description"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "habitat": {
+      "trigger": "minecraft:location",
+      "conditions": {
+        "player": [
+          {
+            "condition": "minecraft:entity_properties",
+            "entity": "this",
+            "predicate": {
+              "location": {
+                "dimension": "cobblemon_safari:safari",
+                "structures": [
+                  "cobblemon_safari:safari_ruins/habitat_berry_patch",
+                  "cobblemon_safari:safari_ruins/habitat_freshwater_pond",
+                  "cobblemon_safari:safari_ruins/habitat_sunflowerbed_clearing",
+                  "cobblemon_safari:safari_ruins/habitat_flowerbed_clearing",
+                  "cobblemon_safari:safari_ruins/habitat_pinkflowerbed_clearing",
+                  "cobblemon_safari:safari_ruins/habitat_sandpit_clearing",
+                  "cobblemon_safari:safari_ruins/habitat_oak_wildfire_scar",
+                  "cobblemon_safari:safari_ruins/habitat_birch_wildfire_scar",
+                  "cobblemon_safari:safari_ruins/habitat_parched_peat_bog",
+                  "cobblemon_safari:safari_ruins/habitat_bug_mound",
+                  "cobblemon_safari:safari_ruins/habitat_fae_mounds",
+                  "cobblemon_safari:safari_ruins/habitat_carved_ice_spikes",
+                  "cobblemon_safari:safari_ruins/habitat_badlands_shaded_rock",
+                  "cobblemon_safari:safari_ruins/habitat_meteorite_impact",
+                  "cobblemon_safari:safari_ruins/habitat_lush_canopy",
+                  "cobblemon_safari:safari_ruins/habitat_lush_peat_bog",
+                  "cobblemon_safari:safari_ruins/habitat_zen_garden",
+                  "cobblemon_safari:safari_ruins/habitat_thermal_crevices"
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "sends_telemetry_event": false
+}

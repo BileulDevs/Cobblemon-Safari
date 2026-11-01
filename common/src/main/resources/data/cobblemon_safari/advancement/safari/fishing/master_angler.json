@@ -1,0 +1,27 @@
+{
+  "parent": "cobblemon_safari:safari/fishing/angler",
+  "display": {
+    "icon": {
+      "id": "cobblemon:master_rod"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.fishing.master_angler.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.fishing.master_angler.description"
+    },
+    "frame": "challenge"
+  },
+  "criteria": {
+    "fished": {
+      "trigger": "cobblemon_safari:safari_event",
+      "conditions": {
+        "event": "pokemon_fished",
+        "value": {
+          "min": 50
+        }
+      }
+    }
+  },
+  "sends_telemetry_event": false
+}

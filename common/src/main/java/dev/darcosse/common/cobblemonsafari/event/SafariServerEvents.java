@@ -4,7 +4,9 @@ import dev.darcosse.common.cobblemonsafari.stats.SafariStatistics;
 import dev.darcosse.common.cobblemonsafari.network.SafariNetwork;
 import com.mojang.brigadier.CommandDispatcher;
 import dev.darcosse.common.cobblemonsafari.structure.RestHouseStaff;
+import dev.darcosse.common.cobblemonsafari.advancement.SafariAdvancements;
 import dev.darcosse.common.cobblemonsafari.capture.CaptureGuard;
+import dev.darcosse.common.cobblemonsafari.capture.ThrowTracker;
 import dev.darcosse.common.cobblemonsafari.command.SafariCommands;
 import dev.darcosse.common.cobblemonsafari.park.SafariBorder;
 import dev.darcosse.common.cobblemonsafari.bounty.SafariBounties;
@@ -69,6 +71,8 @@ public final class SafariServerEvents {
         FeaturedRotation.attach(server);
         FeaturedSync.reset();
         SafariBounties.reset();
+        ThrowTracker.reset();
+        SafariAdvancements.reset();
         SafariSpawnBoost.reset();
         SpecialSpawnCounter.reset();
         RestHouseTravel.reset();
@@ -125,6 +129,8 @@ public final class SafariServerEvents {
         SafariBounties.sendTo(player);
         SafariNetwork.sendStats(player);
         SafariStatistics.catchUp(player);
+        // After the catch-up: thresholds passed before the advancements existed are granted from the totals.
+        SafariAdvancements.onJoin(player);
         JOINED.add(player.getUUID());
     }
 
@@ -209,7 +215,11 @@ public final class SafariServerEvents {
      * @return true when the loader must cancel the damage
      */
     public static boolean onIncomingDamage(LivingEntity entity, DamageSource source) {
-        return SafariProtection.shouldCancelDamage(entity, source) || GateResidents.shouldCancelDamage(entity, source)
+        if (GateResidents.shouldCancelDamage(entity, source)) {
+            SafariAdvancements.onGateResidentHit(source);
+            return true;
+        }
+        return SafariProtection.shouldCancelDamage(entity, source)
                 || RestHouseStaff.shouldCancelDamage(entity, source) || RestHouseTravel.shouldCancelDamage(entity, source);
     }
 }

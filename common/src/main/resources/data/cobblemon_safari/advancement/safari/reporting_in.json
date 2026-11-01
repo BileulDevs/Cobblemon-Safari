@@ -1,0 +1,27 @@
+{
+  "parent": "cobblemon_safari:safari/enter",
+  "display": {
+    "icon": {
+      "id": "minecraft:writable_book"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.reporting_in.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.reporting_in.description"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "mission": {
+      "trigger": "cobblemon_safari:safari_event",
+      "conditions": {
+        "event": "missions_completed",
+        "value": {
+          "min": 1
+        }
+      }
+    }
+  },
+  "sends_telemetry_event": false
+}

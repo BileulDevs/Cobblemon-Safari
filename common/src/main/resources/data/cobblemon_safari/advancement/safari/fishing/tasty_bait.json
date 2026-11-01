@@ -1,0 +1,24 @@
+{
+  "parent": "cobblemon_safari:safari/fishing/first_bite",
+  "display": {
+    "icon": {
+      "id": "cobblemon:poke_bait"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.fishing.tasty_bait.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.fishing.tasty_bait.description"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "fished": {
+      "trigger": "cobblemon_safari:safari_event",
+      "conditions": {
+        "event": "fished_with_bait"
+      }
+    }
+  },
+  "sends_telemetry_event": false
+}

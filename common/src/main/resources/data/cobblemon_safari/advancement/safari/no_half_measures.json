@@ -1,0 +1,25 @@
+{
+  "parent": "cobblemon_safari:safari/first_catch",
+  "display": {
+    "icon": {
+      "id": "cobblemon:master_ball"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.no_half_measures.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.no_half_measures.description"
+    },
+    "frame": "task",
+    "hidden": true
+  },
+  "criteria": {
+    "catch": {
+      "trigger": "cobblemon_safari:safari_event",
+      "conditions": {
+        "event": "catch_master_ball"
+      }
+    }
+  },
+  "sends_telemetry_event": false
+}

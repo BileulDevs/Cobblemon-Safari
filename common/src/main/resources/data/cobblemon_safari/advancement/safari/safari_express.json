@@ -1,0 +1,27 @@
+{
+  "parent": "cobblemon_safari:safari/good_haul",
+  "display": {
+    "icon": {
+      "id": "cobblemon:quick_ball"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.safari_express.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.safari_express.description"
+    },
+    "frame": "challenge"
+  },
+  "criteria": {
+    "catches": {
+      "trigger": "cobblemon_safari:safari_event",
+      "conditions": {
+        "event": "hunt_catches",
+        "value": {
+          "min": 30
+        }
+      }
+    }
+  },
+  "sends_telemetry_event": false
+}

@@ -1,6 +1,7 @@
 package dev.darcosse.common.cobblemonsafari.stats;
 
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
+import dev.darcosse.common.cobblemonsafari.advancement.SafariAdvancements;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.MinecraftServer;
@@ -15,7 +16,10 @@ import java.util.function.BiConsumer;
 /**
  * The Safari's lines in the game's own Statistics screen (General tab):
  * hunts, time hunted, Pokémon, shinies and specials caught, points earned
- * and spent, missions completed, rest house trips, best hunt.
+ * and spent, missions completed, rest house trips, best hunt, Pokémon fished.
+ *
+ * <p>Every change also fires the statistic under its own name for the
+ * Safari advancements ({@link SafariAdvancements#onStatChanged}).
  *
  * <p>Why vanilla statistics on top of the mod's own record
  * ({@link SafariStatsStore}): they show where players already look, are
@@ -49,13 +53,16 @@ public final class SafariStatistics {
     public static final ResourceLocation MISSIONS_COMPLETED = CobblemonSafari.id("missions_completed");
     /** Trips to a rest house, by the Guide or the Escape Rope. */
     public static final ResourceLocation REST_HOUSE_TRIPS = CobblemonSafari.id("rest_house_trips");
+    /** Pokémon pulled out of the water with a rod in the Safari, caught or not. */
+    public static final ResourceLocation POKEMON_FISHED = CobblemonSafari.id("pokemon_fished");
 
     /**
      * Every statistic, in the order they are registered. The order sets
      * their numeric ids in the registry: append new ones at the end.
      */
     private static final List<ResourceLocation> ALL = List.of(HUNTS, TIME_HUNTED, POKEMON_CAUGHT, SHINY_CAUGHT,
-            SPECIALS_CAUGHT, BEST_HUNT, POINTS_EARNED, POINTS_SPENT, MISSIONS_COMPLETED, REST_HOUSE_TRIPS);
+            SPECIALS_CAUGHT, BEST_HUNT, POINTS_EARNED, POINTS_SPENT, MISSIONS_COMPLETED, REST_HOUSE_TRIPS,
+            POKEMON_FISHED);
 
     private SafariStatistics() {
     }
@@ -80,16 +87,23 @@ public final class SafariStatistics {
         }
     }
 
+    /** Every Safari statistic, in registration order. */
+    public static List<ResourceLocation> all() {
+        return ALL;
+    }
+
     /** Adds to a counter. Does nothing for an amount of 0 or less. */
     public static void add(ServerPlayer player, ResourceLocation stat, int amount) {
         if (amount > 0) {
             player.awardStat(stat, amount);
+            SafariAdvancements.onStatChanged(player, stat);
         }
     }
 
     /** Adds one to a counter. */
     public static void increment(ServerPlayer player, ResourceLocation stat) {
         player.awardStat(stat, 1);
+        SafariAdvancements.onStatChanged(player, stat);
     }
 
     /** Raises a record to {@code value} if it is higher than the one held. */
@@ -98,6 +112,7 @@ public final class SafariStatistics {
         Stat<ResourceLocation> entry = Stats.CUSTOM.get(stat);
         if (value > counter.getValue(entry)) {
             counter.setValue(player, entry, value);
+            SafariAdvancements.onStatChanged(player, stat);
         }
     }
 

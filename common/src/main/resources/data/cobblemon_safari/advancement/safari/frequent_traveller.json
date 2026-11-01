@@ -1,0 +1,27 @@
+{
+  "parent": "cobblemon_safari:safari/first_trip",
+  "display": {
+    "icon": {
+      "id": "minecraft:feather"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.frequent_traveller.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.frequent_traveller.description"
+    },
+    "frame": "goal"
+  },
+  "criteria": {
+    "trips": {
+      "trigger": "cobblemon_safari:safari_event",
+      "conditions": {
+        "event": "rest_house_trips",
+        "value": {
+          "min": 25
+        }
+      }
+    }
+  },
+  "sends_telemetry_event": false
+}
