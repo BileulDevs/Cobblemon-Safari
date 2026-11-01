@@ -25,6 +25,7 @@ New network protocol (`1.5.0`): clients and servers must both update.
 
 ### Fixed
 
+- The rest houses built in the background after the server start did not tell the clients their height or their final spot: the Pokémon Center theme could play above or below a house (on the surface over an underground one, in a cave under a surface one), or around the wrong spot, until the player logged in again. Every build now sends the update.
 - A rest house's clerk or guide could stand on the roof, mostly in the jungle, where the leaves of a tree left beside the house spread over it. The staff now always find the floor from the house's own roof, and those already on a roof are put back behind the counter.
 - Poké Snacks placed in the Safari were nearly never bitten: the boosted spawns filled their area to the snack's own limit, so the snack had no room to bring a Pokémon. In the Safari, no natural Pokémon spawns within 16 blocks of a snack any more, and a snack may bring Pokémon up to 1.5 times the Safari's density. Both can be set: `spawns.snackClearRadius` (16, 0 to 32, 0 turns the clearing off) and `spawns.snackDensityMultiplier` (1.5, 1 to 4).
 - A Safari Gate could be built over a lava lake, the lava showing through its floor and around it; the Safari's ruins and towers had the same flaw. Lava lakes are no longer placed where they would reach one of them. Shows in newly generated chunks.

@@ -283,9 +283,7 @@ public final class RestHouses {
             RestHouseBuilder.Job job = running.job();
             RestHouseBuilder.loadArea(level, job.centerX, job.centerZ, job.facing);
             if (job.runUntilPlaced(level)) {
-                markBuilt(state, anchor, job);
-                // Its height is known now: the arriving player's music and shop follow it.
-                SafariNetwork.broadcastRules(level.getServer());
+                markBuilt(level.getServer(), state, anchor, job);
                 // The cut trees are removed over the next ticks, as for any build.
                 builds.addFirst(running);
                 return;
@@ -407,10 +405,7 @@ public final class RestHouses {
             // Template missing: not marked built, so the next start tries again.
             return;
         }
-        markBuilt(state, anchor, job);
-        // The house may stand at another of its sites than planned, and its height
-        // is known now: the arriving player's music and shop follow it.
-        SafariNetwork.broadcastRules(level.getServer());
+        markBuilt(level.getServer(), state, anchor, job);
         // The cut trees are removed over the next ticks, with the chunks loaded by then.
         builds.add(new PendingBuild(anchor, job));
     }
@@ -531,7 +526,7 @@ public final class RestHouses {
             case RUNNING -> {
             }
             case WAITING -> paused.put(key(build.anchor()), builds.pollFirst());
-            case PLACED -> markBuilt(state, build.anchor(), job);
+            case PLACED -> markBuilt(server, state, build.anchor(), job);
             case DONE -> builds.pollFirst();
             case WET -> {
                 builds.pollFirst();
@@ -560,12 +555,17 @@ public final class RestHouses {
         return anchor.x() + "," + anchor.z();
     }
 
-    /** Records a house as standing, logs it and refreshes {@link #sites()}. */
-    private static void markBuilt(SafariWorldState state, ParkGeometry.Column anchor, RestHouseBuilder.Job job) {
+    /** Records a house as standing, logs it, refreshes {@link #sites()} and tells the clients. */
+    private static void markBuilt(MinecraftServer server, SafariWorldState state, ParkGeometry.Column anchor,
+                                  RestHouseBuilder.Job job) {
         state.markHouseBuilt(anchor.x(), anchor.z(), job.centerX, job.centerZ, job.groundY());
         CobblemonSafari.LOGGER.info("Built Safari rest house at {}, {} (anchor {}, {})",
                 job.centerX, job.centerZ, anchor.x(), anchor.z());
         refreshSites(state);
+        // Here, for every way a house gets built: its height is known now, and it may
+        // stand at another of its sites than planned, so the clients' music (and the
+        // shop's notion of "inside") must follow. The background builds used to skip it.
+        SafariNetwork.broadcastRules(server);
     }
 
     // ---- Queries ----------------------------------------------------------
