@@ -37,6 +37,12 @@
   "capture": {
     "safariBallOutOfBattleMultiplier": 3.0,
     "awardSafariMark": true,
+    "eventMarks": {
+      "special": true,
+      "swarm": true,
+      "fullMoon": true,
+      "angler": true
+    },
     "flee": {
       "enabled": true,
       "commonChance": 0.05,

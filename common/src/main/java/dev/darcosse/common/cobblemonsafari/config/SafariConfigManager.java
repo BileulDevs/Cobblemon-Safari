@@ -953,18 +953,22 @@ public final class SafariConfigManager {
         return corrected;
     }
 
-    /** Fixes the capture.flee section; returns true if anything changed. */
+    /** Fixes the capture.flee section (and a missing capture.eventMarks); returns true if anything changed. */
     private static boolean validateFlee(SafariConfig c) {
         if (c.capture == null) {
             c.capture = new SafariConfig.Capture();
             return true;
+        }
+        boolean corrected = false;
+        if (c.capture.eventMarks == null) {
+            c.capture.eventMarks = new SafariConfig.EventMarks();
+            corrected = true;
         }
         if (c.capture.flee == null) {
             c.capture.flee = new SafariConfig.Flee();
             return true;
         }
         SafariConfig.Flee f = c.capture.flee;
-        boolean corrected = false;
         double[] values = {f.commonChance, f.uncommonChance, f.rareChance, f.ultraRareChance, f.perFailedBall,
                 f.maxChance};
         String[] names = {"commonChance", "uncommonChance", "rareChance", "ultraRareChance", "perFailedBall",

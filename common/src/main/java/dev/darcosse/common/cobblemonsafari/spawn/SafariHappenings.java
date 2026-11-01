@@ -76,6 +76,11 @@ public final class SafariHappenings {
         return fullMoon;
     }
 
+    /** Whether a full moon night is on in the Safari right now (as of the last second's check). */
+    public static boolean isFullMoon() {
+        return fullMoon;
+    }
+
     /** Type names the full moon favours, lower case, for the spawn threads. */
     static Set<String> fullMoonTypes() {
         return fullMoonTypes;

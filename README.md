@@ -52,7 +52,7 @@ Ten Pokémon Centers stand on every map: eight on the surface, the entrance one 
 
 - Every catch earns **Safari points**, more for rare species, today's specials and shinies.
 - Each rotation brings **three missions** drawn among thirteen kinds (a species, a type, one of today's specials, a habitat, different species, without a battle, at night, fishing...), the same for everyone, paid once per player, with a bonus when all are done. Too hard? The clerk swaps one for you, for a few points. Every kind, its reward and the species it may ask can be configured.
-- Every Pokémon you catch there keeps the **Safari Mark**: "Tauros the Safari Find".
+- Every Pokémon you catch there keeps the **Safari Mark**: "Tauros the Safari Find". Catch it at the right moment and it gets an event mark too: one of the specials of the day ("the Star of the Day"), a swarm ("of the Swarm"), a full moon night ("of the Full Moon"), or fished first ("the Safari Catch").
 - Your Safari career shows in the game's own **Statistics** screen: hunts, time hunted, Pokémon, shinies and specials caught, best hunt, points earned and spent, missions completed, rest house trips, Pokémon fished.
 - A **Safari advancement tab** of 47 advancements, from your first steps in the tall grass to fishing from a boat, with a few hidden ones.
 - The **shop** sells a fixed list plus random Pokémon, items and Poké Balls that change with each rotation, a cooking tab, and the ticket trades. Pokémon cards show the animated Cobblemon model.

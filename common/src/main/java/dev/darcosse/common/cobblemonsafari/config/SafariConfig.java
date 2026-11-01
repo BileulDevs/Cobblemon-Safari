@@ -577,6 +577,26 @@ public class SafariConfig {
 
         /** Wild Pokémon running away after a failed throw. */
         public Flee flee = new Flee();
+
+        /** The marks given for a catch made at a remarkable moment, each with its switch. */
+        public EventMarks eventMarks = new EventMarks();
+    }
+
+    /**
+     * The Safari's event marks, on top of the Safari Mark: each is given to
+     * a Pokémon caught in the Safari at that moment, and its title becomes
+     * the active one in place of the Safari Mark's. False stops giving that
+     * mark; marks already given stay.
+     */
+    public static class EventMarks {
+        /** "the Star of the Day": one of the specials of the rotation. */
+        public boolean special = true;
+        /** "of the Swarm": the swarming species, caught in the swarm's habitat. */
+        public boolean swarm = true;
+        /** "of the Full Moon": caught on a full moon night. */
+        public boolean fullMoon = true;
+        /** "the Safari Catch": fished with a rod in the Safari, then caught. */
+        public boolean angler = true;
     }
 
     /**

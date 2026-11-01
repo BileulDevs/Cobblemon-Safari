@@ -8,6 +8,7 @@ import dev.darcosse.common.cobblemonsafari.biome.SafariBiomes;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.world.SafariWorldState;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -106,6 +107,15 @@ public final class Swarm {
             drawnConfig = config;
         }
         return active;
+    }
+
+    /**
+     * Whether a Pokémon of this species at this spot belongs to the current
+     * swarm: the swarming species, in the swarm's habitat.
+     */
+    public static boolean isSwarming(Species species, Holder<Biome> biome) {
+        Active swarm = active;
+        return swarm != null && swarm.species() == species && biome.is(swarm.biome());
     }
 
     /**

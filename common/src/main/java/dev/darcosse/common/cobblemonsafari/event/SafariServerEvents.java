@@ -7,6 +7,7 @@ import dev.darcosse.common.cobblemonsafari.structure.RestHouseStaff;
 import dev.darcosse.common.cobblemonsafari.advancement.SafariAdvancements;
 import dev.darcosse.common.cobblemonsafari.capture.CaptureGuard;
 import dev.darcosse.common.cobblemonsafari.capture.SafariFlee;
+import dev.darcosse.common.cobblemonsafari.capture.FishedTracker;
 import dev.darcosse.common.cobblemonsafari.capture.ThrowTracker;
 import dev.darcosse.common.cobblemonsafari.battle.FishingBattleGuard;
 import dev.darcosse.common.cobblemonsafari.dex.SafariDex;
@@ -77,7 +78,7 @@ public final class SafariServerEvents {
         FeaturedSync.reset();
         SafariBounties.reset();
         ThrowTracker.reset();
-        SafariAdvancements.reset();
+        FishedTracker.reset();
         FishingBattleGuard.reset();
         SafariDex.reset();
         SafariFlee.reset();

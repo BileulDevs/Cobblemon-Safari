@@ -72,6 +72,17 @@ The original games' loan of Safari Balls, off by default: players bring their ow
 | `safariBallOutOfBattleMultiplier` | `3.0` | Multiplies the catch rate when a Safari Ball (`loan.ballItem`) hits a wild Pokémon that is not in a battle, inside the Safari. Cobblemon halves every capture made outside a battle, so at 3 the Safari Ball out of battle works 1.5 times as well as a normal throw in battle, before Cobblemon's own Safari Ball bonus. 1 turns it off; lower values are raised to 1. |
 | `awardSafariMark` | `true` | Gives the Safari Mark ("the Safari Find") to every Pokémon caught in the Safari; its title becomes the active one when the Pokémon has none. `false` gives none; marks already given stay. |
 
+### `capture.eventMarks`: marks for remarkable catches
+
+On top of the Safari Mark, a Pokémon caught in the Safari at one of these moments gets the matching mark, and its title becomes the active one in place of the Safari Mark's (a Cobblemon weather or personality title stays). `false` stops giving that mark; marks already given stay.
+
+| Key | Default | Mark |
+|---|---|---|
+| `special` | `true` | "the Star of the Day": one of the specials of the rotation. |
+| `swarm` | `true` | "of the Swarm": the swarming species, caught in the swarm's habitat (see `events.swarm`). |
+| `fullMoon` | `true` | "of the Full Moon": caught on a full moon night. |
+| `angler` | `true` | "the Safari Catch": fished with a rod in the Safari, then caught. |
+
 ### `capture.flee`: Pokémon running away
 
 After a ball fails on a wild Pokémon outside of a battle, inside the Safari, the Pokémon may run away (it vanishes in a puff, and the thrower is told), as in the Safari Zone of the games. Never in a battle.

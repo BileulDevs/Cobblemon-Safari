@@ -9,6 +9,7 @@ import com.cobblemon.mod.common.entity.pokeball.EmptyPokeBallEntity;
 import com.cobblemon.mod.common.pokemon.Pokemon;
 import com.cobblemon.mod.common.pokemon.Species;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
+import dev.darcosse.common.cobblemonsafari.capture.FishedTracker;
 import dev.darcosse.common.cobblemonsafari.capture.ThrowTracker;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
@@ -32,10 +33,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.function.BiConsumer;
 
 /**
@@ -123,23 +121,6 @@ public final class SafariAdvancements {
     /** Cobblemon's Master Ball, compared with the ball of a capture. */
     private static final ResourceLocation MASTER_BALL = ResourceLocation.fromNamespaceAndPath("cobblemon", "master_ball");
 
-    /**
-     * Fished Pokémon remembered until caught, by Pokémon UUID. A fished
-     * Pokémon carries no mark of it, and the capture may come minutes
-     * later. Bounded: beyond this many, the oldest are forgotten (a fished
-     * Pokémon that fled or despawned is never caught anyway). Lowering it
-     * risks forgetting one still being chased on a busy server.
-     */
-    private static final int FISHED_MEMORY = 256;
-
-    /** Fished Pokémon, oldest first; see {@link #FISHED_MEMORY}. Server thread only. */
-    private static final Map<UUID, Boolean> FISHED_POKEMON = new LinkedHashMap<>() {
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<UUID, Boolean> eldest) {
-            return size() > FISHED_MEMORY;
-        }
-    };
-
     private SafariAdvancements() {
     }
 
@@ -172,11 +153,6 @@ public final class SafariAdvancements {
         });
         // LOWEST: only reads the spawn, after any addon that might change the Pokémon.
         CobblemonEvents.BOBBER_SPAWN_POKEMON_POST.subscribe(Priority.LOWEST, SafariAdvancements::onFished);
-    }
-
-    /** Forgets the fished Pokémon; for a server start, as single player reuses this class. */
-    public static void reset() {
-        FISHED_POKEMON.clear();
     }
 
     /** Fires an event worth 1. */
@@ -272,7 +248,7 @@ public final class SafariAdvancements {
         if (pokemon.getForcedAspects().contains(PokeSnackBlockEntity.POKE_SNACK_CRUMBED_ASPECT)) {
             fire(player, CATCH_SNACK_VISITOR);
         }
-        if (FISHED_POKEMON.remove(pokemon.getUuid()) != null) {
+        if (FishedTracker.wasFished(pokemon.getUuid())) {
             fire(player, CATCH_FISHED);
         }
         SafariSession session = SafariSessionManager.getSession(player);
@@ -299,7 +275,7 @@ public final class SafariAdvancements {
             return;
         }
         Pokemon pokemon = event.getPokemon().getPokemon();
-        FISHED_POKEMON.put(pokemon.getUuid(), Boolean.TRUE);
+        FishedTracker.remember(pokemon.getUuid());
         SafariStatistics.increment(player, SafariStatistics.POKEMON_FISHED);
         fire(player, FISHED);
         if (!event.getBait().isEmpty()) {
