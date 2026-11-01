@@ -101,7 +101,7 @@ To change the music: edit `THEMES` in the composer, run it, then run `generate_w
 
 ## Protection
 
-Inside the Safari, by default: players take no damage (except /kill and the void), cannot break or place blocks or use block-changing tools, fire never spreads, and explosions destroy no block. Creative and spectator players are exempt from the terrain rules. Blocks listed in `protection.placeableBlocks` (by default Cobblemon's Poké Cake and Poké Snack) can still be placed and picked up. Breaking a protected block is refused only when it would break, so mining shows its cracks and the warning appears once. Each rule can be switched off in the `protection` section of the config.
+Inside the Safari, by default: players take no damage (except /kill and the void), cannot break or place blocks or use block-changing tools, fire never spreads, and explosions destroy no block. Creative and spectator players are exempt from the terrain rules. Blocks listed in `protection.placeableBlocks` (by default Cobblemon's Poké Cake and Poké Snack) can still be placed and picked up. Breaking a protected block is refused only when it would break, so mining shows its cracks and the warning appears once. Each rule can be switched off in the `protection` section of the config. With `protection.hunger` on (off by default), the food bar of players inside does not go down either: `mixin/PlayerExhaustionMixin` cancels `Player.causeFoodExhaustion`, the one entry of every exhaustion source (movement, healing, attacks, the Hunger effect).
 
 ## Safari Game loop
 

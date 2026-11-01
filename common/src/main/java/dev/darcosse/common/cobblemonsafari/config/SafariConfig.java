@@ -690,6 +690,14 @@ public class SafariConfig {
         public boolean invulnerablePlayers = true;
 
         /**
+         * Whether hunger is frozen for players inside. On, the food bar and
+         * its saturation stay where they were on entering (eating still fills
+         * them), so a timed hunt is not spent eating. Off (the default), the
+         * bar goes down as it does everywhere else.
+         */
+        public boolean hunger = false;
+
+        /**
          * Players cannot break blocks, place blocks, empty or fill buckets, or
          * use tools that change blocks (hoe, shovel, axe stripping, flint and
          * steel, bone meal). Placement is included on purpose: breaking alone

@@ -11,7 +11,8 @@
     "PlacedFeatureMixin",
     "ExplosionMixin",
     "FireBlockMixin",
-    "LakeFeatureMixin"
+    "LakeFeatureMixin",
+    "PlayerExhaustionMixin"
   ],
   "injectors": {
     "defaultRequire": 1

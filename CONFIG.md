@@ -51,6 +51,7 @@ A complete, commented example of the three files is in [`example/config/`](examp
 | Key | Default | What it does |
 |---|---|---|
 | `invulnerablePlayers` | `true` | Players inside take no damage. `/kill` and falling out of the world still apply, so a player in the void does not fall forever. |
+| `hunger` | `false` | Whether hunger is frozen inside. `true`: the food bar and its saturation stay where they were on entering (eating still fills them). `false`: the bar goes down as everywhere else. |
 | `protectBlocks` | `true` | Players cannot break or place blocks, fill or empty buckets, or use tools that change blocks (hoe, shovel, axe stripping, flint and steel, bone meal). Fire does not spread or burn blocks, and explosions break nothing. |
 | `placeableBlocks` | `["cobblemon:poke_cake", "cobblemon:poke_snack"]` | Blocks players may still place and break while `protectBlocks` is on. By default Cobblemon's baits. Anything placed disappears with the daily map. |
 

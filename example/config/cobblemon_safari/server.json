@@ -21,6 +21,7 @@
   ],
   "protection": {
     "invulnerablePlayers": true,
+    "hunger": false,
     "protectBlocks": true,
     "placeableBlocks": [
       "cobblemon:poke_cake",

@@ -91,6 +91,19 @@ public final class SafariProtection {
     }
 
     /**
+     * Whether a player's food exhaustion must be ignored: inside the Safari
+     * while {@code protection.hunger} is on. Exhaustion is the only
+     * way the food bar and its saturation go down (running, jumping,
+     * healing, the Hunger effect), so ignoring it keeps them where they are.
+     * Server side only: the client's food bar follows the server's.
+     */
+    public static boolean shouldIgnoreExhaustion(Player player) {
+        return player instanceof ServerPlayer
+                && SafariConfigManager.get().protection.hunger
+                && SafariDimensions.isSafari(player.level());
+    }
+
+    /**
      * Whether breaking a block must be refused, at the moment it would break.
      * Tells the player why. Placeable blocks (baits) can be picked up again.
      */
