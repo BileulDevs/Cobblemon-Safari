@@ -557,8 +557,8 @@ public final class SafariConfigManager {
         }
         if (c.reset.relief == null) {
             // Gson reads a name that is no relief as null.
-            warn("reset.relief", "an unknown relief", IslandRelief.ROLLING);
-            c.reset.relief = IslandRelief.ROLLING;
+            warn("reset.relief", "an unknown relief", IslandRelief.GENTLE);
+            c.reset.relief = IslandRelief.GENTLE;
             corrected = true;
         }
         if (c.reset.hour < 0 || c.reset.hour > LAST_HOUR) {

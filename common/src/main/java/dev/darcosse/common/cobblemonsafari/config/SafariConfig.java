@@ -282,12 +282,12 @@ public class SafariConfig {
         public String timeZone = "";
 
         /**
-         * How hilly each new map is: FLAT, ROLLING (the island as always) or
-         * MOUNTAINOUS. Only new maps take it: the map on disk keeps the
-         * relief it was generated with, or new chunks would rise as cliffs
-         * against the old ones.
+         * How hilly each new map is: FLAT, GENTLE (the default), ROLLING (the
+         * island as it was before 1.4.0) or MOUNTAINOUS. Only new maps take
+         * it: the map on disk keeps the relief it was generated with, or new
+         * chunks would rise as cliffs against the old ones.
          */
-        public IslandRelief relief = IslandRelief.ROLLING;
+        public IslandRelief relief = IslandRelief.GENTLE;
     }
 
     /**

@@ -20,6 +20,15 @@ public enum IslandRelief {
      * whole habitats sink into the lagoon and the rivers flood them.
      */
     FLAT(0.35, 0.0),
+    /**
+     * Rolling but softer: the land two thirds as high, the peaks half as
+     * sharp. The plateaus of ROLLING rise up to some forty blocks above the
+     * rivers cut through them, in sheer walls; here those walls lose a third
+     * of their height and the summits most of their spikes, while hills,
+     * valleys and the central summit keep their shape. Lower comes close to
+     * FLAT; higher brings the cliffs back.
+     */
+    GENTLE(0.65, 0.5),
     /** The island as it has always been generated (1.0 changes nothing). */
     ROLLING(1.0, 1.0),
     /**
