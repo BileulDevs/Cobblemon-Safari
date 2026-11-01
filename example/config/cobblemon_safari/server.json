@@ -45,23 +45,43 @@
     },
     "flee": {
       "enabled": true,
-      "commonChance": 0.05,
-      "uncommonChance": 0.08,
-      "rareChance": 0.12,
-      "ultraRareChance": 0.18,
       "perFailedBall": 0.05,
       "maxChance": 0.5,
-      "rarity": {
-        "common": true,
-        "uncommon": true,
-        "rare": true,
-        "ultraRare": true,
-        "legendary": false,
-        "mythical": false,
-        "ultraBeast": false,
-        "paradox": false
-      },
-      "shinies": false
+      "shinies": false,
+      "rarities": {
+        "common": {
+          "enabled": true,
+          "chance": 0.05
+        },
+        "uncommon": {
+          "enabled": true,
+          "chance": 0.08
+        },
+        "rare": {
+          "enabled": true,
+          "chance": 0.12
+        },
+        "ultraRare": {
+          "enabled": true,
+          "chance": 0.18
+        },
+        "legendary": {
+          "enabled": false,
+          "chance": 0.25
+        },
+        "mythical": {
+          "enabled": false,
+          "chance": 0.25
+        },
+        "ultraBeast": {
+          "enabled": false,
+          "chance": 0.2
+        },
+        "paradox": {
+          "enabled": false,
+          "chance": 0.18
+        }
+      }
     }
   },
   "reset": {

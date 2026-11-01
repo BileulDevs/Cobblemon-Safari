@@ -90,29 +90,27 @@ After a ball fails on a wild Pokémon outside of a battle, inside the Safari, th
 | Key | Default | What it does |
 |---|---|---|
 | `enabled` | `true` | `false`: no Pokémon ever runs away. |
-| `commonChance` | `0.05` | Chance (0 to 1) that a common Pokémon runs away after a failed ball. A species the Safari does not know counts as common. |
-| `uncommonChance` | `0.08` | Same, for an uncommon one. |
-| `rareChance` | `0.12` | Same, for a rare one. |
-| `ultraRareChance` | `0.18` | Same, for an ultra-rare one. |
-| `perFailedBall` | `0.05` | Added to the chance for each ball that already failed on the same Pokémon: at 0.05, the fourth failed ball on a rare one is a 27 % risk. 0 keeps it flat. 0 to 1. |
-| `maxChance` | `0.5` | Highest chance, whatever the rarity and the failed balls. 0 to 1. |
-| `rarity` | see below | Which Pokémon may run away at all, rarity by rarity and category by category. |
+| `perFailedBall` | `0.05` | Added to the chance for each ball that already failed on the same Pokémon: at 0.05, the fourth failed ball on a rare one is a 27 % risk. 0 keeps it flat. 0 to 1, shared by every entry of `rarities`. |
+| `maxChance` | `0.5` | Highest chance, whatever the entry and the failed balls. 0 to 1. |
 | `shinies` | `false` | Whether shiny Pokémon may run away. |
+| `rarities` | see below | One entry per kind of Pokémon: whether it may run away, and how likely. |
 
-`capture.flee.rarity`: `false` keeps those Pokémon from ever running away, whatever the chances above say. A legendary, mythical, ultra beast or paradox Pokémon follows its category's switch only, never its rarity's (a legendary the Safari lists as ultra-rare follows `legendary`); a Pokémon in two categories stays as soon as one of them is `false`. Every other Pokémon follows the switch of its rarity in the Safari.
+`capture.flee.rarities` holds eight entries, each `{ "enabled": ..., "chance": ... }`. `enabled: false` keeps those Pokémon from ever running away; `chance` (0 to 1) is the chance after the first failed ball, before `perFailedBall` and `maxChance`.
 
-| Key | Default | What it does |
+The first four are the rarities of the Safari (a species the Safari does not know counts as common). The last four are categories, and take precedence: a legendary, mythical, ultra beast or paradox Pokémon follows its category's entry only, never its rarity's, so a legendary the Safari lists as ultra-rare follows `legendary`. A Pokémon in two categories stays as soon as one of them is disabled, and otherwise takes the higher chance of the two.
+
+| Entry | `enabled` | `chance` |
 |---|---|---|
-| `common` | `true` | Common Pokémon (and species the Safari does not know) may run away. |
-| `uncommon` | `true` | Uncommon Pokémon may run away. |
-| `rare` | `true` | Rare Pokémon may run away. |
-| `ultraRare` | `true` | Ultra-rare Pokémon may run away. |
-| `legendary` | `false` | Legendary Pokémon may run away. |
-| `mythical` | `false` | Mythical Pokémon may run away. |
-| `ultraBeast` | `false` | Ultra Beasts may run away. |
-| `paradox` | `false` | Paradox Pokémon may run away. |
+| `common` | `true` | `0.05` |
+| `uncommon` | `true` | `0.08` |
+| `rare` | `true` | `0.12` |
+| `ultraRare` | `true` | `0.18` |
+| `legendary` | `false` | `0.25` |
+| `mythical` | `false` | `0.25` |
+| `ultraBeast` | `false` | `0.20` |
+| `paradox` | `false` | `0.18` |
 
-A file from an earlier 1.4.0 build that still has `specialCategories` has it copied into the four category switches, then removed.
+A key left out of an entry takes that entry's default. A file from an earlier 1.4.0 build that still has `commonChance`, `uncommonChance`, `rareChance`, `ultraRareChance`, `specialCategories` or `rarity` has them moved into `rarities`, then removed.
 
 ### `reset`: the daily new map
 

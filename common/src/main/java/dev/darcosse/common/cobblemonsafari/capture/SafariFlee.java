@@ -34,14 +34,14 @@ import java.util.UUID;
  * Safari Zone of the games ({@code capture.flee}).
  *
  * <p>When Cobblemon has computed a throw at a wild Pokémon outside of a
- * battle and it fails, a chance is rolled: the species' rarity in the
- * Safari, plus a share for each ball that already failed on that Pokémon,
- * capped. A Pokémon that runs away does so once it is out of the ball and
- * free again (Cobblemon's shaking ends, its busy lock goes), a moment
- * later: it vanishes in a puff and the thrower is told. Which rarities and
- * legendary-class categories may run away at all is set per rarity
- * ({@code capture.flee.rarity}); shinies are spared unless the config says
- * otherwise.
+ * battle and it fails, a chance is rolled: that of the species' rarity in the
+ * Safari (or of its legendary-class category), plus a share for each ball
+ * that already failed on that Pokémon, capped. A Pokémon that runs away
+ * does so once it is out of the ball and free again (Cobblemon's shaking
+ * ends, its busy lock goes), a moment later: it vanishes in a puff and the thrower is told. Which rarities and
+ * legendary-class categories may run away, and how likely, is set entry
+ * by entry ({@code capture.flee.rarities}); shinies are spared unless the
+ * config says otherwise.
  *
  * <p>Server side. Cost: one roll per failed ball; while a flight is
  * pending, one entity lookup per pending Pokémon each tick, for a few
@@ -130,12 +130,11 @@ public final class SafariFlee {
         Integer before = FAILED_BALLS.get(pokemon.getUuid());
         int failedBefore = before == null ? 0 : before;
         FAILED_BALLS.put(pokemon.getUuid(), failedBefore + 1);
-        Rarity rarity = safariRarity(server, pokemon);
-        if (!mayFlee(pokemon.getSpecies(), rarity, config.rarity) || (!config.shinies && pokemon.getShiny())) {
+        Double base = baseChance(pokemon.getSpecies(), safariRarity(server, pokemon), config.rarities);
+        if (base == null || (!config.shinies && pokemon.getShiny())) {
             return;
         }
-        double chance = Math.min(config.maxChance,
-                baseChance(rarity, config) + config.perFailedBall * failedBefore);
+        double chance = Math.min(config.maxChance, base + config.perFailedBall * failedBefore);
         if (entity.level().getRandom().nextDouble() < chance) {
             PENDING.put(entity.getUUID(), new Pending(player.getUUID(), server.getTickCount(), -1));
         }
@@ -148,47 +147,42 @@ public final class SafariFlee {
     }
 
     /**
-     * Whether {@code capture.flee.rarity} lets this Pokémon run away. A
-     * legendary-class species answers to its categories only, and is spared
-     * as soon as one of them is off (a species may carry two labels, and the
-     * stricter switch wins); any other species answers to its rarity.
+     * The chance of {@code capture.flee.rarities} that applies to this
+     * Pokémon, or null when it may not run away at all.
+     *
+     * <p>A legendary-class species answers to its categories only. With two
+     * of them (a species may carry two labels) it is spared as soon as one
+     * is off, the stricter switch winning, and otherwise takes the higher
+     * chance. Any other species answers to its rarity in the Safari.
      */
-    private static boolean mayFlee(Species species, Rarity rarity, SafariConfig.FleeRarity switches) {
-        boolean special = false;
+    private static Double baseChance(Species species, Rarity rarity, SafariConfig.FleeRarities rarities) {
+        Double best = null;
         for (String label : species.getLabels()) {
-            Boolean allowed = switch (label) {
-                case CobblemonPokemonLabels.LEGENDARY -> switches.legendary;
-                case CobblemonPokemonLabels.MYTHICAL -> switches.mythical;
-                case CobblemonPokemonLabels.ULTRA_BEAST -> switches.ultraBeast;
-                case CobblemonPokemonLabels.PARADOX -> switches.paradox;
+            SafariConfig.FleeRarity entry = switch (label) {
+                case CobblemonPokemonLabels.LEGENDARY -> rarities.legendary;
+                case CobblemonPokemonLabels.MYTHICAL -> rarities.mythical;
+                case CobblemonPokemonLabels.ULTRA_BEAST -> rarities.ultraBeast;
+                case CobblemonPokemonLabels.PARADOX -> rarities.paradox;
                 default -> null;
             };
-            if (allowed != null) {
-                if (!allowed) {
-                    return false;
-                }
-                special = true;
+            if (entry == null) {
+                continue;
             }
+            if (!entry.enabled) {
+                return null;
+            }
+            best = best == null ? entry.chance : Math.max(best, entry.chance);
         }
-        if (special) {
-            return true;
+        if (best != null) {
+            return best;
         }
-        return switch (rarity) {
-            case COMMON -> switches.common;
-            case UNCOMMON -> switches.uncommon;
-            case RARE -> switches.rare;
-            case ULTRA_RARE -> switches.ultraRare;
+        SafariConfig.FleeRarity entry = switch (rarity) {
+            case COMMON -> rarities.common;
+            case UNCOMMON -> rarities.uncommon;
+            case RARE -> rarities.rare;
+            case ULTRA_RARE -> rarities.ultraRare;
         };
-    }
-
-    /** The chance of the given rarity in the Safari. */
-    private static double baseChance(Rarity rarity, SafariConfig.Flee config) {
-        return switch (rarity) {
-            case COMMON -> config.commonChance;
-            case UNCOMMON -> config.uncommonChance;
-            case RARE -> config.rareChance;
-            case ULTRA_RARE -> config.ultraRareChance;
-        };
+        return entry.enabled ? entry.chance : null;
     }
 
     /**

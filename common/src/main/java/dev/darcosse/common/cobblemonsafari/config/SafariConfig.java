@@ -611,62 +611,100 @@ public class SafariConfig {
         public boolean enabled = true;
 
         /**
-         * Chance, from 0 to 1, that a Pokémon runs away after a failed
-         * ball, by its rarity in the Safari (a species the habitat index
-         * does not know counts as common). Higher makes rare Pokémon a
-         * one-or-two-ball affair.
-         */
-        public double commonChance = 0.05;
-        public double uncommonChance = 0.08;
-        public double rareChance = 0.12;
-        public double ultraRareChance = 0.18;
-
-        /**
          * Added to the chance for each ball that already failed on the same
          * Pokémon: 0.05 makes the fourth failed ball on a rare one a 27 %
-         * risk. 0 keeps the chance flat.
+         * risk. 0 keeps the chance flat. Shared by every rarity.
          */
         public double perFailedBall = 0.05;
 
-        /** Highest chance, whatever the rarity and the failed balls: keeps a long chase possible. */
-        public double maxChance = 0.5;
-
         /**
-         * Which Pokémon may run away at all, rarity by rarity and category by
-         * category. A Pokémon of a legendary-class category follows its
-         * category's switch only; any other Pokémon follows the switch of its
-         * rarity in the Safari.
+         * Highest chance, whatever the rarity and the failed balls: keeps a
+         * long chase possible. Shared by every rarity.
          */
-        public FleeRarity rarity = new FleeRarity();
+        public double maxChance = 0.5;
 
         /** Whether shiny Pokémon may run away. */
         public boolean shinies = false;
 
         /**
-         * Before 1.4.0's per-rarity switches, one switch for the four
-         * legendary-class categories. Read once by the config manager, which
-         * copies it into {@link #rarity} and drops it; null otherwise, so it
-         * is never written back (Gson skips nulls).
+         * Whether, and how likely, each kind of Pokémon runs away: the four
+         * rarities of the Safari, then the four legendary-class categories,
+         * which take precedence over the rarity.
          */
+        public FleeRarities rarities = new FleeRarities();
+
+        // Keys of earlier 1.4.0 builds, read once by
+        // SafariConfigManager.migrateFlee, copied into rarities and set back to
+        // null so they are not written again (Gson skips nulls). Not settings.
+
+        /** Legacy: chance of a common Pokémon, now {@code rarities.common.chance}. */
+        public Double commonChance;
+        /** Legacy: chance of an uncommon Pokémon, now {@code rarities.uncommon.chance}. */
+        public Double uncommonChance;
+        /** Legacy: chance of a rare Pokémon, now {@code rarities.rare.chance}. */
+        public Double rareChance;
+        /** Legacy: chance of an ultra-rare Pokémon, now {@code rarities.ultraRare.chance}. */
+        public Double ultraRareChance;
+        /** Legacy: one switch for the four categories, now their {@code enabled}. */
         public Boolean specialCategories;
+        /** Legacy: the switch-only object of the first patch, now the {@code enabled} of each entry. */
+        public LegacyFleeSwitches rarity;
     }
 
     /**
-     * Per-rarity and per-category switches of {@code capture.flee.rarity}:
-     * false keeps those Pokémon from ever running away, whatever the chances
-     * say. The four rarities are the Safari's own (habitat index); the four
-     * categories are Cobblemon's labels and take precedence over the rarity,
-     * so a legendary listed as ultra-rare follows {@link #legendary}.
+     * The eight entries of {@code capture.flee.rarities}. The four rarities
+     * are the Safari's own (habitat index; a species it does not know counts
+     * as common). The four categories are Cobblemon's labels: a Pokémon that
+     * carries one follows that entry only, never its rarity's, so a
+     * legendary the Safari lists as ultra-rare follows {@link #legendary}.
+     */
+    public static class FleeRarities {
+        public FleeRarity common = new FleeRarity(true, 0.05);
+        public FleeRarity uncommon = new FleeRarity(true, 0.08);
+        public FleeRarity rare = new FleeRarity(true, 0.12);
+        public FleeRarity ultraRare = new FleeRarity(true, 0.18);
+        public FleeRarity legendary = new FleeRarity(false, 0.25);
+        public FleeRarity mythical = new FleeRarity(false, 0.25);
+        public FleeRarity ultraBeast = new FleeRarity(false, 0.20);
+        public FleeRarity paradox = new FleeRarity(false, 0.18);
+    }
+
+    /**
+     * One entry of {@code capture.flee.rarities}. Boxed so that a key left
+     * out of a hand-written entry reads as null and the config manager can
+     * put that entry's own default back, rather than Gson's false and 0.
      */
     public static class FleeRarity {
-        public boolean common = true;
-        public boolean uncommon = true;
-        public boolean rare = true;
-        public boolean ultraRare = true;
-        public boolean legendary = false;
-        public boolean mythical = false;
-        public boolean ultraBeast = false;
-        public boolean paradox = false;
+        /** Whether these Pokémon may run away at all. */
+        public Boolean enabled;
+
+        /**
+         * Chance, from 0 to 1, that one of them runs away after a failed
+         * ball, before {@link Flee#perFailedBall} and {@link Flee#maxChance}.
+         */
+        public Double chance;
+
+        /** For Gson: an entry whose keys are all missing, filled in by validation. */
+        public FleeRarity() {
+        }
+
+        /** An entry with its default values. */
+        public FleeRarity(boolean enabled, double chance) {
+            this.enabled = enabled;
+            this.chance = chance;
+        }
+    }
+
+    /** Shape of the legacy {@code capture.flee.rarity} switches, read for migration only. */
+    public static class LegacyFleeSwitches {
+        public Boolean common;
+        public Boolean uncommon;
+        public Boolean rare;
+        public Boolean ultraRare;
+        public Boolean legendary;
+        public Boolean mythical;
+        public Boolean ultraBeast;
+        public Boolean paradox;
     }
 
     /**

@@ -235,7 +235,7 @@ public final class SafariConfigManager {
             c.escapeRope.restHouseCooldownSeconds = null;
         }
         migrateBounties(c);
-        migrateFleeCategories(c);
+        migrateFlee(c);
         if (c.configVersion < TICKET_LOOT_VERSION) {
             migrateTicketLoot(c);
         }
@@ -250,28 +250,73 @@ public final class SafariConfigManager {
     }
 
     /**
-     * Turns the single {@code capture.flee.specialCategories} switch of the
-     * first 1.4.0 builds into the four category switches of
-     * {@code capture.flee.rarity}. Read whatever the version, like the rope
-     * cooldown: development builds wrote it without a version bump. The key is
-     * then dropped, so the rewritten file only shows the new switches.
+     * Moves the flee keys of earlier 1.4.0 builds into
+     * {@code capture.flee.rarities}: the four {@code xxxChance} values, the
+     * single {@code specialCategories} switch, and the switch-only
+     * {@code rarity} object. Read whatever the version, like the rope
+     * cooldown: development builds wrote them without a version bump. Each
+     * key is then set back to null, so the rewritten file only shows
+     * {@code rarities}. Runs before validation, which fills what is missing.
      */
-    private static void migrateFleeCategories(SafariConfig c) {
-        if (c.capture == null || c.capture.flee == null || c.capture.flee.specialCategories == null) {
+    private static void migrateFlee(SafariConfig c) {
+        if (c.capture == null || c.capture.flee == null) {
             return;
         }
         SafariConfig.Flee f = c.capture.flee;
-        if (f.rarity == null) {
-            f.rarity = new SafariConfig.FleeRarity();
+        boolean legacy = f.commonChance != null || f.uncommonChance != null || f.rareChance != null
+                || f.ultraRareChance != null || f.specialCategories != null || f.rarity != null;
+        if (!legacy) {
+            return;
         }
-        boolean allowed = f.specialCategories;
-        f.rarity.legendary = allowed;
-        f.rarity.mythical = allowed;
-        f.rarity.ultraBeast = allowed;
-        f.rarity.paradox = allowed;
+        if (f.rarities == null) {
+            f.rarities = new SafariConfig.FleeRarities();
+        }
+        SafariConfig.FleeRarities r = f.rarities;
+        moveChance(f.commonChance, r.common);
+        moveChance(f.uncommonChance, r.uncommon);
+        moveChance(f.rareChance, r.rare);
+        moveChance(f.ultraRareChance, r.ultraRare);
+        if (f.specialCategories != null) {
+            moveSwitch(f.specialCategories, r.legendary);
+            moveSwitch(f.specialCategories, r.mythical);
+            moveSwitch(f.specialCategories, r.ultraBeast);
+            moveSwitch(f.specialCategories, r.paradox);
+        }
+        // Applied after specialCategories: a file that has both comes from the
+        // later build, whose per-category switches are the more precise.
+        if (f.rarity != null) {
+            SafariConfig.LegacyFleeSwitches old = f.rarity;
+            moveSwitch(old.common, r.common);
+            moveSwitch(old.uncommon, r.uncommon);
+            moveSwitch(old.rare, r.rare);
+            moveSwitch(old.ultraRare, r.ultraRare);
+            moveSwitch(old.legendary, r.legendary);
+            moveSwitch(old.mythical, r.mythical);
+            moveSwitch(old.ultraBeast, r.ultraBeast);
+            moveSwitch(old.paradox, r.paradox);
+        }
+        f.commonChance = null;
+        f.uncommonChance = null;
+        f.rareChance = null;
+        f.ultraRareChance = null;
         f.specialCategories = null;
-        CobblemonSafari.LOGGER.info("Moved capture.flee.specialCategories ({}) to the four category switches of capture.flee.rarity in {}",
-                allowed, FILE_NAME);
+        f.rarity = null;
+        CobblemonSafari.LOGGER.info("Moved the old capture.flee chances and switches into capture.flee.rarities in {}",
+                FILE_NAME);
+    }
+
+    /** Copies a legacy chance into an entry, when there is one; a missing entry is left to validation. */
+    private static void moveChance(Double chance, SafariConfig.FleeRarity entry) {
+        if (chance != null && entry != null) {
+            entry.chance = chance;
+        }
+    }
+
+    /** Copies a legacy switch into an entry, when there is one; a missing entry is left to validation. */
+    private static void moveSwitch(Boolean enabled, SafariConfig.FleeRarity entry) {
+        if (enabled != null && entry != null) {
+            entry.enabled = enabled;
+        }
     }
 
     /**
@@ -995,30 +1040,72 @@ public final class SafariConfigManager {
             return true;
         }
         SafariConfig.Flee f = c.capture.flee;
-        if (f.rarity == null) {
-            f.rarity = new SafariConfig.FleeRarity();
-            corrected = true;
+        double perFailedBall = clampChance("capture.flee.perFailedBall", f.perFailedBall);
+        double maxChance = clampChance("capture.flee.maxChance", f.maxChance);
+        corrected |= perFailedBall != f.perFailedBall || maxChance != f.maxChance;
+        f.perFailedBall = perFailedBall;
+        f.maxChance = maxChance;
+        if (f.rarities == null) {
+            f.rarities = new SafariConfig.FleeRarities();
+            return true;
         }
-        double[] values = {f.commonChance, f.uncommonChance, f.rareChance, f.ultraRareChance, f.perFailedBall,
-                f.maxChance};
-        String[] names = {"commonChance", "uncommonChance", "rareChance", "ultraRareChance", "perFailedBall",
-                "maxChance"};
-        for (int i = 0; i < values.length; i++) {
-            // Also catches NaN, which reads as 0 (no flight).
-            if (!(values[i] >= 0.0D && values[i] <= 1.0D)) {
-                double fixed = Double.isNaN(values[i]) ? 0.0D : Math.max(0.0D, Math.min(1.0D, values[i]));
-                warn("capture.flee." + names[i], values[i], fixed);
-                values[i] = fixed;
+        SafariConfig.FleeRarities r = f.rarities;
+        SafariConfig.FleeRarities defaults = new SafariConfig.FleeRarities();
+        FleeCheck check = new FleeCheck();
+        r.common = check.entry("common", r.common, defaults.common);
+        r.uncommon = check.entry("uncommon", r.uncommon, defaults.uncommon);
+        r.rare = check.entry("rare", r.rare, defaults.rare);
+        r.ultraRare = check.entry("ultraRare", r.ultraRare, defaults.ultraRare);
+        r.legendary = check.entry("legendary", r.legendary, defaults.legendary);
+        r.mythical = check.entry("mythical", r.mythical, defaults.mythical);
+        r.ultraBeast = check.entry("ultraBeast", r.ultraBeast, defaults.ultraBeast);
+        r.paradox = check.entry("paradox", r.paradox, defaults.paradox);
+        return corrected || check.corrected;
+    }
+
+    /**
+     * A chance brought back between 0 and 1, logged when it was not. NaN
+     * becomes 0 (no flight), the safe reading of a value that means nothing.
+     */
+    private static double clampChance(String field, double value) {
+        if (value >= 0.0D && value <= 1.0D) {
+            return value;
+        }
+        double fixed = Double.isNaN(value) ? 0.0D : Math.max(0.0D, Math.min(1.0D, value));
+        warn(field, value, fixed);
+        return fixed;
+    }
+
+    /** Checks the entries of {@code capture.flee.rarities}, remembering whether any was fixed. */
+    private static final class FleeCheck {
+        /** Whether an entry was missing, incomplete or out of bounds. */
+        boolean corrected;
+
+        /**
+         * The entry, completed from its own defaults where a key is missing
+         * (a hand-written entry may give only {@code enabled}) and with its
+         * chance between 0 and 1.
+         */
+        SafariConfig.FleeRarity entry(String name, SafariConfig.FleeRarity entry, SafariConfig.FleeRarity fallback) {
+            if (entry == null) {
+                corrected = true;
+                return fallback;
+            }
+            if (entry.enabled == null) {
+                entry.enabled = fallback.enabled;
                 corrected = true;
             }
+            if (entry.chance == null) {
+                entry.chance = fallback.chance;
+                corrected = true;
+            }
+            double chance = clampChance("capture.flee.rarities." + name + ".chance", entry.chance);
+            if (chance != entry.chance) {
+                entry.chance = chance;
+                corrected = true;
+            }
+            return entry;
         }
-        f.commonChance = values[0];
-        f.uncommonChance = values[1];
-        f.rareChance = values[2];
-        f.ultraRareChance = values[3];
-        f.perFailedBall = values[4];
-        f.maxChance = values[5];
-        return corrected;
     }
 
     /** Bounds of events.swarm.weightMultiplier: 1 is no boost; beyond 100 the swarm is all that spawns. */
