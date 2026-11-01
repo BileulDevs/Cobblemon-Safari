@@ -3,8 +3,10 @@ package dev.darcosse.common.cobblemonsafari.capture;
 import com.cobblemon.mod.common.api.Priority;
 import com.cobblemon.mod.common.api.events.CobblemonEvents;
 import com.cobblemon.mod.common.api.events.pokeball.PokeBallCaptureCalculatedEvent;
+import com.cobblemon.mod.common.api.pokemon.labels.CobblemonPokemonLabels;
 import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
 import com.cobblemon.mod.common.pokemon.Pokemon;
+import com.cobblemon.mod.common.pokemon.Species;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
@@ -12,7 +14,6 @@ import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedRotation;
 import dev.darcosse.common.cobblemonsafari.spawn.HabitatEntry;
 import dev.darcosse.common.cobblemonsafari.spawn.Rarity;
-import dev.darcosse.common.cobblemonsafari.spawn.SpeciesRules;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
@@ -37,8 +38,10 @@ import java.util.UUID;
  * Safari, plus a share for each ball that already failed on that Pokémon,
  * capped. A Pokémon that runs away does so once it is out of the ball and
  * free again (Cobblemon's shaking ends, its busy lock goes), a moment
- * later: it vanishes in a puff and the thrower is told. Legendary-class and
- * shiny Pokémon are spared unless the config says otherwise.
+ * later: it vanishes in a puff and the thrower is told. Which rarities and
+ * legendary-class categories may run away at all is set per rarity
+ * ({@code capture.flee.rarity}); shinies are spared unless the config says
+ * otherwise.
  *
  * <p>Server side. Cost: one roll per failed ball; while a flight is
  * pending, one entity lookup per pending Pokémon each tick, for a few
@@ -127,21 +130,59 @@ public final class SafariFlee {
         Integer before = FAILED_BALLS.get(pokemon.getUuid());
         int failedBefore = before == null ? 0 : before;
         FAILED_BALLS.put(pokemon.getUuid(), failedBefore + 1);
-        if ((!config.specialCategories && SpeciesRules.isSpecial(pokemon.getSpecies()))
-                || (!config.shinies && pokemon.getShiny())) {
+        Rarity rarity = safariRarity(server, pokemon);
+        if (!mayFlee(pokemon.getSpecies(), rarity, config.rarity) || (!config.shinies && pokemon.getShiny())) {
             return;
         }
         double chance = Math.min(config.maxChance,
-                baseChance(server, pokemon, config) + config.perFailedBall * failedBefore);
+                baseChance(rarity, config) + config.perFailedBall * failedBefore);
         if (entity.level().getRandom().nextDouble() < chance) {
             PENDING.put(entity.getUUID(), new Pending(player.getUUID(), server.getTickCount(), -1));
         }
     }
 
-    /** The chance of the Pokémon's rarity in the Safari; common when the index does not know it. */
-    private static double baseChance(MinecraftServer server, Pokemon pokemon, SafariConfig.Flee config) {
+    /** The Pokémon's rarity in the Safari; common when the habitat index does not know it. */
+    private static Rarity safariRarity(MinecraftServer server, Pokemon pokemon) {
         HabitatEntry entry = FeaturedRotation.index(server).get(pokemon.getSpecies().getResourceIdentifier());
-        Rarity rarity = entry == null ? Rarity.COMMON : entry.rarity();
+        return entry == null ? Rarity.COMMON : entry.rarity();
+    }
+
+    /**
+     * Whether {@code capture.flee.rarity} lets this Pokémon run away. A
+     * legendary-class species answers to its categories only, and is spared
+     * as soon as one of them is off (a species may carry two labels, and the
+     * stricter switch wins); any other species answers to its rarity.
+     */
+    private static boolean mayFlee(Species species, Rarity rarity, SafariConfig.FleeRarity switches) {
+        boolean special = false;
+        for (String label : species.getLabels()) {
+            Boolean allowed = switch (label) {
+                case CobblemonPokemonLabels.LEGENDARY -> switches.legendary;
+                case CobblemonPokemonLabels.MYTHICAL -> switches.mythical;
+                case CobblemonPokemonLabels.ULTRA_BEAST -> switches.ultraBeast;
+                case CobblemonPokemonLabels.PARADOX -> switches.paradox;
+                default -> null;
+            };
+            if (allowed != null) {
+                if (!allowed) {
+                    return false;
+                }
+                special = true;
+            }
+        }
+        if (special) {
+            return true;
+        }
+        return switch (rarity) {
+            case COMMON -> switches.common;
+            case UNCOMMON -> switches.uncommon;
+            case RARE -> switches.rare;
+            case ULTRA_RARE -> switches.ultraRare;
+        };
+    }
+
+    /** The chance of the given rarity in the Safari. */
+    private static double baseChance(Rarity rarity, SafariConfig.Flee config) {
         return switch (rarity) {
             case COMMON -> config.commonChance;
             case UNCOMMON -> config.uncommonChance;

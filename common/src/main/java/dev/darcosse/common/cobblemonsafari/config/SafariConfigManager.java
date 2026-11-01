@@ -235,6 +235,7 @@ public final class SafariConfigManager {
             c.escapeRope.restHouseCooldownSeconds = null;
         }
         migrateBounties(c);
+        migrateFleeCategories(c);
         if (c.configVersion < TICKET_LOOT_VERSION) {
             migrateTicketLoot(c);
         }
@@ -246,6 +247,31 @@ public final class SafariConfigManager {
             CobblemonSafari.LOGGER.info("Added the fishing missions (FISHING) to bounties.allowedKinds in {}",
                     FILE_NAME);
         }
+    }
+
+    /**
+     * Turns the single {@code capture.flee.specialCategories} switch of the
+     * first 1.4.0 builds into the four category switches of
+     * {@code capture.flee.rarity}. Read whatever the version, like the rope
+     * cooldown: development builds wrote it without a version bump. The key is
+     * then dropped, so the rewritten file only shows the new switches.
+     */
+    private static void migrateFleeCategories(SafariConfig c) {
+        if (c.capture == null || c.capture.flee == null || c.capture.flee.specialCategories == null) {
+            return;
+        }
+        SafariConfig.Flee f = c.capture.flee;
+        if (f.rarity == null) {
+            f.rarity = new SafariConfig.FleeRarity();
+        }
+        boolean allowed = f.specialCategories;
+        f.rarity.legendary = allowed;
+        f.rarity.mythical = allowed;
+        f.rarity.ultraBeast = allowed;
+        f.rarity.paradox = allowed;
+        f.specialCategories = null;
+        CobblemonSafari.LOGGER.info("Moved capture.flee.specialCategories ({}) to the four category switches of capture.flee.rarity in {}",
+                allowed, FILE_NAME);
     }
 
     /**
@@ -969,6 +995,10 @@ public final class SafariConfigManager {
             return true;
         }
         SafariConfig.Flee f = c.capture.flee;
+        if (f.rarity == null) {
+            f.rarity = new SafariConfig.FleeRarity();
+            corrected = true;
+        }
         double[] values = {f.commonChance, f.uncommonChance, f.rareChance, f.ultraRareChance, f.perFailedBall,
                 f.maxChance};
         String[] names = {"commonChance", "uncommonChance", "rareChance", "ultraRareChance", "perFailedBall",

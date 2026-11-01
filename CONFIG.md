@@ -96,8 +96,23 @@ After a ball fails on a wild Pokémon outside of a battle, inside the Safari, th
 | `ultraRareChance` | `0.18` | Same, for an ultra-rare one. |
 | `perFailedBall` | `0.05` | Added to the chance for each ball that already failed on the same Pokémon: at 0.05, the fourth failed ball on a rare one is a 27 % risk. 0 keeps it flat. 0 to 1. |
 | `maxChance` | `0.5` | Highest chance, whatever the rarity and the failed balls. 0 to 1. |
-| `specialCategories` | `false` | Whether legendary, mythical, ultra beast and paradox Pokémon may run away. |
+| `rarity` | see below | Which Pokémon may run away at all, rarity by rarity and category by category. |
 | `shinies` | `false` | Whether shiny Pokémon may run away. |
+
+`capture.flee.rarity`: `false` keeps those Pokémon from ever running away, whatever the chances above say. A legendary, mythical, ultra beast or paradox Pokémon follows its category's switch only, never its rarity's (a legendary the Safari lists as ultra-rare follows `legendary`); a Pokémon in two categories stays as soon as one of them is `false`. Every other Pokémon follows the switch of its rarity in the Safari.
+
+| Key | Default | What it does |
+|---|---|---|
+| `common` | `true` | Common Pokémon (and species the Safari does not know) may run away. |
+| `uncommon` | `true` | Uncommon Pokémon may run away. |
+| `rare` | `true` | Rare Pokémon may run away. |
+| `ultraRare` | `true` | Ultra-rare Pokémon may run away. |
+| `legendary` | `false` | Legendary Pokémon may run away. |
+| `mythical` | `false` | Mythical Pokémon may run away. |
+| `ultraBeast` | `false` | Ultra Beasts may run away. |
+| `paradox` | `false` | Paradox Pokémon may run away. |
+
+A file from an earlier 1.4.0 build that still has `specialCategories` has it copied into the four category switches, then removed.
 
 ### `reset`: the daily new map
 

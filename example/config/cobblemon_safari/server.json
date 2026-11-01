@@ -51,7 +51,16 @@
       "ultraRareChance": 0.18,
       "perFailedBall": 0.05,
       "maxChance": 0.5,
-      "specialCategories": false,
+      "rarity": {
+        "common": true,
+        "uncommon": true,
+        "rare": true,
+        "ultraRare": true,
+        "legendary": false,
+        "mythical": false,
+        "ultraBeast": false,
+        "paradox": false
+      },
       "shinies": false
     }
   },

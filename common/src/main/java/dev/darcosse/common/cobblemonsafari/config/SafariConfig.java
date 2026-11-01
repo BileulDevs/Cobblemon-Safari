@@ -631,11 +631,42 @@ public class SafariConfig {
         /** Highest chance, whatever the rarity and the failed balls: keeps a long chase possible. */
         public double maxChance = 0.5;
 
-        /** Whether legendary, mythical, ultra beast and paradox Pokémon may run away. */
-        public boolean specialCategories = false;
+        /**
+         * Which Pokémon may run away at all, rarity by rarity and category by
+         * category. A Pokémon of a legendary-class category follows its
+         * category's switch only; any other Pokémon follows the switch of its
+         * rarity in the Safari.
+         */
+        public FleeRarity rarity = new FleeRarity();
 
         /** Whether shiny Pokémon may run away. */
         public boolean shinies = false;
+
+        /**
+         * Before 1.4.0's per-rarity switches, one switch for the four
+         * legendary-class categories. Read once by the config manager, which
+         * copies it into {@link #rarity} and drops it; null otherwise, so it
+         * is never written back (Gson skips nulls).
+         */
+        public Boolean specialCategories;
+    }
+
+    /**
+     * Per-rarity and per-category switches of {@code capture.flee.rarity}:
+     * false keeps those Pokémon from ever running away, whatever the chances
+     * say. The four rarities are the Safari's own (habitat index); the four
+     * categories are Cobblemon's labels and take precedence over the rarity,
+     * so a legendary listed as ultra-rare follows {@link #legendary}.
+     */
+    public static class FleeRarity {
+        public boolean common = true;
+        public boolean uncommon = true;
+        public boolean rare = true;
+        public boolean ultraRare = true;
+        public boolean legendary = false;
+        public boolean mythical = false;
+        public boolean ultraBeast = false;
+        public boolean paradox = false;
     }
 
     /**
