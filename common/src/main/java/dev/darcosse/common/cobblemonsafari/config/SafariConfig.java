@@ -463,7 +463,7 @@ public class SafariConfig {
          */
         public List<BountyKind> allowedKinds = new ArrayList<>(List.of(BountyKind.SPECIES, BountyKind.TYPE,
                 BountyKind.FEATURED, BountyKind.HABITAT, BountyKind.ANY, BountyKind.DIFFERENT,
-                BountyKind.OUT_OF_BATTLE, BountyKind.NIGHT, BountyKind.EVOLVED, BountyKind.LEVEL));
+                BountyKind.OUT_OF_BATTLE, BountyKind.NIGHT, BountyKind.EVOLVED, BountyKind.LEVEL, BountyKind.FISHING));
 
         /** Extra points once every mission of the rotation is done. */
         public int allDoneBonus = 200;

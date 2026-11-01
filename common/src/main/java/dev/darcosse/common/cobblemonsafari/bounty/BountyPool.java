@@ -51,6 +51,9 @@ final class BountyPool {
     /** Spawn positions Cobblemon counts as water, as in SafariHabitatIndex. */
     private static final Set<String> WATER_POSITION_TYPES = Set.of("submerged", "surface", "seafloor", "fishing");
 
+    /** Cobblemon's spawn position type of the Pokémon a rod brings up. */
+    private static final String FISHING_POSITION_TYPE = "fishing";
+
     /**
      * Highest sky light an underground spawn may ask for, as in SpawnWindow:
      * below 8 a spawn wants to be out of the sky. Changing one without the
@@ -76,15 +79,23 @@ final class BountyPool {
     final List<Species> evolved;
     /** Highest wild level of each eligible species. */
     final Map<Species, Integer> maxLevel;
+    /**
+     * Whether a rod can bring anything up in the Safari: some fishing spawn
+     * of a species the Safari lets in fits one of its habitats, whatever the
+     * filter's rarities and water switch (a fishing mission names no species).
+     */
+    final boolean fishable;
 
     private BountyPool(List<Species> species, Map<Species, Rarity> rarity, Map<String, Integer> typeWeights,
-                       Map<ResourceKey<Biome>, Integer> habitats, List<Species> evolved, Map<Species, Integer> maxLevel) {
+                       Map<ResourceKey<Biome>, Integer> habitats, List<Species> evolved, Map<Species, Integer> maxLevel,
+                       boolean fishable) {
         this.species = species;
         this.rarity = rarity;
         this.typeWeights = typeWeights;
         this.habitats = habitats;
         this.evolved = evolved;
         this.maxLevel = maxLevel;
+        this.fishable = fishable;
     }
 
     /**
@@ -134,12 +145,19 @@ final class BountyPool {
         Map<Species, Rarity> rarity = new LinkedHashMap<>();
         Map<Species, Set<ResourceKey<Biome>>> where = new LinkedHashMap<>();
         Map<Species, Integer> maxLevel = new LinkedHashMap<>();
+        boolean fishable = false;
         if (CobblemonSpawnPools.WORLD_SPAWN_POOL != null) {
             for (SpawnDetail raw : CobblemonSpawnPools.WORLD_SPAWN_POOL.getDetails()) {
                 if (!(raw instanceof PokemonSpawnDetail detail)) {
                     continue;
                 }
                 Species species = speciesOf(detail);
+                // Before the filter: a fishing mission only needs something to bite.
+                if (!fishable && species != null && species.getImplemented()
+                        && SpeciesRules.isAllowed(species, SpawnSource.NATURAL) && isFishing(detail)
+                        && !easyBiomes(detail, holders, filter).isEmpty()) {
+                    fishable = true;
+                }
                 if (species == null || !species.getImplemented() || !allowed(species, excludedSpecies, excludedTypes)) {
                     continue;
                 }
@@ -189,7 +207,7 @@ final class BountyPool {
             }
         }
         evolved.sort(Comparator.comparing(one -> one.getResourceIdentifier().toString()));
-        return new BountyPool(species, rarity, typeWeights, habitats, List.copyOf(evolved), maxLevel);
+        return new BountyPool(species, rarity, typeWeights, habitats, List.copyOf(evolved), maxLevel, fishable);
     }
 
     /**
@@ -237,6 +255,16 @@ final class BountyPool {
             }
         }
         return false;
+    }
+
+    /** Whether a spawn is a rod's bite; a spawn file left without a position type is not. */
+    private static boolean isFishing(PokemonSpawnDetail detail) {
+        try {
+            return FISHING_POSITION_TYPE.equals(detail.getSpawnablePositionType().getName());
+        } catch (RuntimeException e) {
+            // lateinit in Cobblemon: a broken spawn file can leave it unset.
+            return false;
+        }
     }
 
     /** Whether a spawn happens in the water; a spawn file left without a position type counts as land. */

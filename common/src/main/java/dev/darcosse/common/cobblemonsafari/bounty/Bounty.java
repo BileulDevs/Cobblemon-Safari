@@ -57,6 +57,7 @@ public record Bounty(BountyKind kind, String target, int count, int reward) {
             case LEVEL -> Component.translatable(prefix + "level", count, target);
             case HIDDEN_ABILITY -> Component.translatable(prefix + "hidden_ability", count);
             case SHINY -> Component.translatable(prefix + "shiny", count);
+            case FISHING -> Component.translatable(prefix + "fishing", count);
         };
     }
 

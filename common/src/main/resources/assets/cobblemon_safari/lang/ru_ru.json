@@ -211,6 +211,7 @@
   "cobblemon_safari.bounty.level": "Поймайте %1$s покемонов уровня %2$s или выше",
   "cobblemon_safari.bounty.hidden_ability": "Поймайте %1$s покемонов со скрытой способностью",
   "cobblemon_safari.bounty.shiny": "Поймайте %1$s шайни-покемонов",
+  "cobblemon_safari.bounty.fishing": "Выловите %1$s покемонов",
   "cobblemon_safari.bounty.swap.done": "Новая миссия: %s (+%s)",
   "cobblemon_safari.bounty.swap.no_points": "Чтобы заменить миссию, нужно %s.",
   "cobblemon_safari.bounty.swap.none_left": "В этой ротации замен больше не осталось.",

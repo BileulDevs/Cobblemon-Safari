@@ -2,6 +2,7 @@ package dev.darcosse.common.cobblemonsafari.bounty;
 
 import com.cobblemon.mod.common.api.Priority;
 import com.cobblemon.mod.common.api.events.CobblemonEvents;
+import com.cobblemon.mod.common.api.events.fishing.BobberSpawnPokemonEvent;
 import com.cobblemon.mod.common.api.events.pokemon.PokemonCapturedEvent;
 import com.cobblemon.mod.common.api.types.ElementalType;
 import com.cobblemon.mod.common.entity.pokeball.EmptyPokeBallEntity;
@@ -42,6 +43,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.function.BiPredicate;
+import java.util.function.Supplier;
 
 /**
  * Bounties: the missions of the rotation, drawn with each rotation of the
@@ -100,10 +103,15 @@ public final class SafariBounties {
     private SafariBounties() {
     }
 
-    /** Subscribes to captures. Called once from common init; throws are recorded by {@link ThrowTracker}. */
+    /**
+     * Subscribes to captures and to the rod's bites. Called once from common
+     * init; throws are recorded by {@link ThrowTracker}.
+     */
     public static void register() {
         // LOWEST: the capture is final, as for points and catch records.
         CobblemonEvents.POKEMON_CAPTURED.subscribe(Priority.LOWEST, SafariBounties::onCaptured);
+        // LOWEST: only reads the bite, after any addon that might change the Pokémon.
+        CobblemonEvents.BOBBER_SPAWN_POKEMON_POST.subscribe(Priority.LOWEST, SafariBounties::onFished);
     }
 
     /** Forgets cached missions; call when a server starts, since single player reuses this class. */
@@ -334,6 +342,37 @@ public final class SafariBounties {
         if (server == null || !SafariDimensions.isSafari(player.level())) {
             return;
         }
+        // Built only when a mission is there to read it: Capture.of reads the biome and the ball.
+        Capture[] capture = new Capture[1];
+        advance(server, player, (bounty, seen) -> {
+            if (capture[0] == null) {
+                capture[0] = Capture.of(server, player, event);
+            }
+            return matches(bounty, capture[0], seen);
+        }, () -> capture[0].speciesId);
+    }
+
+    /** Counts a Pokémon a rod brought up inside the Safari toward the fishing missions. */
+    private static void onFished(BobberSpawnPokemonEvent.Post event) {
+        if (!(event.getBobber().getPlayerOwner() instanceof ServerPlayer player)) {
+            return;
+        }
+        MinecraftServer server = player.getServer();
+        if (server == null || !SafariDimensions.isSafari(player.level())) {
+            return;
+        }
+        advance(server, player, (bounty, seen) -> bounty.kind() == BountyKind.FISHING, () -> "");
+    }
+
+    /**
+     * Moves every unfinished mission of the player that the event matches
+     * one step, pays those it completes and the bonus when all are done.
+     *
+     * @param matcher   whether the event counts for a mission, given the species it already counted
+     * @param speciesId the species to remember for a "different species" mission it moved
+     */
+    private static void advance(MinecraftServer server, ServerPlayer player,
+                                BiPredicate<Bounty, Set<String>> matcher, Supplier<String> speciesId) {
         List<Bounty> shared = today(server);
         if (shared.isEmpty()) {
             return;
@@ -341,15 +380,14 @@ public final class SafariBounties {
         SafariBountyStore store = SafariBountyStore.get(server);
         SafariBountyStore.Progress progress = progressOf(server, player, shared);
         List<Bounty> bounties = missionsOf(shared, progress);
-        Capture capture = Capture.of(server, player, event);
         boolean moved = false;
         for (int i = 0; i < bounties.size(); i++) {
             Bounty bounty = bounties.get(i);
-            if (progress.counts[i] >= bounty.count() || !matches(bounty, capture, progress.seen.get(i))) {
+            if (progress.counts[i] >= bounty.count() || !matcher.test(bounty, progress.seen.get(i))) {
                 continue;
             }
             if (bounty.kind() == BountyKind.DIFFERENT) {
-                progress.seen.get(i).add(capture.speciesId);
+                progress.seen.get(i).add(speciesId.get());
             }
             progress.counts[i]++;
             moved = true;
@@ -423,6 +461,8 @@ public final class SafariBounties {
             case LEVEL -> pokemon.getLevel() >= bounty.level();
             case HIDDEN_ABILITY -> new HiddenAbilityProperty(true).matches(pokemon);
             case SHINY -> pokemon.getShiny();
+            // Counted at the bite (onFished), not at the capture.
+            case FISHING -> false;
         };
     }
 
@@ -581,6 +621,8 @@ public final class SafariBounties {
                 yield new Bounty(kind, "", count, tuning.rewardFor(count));
             }
             case EVOLVED -> pool.evolved.isEmpty() ? null : counted(random, kind, "", tuning);
+            // Never drawn on an island where nothing bites.
+            case FISHING -> pool.fishable ? counted(random, kind, "", tuning) : null;
             case LEVEL -> {
                 int highest = 0;
                 for (int level : pool.maxLevel.values()) {

@@ -211,6 +211,7 @@
   "cobblemon_safari.bounty.level": "捕捉%1$s只%2$s级或以上的宝可梦",
   "cobblemon_safari.bounty.hidden_ability": "捕捉%1$s只拥有隐藏特性的宝可梦",
   "cobblemon_safari.bounty.shiny": "捕捉%1$s只异色宝可梦",
+  "cobblemon_safari.bounty.fishing": "钓到%1$s只宝可梦",
   "cobblemon_safari.bounty.swap.done": "新任务：%s（+%s）",
   "cobblemon_safari.bounty.swap.no_points": "更换任务需要%s。",
   "cobblemon_safari.bounty.swap.none_left": "本轮已没有更换次数。",

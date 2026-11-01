@@ -1,5 +1,5 @@
 {
-  "configVersion": 5,
+  "configVersion": 6,
   "maxDurationSeconds": 3600,
   "allowedBalls": [
     "cobblemon:safari_ball",
@@ -125,7 +125,7 @@
   "bounties": {
     "enabled": true,
     "count": 4,
-    "allowedKinds": ["SPECIES", "TYPE", "FEATURED", "HABITAT", "ANY", "DIFFERENT", "OUT_OF_BATTLE", "NIGHT", "EVOLVED", "LEVEL"],
+    "allowedKinds": ["SPECIES", "TYPE", "FEATURED", "HABITAT", "ANY", "DIFFERENT", "OUT_OF_BATTLE", "NIGHT", "EVOLVED", "LEVEL", "FISHING"],
     "allDoneBonus": 200,
     "kinds": {
       "species": { "weight": 3, "minCount": 1, "maxCount": 2, "reward": 120, "rewardPerCatch": 0, "commonCount": 2, "uncommonCount": 1, "rareCount": 1 },
@@ -139,7 +139,8 @@
       "evolved": { "weight": 1, "minCount": 1, "maxCount": 2, "reward": 0, "rewardPerCatch": 80 },
       "level": { "weight": 1, "minCount": 1, "maxCount": 1, "reward": 120, "rewardPerCatch": 0, "minLevel": 20, "maxLevel": 40 },
       "hiddenAbility": { "weight": 1, "minCount": 1, "maxCount": 1, "reward": 400, "rewardPerCatch": 0 },
-      "shiny": { "weight": 1, "minCount": 1, "maxCount": 1, "reward": 1000, "rewardPerCatch": 0 }
+      "shiny": { "weight": 1, "minCount": 1, "maxCount": 1, "reward": 1000, "rewardPerCatch": 0 },
+      "fishing": { "weight": 2, "minCount": 2, "maxCount": 3, "reward": 0, "rewardPerCatch": 45 }
     },
     "speciesFilter": {
       "rarities": ["common", "uncommon", "rare"],

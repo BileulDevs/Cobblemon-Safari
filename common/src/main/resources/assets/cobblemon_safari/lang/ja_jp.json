@@ -211,6 +211,7 @@
   "cobblemon_safari.bounty.level": "レベル%2$s以上のポケモンを%1$s匹捕まえる",
   "cobblemon_safari.bounty.hidden_ability": "隠れ特性のポケモンを%1$s匹捕まえる",
   "cobblemon_safari.bounty.shiny": "色違いのポケモンを%1$s匹捕まえる",
+  "cobblemon_safari.bounty.fishing": "ポケモンを%1$s匹釣る",
   "cobblemon_safari.bounty.swap.done": "新しいミッション：%s（+%s）",
   "cobblemon_safari.bounty.swap.no_points": "ミッションの交換には%sが必要です。",
   "cobblemon_safari.bounty.swap.none_left": "このローテーションの交換回数はもうありません。",

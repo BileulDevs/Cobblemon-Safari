@@ -40,6 +40,8 @@ public class BountyKinds {
     public BountyKindSettings hiddenAbility = BountyKindSettings.of(1, 1, 1, 400, 0);
     /** Catch a shiny. Off by default: luck more than skill. */
     public BountyKindSettings shiny = BountyKindSettings.of(1, 1, 1, 1000, 0);
+    /** Fish N Pokémon with a rod, 2 to 3 at 45 points each: a bite takes a while. */
+    public BountyKindSettings fishing = BountyKindSettings.of(2, 2, 3, 0, 45);
 
     /** The tuning of a kind; never null once the config is validated. */
     public BountyKindSettings of(BountyKind kind) {
@@ -56,6 +58,7 @@ public class BountyKinds {
             case LEVEL -> level;
             case HIDDEN_ABILITY -> hiddenAbility;
             case SHINY -> shiny;
+            case FISHING -> fishing;
         };
     }
 
@@ -64,7 +67,7 @@ public class BountyKinds {
         BountyKinds defaults = new BountyKinds();
         boolean missing = species == null || type == null || featured == null || habitat == null || any == null
                 || different == null || outOfBattle == null || night == null || evolved == null || level == null
-                || hiddenAbility == null || shiny == null;
+                || hiddenAbility == null || shiny == null || fishing == null;
         if (species == null) species = defaults.species;
         if (type == null) type = defaults.type;
         if (featured == null) featured = defaults.featured;
@@ -77,6 +80,7 @@ public class BountyKinds {
         if (level == null) level = defaults.level;
         if (hiddenAbility == null) hiddenAbility = defaults.hiddenAbility;
         if (shiny == null) shiny = defaults.shiny;
+        if (fishing == null) fishing = defaults.fishing;
         return missing;
     }
 

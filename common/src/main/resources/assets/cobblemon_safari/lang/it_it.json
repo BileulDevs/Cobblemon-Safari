@@ -211,6 +211,7 @@
   "cobblemon_safari.bounty.level": "Cattura %1$s Pokémon di livello %2$s o superiore",
   "cobblemon_safari.bounty.hidden_ability": "Cattura %1$s Pokémon con l'abilità nascosta",
   "cobblemon_safari.bounty.shiny": "Cattura %1$s Pokémon cromatici",
+  "cobblemon_safari.bounty.fishing": "Pesca %1$s Pokémon",
   "cobblemon_safari.bounty.swap.done": "Nuova missione: %s (+%s)",
   "cobblemon_safari.bounty.swap.no_points": "Ti servono %s per cambiare una missione.",
   "cobblemon_safari.bounty.swap.none_left": "Nessun cambio rimasto per questa rotazione.",

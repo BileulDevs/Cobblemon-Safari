@@ -1,7 +1,7 @@
 package dev.darcosse.common.cobblemonsafari.bounty;
 
 /**
- * What a mission asks the player to catch.
+ * What a mission asks the player to catch (or, for {@link #FISHING}, to fish).
  *
  * <p>Two formats rest on this enum: the constant names are the values of
  * {@code bounties.allowedKinds} in server.json (renaming one drops it from
@@ -36,5 +36,10 @@ public enum BountyKind {
      */
     HIDDEN_ABILITY,
     /** N shiny Pokémon. */
-    SHINY
+    SHINY,
+    /**
+     * N Pokémon fished with a rod in the Safari. Counted at the bite, when
+     * the Pokémon comes out of the water, caught afterwards or not.
+     */
+    FISHING
 }

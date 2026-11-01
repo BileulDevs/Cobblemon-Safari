@@ -75,9 +75,13 @@ public final class SafariConfigManager {
      * each kind of mission its own tuning ({@code bounties.kinds}), where the
      * three former rewards of {@code bounties} moved. 5 raised the default
      * ticket loot (every village chest), applied to files still holding the
-     * old default list.
+     * old default list. 6 added the fishing missions to
+     * {@code bounties.allowedKinds}, once, in files written before they existed.
      */
-    public static final int CURRENT_CONFIG_VERSION = 5;
+    public static final int CURRENT_CONFIG_VERSION = 6;
+
+    /** First version that knows the fishing missions. */
+    private static final int FISHING_MISSION_VERSION = 6;
 
     /** First version with the 1.3.0 ticket loot defaults. */
     private static final int TICKET_LOOT_VERSION = 5;
@@ -233,6 +237,14 @@ public final class SafariConfigManager {
         migrateBounties(c);
         if (c.configVersion < TICKET_LOOT_VERSION) {
             migrateTicketLoot(c);
+        }
+        // A file older than the fishing missions could not list them, so its list
+        // says nothing against them: they are added once, like a new default.
+        if (c.configVersion < FISHING_MISSION_VERSION && c.bounties != null && c.bounties.allowedKinds != null
+                && !c.bounties.allowedKinds.contains(BountyKind.FISHING)) {
+            c.bounties.allowedKinds.add(BountyKind.FISHING);
+            CobblemonSafari.LOGGER.info("Added the fishing missions (FISHING) to bounties.allowedKinds in {}",
+                    FILE_NAME);
         }
     }
 

@@ -211,6 +211,7 @@
   "cobblemon_safari.bounty.level": "레벨 %2$s 이상 포켓몬 %1$s마리 포획",
   "cobblemon_safari.bounty.hidden_ability": "숨겨진 특성 포켓몬 %1$s마리 포획",
   "cobblemon_safari.bounty.shiny": "색이 다른 포켓몬 %1$s마리 포획",
+  "cobblemon_safari.bounty.fishing": "포켓몬 %1$s마리 낚기",
   "cobblemon_safari.bounty.swap.done": "새 미션: %s (+%s)",
   "cobblemon_safari.bounty.swap.no_points": "미션을 교체하려면 %s이(가) 필요합니다.",
   "cobblemon_safari.bounty.swap.none_left": "이번 로테이션의 교체 횟수가 남아 있지 않습니다.",

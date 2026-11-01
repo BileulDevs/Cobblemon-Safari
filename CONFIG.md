@@ -18,7 +18,7 @@ How the files behave:
 - **An invalid value** (a negative price, an hour of 25, a colour that is not a colour...) is replaced by its default or clamped into range, a warning names it in the log, and the file is rewritten with the fixed value.
 - **A file that cannot be read at all** (a missing comma, a stray quote) is never overwritten: the mod runs on the defaults, logs the error, and reads the file again once you fix it.
 - **Unknown keys** are ignored and dropped when the file is rewritten.
-- **`configVersion`** is the format version of the file (`5` for `server.json`, `2` for `shop.json`, `1` for `client.json`). It is not a setting: the mod writes it. A `server.json` at version `1` (Cobblemon Safari 1.0.0) is converted once on load: its `spawns` species rules are copied to `featured` (see below), so nothing changes in game until you edit them. A `server.json` older than version `4` (Cobblemon Safari 1.1.0 and before) has its three bounty rewards moved into `bounties.kinds`. A `shop.json` at version `1` gets the fossil ticket trade added once.
+- **`configVersion`** is the format version of the file (`6` for `server.json`, `2` for `shop.json`, `1` for `client.json`). It is not a setting: the mod writes it. A `server.json` at version `1` (Cobblemon Safari 1.0.0) is converted once on load: its `spawns` species rules are copied to `featured` (see below), so nothing changes in game until you edit them. A `server.json` older than version `4` (Cobblemon Safari 1.1.0 and before) has its three bounty rewards moved into `bounties.kinds`. A `server.json` older than version `6` gets the fishing missions (`FISHING`) added once to `bounties.allowedKinds`. A `shop.json` at version `1` gets the fossil ticket trade added once.
 
 Formats used below:
 
@@ -207,6 +207,7 @@ The kinds (`allowedKinds` names, `kinds` keys):
 | `NIGHT` | `night` | Catch N Pokémon at night (Cobblemon's night, about 12500 to 23500 ticks of the day). A rotation shorter than a game day may have no night. | weight 1, 2 to 3, 40 per catch |
 | `EVOLVED` | `evolved` | Catch N fully evolved Pokémon (a species that evolved and evolves no further). | weight 1, 1 to 2, 80 per catch |
 | `LEVEL` | `level` | Catch N Pokémon of at least a level, drawn between `minLevel` 20 and `maxLevel` 40 by steps of 5, and lowered to the highest wild level of the filter's species. | weight 1, 1, 120 points |
+| `FISHING` | `fishing` | Fish N Pokémon with a rod in the Safari, counted when one bites (caught afterwards or not). Not drawn when nothing the Safari lets in can be fished in its habitats. | weight 2, 2 to 3, 45 per catch |
 | `HIDDEN_ABILITY` | `hiddenAbility` | Catch N Pokémon with their hidden ability. Rare: Cobblemon gives one only to some fished Pokémon and to those drawn by a honeyed tree. | weight 1, 1, 400 points |
 | `SHINY` | `shiny` | Catch N shiny Pokémon. Luck more than skill. | weight 1, 1, 1000 points |
 
