@@ -8,6 +8,7 @@
   ],
   "pauseTimeWhileOffline": true,
   "allowBattles": true,
+  "fishingStartsBattle": true,
   "battleGraceSeconds": 120,
   "exitDestination": "WORLD_SPAWN",
   "exemptCreativeAndSpectator": true,

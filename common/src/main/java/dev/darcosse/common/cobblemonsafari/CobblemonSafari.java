@@ -2,6 +2,7 @@ package dev.darcosse.common.cobblemonsafari;
 
 import dev.darcosse.common.cobblemonsafari.advancement.SafariAdvancements;
 import dev.darcosse.common.cobblemonsafari.battle.BattleGuard;
+import dev.darcosse.common.cobblemonsafari.battle.FishingBattleGuard;
 import dev.darcosse.common.cobblemonsafari.capture.ThrowTracker;
 import dev.darcosse.common.cobblemonsafari.capture.CaptureGuard;
 import dev.darcosse.common.cobblemonsafari.capture.SafariBallBonus;
@@ -57,6 +58,7 @@ public final class CobblemonSafari {
         ThrowTracker.register();
         CatchTracker.register();
         BattleGuard.register();
+        FishingBattleGuard.register();
         NativeSpawnRules.register();
         SpecialSpawnCounter.register();
         SafariBallBonus.register();

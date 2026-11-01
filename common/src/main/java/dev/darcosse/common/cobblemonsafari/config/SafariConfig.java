@@ -51,6 +51,14 @@ public class SafariConfig {
     public boolean allowBattles = true;
 
     /**
+     * Whether a Pokémon fished inside the Safari starts a battle with the
+     * angler, as Cobblemon does everywhere one second after the bite. False
+     * leaves the Pokémon free on the bank, to be caught with a ball out of
+     * battle (Safari Ball bonus included) or battled on purpose.
+     */
+    public boolean fishingStartsBattle = true;
+
+    /**
      * Extra time a player may stay after their clock hits zero when they are in
      * the middle of a battle, so the battle is not torn apart by a teleport.
      */
