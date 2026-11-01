@@ -3,6 +3,8 @@ package dev.darcosse.common.cobblemonsafari.command;
 import dev.darcosse.common.cobblemonsafari.points.SafariPointsIcon;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.cobblemon.mod.common.pokemon.Species;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
@@ -10,6 +12,7 @@ import dev.darcosse.common.cobblemonsafari.access.EntryResult;
 import dev.darcosse.common.cobblemonsafari.access.SafariAccess;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.credit.SafariCredit;
+import dev.darcosse.common.cobblemonsafari.dex.SafariDex;
 import dev.darcosse.common.cobblemonsafari.points.SafariPoints;
 import dev.darcosse.common.cobblemonsafari.network.SafariNetwork;
 import dev.darcosse.common.cobblemonsafari.park.SafariBorder;
@@ -25,13 +28,19 @@ import dev.darcosse.common.cobblemonsafari.util.Ticks;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.biome.Biome;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * The {@code /safari} command tree.
@@ -74,6 +83,7 @@ public final class SafariCommands {
     private static final String ARG_SECONDS = "seconds";
     private static final String ARG_AMOUNT = "amount";
     private static final String ARG_TARGET = "player";
+    private static final String ARG_HABITAT = "habitat";
 
     /**
      * Rows shown by /safari top. More rows make the command scroll the chat;
@@ -128,6 +138,14 @@ public final class SafariCommands {
                         .requires(s -> s.hasPermission(OP_LEVEL))
                         .then(Commands.argument(ARG_TARGET, EntityArgument.player())
                                 .executes(ctx -> showStats(ctx, EntityArgument.getPlayer(ctx, ARG_TARGET)))))
+                // Every player: their own Safari Pokédex.
+                .then(Commands.literal("dex")
+                        .executes(SafariCommands::showDex)
+                        .then(Commands.argument(ARG_HABITAT, StringArgumentType.word())
+                                .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(
+                                        SafariDex.habitats().keySet().stream().map(biome -> biome.location().getPath()),
+                                        builder))
+                                .executes(ctx -> showDexHabitat(ctx, StringArgumentType.getString(ctx, ARG_HABITAT)))))
                 .then(Commands.literal("top")
                         .requires(s -> s.hasPermission(OP_LEVEL))
                         .executes(SafariCommands::showTop))
@@ -310,6 +328,98 @@ public final class SafariCommands {
         ctx.getSource().sendSuccess(() -> Component.translatable(key("command.stats.species"),
                 stats.speciesCaught().size(), stats.shinyCatches()), false);
         return stats.totalCatches();
+    }
+
+    /** /safari dex: the player's Safari Pokédex, habitat by habitat. */
+    private static int showDex(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        MinecraftServer server = ctx.getSource().getServer();
+        Map<ResourceKey<Biome>, List<Species>> habitats = SafariDex.habitats();
+        if (habitats.isEmpty()) {
+            ctx.getSource().sendFailure(Component.translatable(key("command.dex.empty")));
+            return 0;
+        }
+        Set<String> caught = SafariDex.caughtBy(server, player);
+        int caughtCount = SafariDex.caughtCount(server, player);
+        ctx.getSource().sendSuccess(() -> Component.translatable(key("command.dex.header"), caughtCount,
+                SafariDex.total()).withStyle(ChatFormatting.GOLD), false);
+        for (Map.Entry<ResourceKey<Biome>, List<Species>> habitat : habitats.entrySet()) {
+            int done = countCaught(habitat.getValue(), caught);
+            int total = habitat.getValue().size();
+            ctx.getSource().sendSuccess(() -> Component.translatable(key("command.dex.habitat_line"),
+                    habitatName(habitat.getKey()), done, total)
+                    .withStyle(done == total ? ChatFormatting.GREEN : ChatFormatting.WHITE), false);
+        }
+        ctx.getSource().sendSuccess(() -> Component.translatable(key("command.dex.hint"))
+                .withStyle(ChatFormatting.GRAY), false);
+        return caughtCount;
+    }
+
+    /** /safari dex &lt;habitat&gt;: the species of one habitat, caught and missing. */
+    private static int showDexHabitat(CommandContext<CommandSourceStack> ctx, String name)
+            throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        MinecraftServer server = ctx.getSource().getServer();
+        Map<ResourceKey<Biome>, List<Species>> habitats = SafariDex.habitats();
+        if (habitats.isEmpty()) {
+            ctx.getSource().sendFailure(Component.translatable(key("command.dex.empty")));
+            return 0;
+        }
+        Map.Entry<ResourceKey<Biome>, List<Species>> habitat = null;
+        for (Map.Entry<ResourceKey<Biome>, List<Species>> candidate : habitats.entrySet()) {
+            if (candidate.getKey().location().getPath().equals(name)) {
+                habitat = candidate;
+            }
+        }
+        if (habitat == null) {
+            ctx.getSource().sendFailure(Component.translatable(key("command.dex.unknown_habitat"), name));
+            return 0;
+        }
+        Set<String> caught = SafariDex.caughtBy(server, player);
+        MutableComponent caughtNames = Component.empty();
+        MutableComponent missingNames = Component.empty();
+        int done = 0;
+        for (Species species : habitat.getValue()) {
+            boolean has = caught.contains(species.getResourceIdentifier().toString());
+            MutableComponent list = has ? caughtNames : missingNames;
+            if (!list.getSiblings().isEmpty()) {
+                list.append(", ");
+            }
+            list.append(species.getTranslatedName());
+            if (has) {
+                done++;
+            }
+        }
+        int total = habitat.getValue().size();
+        int doneCount = done;
+        ResourceKey<Biome> biome = habitat.getKey();
+        ctx.getSource().sendSuccess(() -> Component.translatable(key("command.dex.habitat_header"),
+                habitatName(biome), doneCount, total).withStyle(ChatFormatting.GOLD), false);
+        if (doneCount > 0) {
+            ctx.getSource().sendSuccess(() -> Component.translatable(key("command.dex.caught"), caughtNames)
+                    .withStyle(ChatFormatting.GREEN), false);
+        }
+        if (doneCount < total) {
+            ctx.getSource().sendSuccess(() -> Component.translatable(key("command.dex.missing"), missingNames)
+                    .withStyle(ChatFormatting.GRAY), false);
+        }
+        return doneCount;
+    }
+
+    /** How many of the species the caught set holds. */
+    private static int countCaught(List<Species> species, Set<String> caught) {
+        int count = 0;
+        for (Species one : species) {
+            if (caught.contains(one.getResourceIdentifier().toString())) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /** A Safari biome's translated name, as the F3 screen and the wall screens show it. */
+    private static Component habitatName(ResourceKey<Biome> biome) {
+        return Component.translatable("biome." + biome.location().getNamespace() + "." + biome.location().getPath());
     }
 
     /** Prints the same list as the wall screens' FEATURED page. */

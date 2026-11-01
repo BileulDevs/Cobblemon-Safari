@@ -38,6 +38,7 @@ public final class SafariClient {
         FeaturedClientState.clear();
         BountyClientState.clear();
         StatsClientState.clear();
+        DexClientState.clear();
         // Animation states hold model references; the next server may ship other models.
         BoardPokemonModels.clear();
     }

@@ -8,6 +8,7 @@ import dev.darcosse.common.cobblemonsafari.network.SafariShopBuyPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariShopPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariTravelPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariStatsPayload;
+import dev.darcosse.common.cobblemonsafari.network.SafariDexPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariWallScreenOpenPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariWallScreenSetPayload;
 import dev.darcosse.common.cobblemonsafari.block.WallScreenSettings;
@@ -44,6 +45,7 @@ public final class FabricSafariNetworking {
         PayloadTypeRegistry.playS2C().register(SafariFeaturedPayload.TYPE, SafariFeaturedPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SafariBountiesPayload.TYPE, SafariBountiesPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SafariStatsPayload.TYPE, SafariStatsPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(SafariDexPayload.TYPE, SafariDexPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SafariWallScreenOpenPayload.TYPE, SafariWallScreenOpenPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SafariWallScreenSetPayload.TYPE, SafariWallScreenSetPayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(SafariWallScreenSetPayload.TYPE,

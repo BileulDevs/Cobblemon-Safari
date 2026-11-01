@@ -30,7 +30,7 @@ Rare lodges in the overworld's plains, meadows, light forests and savannas. Stan
 - **Safari Tickets** add 30 minutes of Safari time, banked up to 4 hours. Entering at a gate spends the bank, up to 2 hours per hunt.
 - **Earn tickets** by trading overworld goods at the shop (16 Apricorns, 24 Berries, 1 evolution stone or 1 fossil, once per rotation each, choosing which kind you give) or by finding them in village chests, desert and jungle temples and Cobblemon ruins.
 - **A stopwatch HUD**, made of a Safari Ball, whose hand spins faster as time runs out, with chat warnings from 15 minutes down to 10 seconds.
-- **An end-of-game recap** with every Pokémon caught. Leave early through a rest house clerk and the unused time goes back to your bank.
+- **An end-of-game recap** with every Pokémon caught, the Safari points earned, the missions completed, the species new to your Safari Pokédex, a beaten record and the advancements unlocked. Leave early through a rest house clerk and the unused time goes back to your bank.
 
 ### Restricted Poké Balls
 
@@ -57,7 +57,7 @@ Ten Pokémon Centers stand on every map: eight on the surface, the entrance one 
 
 ### Safari Wall Screens
 
-A screen on an arm that you can tilt toward the floor or the ceiling, up to three wide. It shows today's specials with their animated models, your own Safari record, or the missions with your progress, over a pixel-art landscape that follows the time of day. Every colour can be changed.
+A screen on an arm that you can tilt toward the floor or the ceiling, up to three wide. It shows today's specials with their animated models, your own Safari record, the missions with your progress, or your Safari Pokédex (the species you caught in each habitat), over a pixel-art landscape that follows the time of day. Every colour can be changed.
 
 ### Decoration
 
@@ -97,7 +97,7 @@ The Safari Gate block is creative-only, for operators who want to build their ow
 
 ### Commands
 
-Players have one command: `/safari`, which shows their time left, banked time and points. Everything else goes through the gates, the NPCs and the wall screens.
+Players have two commands: `/safari`, which shows their time left, banked time and points, and `/safari dex [habitat]`, their Safari Pokédex (progress per habitat, or the species caught and missing in one habitat). Everything else goes through the gates, the NPCs and the wall screens.
 
 Operators (level 2) have `/safari info`, `enter`, `exit`, `time`, `credit add`, `points add`, `stats`, `top`, `today`, `shop`, `rotate`, `reset` and `reload`.
 

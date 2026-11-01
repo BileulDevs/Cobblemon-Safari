@@ -81,6 +81,10 @@ public final class SafariClientConfigManager {
             loaded.board.bountiesFooter = boardDefaults.bountiesFooter;
             corrected = true;
         }
+        if (loaded.board.dexFooter == null) {
+            loaded.board.dexFooter = boardDefaults.dexFooter;
+            corrected = true;
+        }
         if (loaded.board.colors == null) {
             loaded.board.colors = new SafariClientConfig.BoardColors();
             corrected = true;

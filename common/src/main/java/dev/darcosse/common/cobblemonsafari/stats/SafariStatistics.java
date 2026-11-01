@@ -2,6 +2,7 @@ package dev.darcosse.common.cobblemonsafari.stats;
 
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.advancement.SafariAdvancements;
+import dev.darcosse.common.cobblemonsafari.session.SafariSessionManager;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.MinecraftServer;
@@ -97,6 +98,7 @@ public final class SafariStatistics {
         if (amount > 0) {
             player.awardStat(stat, amount);
             SafariAdvancements.onStatChanged(player, stat);
+            SafariSessionManager.recordStat(player, stat, amount);
         }
     }
 
@@ -104,6 +106,7 @@ public final class SafariStatistics {
     public static void increment(ServerPlayer player, ResourceLocation stat) {
         player.awardStat(stat, 1);
         SafariAdvancements.onStatChanged(player, stat);
+        SafariSessionManager.recordStat(player, stat, 1);
     }
 
     /** Raises a record to {@code value} if it is higher than the one held. */

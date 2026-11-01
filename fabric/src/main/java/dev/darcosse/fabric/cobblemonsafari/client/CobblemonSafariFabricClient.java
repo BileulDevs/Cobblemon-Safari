@@ -19,12 +19,14 @@ import dev.darcosse.common.cobblemonsafari.network.SafariTravelPayload;
 import dev.darcosse.common.cobblemonsafari.network.ShopClientBridge;
 import dev.darcosse.common.cobblemonsafari.network.TravelClientBridge;
 import dev.darcosse.common.cobblemonsafari.network.SafariStatsPayload;
+import dev.darcosse.common.cobblemonsafari.network.SafariDexPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariWallScreenOpenPayload;
 import dev.darcosse.common.cobblemonsafari.network.WallScreenClientBridge;
 import dev.darcosse.common.cobblemonsafari.network.BannerClientBridge;
 import dev.darcosse.common.cobblemonsafari.network.SafariBannerOpenPayload;
 import dev.darcosse.common.cobblemonsafari.client.banner.SafariBannerRenderer;
 import dev.darcosse.common.cobblemonsafari.client.StatsClientState;
+import dev.darcosse.common.cobblemonsafari.client.DexClientState;
 import dev.darcosse.common.cobblemonsafari.network.SafariTimerPayload;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
@@ -57,6 +59,8 @@ public class CobblemonSafariFabricClient implements ClientModInitializer {
 
         ClientPlayNetworking.registerGlobalReceiver(SafariStatsPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> StatsClientState.onStats(payload)));
+        ClientPlayNetworking.registerGlobalReceiver(SafariDexPayload.TYPE, (payload, context) ->
+                context.client().execute(() -> DexClientState.onDex(payload)));
 
         ClientPlayNetworking.registerGlobalReceiver(SafariShopPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> ShopClientBridge.onShop(payload)));

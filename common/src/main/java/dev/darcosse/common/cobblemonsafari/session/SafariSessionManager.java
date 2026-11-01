@@ -12,10 +12,12 @@ import dev.darcosse.common.cobblemonsafari.loan.LoanedBalls;
 import dev.darcosse.common.cobblemonsafari.network.SafariNetwork;
 import dev.darcosse.common.cobblemonsafari.park.ParkBoundary;
 import dev.darcosse.common.cobblemonsafari.park.SafariBorder;
+import dev.darcosse.common.cobblemonsafari.stats.SafariStatistics;
 import dev.darcosse.common.cobblemonsafari.teleport.SafariTeleporter;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
@@ -219,7 +221,7 @@ public final class SafariSessionManager {
         int returned = LoanedBalls.reclaim(player);
         EscapeRopes.reclaim(player);
         player.sendSystemMessage(Component.translatable(reason.translationKey()));
-        player.sendSystemMessage(SafariRecap.build(session, returned));
+        player.sendSystemMessage(SafariRecap.build(player, session, returned));
         for (SafariSessionListener listener : LISTENERS) {
             listener.onEnd(player, session, reason);
         }
@@ -283,6 +285,32 @@ public final class SafariSessionManager {
         for (SafariSessionListener listener : LISTENERS) {
             listener.onCatch(player, session, record);
         }
+    }
+
+    /**
+     * Adds a statistic change to the player's session recap: points earned
+     * and missions completed. Other statistics are ignored, and so is a
+     * player without a session (points earned outside a hunt).
+     */
+    public static void recordStat(ServerPlayer player, ResourceLocation stat, int amount) {
+        if (amount <= 0 || player.getServer() == null) {
+            return;
+        }
+        boolean points = stat.equals(SafariStatistics.POINTS_EARNED);
+        if (!points && !stat.equals(SafariStatistics.MISSIONS_COMPLETED)) {
+            return;
+        }
+        SafariSessionStore store = SafariSessionStore.get(player.getServer());
+        SafariSession session = store.get(player.getUUID());
+        if (session == null) {
+            return;
+        }
+        if (points) {
+            session.addPointsEarned(amount);
+        } else {
+            session.addMissionCompleted();
+        }
+        store.setDirty();
     }
 
     /**

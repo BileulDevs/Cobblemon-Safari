@@ -13,6 +13,7 @@
     "featuredFooter": "SESSION",
     "statsFooter": "ROTATION",
     "bountiesFooter": "SESSION",
+    "dexFooter": "ROTATION",
     "colors": {
       "bezel": "#1A1C22",
       "background": "#0A1220",

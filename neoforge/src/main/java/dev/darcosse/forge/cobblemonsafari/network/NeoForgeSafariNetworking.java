@@ -13,10 +13,12 @@ import dev.darcosse.common.cobblemonsafari.network.SafariTravelPayload;
 import dev.darcosse.common.cobblemonsafari.network.ShopClientBridge;
 import dev.darcosse.common.cobblemonsafari.network.TravelClientBridge;
 import dev.darcosse.common.cobblemonsafari.network.SafariStatsPayload;
+import dev.darcosse.common.cobblemonsafari.network.SafariDexPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariWallScreenOpenPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariWallScreenSetPayload;
 import dev.darcosse.common.cobblemonsafari.network.WallScreenClientBridge;
 import dev.darcosse.common.cobblemonsafari.client.StatsClientState;
+import dev.darcosse.common.cobblemonsafari.client.DexClientState;
 import dev.darcosse.common.cobblemonsafari.block.WallScreenSettings;
 import dev.darcosse.common.cobblemonsafari.decor.BannerDesigns;
 import dev.darcosse.common.cobblemonsafari.network.BannerClientBridge;
@@ -59,6 +61,8 @@ public final class NeoForgeSafariNetworking {
                 (payload, context) -> context.enqueueWork(() -> ShopClientBridge.onShop(payload)));
         registrar.playToClient(SafariStatsPayload.TYPE, SafariStatsPayload.CODEC,
                 (payload, context) -> context.enqueueWork(() -> StatsClientState.onStats(payload)));
+        registrar.playToClient(SafariDexPayload.TYPE, SafariDexPayload.CODEC,
+                (payload, context) -> context.enqueueWork(() -> DexClientState.onDex(payload)));
         // Through the bridge for the same reason as the shop.
         registrar.playToClient(SafariWallScreenOpenPayload.TYPE, SafariWallScreenOpenPayload.CODEC,
                 (payload, context) -> context.enqueueWork(() -> WallScreenClientBridge.onOpen(payload)));

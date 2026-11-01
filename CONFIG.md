@@ -413,6 +413,7 @@ These settings belong to each player; a server cannot change them.
 | `featuredFooter` | `"SESSION"` | What the bar at the bottom of the specials screens counts down: `"SESSION"`, your hunting time while you hunt (the next rotation otherwise), or `"ROTATION"`, always the next rotation. |
 | `statsFooter` | `"ROTATION"` | Same, for the record screens. |
 | `bountiesFooter` | `"SESSION"` | Same, for the missions screens. |
+| `dexFooter` | `"ROTATION"` | Same, for the Pokédex screens. |
 | `colors` | see below | Every colour of the screens. |
 
 ### `board.colors`

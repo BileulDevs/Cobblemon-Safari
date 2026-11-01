@@ -8,6 +8,7 @@ import dev.darcosse.common.cobblemonsafari.advancement.SafariAdvancements;
 import dev.darcosse.common.cobblemonsafari.capture.CaptureGuard;
 import dev.darcosse.common.cobblemonsafari.capture.ThrowTracker;
 import dev.darcosse.common.cobblemonsafari.battle.FishingBattleGuard;
+import dev.darcosse.common.cobblemonsafari.dex.SafariDex;
 import dev.darcosse.common.cobblemonsafari.command.SafariCommands;
 import dev.darcosse.common.cobblemonsafari.park.SafariBorder;
 import dev.darcosse.common.cobblemonsafari.bounty.SafariBounties;
@@ -75,6 +76,7 @@ public final class SafariServerEvents {
         ThrowTracker.reset();
         SafariAdvancements.reset();
         FishingBattleGuard.reset();
+        SafariDex.reset();
         SafariSpawnBoost.reset();
         SpecialSpawnCounter.reset();
         RestHouseTravel.reset();
@@ -103,6 +105,7 @@ public final class SafariServerEvents {
         FeaturedSpawner.tick(server);
         SpecialSpawnCounter.tick(server);
         FeaturedSync.tick(server);
+        SafariDex.tick(server);
         SafariBounties.tick(server);
         SafariSpawnBoost.tick(server);
         RestHouses.tick(server);
@@ -130,6 +133,7 @@ public final class SafariServerEvents {
         FeaturedSync.sendTo(player);
         SafariBounties.sendTo(player);
         SafariNetwork.sendStats(player);
+        SafariDex.sendTo(player);
         SafariStatistics.catchUp(player);
         // After the catch-up: thresholds passed before the advancements existed are granted from the totals.
         SafariAdvancements.onJoin(player);

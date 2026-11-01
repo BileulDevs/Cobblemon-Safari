@@ -99,13 +99,17 @@ public final class PlayerSafariStats {
         this.name = name;
     }
 
-    /** Counts one catch and remembers its species. */
-    void addCatch(String speciesId, boolean shiny) {
+    /**
+     * Counts one catch and remembers its species.
+     *
+     * @return whether the species is new to this player's record
+     */
+    boolean addCatch(String speciesId, boolean shiny) {
         totalCatches++;
         if (shiny) {
             shinyCatches++;
         }
-        speciesCaught.add(speciesId);
+        return speciesCaught.add(speciesId);
     }
 
     /** Closes one game: counts it, keeps the best score and adds the time hunted. */
