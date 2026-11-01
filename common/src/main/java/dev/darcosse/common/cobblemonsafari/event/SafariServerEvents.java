@@ -22,6 +22,8 @@ import dev.darcosse.common.cobblemonsafari.spawn.FeaturedRotation;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedSpawner;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedSync;
 import dev.darcosse.common.cobblemonsafari.spawn.SafariSpawnBoost;
+import dev.darcosse.common.cobblemonsafari.spawn.SafariHappenings;
+import dev.darcosse.common.cobblemonsafari.spawn.SafariHappeningsInfluence;
 import dev.darcosse.common.cobblemonsafari.spawn.SafariSpawnFilter;
 import dev.darcosse.common.cobblemonsafari.spawn.SpecialSpawnCounter;
 import dev.darcosse.common.cobblemonsafari.structure.RestHousePrebuilder;
@@ -79,6 +81,8 @@ public final class SafariServerEvents {
         FishingBattleGuard.reset();
         SafariDex.reset();
         SafariFlee.reset();
+        SafariHappenings.reset();
+        SafariHappeningsInfluence.clear();
         SafariSpawnBoost.reset();
         SpecialSpawnCounter.reset();
         RestHouseTravel.reset();
@@ -98,6 +102,8 @@ public final class SafariServerEvents {
     public static void onDataReload(MinecraftServer server) {
         FeaturedRotation.invalidate();
         SafariSpawnFilter.invalidate();
+        // Types may have changed with the species data.
+        SafariHappeningsInfluence.clear();
     }
 
     /** End of every server tick. */
@@ -109,6 +115,7 @@ public final class SafariServerEvents {
         FeaturedSync.tick(server);
         SafariDex.tick(server);
         SafariFlee.tick(server);
+        SafariHappenings.tick(server);
         SafariBounties.tick(server);
         SafariSpawnBoost.tick(server);
         RestHouses.tick(server);

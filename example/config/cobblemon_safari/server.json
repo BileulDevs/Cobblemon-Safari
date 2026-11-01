@@ -215,5 +215,18 @@
     "excludedSpecies": [
       "cobblemon:ditto"
     ]
+  },
+  "events": {
+    "swarm": {
+      "enabled": true,
+      "chance": 0.5,
+      "weightMultiplier": 10.0,
+      "maxNearby": 10
+    },
+    "fullMoon": {
+      "enabled": true,
+      "types": ["fairy", "ghost"],
+      "weightMultiplier": 3.0
+    }
   }
 }

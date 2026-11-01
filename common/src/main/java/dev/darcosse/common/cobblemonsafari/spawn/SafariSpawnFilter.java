@@ -144,7 +144,8 @@ public final class SafariSpawnFilter implements SpawningInfluence {
         }
         Set<String> crowded = new HashSet<>();
         counts.forEach((id, count) -> {
-            if (count >= maxNearby) {
+            // The swarming species may gather more: its own cap, read here too so both checks agree.
+            if (count >= Swarm.sameSpeciesCap(id, maxNearby)) {
                 crowded.add(id);
             }
         });

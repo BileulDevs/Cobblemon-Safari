@@ -27,11 +27,12 @@ import java.util.UUID;
  * class boosted are reset, so settings other mods put on a spawner are left
  * alone.
  *
- * <p>It also keeps two influences on the spawner of every player in the
+ * <p>It also keeps three influences on the spawner of every player in the
  * Safari: {@link NoveltyInfluence}, with a snapshot of the species they
- * caught there, so new species come up more often; and
+ * caught there, so new species come up more often;
  * {@link SafariSpawnFilter}, with snapshots of the species the Safari would
- * refuse, so those never take part in Cobblemon's weighted pick.
+ * refuse, so those never take part in Cobblemon's weighted pick; and
+ * {@link SafariHappeningsInfluence}, for the swarm and the full moon.
  */
 public final class SafariSpawnBoost {
 
@@ -112,7 +113,7 @@ public final class SafariSpawnBoost {
     }
 
     /**
-     * Puts the novelty and filter influences on a spawner once, and refreshes
+     * Puts the novelty, filter and happenings influences on a spawner once, and refreshes
      * the player's snapshot of caught species when its size changed (species
      * are only ever added, so the size tells).
      */
@@ -124,6 +125,9 @@ public final class SafariSpawnBoost {
         }
         if (!spawner.getInfluences().contains(SafariSpawnFilter.INSTANCE)) {
             spawner.getInfluences().add(SafariSpawnFilter.INSTANCE);
+        }
+        if (!spawner.getInfluences().contains(SafariHappeningsInfluence.INSTANCE)) {
+            spawner.getInfluences().add(SafariHappeningsInfluence.INSTANCE);
         }
         PlayerSafariStats playerStats = stats.find(playerId);
         Set<String> caught = playerStats == null ? Set.of() : playerStats.speciesCaught();

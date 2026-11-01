@@ -90,7 +90,8 @@ public final class NativeSpawnRules {
             // Wild only: a player's own Pokémon sent out nearby is not part of the habitat.
             int sameSpecies = level.getEntitiesOfClass(PokemonEntity.class, area,
                     other -> other.getPokemon().isWild() && other.getPokemon().getSpecies() == species).size();
-            if (sameSpecies >= config.maxSameSpeciesNearby) {
+            if (sameSpecies >= Swarm.sameSpeciesCap(species.getResourceIdentifier().toString(),
+                    config.maxSameSpeciesNearby)) {
                 event.cancel();
                 return;
             }

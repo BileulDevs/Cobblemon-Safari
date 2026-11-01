@@ -40,6 +40,8 @@ Only Safari Balls and Master Balls work inside by default (configurable). A Safa
 
 Every four hours, the mod draws a few uncommon, rare and ultra-rare species from whatever is installed (Cobblemon and your spawn datapacks) and spawns them near players, **only in their own habitat and at their own hours**: a nocturnal species comes out at night, a cave dweller waits for darkness. Legendary, mythical, ultra beast and paradox Pokémon each have their own switch and a per-rotation cap.
 
+Some rotations bring a **swarm**: one species comes out in numbers in one habitat until the next rotation. And on **full moon nights**, Fairy and Ghost Pokémon come out more. Both are announced in the chat and configurable.
+
 Cobblemon's natural spawns fill the park too, faster than usual, and they favour species you have not caught yet.
 
 ### Rest houses

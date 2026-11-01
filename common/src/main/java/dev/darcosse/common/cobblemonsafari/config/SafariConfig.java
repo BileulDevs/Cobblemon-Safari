@@ -121,6 +121,63 @@ public class SafariConfig {
     /** The daily rotation of special Pokémon, its board and the spawner that brings them in. */
     public Featured featured = new Featured();
 
+    /** Rare happenings in the Safari: swarms and full moon nights. */
+    public Events events = new Events();
+
+    /** Rare happenings that change Cobblemon's natural spawns in the Safari for a while. */
+    public static class Events {
+        /** One species swarming in one habitat for a whole rotation. */
+        public Swarm swarm = new Swarm();
+        /** Some types coming out more on full moon nights. */
+        public FullMoon fullMoon = new FullMoon();
+    }
+
+    /**
+     * A swarm: with each rotation of the specials, maybe, one uncommon or
+     * rare species of the Safari comes out in numbers in one of its
+     * habitats. It is announced to the players in the Safari and on the
+     * specials board. Only Cobblemon's natural spawns change: in that
+     * habitat, the species is offered with the common Pokémon and its weight
+     * is multiplied.
+     */
+    public static class Swarm {
+        /** Master switch. */
+        public boolean enabled = true;
+
+        /** Chance, from 0 to 1, that a rotation has a swarm. 1 makes every rotation have one. */
+        public double chance = 0.5;
+
+        /**
+         * How much more often the swarming species is picked in its habitat,
+         * among the common Pokémon. 10 makes it most of what spawns there;
+         * 1 leaves only the move into the common pick. 1 to 100.
+         */
+        public double weightMultiplier = 10.0;
+
+        /**
+         * Same-species cap around a player for the swarming species, instead
+         * of spawns.maxSameSpeciesNearby, so a swarm can look like one. 0 or
+         * less keeps the usual cap.
+         */
+        public int maxNearby = 10;
+    }
+
+    /**
+     * Full moon nights: while the moon is full and it is night in the
+     * Safari, Pokémon of some types come out more often in Cobblemon's
+     * natural spawns. Announced to the players in the Safari at nightfall.
+     */
+    public static class FullMoon {
+        /** Master switch. */
+        public boolean enabled = true;
+
+        /** Cobblemon type names whose Pokémon come out more. */
+        public List<String> types = new ArrayList<>(List.of("fairy", "ghost"));
+
+        /** How much more often those Pokémon are picked, within their rarity. 1 to 20. */
+        public double weightMultiplier = 3.0;
+    }
+
     /**
      * Which species one way into the Safari lets through: the four special
      * categories and a list of excluded species. Shared by {@link Spawns}

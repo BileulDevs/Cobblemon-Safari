@@ -64,7 +64,12 @@ public final class ThrowTracker {
 
     /** Whether it is night where the entity stands, by Cobblemon's spawner's definition. */
     public static boolean isNight(Entity where) {
-        long time = Math.floorMod(where.level().getDayTime(), TICKS_PER_DAY);
+        return isNight(where.level().getDayTime());
+    }
+
+    /** Whether a level's day time is night, by Cobblemon's spawner's definition. */
+    public static boolean isNight(long dayTime) {
+        long time = Math.floorMod(dayTime, TICKS_PER_DAY);
         return time >= NIGHT_START && time <= NIGHT_END;
     }
 

@@ -36,6 +36,10 @@ public final class FeaturedBoard {
         for (HabitatEntry entry : specials) {
             lines.add(line(entry));
         }
+        Swarm.Active swarm = Swarm.current(server);
+        if (swarm != null) {
+            lines.add(SafariHappenings.swarmMessage(swarm));
+        }
         lines.add(Component.translatable(key("board.next_rotation"), untilNextRotation())
                 .withStyle(ChatFormatting.DARK_GRAY));
         return lines;

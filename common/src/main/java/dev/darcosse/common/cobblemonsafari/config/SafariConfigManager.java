@@ -608,6 +608,7 @@ public final class SafariConfigManager {
         corrected |= validateSpawns(c);
         corrected |= validateFeatured(c);
         corrected |= validateFlee(c);
+        corrected |= validateEvents(c);
         return corrected;
     }
 
@@ -971,6 +972,55 @@ public final class SafariConfigManager {
         f.ultraRareChance = values[3];
         f.perFailedBall = values[4];
         f.maxChance = values[5];
+        return corrected;
+    }
+
+    /** Bounds of events.swarm.weightMultiplier: 1 is no boost; beyond 100 the swarm is all that spawns. */
+    private static final double MAX_SWARM_MULTIPLIER = 100.0D;
+    /** Upper bound of events.fullMoon.weightMultiplier. */
+    private static final double MAX_FULL_MOON_MULTIPLIER = 20.0D;
+
+    /** Fixes the events section; returns true if anything changed. */
+    private static boolean validateEvents(SafariConfig c) {
+        boolean corrected = false;
+        if (c.events == null) {
+            c.events = new SafariConfig.Events();
+            return true;
+        }
+        if (c.events.swarm == null) {
+            c.events.swarm = new SafariConfig.Swarm();
+            corrected = true;
+        }
+        if (c.events.fullMoon == null) {
+            c.events.fullMoon = new SafariConfig.FullMoon();
+            corrected = true;
+        }
+        SafariConfig.Swarm swarm = c.events.swarm;
+        if (!(swarm.chance >= 0.0D && swarm.chance <= 1.0D)) {
+            double fixed = Double.isNaN(swarm.chance) ? 0.0D : Math.max(0.0D, Math.min(1.0D, swarm.chance));
+            warn("events.swarm.chance", swarm.chance, fixed);
+            swarm.chance = fixed;
+            corrected = true;
+        }
+        if (!(swarm.weightMultiplier >= 1.0D && swarm.weightMultiplier <= MAX_SWARM_MULTIPLIER)) {
+            double fixed = Double.isNaN(swarm.weightMultiplier) ? 1.0D
+                    : Math.max(1.0D, Math.min(MAX_SWARM_MULTIPLIER, swarm.weightMultiplier));
+            warn("events.swarm.weightMultiplier", swarm.weightMultiplier, fixed);
+            swarm.weightMultiplier = fixed;
+            corrected = true;
+        }
+        SafariConfig.FullMoon moon = c.events.fullMoon;
+        if (moon.types == null) {
+            moon.types = new ArrayList<>();
+            corrected = true;
+        }
+        if (!(moon.weightMultiplier >= 1.0D && moon.weightMultiplier <= MAX_FULL_MOON_MULTIPLIER)) {
+            double fixed = Double.isNaN(moon.weightMultiplier) ? 1.0D
+                    : Math.max(1.0D, Math.min(MAX_FULL_MOON_MULTIPLIER, moon.weightMultiplier));
+            warn("events.fullMoon.weightMultiplier", moon.weightMultiplier, fixed);
+            moon.weightMultiplier = fixed;
+            corrected = true;
+        }
         return corrected;
     }
 

@@ -400,7 +400,7 @@ public class SafariScreenPainter {
      * @return the page shown, for the header's page counter
      */
     private Page drawBody(BoardPainter p, float x0, float y0, float x1, float y1,
-                          List<SafariFeaturedPayload.Entry> entries, long now) {
+                          List<SafariFeaturedPayload.Entry> specials, long now) {
         float centerY = (y0 + y1) / 2.0F - LINE_HEIGHT / 2.0F;
         if (!FeaturedClientState.received()) {
             int dots = (int) ((now / CONNECTING_DOT_MS) % 4);
@@ -412,6 +412,14 @@ public class SafariScreenPainter {
             drawCentered(p, tr("screen.featured_off"), x0, x1, centerY, pal.muted());
             return Page.SINGLE;
         }
+        // The swarm, when the rotation has one, takes the last cell, after the specials.
+        SafariFeaturedPayload.Entry swarm = FeaturedClientState.swarm();
+        List<SafariFeaturedPayload.Entry> entries = specials;
+        if (swarm != null) {
+            entries = new ArrayList<>(specials);
+            entries.add(swarm);
+        }
+        int swarmIndex = swarm == null ? -1 : entries.size() - 1;
         if (entries.isEmpty()) {
             drawCentered(p, tr("board.empty"), x0, x1, centerY, pal.muted());
             return Page.SINGLE;
@@ -440,7 +448,8 @@ public class SafariScreenPainter {
             int row = slot / grid.columns();
             float cx = x0 + column * (grid.cellWidth() + GAP);
             float cy = y0 + row * (grid.cellHeight() + GAP);
-            drawCell(p, cx, cy, grid.cellWidth(), grid.cellHeight(), entries.get(i), slot, revealStart, now);
+            drawCell(p, cx, cy, grid.cellWidth(), grid.cellHeight(), entries.get(i), i == swarmIndex, slot,
+                    revealStart, now);
         }
         return new Page(pageIndex, pageCount);
     }
@@ -763,9 +772,12 @@ public class SafariScreenPainter {
         return true;
     }
 
-    /** One special: rarity strip, turning model, name, rarity and, when there is room, habitat. */
+    /**
+     * One special: rarity strip, turning model, name, rarity and, when there
+     * is room, habitat. The swarm's cell says "swarm" instead of its rarity.
+     */
     private void drawCell(BoardPainter p, float x, float y, float w, float h, SafariFeaturedPayload.Entry entry,
-                          int slot, long revealStart, long now) {
+                          boolean swarm, int slot, long revealStart, long now) {
         int rarityColor = rarityColor(entry);
         p.fill(x, y, x + w, y + h, Z_PANEL, panel(pal.cell()));
         p.fill(x, y, x + w, y + RARITY_STRIP, Z_DETAIL, rarityColor);
@@ -828,7 +840,8 @@ public class SafariScreenPainter {
         // Rarity and habitat in smaller type; a line still too long scrolls.
         float lineLeft = x + 2.0F;
         float lineRight = x + w - 2.0F;
-        String rarity = entry.rarity().displayName().getString();
+        // A swarm says so where a special shows its rarity: the habitat under it is where to go.
+        String rarity = swarm ? tr("screen.swarm") : entry.rarity().displayName().getString();
         drawMarquee(p, rarity, lineLeft, lineRight, textTop + line, subScale, rarityColor, now);
         if (showHabitat) {
             drawMarquee(p, habitatName(entry.habitat()), lineLeft, lineRight, textTop + line + subLine, subScale,

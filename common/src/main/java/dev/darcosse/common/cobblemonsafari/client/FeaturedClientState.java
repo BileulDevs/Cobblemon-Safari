@@ -3,6 +3,7 @@ package dev.darcosse.common.cobblemonsafari.client;
 import dev.darcosse.common.cobblemonsafari.network.SafariFeaturedPayload;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * What the client knows about the special Pokémon of the day, for the
@@ -16,6 +17,8 @@ public final class FeaturedClientState {
     private static boolean received;
     private static boolean enabled;
     private static List<SafariFeaturedPayload.Entry> entries = List.of();
+    /** The rotation's swarm, or null; drawn on the board after the specials. */
+    private static SafariFeaturedPayload.Entry swarm;
     /** Local wall-clock time at which the current rotation ends. */
     private static long rotationEndsAtMillis;
     private static long rotationLengthMillis;
@@ -32,12 +35,13 @@ public final class FeaturedClientState {
      */
     public static void onFeatured(SafariFeaturedPayload payload) {
         long now = System.currentTimeMillis();
-        if (!received || !payload.entries().equals(entries)) {
+        if (!received || !payload.entries().equals(entries) || !Objects.equals(payload.swarm(), swarm)) {
             changedAtMillis = now;
         }
         received = true;
         enabled = payload.enabled();
         entries = payload.entries();
+        swarm = payload.swarm();
         rotationEndsAtMillis = now + payload.millisUntilRotation();
         rotationLengthMillis = payload.rotationLengthMillis();
     }
@@ -47,9 +51,15 @@ public final class FeaturedClientState {
         received = false;
         enabled = false;
         entries = List.of();
+        swarm = null;
         rotationEndsAtMillis = 0L;
         rotationLengthMillis = 0L;
         changedAtMillis = 0L;
+    }
+
+    /** The rotation's swarm, or null when it has none. */
+    public static SafariFeaturedPayload.Entry swarm() {
+        return swarm;
     }
 
     /** Whether a snapshot arrived since joining; screens show a "connecting" state until then. */

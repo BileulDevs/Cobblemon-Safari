@@ -313,6 +313,27 @@ After `/safari reload`, the specials are redrawn with the new rules right away.
 
 ---
 
+### `events`: swarms and full moon nights
+
+Rare happenings that change Cobblemon's natural spawns in the Safari for a while, announced in the chat (with a chime) to the players in the Safari.
+
+**`events.swarm`**: with each rotation of the specials, maybe, one uncommon or rare species of the Safari comes out in numbers in one of its habitats until the next rotation. It also shows on the specials board (wall screens and `/safari today`). Legendary-class species never swarm, nor species `spawns` keeps out.
+
+| Key | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | `false`: no swarm. |
+| `chance` | `0.5` | Chance (0 to 1) that a rotation has a swarm. |
+| `weightMultiplier` | `10.0` | In its habitat, the swarming species is also offered among the common Pokémon, and its weight is multiplied by this: at 10 it makes up most of what spawns there. 1 to 100. |
+| `maxNearby` | `10` | Same-species cap around a player for the swarming species, instead of `spawns.maxSameSpeciesNearby`, so a swarm can look like one. 0 keeps the usual cap. |
+
+**`events.fullMoon`**: on full moon nights in the Safari, Pokémon of some types come out more.
+
+| Key | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | `false`: no full moon effect. |
+| `types` | `["fairy", "ghost"]` | Cobblemon type names favoured. |
+| `weightMultiplier` | `3.0` | How much more often those Pokémon are picked, within their rarity. 1 to 20. |
+
 ## `shop.json`: the shop
 
 The Safari Warden (at every gate) and the Safari Clerk (in every rest house) open the shop. It sells, in this order: the fixed `entries` of this file, then the random Pokémon (`rotating`), items (`rotatingItems`) and Poké Balls (`rotatingBalls`) of the current rotation. Every player sees the same random goods; they change with the specials.
