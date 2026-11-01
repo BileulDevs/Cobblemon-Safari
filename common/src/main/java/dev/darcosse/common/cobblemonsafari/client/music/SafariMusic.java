@@ -46,10 +46,10 @@ public final class SafariMusic {
 
     /**
      * Ticks the player must stay in a habitat with another track before the
-     * music changes. Shorter and walking along a border makes the music
+     * music changes (2 s). Shorter and walking along a border makes the music
      * fade back and forth; longer and the old habitat's track lingers.
      */
-    private static final int HABITAT_SWITCH_TICKS = 100;
+    private static final int HABITAT_SWITCH_TICKS = 40;
 
     /**
      * Vanilla waits a random 0 to half this many ticks between the end of a
