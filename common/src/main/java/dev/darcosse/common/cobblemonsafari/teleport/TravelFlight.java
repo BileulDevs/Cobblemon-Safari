@@ -19,6 +19,8 @@ import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.structure.RestHouses;
 import dev.darcosse.common.cobblemonsafari.util.LoadedChunks;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -27,6 +29,8 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -83,12 +87,45 @@ final class TravelFlight {
     static final int FLIGHT_TICKS = 80;
 
     /**
-     * Share of a flight spent rising straight up from the ground (or, when
-     * landing, settling down onto it), before the bird heads away.
+     * Taking off, the bird first gathers itself on the spot for this many
+     * ticks (a flap, a small bob): the wind-up that makes the leap read as
+     * a push.
      */
-    private static final double HOVER_SHARE = 0.2D;
-    /** Height of that straight rise, in blocks. */
-    private static final double HOVER_RISE = 2.0D;
+    private static final int GATHER_TICKS = 10;
+    /** Height of that bob, in blocks. Never below the ground: the path check would refuse it. */
+    private static final double GATHER_BOB = 0.1D;
+
+    /**
+     * Then it leaps straight up {@link #LEAP_HEIGHT} blocks in this many
+     * ticks, fast off the ground and slowing at the top: the impact of the
+     * take-off, with a gust on the ground.
+     */
+    private static final int LEAP_TICKS = 6;
+    private static final double LEAP_HEIGHT = 4.5D;
+
+    /**
+     * Then it hangs at the top for this many ticks, flapping, the time for
+     * the camera to frame it up there, before it dashes away.
+     */
+    private static final int HANG_TICKS = 8;
+    /** Bob while hanging, in blocks. */
+    private static final double HANG_BOB = 0.15D;
+
+    /**
+     * Landing: ticks of the approach from afar to above the spot, where it
+     * brakes; it slows down as it comes in, the dash played backwards.
+     */
+    private static final int APPROACH_TICKS = 50;
+
+    /** Then it brakes above the spot for this many ticks, flapping hard, its gust raising dust. */
+    private static final int FLARE_TICKS = 12;
+
+    /** Then it drops onto the spot in this many ticks, faster as it goes down. */
+    private static final int DROP_TICKS = 10;
+
+    /** Then a small bounce on touching the ground: its length in ticks, and its height in blocks. */
+    private static final int BOUNCE_TICKS = 4;
+    private static final double BOUNCE_HEIGHT = 0.3D;
     /**
      * Distance and height covered after the rise, in blocks. Larger flies
      * further out of the camera's frame, but needs more open sky to pass
@@ -124,6 +161,34 @@ final class TravelFlight {
     /** Wing flap played at take-off and landing: volume, then pitch (higher sounds like a smaller bird). */
     private static final float FLAP_VOLUME = 0.8F;
     private static final float FLAP_PITCH = 1.3F;
+
+    /** Pitch of the big flap of the leap: lower than the others, heavier. */
+    private static final float LEAP_FLAP_PITCH = 0.9F;
+
+    /** Ticks between two flaps while hanging or braking. */
+    private static final int FLAP_INTERVAL = 4;
+
+    /**
+     * The gust of the leap (and of the touchdown, smaller): wind particles,
+     * a ring of dust and earth of the ground, and the wind charge's burst.
+     * One packet each to the players around.
+     */
+    private static final int GUST_RING = 10;
+    private static final int GUST_DUST = 12;
+    private static final int GUST_EARTH = 30;
+    private static final double GUST_SPREAD = 1.2D;
+    private static final float GUST_VOLUME = 0.7F;
+
+    /**
+     * A trail of small gusts behind the bird, every {@link #TRAIL_INTERVAL}
+     * ticks, for {@link #TRAIL_TICKS} ticks after the dash starts (or
+     * before the brake when landing).
+     */
+    private static final int TRAIL_INTERVAL = 2;
+    private static final int TRAIL_TICKS = 20;
+
+    /** Volume of the rush of air when the bird dashes off or comes in. */
+    private static final float RUSH_VOLUME = 0.9F;
 
     /** The eight compass directions, as horizontal unit vectors, tried when the wished one is blocked. */
     private static final List<Vec3> COMPASS = compass();
@@ -251,8 +316,6 @@ final class TravelFlight {
             bird.discard();
             return null;
         }
-        level.playSound(null, spot.x, spot.y, spot.z, SoundEvents.ENDER_DRAGON_FLAP, SoundSource.NEUTRAL,
-                FLAP_VOLUME, FLAP_PITCH);
         Vec3 look = landing ? first : spot.add(0.0D, LOOK_HEIGHT, 0.0D);
         return new Flight(bird, rider, spot, direction, landing, now, camera, look, FLIGHT_TICKS, null, null);
     }
@@ -269,14 +332,16 @@ final class TravelFlight {
         if (flight.dive() != null) {
             return TravelSwim.tick(flight, now);
         }
-        double progress = Math.min(1.0D, (now - flight.startTick()) / (double) FLIGHT_TICKS);
+        int elapsed = now - flight.startTick();
+        double progress = Math.min(1.0D, elapsed / (double) FLIGHT_TICKS);
         Vec3 next = position(flight.spot(), flight.direction(), flight.landing(), progress);
         PokemonEntity bird = flight.bird();
         // The motion is given too, though nothing applies it: the client's
         // Pokémon animations read it to tell flying from hovering.
         bird.setDeltaMovement(next.subtract(bird.position()));
         bird.setPos(next);
-        float yaw = yawOf(flight.direction());
+        effects(flight, next, elapsed);
+        float yaw = yawAt(flight, elapsed);
         bird.setYRot(yaw);
         bird.setYBodyRot(yaw);
         bird.setYHeadRot(yaw);
@@ -322,28 +387,186 @@ final class TravelFlight {
     }
 
     /**
-     * Where the bird is at a point of its flight, from 0 to 1. Taking off,
-     * it rises straight up, then climbs away, steeply first and then
-     * flattening while it speeds up. Landing plays the same path backwards,
-     * coming from the far side: fast from afar, slowing down to settle.
+     * Where the bird is at a point of its flight, from 0 to 1 (a tick of
+     * {@link #FLIGHT_TICKS}, so the path check can sample it).
+     *
+     * <p>Taking off: it gathers itself on the spot ({@link #GATHER_TICKS}),
+     * leaps straight up ({@link #LEAP_TICKS}), hangs there flapping
+     * ({@link #HANG_TICKS}), then dashes away, climbing steeply first and
+     * flattening while it speeds up.
+     *
+     * <p>Landing: it comes in from the far side, fast then slowing (the dash
+     * backwards, {@link #APPROACH_TICKS}), to above the spot, brakes there
+     * ({@link #FLARE_TICKS}), drops onto it faster and faster
+     * ({@link #DROP_TICKS}), bounces once ({@link #BOUNCE_TICKS}) and stands.
      */
     private static Vec3 position(Vec3 spot, Vec3 direction, boolean landing, double progress) {
-        double s = landing ? 1.0D - progress : progress;
+        double tick = progress * FLIGHT_TICKS;
         double along;
         double up;
-        if (s < HOVER_SHARE) {
-            double u = s / HOVER_SHARE;
-            along = 0.0D;
-            // Smoothstep: no jolt when it leaves the ground or meets it.
-            up = HOVER_RISE * u * u * (3.0D - 2.0D * u);
+        if (!landing) {
+            if (tick < GATHER_TICKS) {
+                along = 0.0D;
+                up = GATHER_BOB * Mth.sin((float) (tick / GATHER_TICKS * Math.PI));
+            } else if (tick < GATHER_TICKS + LEAP_TICKS) {
+                double u = (tick - GATHER_TICKS) / LEAP_TICKS;
+                along = 0.0D;
+                // 1 - (1 - u)^3: off the ground at once, slowing to the top.
+                up = LEAP_HEIGHT * (1.0D - Math.pow(1.0D - u, 3.0D));
+            } else if (tick < GATHER_TICKS + LEAP_TICKS + HANG_TICKS) {
+                double u = (tick - GATHER_TICKS - LEAP_TICKS) / HANG_TICKS;
+                along = 0.0D;
+                up = LEAP_HEIGHT + HANG_BOB * Mth.sin((float) (u * Math.PI * 2.0D));
+            } else {
+                double u = (tick - GATHER_TICKS - LEAP_TICKS - HANG_TICKS)
+                        / (FLIGHT_TICKS - GATHER_TICKS - LEAP_TICKS - HANG_TICKS);
+                double[] dash = dash(Math.min(1.0D, u));
+                along = dash[0];
+                up = dash[1];
+            }
         } else {
-            double u = (s - HOVER_SHARE) / (1.0D - HOVER_SHARE);
-            along = CLIMB_DISTANCE * u * u;
-            up = HOVER_RISE + CLIMB_HEIGHT * (1.0D - (1.0D - u) * (1.0D - u));
+            if (tick < APPROACH_TICKS) {
+                // The dash backwards: far and high first, slowing as it comes to the spot.
+                double[] dash = dash(1.0D - tick / APPROACH_TICKS);
+                along = -dash[0];
+                up = dash[1];
+            } else if (tick < APPROACH_TICKS + FLARE_TICKS) {
+                double u = (tick - APPROACH_TICKS) / FLARE_TICKS;
+                along = 0.0D;
+                up = LEAP_HEIGHT + HANG_BOB * Mth.sin((float) (u * Math.PI * 2.0D));
+            } else if (tick < APPROACH_TICKS + FLARE_TICKS + DROP_TICKS) {
+                double u = (tick - APPROACH_TICKS - FLARE_TICKS) / DROP_TICKS;
+                along = 0.0D;
+                // Squared: slow off the brake, fastest onto the ground.
+                up = LEAP_HEIGHT * (1.0D - u * u);
+            } else if (tick < APPROACH_TICKS + FLARE_TICKS + DROP_TICKS + BOUNCE_TICKS) {
+                double u = (tick - APPROACH_TICKS - FLARE_TICKS - DROP_TICKS) / BOUNCE_TICKS;
+                along = 0.0D;
+                up = BOUNCE_HEIGHT * Mth.sin((float) (u * Math.PI));
+            } else {
+                along = 0.0D;
+                up = 0.0D;
+            }
         }
-        // Landing comes from behind the spot, flying toward the wished direction.
-        double signed = landing ? -along : along;
-        return spot.add(direction.x * signed, up, direction.z * signed);
+        return spot.add(direction.x * along, up, direction.z * along);
+    }
+
+    /**
+     * The dash away from above the spot, from 0 to 1: blocks along the
+     * flight, then blocks up from the ground. Steep first and flattening
+     * while it speeds up; starts at the top of the leap.
+     */
+    private static double[] dash(double u) {
+        double along = CLIMB_DISTANCE * u * u;
+        double up = LEAP_HEIGHT + CLIMB_HEIGHT * (1.0D - (1.0D - u) * (1.0D - u));
+        return new double[]{along, up};
+    }
+
+    /**
+     * The bird's heading at a tick: along the flight, except when landing,
+     * where from the brake on it turns to face the camera, so the bird and
+     * its rider touch down facing it.
+     */
+    private static float yawAt(Flight flight, int elapsed) {
+        float along = yawOf(flight.direction());
+        if (!flight.landing() || elapsed < APPROACH_TICKS) {
+            return along;
+        }
+        Vec3 flat = new Vec3(flight.camera().x - flight.spot().x, 0.0D, flight.camera().z - flight.spot().z);
+        if (flat.lengthSqr() < 1.0E-4D) {
+            return along;
+        }
+        float toCamera = yawOf(flat.normalize());
+        float u = Math.min(1.0F, (elapsed - APPROACH_TICKS) / (float) FLARE_TICKS);
+        return along + Mth.wrapDegrees(toCamera - along) * u;
+    }
+
+    /**
+     * The effects of this tick, by phase: flaps, the gust of the leap, the
+     * rush and the trail of the dash; when landing, the rush and trail of
+     * the approach, the flaps and the dust of the brake, and the touchdown.
+     * Cost: at most two particle packets and two sounds a tick, while a
+     * flight plays.
+     */
+    private static void effects(Flight flight, Vec3 at, int elapsed) {
+        ServerLevel level = (ServerLevel) flight.bird().level();
+        Vec3 spot = flight.spot();
+        if (!flight.landing()) {
+            int leap = GATHER_TICKS;
+            int dashStart = GATHER_TICKS + LEAP_TICKS + HANG_TICKS;
+            if (elapsed == GATHER_TICKS / 2) {
+                flap(level, at, FLAP_PITCH);
+            } else if (elapsed == leap) {
+                gust(level, spot, 1.0F);
+                flap(level, at, LEAP_FLAP_PITCH);
+            } else if (elapsed > leap + LEAP_TICKS && elapsed < dashStart
+                    && (elapsed - leap - LEAP_TICKS) % FLAP_INTERVAL == 0) {
+                flap(level, at, FLAP_PITCH);
+            } else if (elapsed == dashStart) {
+                rush(level, at);
+            }
+            if (elapsed >= dashStart && elapsed < dashStart + TRAIL_TICKS && elapsed % TRAIL_INTERVAL == 0) {
+                trail(level, at);
+            }
+        } else {
+            int flare = APPROACH_TICKS;
+            int touchdown = APPROACH_TICKS + FLARE_TICKS + DROP_TICKS;
+            if (elapsed == flare - TRAIL_TICKS) {
+                rush(level, at);
+            }
+            if (elapsed >= flare - TRAIL_TICKS && elapsed < flare && elapsed % TRAIL_INTERVAL == 0) {
+                trail(level, at);
+            }
+            if (elapsed >= flare && elapsed < touchdown && (elapsed - flare) % FLAP_INTERVAL == 0) {
+                flap(level, at, FLAP_PITCH);
+                // The downdraught of the brake raises a little dust under it.
+                level.sendParticles(ParticleTypes.POOF, spot.x, spot.y + 0.1D, spot.z, GUST_DUST / 3, GUST_SPREAD * 0.6D,
+                        0.05D, GUST_SPREAD * 0.6D, 0.02D);
+            }
+            if (elapsed == touchdown) {
+                gust(level, spot, 0.5F);
+            }
+        }
+    }
+
+    /** One wing flap at the bird. */
+    private static void flap(ServerLevel level, Vec3 at, float pitch) {
+        level.playSound(null, at.x, at.y, at.z, SoundEvents.ENDER_DRAGON_FLAP, SoundSource.NEUTRAL, FLAP_VOLUME, pitch);
+    }
+
+    /**
+     * A gust on the ground at the spot: a ring of wind, dust and earth of
+     * the ground, and the wind charge's burst. {@code strength} 1 for the
+     * leap, less for the touchdown.
+     */
+    private static void gust(ServerLevel level, Vec3 spot, float strength) {
+        double y = spot.y + 0.2D;
+        level.sendParticles(ParticleTypes.GUST, spot.x, y + 0.3D, spot.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
+        level.sendParticles(ParticleTypes.SMALL_GUST, spot.x, y, spot.z, Math.round(GUST_RING * strength),
+                GUST_SPREAD, 0.1D, GUST_SPREAD, 0.0D);
+        level.sendParticles(ParticleTypes.POOF, spot.x, y, spot.z, Math.round(GUST_DUST * strength), GUST_SPREAD,
+                0.1D, GUST_SPREAD, 0.05D);
+        BlockState ground = level.getBlockState(BlockPos.containing(spot).below());
+        if (!ground.isAir()) {
+            level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, ground), spot.x, y, spot.z,
+                    Math.round(GUST_EARTH * strength), GUST_SPREAD, 0.2D, GUST_SPREAD, 0.2D);
+            SoundType sound = ground.getSoundType();
+            level.playSound(null, spot.x, spot.y, spot.z, sound.getFallSound(), SoundSource.NEUTRAL,
+                    sound.getVolume() * strength, sound.getPitch() * 0.7F);
+        }
+        level.playSound(null, spot.x, spot.y, spot.z, SoundEvents.WIND_CHARGE_BURST.value(), SoundSource.NEUTRAL,
+                GUST_VOLUME * strength, 1.0F);
+    }
+
+    /** The rush of air when the bird dashes off or comes in. */
+    private static void rush(ServerLevel level, Vec3 at) {
+        level.playSound(null, at.x, at.y, at.z, SoundEvents.TRIDENT_RIPTIDE_1.value(), SoundSource.NEUTRAL,
+                RUSH_VOLUME, 1.0F);
+    }
+
+    /** A small gust left behind the bird. */
+    private static void trail(ServerLevel level, Vec3 at) {
+        level.sendParticles(ParticleTypes.SMALL_GUST, at.x, at.y + 0.5D, at.z, 1, 0.2D, 0.2D, 0.2D, 0.0D);
     }
 
     /**
@@ -378,7 +601,7 @@ final class TravelFlight {
             }
             int ground = level.getHeight(Heightmap.Types.MOTION_BLOCKING, column.getX(), column.getZ());
             // On the spot itself the bird stands on the ground: it only needs open sky.
-            boolean onSpot = point.y < spot.y + HOVER_RISE && point.distanceToSqr(spot.x, point.y, spot.z) < 1.0D;
+            boolean onSpot = point.y < spot.y + LEAP_HEIGHT && point.distanceToSqr(spot.x, point.y, spot.z) < 1.0D;
             if (point.y < ground + (onSpot ? 0 : 1)) {
                 return false;
             }
@@ -423,14 +646,27 @@ final class TravelFlight {
     private static final int SCORE_COVERED = 1;
     private static final int SCORE_OPEN = 2;
     private static final int SCORE_SEES_RIDER = 3;
-    private static final int SCORE_BEST = 4;
+    private static final int SCORE_SEES_PATH = 4;
+    private static final int SCORE_BEST = 5;
+
+    /**
+     * Air the best camera spots have around them, in blocks each way (1 is
+     * a 3 x 3 column two blocks high), and how far they keep from a rest
+     * house's square: a spot against a wall or a pillar films along it.
+     * A bonus, not a rule: see {@link #cameraScore}.
+     */
+    private static final int CAMERA_CLEARANCE = 1;
+    private static final int HOUSE_MARGIN = 2;
 
     /**
      * How good a camera spot is. Unusable: not free air, or under cover
      * inside a rest house's square (its hall, under the roof). Then, better
      * and better: free air under cover elsewhere (a canopy, as before this
      * ranking existed); under the open sky; also seeing the rider's spot;
-     * also seeing the middle of the path.
+     * also seeing the middle of the path; best, also with air all around
+     * ({@link #CAMERA_CLEARANCE}), {@link #HOUSE_MARGIN} blocks from any
+     * rest house, and nothing in front of the lens, thin blocks included
+     * (a banner, a sign or a flower: {@link #seesClearly}).
      *
      * <p>Why a ranking and not hard rules: as hard rules (open sky, outside
      * the house's square with a margin, both sight lines), almost no spot
@@ -453,7 +689,39 @@ final class TravelFlight {
         if (!sees(level, camera, rider)) {
             return SCORE_OPEN;
         }
-        return sees(level, camera, midway) ? SCORE_BEST : SCORE_SEES_RIDER;
+        if (!sees(level, camera, midway)) {
+            return SCORE_SEES_RIDER;
+        }
+        return roomy(level, block) && seesClearly(level, camera, rider) ? SCORE_BEST : SCORE_SEES_PATH;
+    }
+
+    /** Whether a camera block has air all around and keeps away from the rest houses. */
+    private static boolean roomy(ServerLevel level, BlockPos block) {
+        if (RestHouses.siteAt(block.getX(), block.getY(), block.getZ(), HOUSE_MARGIN) != null) {
+            return false;
+        }
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        for (int dx = -CAMERA_CLEARANCE; dx <= CAMERA_CLEARANCE; dx++) {
+            for (int dz = -CAMERA_CLEARANCE; dz <= CAMERA_CLEARANCE; dz++) {
+                for (int dy = 0; dy <= 1; dy++) {
+                    cursor.set(block.getX() + dx, block.getY() + dy, block.getZ() + dz);
+                    if (!LoadedChunks.isReady(level, cursor) || !level.getBlockState(cursor).isAir()) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Whether nothing at all stands between two points, thin blocks
+     * included: the outline is cast, not the collision ({@link #sees}).
+     */
+    private static boolean seesClearly(ServerLevel level, Vec3 from, Vec3 to) {
+        BlockHitResult hit = level.clip(new ClipContext(from, to, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE,
+                CollisionContext.empty()));
+        return hit.getType() == HitResult.Type.MISS;
     }
 
     /**
