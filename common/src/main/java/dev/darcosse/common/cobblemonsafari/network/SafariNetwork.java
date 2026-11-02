@@ -35,10 +35,10 @@ public final class SafariNetwork {
     private SafariNetwork() {
     }
 
-    /** Sends the current state of a player's session: clock, catches and loan. */
+    /** Sends the current state of a player's session clock. */
     public static void sendTimer(ServerPlayer player, SafariSession session, boolean running) {
         Platform.get().sendToPlayer(player, new SafariTimerPayload(true, session.remainingTicks(), running,
-                session.catches().size(), session.ballsLoaned(), session.grantedTicks()));
+                session.grantedTicks()));
     }
 
     /** Tells a player they no longer have a session, hiding their HUD. */

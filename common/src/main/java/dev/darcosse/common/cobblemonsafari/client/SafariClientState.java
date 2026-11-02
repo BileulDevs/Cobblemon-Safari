@@ -24,8 +24,6 @@ public final class SafariClientState {
     private static boolean active;
     private static int remainingAtSnapshot;
     private static boolean running;
-    private static int catches;
-    private static int ballsLoaned;
     private static int grantedTicks;
     /**
      * Client game time the last snapshot is anchored to. Left unset on receipt
@@ -53,8 +51,6 @@ public final class SafariClientState {
         active = payload.active();
         remainingAtSnapshot = payload.remainingTicks();
         running = payload.running();
-        catches = payload.catches();
-        ballsLoaned = payload.ballsLoaned();
         grantedTicks = payload.grantedTicks();
         anchorPending = true;
     }
@@ -75,8 +71,6 @@ public final class SafariClientState {
         active = false;
         remainingAtSnapshot = 0;
         running = false;
-        catches = 0;
-        ballsLoaned = 0;
         grantedTicks = 0;
         anchorPending = false;
         safariDimension = null;
@@ -103,16 +97,6 @@ public final class SafariClientState {
             }
         }
         return false;
-    }
-
-    /** Pokémon caught this session, as last reported by the server. */
-    public static int catches() {
-        return catches;
-    }
-
-    /** Safari Balls lent at the entrance; 0 when the server does not lend any. */
-    public static int ballsLoaned() {
-        return ballsLoaned;
     }
 
     /** Total time granted over the session, additions included; 0 without a session. */

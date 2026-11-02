@@ -70,11 +70,6 @@ public final class TravelCamera {
         actorId = -1;
     }
 
-    /** Whether a shot overrides the camera. */
-    public static boolean isActive() {
-        return active;
-    }
-
     /**
      * This frame's camera, or null to leave vanilla's. Cost: an entity
      * lookup by id and a few trigonometric calls, once per rendered frame,

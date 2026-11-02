@@ -96,14 +96,6 @@ public final class SafariCredit {
     }
 
     /**
-     * Enters the Safari, paying with banked time: as much as one session may
-     * last, the rest stays in the bank. Entry requirements still apply.
-     */
-    public static EntryResult enter(ServerPlayer player) {
-        return enter(player, false);
-    }
-
-    /**
      * Enters the Safari, paying with banked time.
      *
      * <p>Banked time is the only currency: no entry path hands out free time,

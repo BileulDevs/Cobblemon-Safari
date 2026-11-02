@@ -17,9 +17,9 @@ The Safari is its own dimension: a single island in a turquoise sea, with its ow
 
 - **Fourteen habitats** laid out around a central summit: grassland, savanna, dunes, badlands, jungle, marsh, mushroom grove, flower meadow, woodland, deep forest, taiga, snowfield, glacier and rocky hills, plus the peaks, a volcano, lakes and rivers.
 - **Caves everywhere**, a giant pillared cavern under the summit and a lush cavern in the south, each reached by its own winding passage.
-- **A new map every day.** At the first server start of a new day, the island is regenerated with a new layout, flat, rolling or mountainous as you choose. Sessions, stats, banked time and points are kept.
+- **A new map every day.** At the first server start of a new day, the island is regenerated with a new layout, flat, gentle (the default), rolling or mountainous as you choose. Sessions, stats, banked time and points are kept.
 - **Its own soundtrack**: six original tracks, one per zone, and the cries of the Pokémon that actually live in each biome.
-- **Nothing to break.** Inside, players take no damage and cannot change the terrain. Poké Cakes and Poké Snacks can still be placed as bait.
+- **Nothing to break.** Inside, players take no damage and cannot change the terrain. Poké Cakes and Poké Snacks can still be placed as bait, and berries, apricorns and Galarica nuts picked; each Cobblemon plant has its own switch. Hunger can be frozen too, so a timed hunt is not spent eating.
 
 ### Safari Gates
 
@@ -34,7 +34,7 @@ Rare lodges in the overworld's plains, meadows, light forests and savannas. Stan
 
 ### Restricted Poké Balls
 
-Only Safari Balls and Master Balls work inside by default (configurable). A Safari Ball thrown at a Pokémon outside of battle gets a strong catch bonus, so hunting without battling feels right. But miss, and the Pokémon may run away, all the more likely the rarer it is and the more balls you already wasted on it (configurable; legendaries and shinies stay by default). The shop hands out 30 free Safari Balls once a day.
+Only Safari Balls and Master Balls work inside by default (configurable). A Safari Ball thrown at a Pokémon outside of battle gets a strong catch bonus, so hunting without battling feels right, and a Pokémon you fish is left free on the bank instead of starting a battle. But miss, and the Pokémon may run away, all the more likely the rarer it is and the more balls you already wasted on it (configurable; legendaries and shinies stay by default). The shop hands out 30 free Safari Balls once a day.
 
 ### Rare Pokémon of the day
 
@@ -46,7 +46,7 @@ Cobblemon's natural spawns fill the park too, faster than usual, and they favour
 
 ### Rest houses
 
-Ten Pokémon Centers stand on every map: eight on the surface, the entrance one right where you arrive, and one deep in each of the two great caverns, beside the passage that leads down to it. Each has two Healing Machines, a PC, a cooking corner with a Poké Pot, a **Safari Clerk** who runs the shop, lists the missions and can walk you out early, and a **Safari Guide** who takes you to any other rest house of the island, named by its biome, with a short travel cinematic: a double of you flies off on your own flying Pokémon (or a Staraptor if you have none), seen by everyone around, and lands at the destination. One trip every 30 seconds by default, a wait shared with the Escape Rope, whose trips fly too.
+Ten Pokémon Centers stand on every map: eight on the surface, the entrance one right where you arrive, and one deep in each of the two great caverns, beside the passage that leads down to it. Each has two Healing Machines, a PC, a cooking corner with a Poké Pot, a **Safari Clerk** who runs the shop, lists the missions and can walk you out early, and a **Safari Guide** who takes you to any other rest house of the island, named by its biome, with a short travel cinematic seen by everyone around: a double of you leaps off on your own flying Pokémon (or a Staraptor if you have none) in a gust of wind and lands at the destination, or, to and from the caverns, rides a digger of your party (or a Dugtrio) that dives into the ground and bursts out in front of the destination. One trip every 30 seconds by default, a wait shared with the Escape Rope, whose trips are filmed too, with a dive under the water when used in it.
 
 ### Missions and Safari points
 

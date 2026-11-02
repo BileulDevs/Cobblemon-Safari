@@ -35,7 +35,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.biome.Biome;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -209,7 +208,7 @@ public final class SafariBounties {
         }
         SafariConfig.Missions config = SafariConfigManager.get().missions;
         Platform.get().sendToPlayer(player, new SafariBountiesPayload(config.enabled, missionsOf(shared, progress),
-                counts, config.allMissionsBonusPoints));
+                counts));
     }
 
     /** Chat lines of the clerk's "missions" answer: each mission with the player's progress and reward. */

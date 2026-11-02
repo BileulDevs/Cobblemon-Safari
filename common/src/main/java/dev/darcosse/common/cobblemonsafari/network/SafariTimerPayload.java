@@ -16,13 +16,10 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
  * @param remainingTicks remaining time when the snapshot was taken
  * @param running        whether the clock is counting down right now; false
  *                       freezes the display (outside the Safari, battle grace period)
- * @param catches        Pokémon caught so far this session
- * @param ballsLoaned    Safari Balls lent at the entrance; 0 hides the ball counter
  * @param grantedTicks   total time granted over the session, additions included;
  *                       the denominator of the wall screens' progress bar
  */
-public record SafariTimerPayload(boolean active, int remainingTicks, boolean running, int catches, int ballsLoaned,
-                                 int grantedTicks)
+public record SafariTimerPayload(boolean active, int remainingTicks, boolean running, int grantedTicks)
         implements CustomPacketPayload {
 
     /**
@@ -30,8 +27,10 @@ public record SafariTimerPayload(boolean active, int remainingTicks, boolean run
      * is positional: adding, removing or reordering a field (or changing what
      * one means) without raising this makes a peer of another build read
      * garbage without an error. Raise it on every change to write/read.
+     *
+     * <p>History: 2: the catch and loaned ball counts dropped, the HUD stopped showing them.
      */
-    public static final int WIRE_VERSION = 1;
+    public static final int WIRE_VERSION = 2;
 
     public static final CustomPacketPayload.Type<SafariTimerPayload> TYPE =
             new CustomPacketPayload.Type<>(CobblemonSafari.id("timer"));
@@ -42,7 +41,7 @@ public record SafariTimerPayload(boolean active, int remainingTicks, boolean run
 
     /** Snapshot telling the client there is no session any more. */
     public static SafariTimerPayload inactive() {
-        return new SafariTimerPayload(false, 0, false, 0, 0, 0);
+        return new SafariTimerPayload(false, 0, false, 0);
     }
 
     /** MUST list the same fields in the same order as {@link #read}. */
@@ -51,8 +50,6 @@ public record SafariTimerPayload(boolean active, int remainingTicks, boolean run
         buf.writeBoolean(active);
         buf.writeVarInt(remainingTicks);
         buf.writeBoolean(running);
-        buf.writeVarInt(catches);
-        buf.writeVarInt(ballsLoaned);
         buf.writeVarInt(grantedTicks);
     }
 
@@ -71,10 +68,8 @@ public record SafariTimerPayload(boolean active, int remainingTicks, boolean run
         boolean active = buf.readBoolean();
         int remainingTicks = buf.readVarInt();
         boolean running = buf.readBoolean();
-        int catches = buf.readVarInt();
-        int ballsLoaned = buf.readVarInt();
         int grantedTicks = buf.readVarInt();
-        return new SafariTimerPayload(active, remainingTicks, running, catches, ballsLoaned, grantedTicks);
+        return new SafariTimerPayload(active, remainingTicks, running, grantedTicks);
     }
 
     /** Type under which each loader registers this payload. */

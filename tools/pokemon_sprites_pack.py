@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Installs the Pokémon sprites used by the wall screens' sprite mode
-(board.pokemonDisplay = SPRITE in the client config), into the mod's own
+(board.useSprites = true in the client config), into the mod's own
 resources or as a separate resource pack.
 
 Input: a folder of sprites laid out as <dex>_<name>/<name>[_<form>][_shiny].png,

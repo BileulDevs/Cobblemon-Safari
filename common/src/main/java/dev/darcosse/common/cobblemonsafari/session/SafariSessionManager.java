@@ -291,8 +291,8 @@ public final class SafariSessionManager {
     }
 
     /**
-     * Records a Pokémon caught by a player during their session and refreshes
-     * their HUD. Ignored when the player has no session.
+     * Records a Pokémon caught by a player during their session and tells the
+     * session listeners. Ignored when the player has no session.
      */
     public static void recordCatch(ServerPlayer player, CatchRecord record) {
         SafariSessionStore store = SafariSessionStore.get(player.getServer());
@@ -302,7 +302,6 @@ public final class SafariSessionManager {
         }
         session.recordCatch(record);
         store.setDirty();
-        SafariNetwork.sendTimer(player, session, isClockRunning(player));
         for (SafariSessionListener listener : LISTENERS) {
             listener.onCatch(player, session, record);
         }

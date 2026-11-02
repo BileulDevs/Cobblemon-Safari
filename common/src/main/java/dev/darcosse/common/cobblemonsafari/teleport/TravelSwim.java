@@ -117,11 +117,10 @@ final class TravelSwim {
      *
      * @param end     where the swimmer comes up, near the shore
      * @param surface height of the water's surface (top of its last water block)
-     * @param float_  how far below the surface the swimmer's base floats
      * @param fromSurface whether it starts at the surface: it then dives with a splash; from the
      *                    depths it only swims up
      */
-    record Dive(Vec3 end, double surface, double float_, boolean fromSurface) {
+    record Dive(Vec3 end, double surface, boolean fromSurface) {
     }
 
     private TravelSwim() {
@@ -247,7 +246,7 @@ final class TravelSwim {
         }
         Vec3 look = start.add(0.0D, swimmer.getBbHeight(), 0.0D);
         return new TravelFlight.Flight(swimmer, rider, start, direction, false, now, camera, look, duration,
-                null, new Dive(end, surface, floatDepth, fromSurface));
+                null, new Dive(end, surface, fromSurface));
     }
 
     /**
