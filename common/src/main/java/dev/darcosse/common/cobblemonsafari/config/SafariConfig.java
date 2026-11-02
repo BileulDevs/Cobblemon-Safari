@@ -61,9 +61,6 @@ public class SafariConfig {
     /** Safari points earned by catching Pokémon, spent at the warden's shop. */
     public Points points = new Points();
 
-    /** The missions of each rotation, paid in Safari points. */
-    public Missions missions = new Missions();
-
     /** The rest houses: their building on a new map, their Safari Guide and the trips to them. */
     public RestHouses restHouses = new RestHouses();
 
@@ -72,6 +69,13 @@ public class SafariConfig {
 
     /** Daily regeneration of the Safari map. */
     public Reset reset = new Reset();
+
+    /**
+     * The missions of each rotation, paid in Safari points. Last on purpose:
+     * Gson writes fields in declaration order, and this long section (one
+     * entry per kind) would otherwise bury the short ones after it.
+     */
+    public Missions missions = new Missions();
 
     /** How long a hunt lasts, when its clock runs, and where it ends. */
     public static class Hunt {

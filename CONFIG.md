@@ -33,7 +33,7 @@ A complete, commented example of the three files is in [`example/config/`](examp
 
 ## `server.json`: rules of the Safari
 
-The sections, in the order of the file: `hunt`, `tickets`, `gate`, `balls`, `battles`, `capture`, `protection`, `spawns`, `specials`, `events`, `points`, `missions`, `restHouses`, `escapeRope`, `reset`.
+The sections, in the order of the file: `hunt`, `tickets`, `gate`, `balls`, `battles`, `capture`, `protection`, `spawns`, `specials`, `events`, `points`, `restHouses`, `escapeRope`, `reset`, `missions`.
 
 ### `hunt`: the hunt and its clock
 
@@ -300,6 +300,45 @@ A currency separate from Safari time, earned with every capture inside and spent
 
 With the default missions, the defaults give about 600 points per hour of active hunting. No value may be negative.
 
+### `restHouses`: the rest houses
+
+| Key | Default | What it does |
+|---|---|---|
+| `prebuild` | `true` | Builds every rest house of a new map in the background, one at a time, from 30 s after the server starts, so trips rarely wait. It pauses while the server is busy (ticks above 40 ms) and for 20 s after a player comes into the Safari, the entrance house aside. `false` builds a house the first time a player goes near it or travels to it. The entrance house is always built in the background right after the start, whatever this says. |
+| `travel` | see below | The trips between the houses. |
+
+#### `restHouses.travel`: trips between the rest houses
+
+The Safari Guide of every rest house takes players to any other house of the island, named by its biome (with its direction, "Jungle Safari (north)", when two houses share a biome). The Escape Rope can take them to the nearest one. Every trip is filmed while the destination loads, and a house nobody went near yet is built during it: a double of the player, wearing their skin, takes off on the first Pokémon of their party that can be ridden in the air (a copy of it: the party is not touched), or on a Staraptor when none can, and lands in front of the destination, filmed by the game camera; players around see it too. The guide's trips take off from the house's steps; the Escape Rope's from where it was used, and from a cave the player is first brought to the nearest safe open-air spot, within 12 blocks around, under a black screen. A trip into or out of a cave burrows, and the rope in the water swims, the same way. When the trip cannot be filmed (no open sky to take off, no open-air spot within 12 blocks of a cave, no flyer and no Staraptor), it shows a painted landscape for the guide and a pixel-art scene for the rope. How the trips are shown is not a setting.
+
+| Key | Default | What it does |
+|---|---|---|
+| `guide` | `true` | The Safari Guide of every rest house. `false` removes the guides from the houses. |
+| `cooldownSeconds` | `30` | Seconds before the same player can travel again, by the guide or by the rope: one wait for both, so the two cannot be chained. 0 removes the wait. At least 0. |
+| `cinematicSeconds` | `3` | Shortest length of the cinematic, even when the destination is ready at once; longer while it loads or builds (45 s at most, then the trip is given up). 0 to 15. |
+
+### `escapeRope`
+
+| Key | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | Lends an Escape Rope to every player entering, taken back on exit. Used in the Safari, it offers to climb to the nearest safe spot in the open air (from a cave) or to go to the nearest rest house. |
+| `toRestHouse` | `true` | The rope's "nearest rest house" option, with the trip of `restHouses.travel` (its wait and cinematic). Climbing to the open air stays either way. |
+
+### `reset`: the daily new map
+
+At the first server start of a new day, the Safari dimension is deleted and regenerated with another layout. Everything built or dropped inside is lost; sessions, statistics, banked time and points are kept.
+
+| Key | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | `false` keeps the same map forever. |
+| `hour` | `4` | Hour (0 to 23) at which a new map day starts. With 4, a server restarted at 3:00 still belongs to the previous day and keeps its map. |
+| `timeZone` | `""` | Time zone of `hour`, e.g. `"Europe/Paris"`. Empty uses the server's own. |
+| `relief` | `"GENTLE"` | How hilly each new map is. `"FLAT"`: low, gentle land, a few blocks above the sea, no peaks (height ×0.35). `"GENTLE"`: rolling but softer, the default since 1.4.0 (height ×0.65, peaks ×0.5): the plateaus' walls over the rivers lose a third of their height. `"ROLLING"`: the island as in earlier versions, with plateaus up to some forty blocks above the rivers. `"MOUNTAINOUS"`: higher land and sharper peaks (height ×1.6, peaks ×1.8). The coast and the sea floor do not move. Only a new map takes it: the map on disk keeps the relief it was generated with (new chunks would rise as cliffs against the old ones), and the log says so at start. To see a new relief now, `/safari reset` then restart. |
+
+`/safari reset` forces a new map at the next start, whatever this section says.
+
+---
+
 ### `missions`
 
 `count` missions drawn with each rotation of the specials, the same for every player, each paid once per player. Each mission is of a kind drawn by weight among `allowedKinds`; a rotation draws different kinds first, and repeats a kind only when too few kinds can be drawn. A kind that cannot be met this rotation is skipped (no specials, no habitat with enough species...).
@@ -362,45 +401,6 @@ Write every key of an entry you change: a key left out of an entry present in th
 | `enabled` | `true` | Whether the clerk offers it. |
 | `cost` | `50` | Safari points it costs. 0 makes it free. |
 | `perRotation` | `1` | Swaps each player may make per rotation, 0 to 8. |
-
-### `restHouses`: the rest houses
-
-| Key | Default | What it does |
-|---|---|---|
-| `prebuild` | `true` | Builds every rest house of a new map in the background, one at a time, from 30 s after the server starts, so trips rarely wait. It pauses while the server is busy (ticks above 40 ms) and for 20 s after a player comes into the Safari, the entrance house aside. `false` builds a house the first time a player goes near it or travels to it. The entrance house is always built in the background right after the start, whatever this says. |
-| `travel` | see below | The trips between the houses. |
-
-#### `restHouses.travel`: trips between the rest houses
-
-The Safari Guide of every rest house takes players to any other house of the island, named by its biome (with its direction, "Jungle Safari (north)", when two houses share a biome). The Escape Rope can take them to the nearest one. Every trip is filmed while the destination loads, and a house nobody went near yet is built during it: a double of the player, wearing their skin, takes off on the first Pokémon of their party that can be ridden in the air (a copy of it: the party is not touched), or on a Staraptor when none can, and lands in front of the destination, filmed by the game camera; players around see it too. The guide's trips take off from the house's steps; the Escape Rope's from where it was used, and from a cave the player is first brought to the nearest safe open-air spot, within 12 blocks around, under a black screen. A trip into or out of a cave burrows, and the rope in the water swims, the same way. When the trip cannot be filmed (no open sky to take off, no open-air spot within 12 blocks of a cave, no flyer and no Staraptor), it shows a painted landscape for the guide and a pixel-art scene for the rope. How the trips are shown is not a setting.
-
-| Key | Default | What it does |
-|---|---|---|
-| `guide` | `true` | The Safari Guide of every rest house. `false` removes the guides from the houses. |
-| `cooldownSeconds` | `30` | Seconds before the same player can travel again, by the guide or by the rope: one wait for both, so the two cannot be chained. 0 removes the wait. At least 0. |
-| `cinematicSeconds` | `3` | Shortest length of the cinematic, even when the destination is ready at once; longer while it loads or builds (45 s at most, then the trip is given up). 0 to 15. |
-
-### `escapeRope`
-
-| Key | Default | What it does |
-|---|---|---|
-| `enabled` | `true` | Lends an Escape Rope to every player entering, taken back on exit. Used in the Safari, it offers to climb to the nearest safe spot in the open air (from a cave) or to go to the nearest rest house. |
-| `toRestHouse` | `true` | The rope's "nearest rest house" option, with the trip of `restHouses.travel` (its wait and cinematic). Climbing to the open air stays either way. |
-
-### `reset`: the daily new map
-
-At the first server start of a new day, the Safari dimension is deleted and regenerated with another layout. Everything built or dropped inside is lost; sessions, statistics, banked time and points are kept.
-
-| Key | Default | What it does |
-|---|---|---|
-| `enabled` | `true` | `false` keeps the same map forever. |
-| `hour` | `4` | Hour (0 to 23) at which a new map day starts. With 4, a server restarted at 3:00 still belongs to the previous day and keeps its map. |
-| `timeZone` | `""` | Time zone of `hour`, e.g. `"Europe/Paris"`. Empty uses the server's own. |
-| `relief` | `"GENTLE"` | How hilly each new map is. `"FLAT"`: low, gentle land, a few blocks above the sea, no peaks (height ×0.35). `"GENTLE"`: rolling but softer, the default since 1.4.0 (height ×0.65, peaks ×0.5): the plateaus' walls over the rivers lose a third of their height. `"ROLLING"`: the island as in earlier versions, with plateaus up to some forty blocks above the rivers. `"MOUNTAINOUS"`: higher land and sharper peaks (height ×1.6, peaks ×1.8). The coast and the sea floor do not move. Only a new map takes it: the map on disk keeps the relief it was generated with (new chunks would rise as cliffs against the old ones), and the log says so at start. To see a new relief now, `/safari reset` then restart. |
-
-`/safari reset` forces a new map at the next start, whatever this section says.
-
----
 
 ## `shop.json`: the shop
 
