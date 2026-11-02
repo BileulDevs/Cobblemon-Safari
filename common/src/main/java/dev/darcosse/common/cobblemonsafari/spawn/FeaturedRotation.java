@@ -55,7 +55,7 @@ public final class FeaturedRotation {
      * Species with no natural spawn anywhere (most legendaries, some data
      * pack species) may be featured, their habitat guessed from their types.
      * Whether a legendary can actually be drawn is the job of the
-     * featured.legendary section (and its siblings); this only makes such
+     * specials.legendary section (and its siblings); this only makes such
      * species known to the index.
      */
     private static final boolean INCLUDE_WITHOUT_NATURAL_SPAWN = true;
@@ -159,7 +159,7 @@ public final class FeaturedRotation {
 
     /** Today's specials, most common first; empty when the feature is off or nothing qualifies. */
     public static List<HabitatEntry> today(MinecraftServer server) {
-        if (!SafariConfigManager.get().featured.enabled) {
+        if (!SafariConfigManager.get().specials.enabled) {
             return List.of();
         }
         long period = currentPeriod();
@@ -206,7 +206,7 @@ public final class FeaturedRotation {
 
     /** Length of one rotation in milliseconds, from the config. */
     public static long rotationLengthMillis() {
-        return SafariConfigManager.get().featured.rotationMinutes * MILLIS_PER_MINUTE;
+        return SafariConfigManager.get().specials.rotationMinutes * MILLIS_PER_MINUTE;
     }
 
     /**
@@ -215,7 +215,8 @@ public final class FeaturedRotation {
      * <p>Each rarity fills its own slots, so the board always mixes uncommon,
      * rare and ultra-rare finds. Slots a rarity cannot fill (no legendary
      * allowed, for instance) fall back to the next more common rarity rather
-     * than staying empty. Within a rarity, species whose main habitat is not
+     * than staying empty, down to uncommon: commons only ever fill their own
+     * slots ({@code specials.slots.common}, 0 by default). Within a rarity, species whose main habitat is not
      * taken yet go first, so the specials send players to different corners of
      * the park instead of all to the same forest.
      *
@@ -225,7 +226,7 @@ public final class FeaturedRotation {
      */
     private static List<HabitatEntry> draw(Map<ResourceLocation, HabitatEntry> index, long period, long salt,
                                            Set<String> excluded) {
-        SafariConfig.Featured config = SafariConfigManager.get().featured;
+        SafariConfig.Specials config = SafariConfigManager.get().specials;
         Random random = new Random(salt ^ (period * ROTATION_SEED_MIX));
 
         Map<Rarity, List<HabitatEntry>> pools = new EnumMap<>(Rarity.class);
@@ -234,10 +235,14 @@ public final class FeaturedRotation {
             pools.put(rarity, new ArrayList<>());
             recentPools.put(rarity, new ArrayList<>());
         }
+        // Commons only when the config gives them slots: otherwise their
+        // pool, the largest by far, would be built for nothing.
+        boolean commonWanted = config.slots.common > 0;
         // The index is sorted by species id, so pools are built in a stable
         // order before shuffling: required for the draw to be reproducible.
         for (HabitatEntry entry : index.values()) {
-            if (entry.rarity() == Rarity.COMMON || !SpeciesRules.isAllowed(entry.species(), SpawnSource.FEATURED)) {
+            if ((entry.rarity() == Rarity.COMMON && !commonWanted)
+                    || !SpeciesRules.isAllowed(entry.species(), SpawnSource.FEATURED)) {
                 continue;
             }
             if (!entry.natural() && !INCLUDE_WITHOUT_NATURAL_SPAWN) {
@@ -259,16 +264,22 @@ public final class FeaturedRotation {
         Set<ResourceKey<Biome>> usedHabitats = new HashSet<>();
         int carried = 0;
         // Rarest first, so leftover slots can roll over to the more common tiers.
-        carried = fill(pools.get(Rarity.ULTRA_RARE), config.ultraRareSlots + carried, picked, usedHabitats);
-        carried = fill(pools.get(Rarity.RARE), config.rareSlots + carried, picked, usedHabitats);
-        carried = fill(pools.get(Rarity.UNCOMMON), config.uncommonSlots + carried, picked, usedHabitats);
+        carried = fill(pools.get(Rarity.ULTRA_RARE), config.slots.ultraRare + carried, picked, usedHabitats);
+        carried = fill(pools.get(Rarity.RARE), config.slots.rare + carried, picked, usedHabitats);
+        carried = fill(pools.get(Rarity.UNCOMMON), config.slots.uncommon + carried, picked, usedHabitats);
+        // Commons fill their own slots only: what the rarer tiers leave over
+        // never becomes a common special, so slots.common = 0 keeps them off
+        // the board whatever happens. Their own leftover rolls on like any.
+        carried += fill(pools.get(Rarity.COMMON), config.slots.common, picked, usedHabitats);
         // Only when the fresh species cannot fill every slot (a tiny pool, most
         // rarities forbidden): last rotation's specials come back rather than
         // leave the board short.
         if (carried > 0) {
             carried = fill(recentPools.get(Rarity.ULTRA_RARE), carried, picked, usedHabitats);
             carried = fill(recentPools.get(Rarity.RARE), carried, picked, usedHabitats);
-            fill(recentPools.get(Rarity.UNCOMMON), carried, picked, usedHabitats);
+            carried = fill(recentPools.get(Rarity.UNCOMMON), carried, picked, usedHabitats);
+            // Empty unless commons have slots: their pool only holds what they let in.
+            fill(recentPools.get(Rarity.COMMON), carried, picked, usedHabitats);
         }
 
         picked.sort((a, b) -> Integer.compare(a.rarity().ordinal(), b.rarity().ordinal()));

@@ -48,7 +48,7 @@ import java.util.function.Supplier;
 
 /**
  * Bounties: the missions of the rotation, drawn with each rotation of the
- * specials among the kinds {@code bounties.allowedKinds} lets in, the same
+ * specials among the kinds {@code missions.allowedKinds} lets in, the same
  * for every player, and paid once per player in Safari points when
  * completed. A player may swap one at the clerk for another, for themselves
  * only.
@@ -68,7 +68,7 @@ public final class SafariBounties {
     private static final long SEED_MIX = 0x5AFA_B0B7_1E5L;
 
     /**
-     * Most missions per rotation (bounties.count is clamped to it). The
+     * Most missions per rotation (missions.count is clamped to it). The
      * clerk's dialogue has one swap answer per mission, so raising it needs
      * as many new answers in the dialogue files, and as many functions
      * (SafariDialogueFunctions registers them up to this).
@@ -130,7 +130,7 @@ public final class SafariBounties {
      * the habitat index changes (data or config reload).
      */
     public static List<Bounty> today(MinecraftServer server) {
-        SafariConfig.Bounties config = SafariConfigManager.get().bounties;
+        SafariConfig.Missions config = SafariConfigManager.get().missions;
         if (!config.enabled || config.count == 0) {
             return List.of();
         }
@@ -207,9 +207,9 @@ public final class SafariBounties {
         for (int count : progress.counts) {
             counts.add(count);
         }
-        SafariConfig.Bounties config = SafariConfigManager.get().bounties;
+        SafariConfig.Missions config = SafariConfigManager.get().missions;
         Platform.get().sendToPlayer(player, new SafariBountiesPayload(config.enabled, missionsOf(shared, progress),
-                counts, config.allDoneBonus));
+                counts, config.allMissionsBonusPoints));
     }
 
     /** Chat lines of the clerk's "missions" answer: each mission with the player's progress and reward. */
@@ -233,7 +233,7 @@ public final class SafariBounties {
                     .append(Component.translatable(key("bounty.reward"), SafariPointsIcon.amount(bounty.reward())).withStyle(ChatFormatting.GOLD))
                     .withStyle(done ? ChatFormatting.GREEN : ChatFormatting.WHITE));
         }
-        int bonus = SafariConfigManager.get().bounties.allDoneBonus;
+        int bonus = SafariConfigManager.get().missions.allMissionsBonusPoints;
         if (bonus > 0) {
             lines.add(Component.translatable(key("bounty.all_done_hint"), SafariPointsIcon.amount(bonus)).withStyle(ChatFormatting.GRAY));
         }
@@ -260,7 +260,7 @@ public final class SafariBounties {
     /** Whether mission {@code slot} (from 0) of the player can be swapped. */
     public static boolean canSwap(ServerPlayer player, int slot) {
         MinecraftServer server = player.getServer();
-        SafariConfig.Bounties config = SafariConfigManager.get().bounties;
+        SafariConfig.Missions config = SafariConfigManager.get().missions;
         if (server == null || !config.swap.enabled || config.swap.perRotation == 0) {
             return false;
         }
@@ -275,7 +275,7 @@ public final class SafariBounties {
 
     /**
      * Replaces mission {@code slot} of the player with another, for
-     * {@code bounties.swap.cost} points. The new mission starts from zero.
+     * {@code missions.swap.cost} points. The new mission starts from zero.
      * Tells the player the outcome in chat.
      *
      * @return whether the mission was replaced
@@ -285,7 +285,7 @@ public final class SafariBounties {
         if (server == null) {
             return false;
         }
-        SafariConfig.Bounties config = SafariConfigManager.get().bounties;
+        SafariConfig.Missions config = SafariConfigManager.get().missions;
         if (!canSwap(player, slot)) {
             // Out of swaps is the one reason worth naming; the others (switched off, mission
             // done or gone) only happen with a stale dialogue page.
@@ -330,7 +330,7 @@ public final class SafariBounties {
             return 0;
         }
         SafariBountyStore.Progress progress = progressOf(server, player, today(server));
-        return Math.max(0, SafariConfigManager.get().bounties.swap.perRotation - progress.swaps);
+        return Math.max(0, SafariConfigManager.get().missions.swap.perRotation - progress.swaps);
     }
 
     // ------------------------------------------------------------- captures
@@ -402,7 +402,7 @@ public final class SafariBounties {
             progress.bonusPaid = true;
             // Even with no bonus configured: the feat is finishing them all, not the payout.
             SafariAdvancements.fire(player, SafariAdvancements.ALL_MISSIONS);
-            int bonus = SafariConfigManager.get().bounties.allDoneBonus;
+            int bonus = SafariConfigManager.get().missions.allMissionsBonusPoints;
             if (bonus > 0) {
                 int added = SafariPoints.add(player, bonus);
                 SafariStatistics.add(player, SafariStatistics.POINTS_EARNED, added);
@@ -450,7 +450,7 @@ public final class SafariBounties {
                 yield false;
             }
             case SPECIES -> capture.speciesId.equals(bounty.target());
-            case FEATURED -> capture.featured;
+            case SPECIAL -> capture.featured;
             case HABITAT -> capture.biome.equals(bounty.target());
             case ANY -> true;
             case DIFFERENT -> !seen.contains(capture.speciesId);
@@ -493,11 +493,11 @@ public final class SafariBounties {
     // ---------------------------------------------------------------- draws
 
     /**
-     * Draws the shared missions of a rotation: {@code bounties.count}
+     * Draws the shared missions of a rotation: {@code missions.count}
      * missions, each of a kind drawn by weight among the allowed kinds, all
      * different kinds while there are enough of them.
      */
-    private static List<Bounty> draw(MinecraftServer server, long period, SafariConfig.Bounties config) {
+    private static List<Bounty> draw(MinecraftServer server, long period, SafariConfig.Missions config) {
         Random random = new Random(period * 31L ^ SafariWorldState.get(server).rotationSalt() ^ SEED_MIX);
         List<Bounty> drawn = new ArrayList<>();
         while (drawn.size() < config.count) {
@@ -515,7 +515,7 @@ public final class SafariBounties {
      * when one can be drawn, otherwise of any allowed kind. Null when no
      * allowed kind can make a new mission (pool too small, kinds all off).
      */
-    private static Bounty drawOne(MinecraftServer server, Random random, SafariConfig.Bounties config,
+    private static Bounty drawOne(MinecraftServer server, Random random, SafariConfig.Missions config,
                                   List<Bounty> taken) {
         Set<BountyKind> takenKinds = new HashSet<>();
         taken.forEach(bounty -> takenKinds.add(bounty.kind()));
@@ -535,7 +535,7 @@ public final class SafariBounties {
     }
 
     /** A mission of one of {@code kinds}, drawn by weight; a kind that fails is dropped for this draw. */
-    private static Bounty drawFrom(MinecraftServer server, Random random, SafariConfig.Bounties config,
+    private static Bounty drawFrom(MinecraftServer server, Random random, SafariConfig.Missions config,
                                    BountyPool pool, List<BountyKind> kinds, List<Bounty> taken) {
         List<BountyKind> left = new ArrayList<>(kinds);
         while (!left.isEmpty()) {
@@ -591,7 +591,7 @@ public final class SafariBounties {
                         : rarity == Rarity.UNCOMMON ? speciesTuning.uncommonCount : speciesTuning.rareCount;
                 yield new Bounty(kind, species.getResourceIdentifier().toString(), count, tuning.rewardFor(count));
             }
-            case FEATURED -> {
+            case SPECIAL -> {
                 List<HabitatEntry> specials = FeaturedRotation.today(server);
                 if (specials.isEmpty()) {
                     yield null;

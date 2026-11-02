@@ -3,6 +3,7 @@ package dev.darcosse.common.cobblemonsafari.config;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
@@ -14,6 +15,7 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 /**
@@ -36,6 +38,11 @@ final class JsonConfigFile<T> {
     private final Class<T> type;
     private final Supplier<T> defaults;
     /**
+     * Moves keys of an older file to their current place, on the raw tree
+     * before binding (see {@link ConfigTreeMigration}); null for none.
+     */
+    private final BiConsumer<String, JsonObject> treeMigration;
+    /**
      * Whether the last {@link #read()} could not parse the file. While set,
      * {@link #write} does nothing: the managers validate what read returned
      * (the defaults, then) and would otherwise "fix" and save them over the
@@ -45,9 +52,21 @@ final class JsonConfigFile<T> {
 
     /** Describes a config file; nothing is read until {@link #read()}. */
     JsonConfigFile(String fileName, Class<T> type, Supplier<T> defaults) {
+        this(fileName, type, defaults, null);
+    }
+
+    /**
+     * Describes a config file whose older layouts are converted on read.
+     *
+     * @param treeMigration called with the file name and its tree before
+     *                      binding; changes the tree in place
+     */
+    JsonConfigFile(String fileName, Class<T> type, Supplier<T> defaults,
+                   BiConsumer<String, JsonObject> treeMigration) {
         this.fileName = fileName;
         this.type = type;
         this.defaults = defaults;
+        this.treeMigration = treeMigration;
     }
 
     /**
@@ -70,6 +89,9 @@ final class JsonConfigFile<T> {
             if (!tree.isJsonObject()) {
                 // An empty file, or one containing literally "null".
                 return defaults.get();
+            }
+            if (treeMigration != null) {
+                treeMigration.accept(fileName, tree.getAsJsonObject());
             }
             T parsed = GSON.fromJson(tree, type);
             return parsed != null ? parsed : defaults.get();

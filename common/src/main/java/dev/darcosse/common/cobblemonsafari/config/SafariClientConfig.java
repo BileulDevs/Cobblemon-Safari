@@ -15,28 +15,35 @@ public class SafariClientConfig {
      */
     public int configVersion = SafariClientConfigManager.CURRENT_CONFIG_VERSION;
 
-    /** Master switch for the timer HUD. */
-    public boolean hudEnabled = true;
-
-    /** Where the timer is attached. */
-    public HudAnchor hudAnchor = SafariClientConfigManager.DEFAULT_HUD_ANCHOR;
-
-    /**
-     * Offset of the middle of the timer (the stopwatch with the time under
-     * it, 22 px high) from the anchor, in GUI pixels. The default puts it in
-     * the bottom left corner, a few pixels above the bottom of the screen.
-     */
-    public int hudOffsetX = SafariClientConfigManager.DEFAULT_HUD_OFFSET_X;
-    public int hudOffsetY = SafariClientConfigManager.DEFAULT_HUD_OFFSET_Y;
-
-    /** Below this many seconds the timer turns amber. */
-    public int lowTimeSeconds = 60;
-
-    /** Below this many seconds the timer turns red and pulses. */
-    public int criticalTimeSeconds = 10;
+    /** The timer shown while hunting. */
+    public Hud hud = new Hud();
 
     /** Look of the wall screens. */
     public Board board = new Board();
+
+    /** The timer shown on screen while hunting: whether, where, and when it changes colour. */
+    public static class Hud {
+        /** Master switch for the timer HUD. */
+        public boolean enabled = true;
+
+        /** Where the timer is attached. */
+        public HudAnchor anchor = SafariClientConfigManager.DEFAULT_HUD_ANCHOR;
+
+        /**
+         * Offset of the middle of the timer (the stopwatch with the time
+         * under it, 22 px high) from the anchor, in GUI pixels. The default
+         * puts it in the bottom left corner, a few pixels above the bottom
+         * of the screen.
+         */
+        public int offsetX = SafariClientConfigManager.DEFAULT_HUD_OFFSET_X;
+        public int offsetY = SafariClientConfigManager.DEFAULT_HUD_OFFSET_Y;
+
+        /** Below this many seconds the timer turns amber; the wall screens' hunt bar too. */
+        public int lowTimeSeconds = 60;
+
+        /** Below this many seconds the timer turns red and pulses; the wall screens' hunt bar turns red. */
+        public int criticalTimeSeconds = 10;
+    }
 
     /**
      * How the wall screens look. The few real choices come first;
@@ -64,21 +71,29 @@ public class SafariClientConfig {
          */
         public double panelOpacity = 0.72;
 
-        /**
-         * What the bar at the bottom of each kind of screen counts down: the
-         * viewer's hunting time (SESSION, the next rotation when they are not
-         * hunting) or always the next rotation (ROTATION). The specials and
-         * missions show the hunt by default, the record and the Pokédex the
-         * rotation, which is when the missions and the shop's goods change.
-         */
-        public WallScreenFooter featuredFooter = WallScreenFooter.SESSION;
-        public WallScreenFooter statsFooter = WallScreenFooter.ROTATION;
-        public WallScreenFooter bountiesFooter = WallScreenFooter.SESSION;
-        /** What the footer bar of the Pokédex screens counts down. */
-        public WallScreenFooter dexFooter = WallScreenFooter.ROTATION;
+        /** What the bar at the bottom of each kind of screen counts down. */
+        public Footers footers = new Footers();
 
         /** Colours of the screens. */
         public BoardColors colors = new BoardColors();
+    }
+
+    /**
+     * What the bar at the bottom of each kind of screen counts down: the
+     * viewer's hunting time (SESSION, the next rotation when they are not
+     * hunting) or always the next rotation (ROTATION). The specials and
+     * missions show the hunt by default, the record and the Pokédex the
+     * rotation, which is when the missions and the shop's goods change.
+     */
+    public static class Footers {
+        /** The specials of the day. */
+        public WallScreenFooter specials = WallScreenFooter.SESSION;
+        /** The player's Safari record. */
+        public WallScreenFooter stats = WallScreenFooter.ROTATION;
+        /** The missions. */
+        public WallScreenFooter missions = WallScreenFooter.SESSION;
+        /** The Safari Pokédex. */
+        public WallScreenFooter dex = WallScreenFooter.ROTATION;
     }
 
     /**

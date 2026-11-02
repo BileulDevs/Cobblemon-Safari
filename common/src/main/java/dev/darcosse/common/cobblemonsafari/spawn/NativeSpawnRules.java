@@ -32,7 +32,7 @@ import net.minecraft.world.phys.AABB;
  *
  * <p>The mod's own special spawns do not go through Cobblemon's spawner and
  * are not filtered here; {@link FeaturedSpawner} applies the rules of
- * {@code featured} itself, which may differ from these.
+ * {@code specials} itself, which may differ from these.
  */
 public final class NativeSpawnRules {
 

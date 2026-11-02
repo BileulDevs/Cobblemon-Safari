@@ -32,12 +32,12 @@ import java.util.Optional;
  * player then spends the bank to enter. Used inside, it extends the running
  * session when the config allows it.
  *
- * <p>A ticket adds {@code ticket.defaultDurationSeconds} (30 min by default),
+ * <p>A ticket adds {@code tickets.defaultDurationSeconds} (30 min by default),
  * or the length written in its own custom data, e.g.
  * {@code /give @p cobblemon_safari:safari_ticket[custom_data={duration_seconds:600}]},
  * so a server can still hand out other lengths. When the bank (or the hunt)
  * is nearly full, the ticket adds only what fits, but never less than
- * {@code ticket.minAddedSeconds}: below that it is refused and kept.
+ * {@code tickets.minAddedSeconds}: below that it is refused and kept.
  */
 public class SafariTicketItem extends Item {
 
@@ -96,13 +96,13 @@ public class SafariTicketItem extends Item {
      * @return true when the ticket was used and must be consumed
      */
     private boolean redeem(ServerPlayer player, ItemStack stack) {
-        SafariConfig.Ticket config = SafariConfigManager.get().ticket;
+        SafariConfig.Tickets config = SafariConfigManager.get().tickets;
         int ticks = Ticks.fromSeconds(customDuration(stack).orElse(config.defaultDurationSeconds));
         // A ticket shorter than the minimum only needs room for itself.
         int minimum = Math.min(ticks, Ticks.fromSeconds(config.minAddedSeconds));
         SafariSession session = SafariSessionManager.getSession(player);
 
-        if (session != null && config.extendsActiveSession) {
+        if (session != null && config.addToCurrentHunt) {
             int before = session.remainingTicks();
             int room = SafariConfigManager.maxDurationTicks() - before;
             if (!hasRoom(player, room, minimum, "message.ticket_at_max")) {
@@ -114,7 +114,7 @@ public class SafariTicketItem extends Item {
             return true;
         }
 
-        int room = Ticks.fromSeconds(config.maxCreditSeconds) - SafariCredit.balance(player);
+        int room = Ticks.fromSeconds(config.maxBankedSeconds) - SafariCredit.balance(player);
         if (!hasRoom(player, room, minimum, "message.credit_full")) {
             return false;
         }

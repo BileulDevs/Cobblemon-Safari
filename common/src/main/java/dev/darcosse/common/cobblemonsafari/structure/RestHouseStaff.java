@@ -33,7 +33,7 @@ import java.util.function.Function;
  *   missions of the day;</li>
  *   <li>the guide, in the south hall, whose dialogue takes the player to
  *   another rest house of the map ({@code RestHouseTravel}); only while
- *   {@code restHouseTravel.guideEnabled} is on, and removed when it is off.</li>
+ *   {@code restHouses.travel.guide} is on, and removed when it is off.</li>
  * </ul>
  *
  * <p>Kept by {@link #tick}: whenever a built house is loaded and misses one
@@ -106,7 +106,7 @@ public final class RestHouseStaff {
             new Role(GUIDE_TAG, CobblemonSafari.id("safari_guide"),
                     (centre, door) -> RestHouseBuilder.guideColumn(centre.getX(), centre.getZ(), door),
                     RestHouseBuilder::guideFacing,
-                    () -> SafariConfigManager.get().restHouseTravel.guideEnabled)
+                    () -> SafariConfigManager.get().restHouses.travel.guide)
     );
 
     private static int ticks;

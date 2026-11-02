@@ -97,7 +97,7 @@ public final class FeaturedSync {
         SafariFeaturedPayload.Entry swarm = active == null ? null
                 : new SafariFeaturedPayload.Entry(active.species().getResourceIdentifier(), active.aspects(),
                 active.rarity(), active.biome().location(), false, 0, 0);
-        return new SafariFeaturedPayload(SafariConfigManager.get().featured.enabled,
+        return new SafariFeaturedPayload(SafariConfigManager.get().specials.enabled,
                 FeaturedRotation.millisUntilNextRotation(), FeaturedRotation.rotationLengthMillis(), entries, swarm);
     }
 

@@ -17,7 +17,7 @@ import java.util.Set;
 /**
  * Builds the rest houses of a new map in the background, one at a time, so
  * that every house can be reached by the Safari Guide without waiting
- * ({@code restHouseTravel.prebuildHouses}).
+ * ({@code restHouses.prebuild}).
  *
  * <p>The entrance house comes first, right after the start and whatever
  * {@code prebuildHouses} says: the server start no longer builds it (it
@@ -167,7 +167,7 @@ public final class RestHousePrebuilder {
                 return;
             }
         }
-        if (!SafariConfigManager.get().restHouseTravel.prebuildHouses
+        if (!SafariConfigManager.get().restHouses.prebuild
                 || server.getTickCount() < Ticks.fromSeconds(START_DELAY_SECONDS) || busy) {
             return;
         }
@@ -223,7 +223,7 @@ public final class RestHousePrebuilder {
      */
     private static void follow(MinecraftServer server, ServerLevel safari, boolean busy) {
         RestHouses.HouseSite site = RestHouses.siteOf(anchor);
-        if (site == null || (!site.entrance() && !SafariConfigManager.get().restHouseTravel.prebuildHouses)) {
+        if (site == null || (!site.entrance() && !SafariConfigManager.get().restHouses.prebuild)) {
             release(safari);
             return;
         }

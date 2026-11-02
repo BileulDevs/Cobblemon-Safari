@@ -136,7 +136,7 @@ public final class SafariTimerHud {
         int remaining = SafariClientState.remainingTicks(gameTime);
 
         SafariClientConfig config = SafariClientConfigManager.get();
-        if (!config.hudEnabled || minecraft.options.hideGui) {
+        if (!config.hud.enabled || minecraft.options.hideGui) {
             return;
         }
         ResourceLocation safari = SafariClientState.safariDimension();
@@ -162,8 +162,8 @@ public final class SafariTimerHud {
         int right = Math.max(iconX + ICON_DRAWN_RIGHT, textX + textWidth);
 
         // The anchor and offset place the pivot; the whole widget stays on screen.
-        int pivotX = Math.round(graphics.guiWidth() * config.hudAnchor.xFraction) + config.hudOffsetX;
-        int pivotY = Math.round(graphics.guiHeight() * config.hudAnchor.yFraction) + config.hudOffsetY;
+        int pivotX = Math.round(graphics.guiWidth() * config.hud.anchor.xFraction) + config.hud.offsetX;
+        int pivotY = Math.round(graphics.guiHeight() * config.hud.anchor.yFraction) + config.hud.offsetY;
         pivotX = clamp(pivotX, SCREEN_MARGIN - left, graphics.guiWidth() - SCREEN_MARGIN - right);
         pivotY = clamp(pivotY, SCREEN_MARGIN - top, graphics.guiHeight() - SCREEN_MARGIN - bottom);
 

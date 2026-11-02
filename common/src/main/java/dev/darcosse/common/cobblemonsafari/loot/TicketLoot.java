@@ -17,7 +17,7 @@ import java.util.Optional;
 
 /**
  * Safari Tickets in overworld chests: the extra loot pool each loader adds to
- * the tables listed in {@code ticketLoot} of the server config.
+ * the tables listed in {@code tickets.loot} of the server config.
  *
  * <p>Built while loot tables load (server start and /reload), never during
  * play: the cost is a scan of the configured sources per table loaded.
@@ -36,7 +36,7 @@ public final class TicketLoot {
      * table's chance, never inside the Safari dimension.
      */
     public static Optional<LootPool.Builder> poolFor(ResourceLocation table) {
-        SafariConfig.TicketLoot config = SafariConfigManager.get().ticketLoot;
+        SafariConfig.TicketLoot config = SafariConfigManager.get().tickets.loot;
         if (!config.enabled) {
             return Optional.empty();
         }

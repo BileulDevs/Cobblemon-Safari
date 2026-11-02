@@ -927,10 +927,10 @@ public class SafariScreenPainter {
     /** What the footer of a kind of screen counts down, from the viewer's client config. */
     private static WallScreenFooter footerOf(SafariClientConfig.Board board, WallScreenContent content) {
         return switch (content) {
-            case STATS -> board.statsFooter;
-            case BOUNTIES -> board.bountiesFooter;
-            case DEX -> board.dexFooter;
-            default -> board.featuredFooter;
+            case STATS -> board.footers.stats;
+            case BOUNTIES -> board.footers.missions;
+            case DEX -> board.footers.dex;
+            default -> board.footers.specials;
         };
     }
 
@@ -997,10 +997,10 @@ public class SafariScreenPainter {
     /** Bar colour for the hunt, with the same thresholds as the HUD timer. */
     private int sessionColor(int remainingTicks, SafariClientConfig config) {
         int seconds = Ticks.toSecondsCeil(remainingTicks);
-        if (seconds <= config.criticalTimeSeconds) {
+        if (seconds <= config.hud.criticalTimeSeconds) {
             return pal.barSessionCritical();
         }
-        if (seconds <= config.lowTimeSeconds) {
+        if (seconds <= config.hud.lowTimeSeconds) {
             return pal.barSessionLow();
         }
         return pal.barSessionOk();

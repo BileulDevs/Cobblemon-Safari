@@ -34,7 +34,7 @@ import java.util.TreeMap;
 
 /**
  * The species missions can be met with: those whose natural spawns in the
- * Safari include one easy enough under {@code bounties.speciesFilter}, with
+ * Safari include one easy enough under {@code missions.speciesFilter}, with
  * what the draw needs from them (rarity, types, habitats, levels).
  *
  * <p>Why read Cobblemon's spawn pool here rather than the habitat index of

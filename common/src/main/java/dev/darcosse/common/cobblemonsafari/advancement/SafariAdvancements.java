@@ -233,7 +233,7 @@ public final class SafariAdvancements {
             ResourceLocation ballId = ball.getPokeBall().getName();
             // A ball the catch rate never saw (another mod's capture) is not counted as out of battle.
             if (Boolean.FALSE.equals(ThrowTracker.wasInBattle(ball))
-                    && ballId.toString().equals(SafariConfigManager.get().loan.ballItem)) {
+                    && ballId.toString().equals(SafariConfigManager.get().balls.loan.ballItem)) {
                 fire(player, CATCH_SAFARI_BALL_OUT_OF_BATTLE);
             }
             if (ballId.equals(MASTER_BALL)) {

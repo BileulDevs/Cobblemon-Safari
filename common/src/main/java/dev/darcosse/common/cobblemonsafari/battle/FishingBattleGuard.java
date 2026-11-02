@@ -20,7 +20,7 @@ import java.util.UUID;
 
 /**
  * Optionally stops the battle Cobblemon starts on its own with a Pokémon
- * just fished in the Safari ({@code fishingStartsBattle = false}), so the
+ * just fished in the Safari ({@code battles.fishingStartsBattle = false}), so the
  * angler can throw a Safari Ball at it out of battle instead.
  *
  * <p>How Cobblemon does it: one second after a bobber pulls a Pokémon out,
@@ -69,7 +69,7 @@ public final class FishingBattleGuard {
 
     /** Remembers a Pokémon fished in the Safari while the option is off. */
     private static void onFished(BobberSpawnPokemonEvent.Post event) {
-        if (SafariConfigManager.get().fishingStartsBattle) {
+        if (SafariConfigManager.get().battles.fishingStartsBattle) {
             return;
         }
         Player owner = event.getBobber().getPlayerOwner();
@@ -102,7 +102,7 @@ public final class FishingBattleGuard {
                 // Removed whatever the outcome: only the first battle after the bite is Cobblemon's.
                 Integer bite = FRESHLY_FISHED.remove(pokemon.getOriginalPokemon().getUuid());
                 if (bite != null && now - bite <= FORCED_BATTLE_WINDOW_TICKS
-                        && !SafariConfigManager.get().fishingStartsBattle) {
+                        && !SafariConfigManager.get().battles.fishingStartsBattle) {
                     event.cancel();
                     return;
                 }

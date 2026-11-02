@@ -80,10 +80,10 @@ public final class SafariMark {
         }
         SafariConfig.Capture config = SafariConfigManager.get().capture;
         Pokemon pokemon = event.getPokemon();
-        Mark safari = config.awardSafariMark ? give(pokemon, ID) : null;
+        Mark safari = config.marks.safari ? give(pokemon, ID) : null;
         // In order of preference for the title: the rarest moment first.
         List<Mark> events = new ArrayList<>();
-        SafariConfig.EventMarks marks = config.eventMarks;
+        SafariConfig.Marks marks = config.marks;
         if (marks.special && isSpecial(server, pokemon)) {
             addIfLoaded(events, give(pokemon, STAR));
         }

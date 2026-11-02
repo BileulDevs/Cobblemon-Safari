@@ -127,7 +127,7 @@ public final class EscapeRopeActions {
 
     /**
      * Whether the dialogue offers the nearest rest house: when
-     * {@code restHouseTravel.ropeEnabled} is on.
+     * {@code escapeRope.toRestHouse} is on.
      */
     public static boolean canGoToRestHouse(ServerPlayer player) {
         return SafariDimensions.isSafari(player.level()) && RestHouseTravel.ropeEnabled();
@@ -135,7 +135,7 @@ public final class EscapeRopeActions {
 
     /**
      * Starts a trip to the nearest rest house, built or not yet, with the
-     * loading cinematic, once per {@code restHouseTravel.cooldownSeconds}
+     * loading cinematic, once per {@code restHouses.travel.cooldownSeconds}
      * (a wait shared with the Safari Guide). Works in the open air too.
      *
      * @return whether the trip started; the player is moved a few seconds later

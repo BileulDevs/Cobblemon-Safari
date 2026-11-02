@@ -55,7 +55,7 @@ public final class LoanedBalls {
         Item item = BuiltInRegistries.ITEM.get(itemId);
         // The item registry is defaulted: an unknown id silently yields air.
         if (item == Items.AIR) {
-            CobblemonSafari.LOGGER.error("loan.ballItem '{}' is not a known item; no ball was lent", itemId);
+            CobblemonSafari.LOGGER.error("balls.loan.ballItem '{}' is not a known item; no ball was lent", itemId);
             return 0;
         }
         int remaining = count;

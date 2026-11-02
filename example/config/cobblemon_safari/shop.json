@@ -1,5 +1,5 @@
 {
-  "configVersion": 2,
+  "configVersion": 3,
   "enabled": true,
   "tabs": [
     {
@@ -249,7 +249,7 @@
       "tab": "rewards"
     }
   ],
-  "rotating": {
+  "rotatingPokemon": {
     "enabled": true,
     "count": 12,
     "tab": "pokemon",

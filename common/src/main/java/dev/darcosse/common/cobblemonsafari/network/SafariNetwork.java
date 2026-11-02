@@ -112,7 +112,7 @@ public final class SafariNetwork {
         return new SafariRulesPayload(SafariDimensions.key().location(),
                 List.copyOf(SafariConfigManager.allowedBalls()),
                 SafariConfigManager.get().protection.protectBlocks,
-                SafariConfigManager.get().exemptCreativeAndSpectator,
+                SafariConfigManager.get().hunt.exemptCreativeAndSpectator,
                 List.copyOf(SafariConfigManager.placeableBlocks()),
                 HarvestCategory.maskOf(SafariConfigManager.get().protection.interact),
                 restHouseColumns());

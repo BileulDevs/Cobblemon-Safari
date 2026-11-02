@@ -40,7 +40,7 @@ public class SafariShopConfig {
 
     /**
      * The one Pokémon sold by default, a nod to the Safari Zone's Tauros, and
-     * its price. The other Pokémon come from {@link #rotating}.
+     * its price. The other Pokémon come from {@link #rotatingPokemon}.
      */
     static final String DEFAULT_POKEMON = "tauros level=45";
     static final int DEFAULT_POKEMON_PRICE = 200;
@@ -129,10 +129,10 @@ public class SafariShopConfig {
     /**
      * Pokémon drawn at random for each rotation of the Safari specials, sold
      * after the fixed {@link #entries}. Every player sees the same ones; they
-     * change with the specials ({@code featured.rotationMinutes} in the main
+     * change with the specials ({@code specials.rotationMinutes} in the main
      * config).
      */
-    public Rotating rotating = new Rotating();
+    public Rotating rotatingPokemon = new Rotating();
 
     /**
      * Cobblemon items drawn at random for each rotation, sold in the items

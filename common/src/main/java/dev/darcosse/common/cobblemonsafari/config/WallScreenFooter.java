@@ -2,8 +2,8 @@ package dev.darcosse.common.cobblemonsafari.config;
 
 /**
  * What the bar at the bottom of a wall screen counts down, chosen per kind
- * of screen in the client config ({@code board.featuredFooter},
- * {@code statsFooter}, {@code bountiesFooter}, {@code dexFooter}).
+ * of screen in the client config ({@code board.footers}: {@code specials},
+ * {@code stats}, {@code missions}, {@code dex}).
  *
  * <p>The constant names are the JSON values: renaming one resets that
  * setting in every client.json to its default.

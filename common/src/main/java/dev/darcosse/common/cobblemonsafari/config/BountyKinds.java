@@ -4,8 +4,8 @@ import dev.darcosse.common.cobblemonsafari.bounty.BountyKind;
 
 /**
  * The tuning of every kind of mission, one entry per {@link BountyKind}
- * ({@code bounties.kinds} in server.json). A kind not in
- * {@code bounties.allowedKinds} keeps its tuning but is never drawn.
+ * ({@code missions.kinds} in server.json). A kind not in
+ * {@code missions.allowedKinds} keeps its tuning but is never drawn.
  *
  * <p>The defaults are balanced against about 600 points per hour of hunting
  * (the {@code points} section): a mission is worth 90 to 250 points, the
@@ -21,7 +21,7 @@ public class BountyKinds {
     /** Catch N Pokémon of a type, 3 to 5 at 30 points each. */
     public BountyKindSettings type = BountyKindSettings.of(3, 3, 5, 0, 30);
     /** Catch one of the specials of the rotation. Never drawn while the specials are off. */
-    public BountyKindSettings featured = BountyKindSettings.of(2, 1, 1, 250, 0);
+    public BountyKindSettings special = BountyKindSettings.of(2, 1, 1, 250, 0);
     /** Catch N Pokémon in a given habitat. */
     public BountyKindSettings habitat = BountyKindSettings.of(2, 3, 4, 0, 25);
     /** Catch N Pokémon, any of them: the easy one. */
@@ -48,7 +48,7 @@ public class BountyKinds {
         return switch (kind) {
             case SPECIES -> species;
             case TYPE -> type;
-            case FEATURED -> featured;
+            case SPECIAL -> special;
             case HABITAT -> habitat;
             case ANY -> any;
             case DIFFERENT -> different;
@@ -65,12 +65,12 @@ public class BountyKinds {
     /** Puts back the defaults of every entry the file left out. Returns true if anything was missing. */
     boolean fillMissing() {
         BountyKinds defaults = new BountyKinds();
-        boolean missing = species == null || type == null || featured == null || habitat == null || any == null
+        boolean missing = species == null || type == null || special == null || habitat == null || any == null
                 || different == null || outOfBattle == null || night == null || evolved == null || level == null
                 || hiddenAbility == null || shiny == null || fishing == null;
         if (species == null) species = defaults.species;
         if (type == null) type = defaults.type;
-        if (featured == null) featured = defaults.featured;
+        if (special == null) special = defaults.special;
         if (habitat == null) habitat = defaults.habitat;
         if (any == null) any = defaults.any;
         if (different == null) different = defaults.different;
@@ -101,8 +101,8 @@ public class BountyKinds {
             weight = 3;
             minCount = 1;
             maxCount = 2;
-            reward = 120;
-            rewardPerCatch = 0;
+            rewardPoints = 120;
+            pointsPerCatch = 0;
         }
     }
 
@@ -123,8 +123,8 @@ public class BountyKinds {
             weight = 1;
             minCount = 1;
             maxCount = 1;
-            reward = 120;
-            rewardPerCatch = 0;
+            rewardPoints = 120;
+            pointsPerCatch = 0;
         }
     }
 }

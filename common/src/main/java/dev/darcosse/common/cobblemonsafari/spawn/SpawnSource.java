@@ -15,11 +15,11 @@ public enum SpawnSource {
     /** Cobblemon's own spawner, filtered by {@code spawns} in the config. */
     NATURAL,
 
-    /** The special Pokémon of the day: the board's draw and the mod's spawner, filtered by {@code featured}. */
+    /** The special Pokémon of the day: the board's draw and the mod's spawner, filtered by {@code specials}. */
     FEATURED;
 
     /** The config section holding this way's categories and exclusions. */
     public SafariConfig.SpeciesRulesSection rules(SafariConfig config) {
-        return this == NATURAL ? config.spawns : config.featured;
+        return this == NATURAL ? config.spawns : config.specials;
     }
 }

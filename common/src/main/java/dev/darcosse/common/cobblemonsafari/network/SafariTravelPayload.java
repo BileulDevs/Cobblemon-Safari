@@ -47,11 +47,11 @@ public record SafariTravelPayload(Kind kind, Scene scene, String biomeKey, Strin
 
     /** The picture of a trip. Sent as its ordinal: append, never reorder. */
     public enum Scene {
-        /** The painted Safari landscape panning between black bands (guide, PANORAMA style). */
+        /** The painted Safari landscape panning between black bands (the guide, when the flight cannot be staged). */
         LANDSCAPE,
         /** The pixel-art escape from a cave on a bird's back (Escape Rope). */
         CAVE,
-        /** The world itself, filmed by the game camera while the double flies (guide, FLIGHT style). */
+        /** The world itself, filmed by the game camera while the double flies (the guide and the rope, when the flight can be staged). */
         FLIGHT
     }
 

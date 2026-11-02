@@ -55,7 +55,7 @@ public final class SafariDialogueFunctions {
     public static final String ROPE_CAN_CLIMB = "safari_rope_can_climb";
     public static final String ROPE_CLIMB = "safari_rope_climb";
     public static final String ROPE_REST_HOUSE = "safari_rope_rest_house";
-    /** Whether the rope offers the nearest rest house (restHouseTravel.ropeEnabled). */
+    /** Whether the rope offers the nearest rest house (escapeRope.toRestHouse). */
     public static final String ROPE_CAN_REST_HOUSE = "safari_rope_can_rest_house";
     /**
      * Prefixes of the guide's functions, followed by a {@link Compass#id()}.

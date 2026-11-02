@@ -44,7 +44,7 @@ public final class SafariCredit {
             public void onEnd(ServerPlayer player, SafariSession session, SessionEndReason reason) {
                 if (refunds(reason)
                         && SOURCE.equals(session.source())
-                        && SafariConfigManager.get().ticket.refundUnusedTimeOnLeave
+                        && SafariConfigManager.get().tickets.refundUnusedTimeOnLeave
                         && session.remainingTicks() > 0) {
                     int refunded = add(player, session.remainingTicks());
                     if (refunded > 0) {
@@ -83,7 +83,7 @@ public final class SafariCredit {
     public static int add(ServerPlayer player, int deltaTicks) {
         SafariCreditStore store = SafariCreditStore.get(player.getServer());
         int before = store.get(player.getUUID());
-        int cap = Ticks.fromSeconds(SafariConfigManager.get().ticket.maxCreditSeconds);
+        int cap = Ticks.fromSeconds(SafariConfigManager.get().tickets.maxBankedSeconds);
         // long: a huge configured cap plus a huge ticket must not wrap around.
         int after = (int) Math.min(cap, (long) before + Math.max(0, deltaTicks));
         if (after > before) {
@@ -109,7 +109,7 @@ public final class SafariCredit {
      * <p>Banked time is the only currency: no entry path hands out free time,
      * so a hunt always traces back to a ticket (or an operator's explicit
      * {@code /safari credit add}). The one exception is a player exempt by
-     * game mode ({@code exemptCreativeAndSpectator}), who enters with an
+     * game mode ({@code hunt.exemptCreativeAndSpectator}), who enters with an
      * empty bank and a session of zero that stays frozen; it runs out as
      * soon as they switch to survival or adventure.
      *

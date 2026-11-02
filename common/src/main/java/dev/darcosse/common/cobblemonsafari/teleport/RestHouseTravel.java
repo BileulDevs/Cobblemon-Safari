@@ -5,7 +5,6 @@ import com.cobblemon.mod.common.battles.BattleRegistry;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
-import dev.darcosse.common.cobblemonsafari.config.TravelCinematicStyle;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
 import dev.darcosse.common.cobblemonsafari.network.SafariTravelPayload;
 import dev.darcosse.common.cobblemonsafari.platform.Platform;
@@ -57,12 +56,12 @@ import java.util.function.Consumer;
  * cinematic meanwhile ({@link SafariTravelPayload}, client side
  * TravelCinematicScreen). The player is moved once the house stands, its
  * arrival is loaded and the cinematic has run for
- * {@code restHouseTravel.cinematicSeconds}; the cinematic then fades out on
+ * {@code restHouses.travel.cinematicSeconds}; the cinematic then fades out on
  * the new place. A trip follows the house's anchor, not a position: a build
  * that finds its spot wet moves the house to its next candidate.
  *
- * <p>The guide's trips are filmed by default
- * ({@code restHouseTravel.cinematicStyle}: FLIGHT): a double of the player
+ * <p>The guide's trips are filmed (not a setting since 1.4.0, which
+ * dropped the PANORAMA-only style): a double of the player
  * takes off on their own flying Pokémon (a Staraptor when they have none)
  * in front of the house ({@link TravelFlight}),
  * the screen goes black while the destination gets ready, then the double
@@ -79,7 +78,7 @@ import java.util.function.Consumer;
  * bird could fly there.
  *
  * <p>One wait between two trips, whichever way they go
- * ({@code restHouseTravel.cooldownSeconds}): with two, a player could rope to
+ * ({@code restHouses.travel.cooldownSeconds}): with two, a player could rope to
  * a house and take its guide straight on.
  *
  * <p>Server side. Waits and trips are kept in memory only: a restart forgets
@@ -90,9 +89,9 @@ public final class RestHouseTravel {
 
     /** Who sends the player: decides which switch of the config applies. */
     public enum Source {
-        /** The Safari Guide of a rest house ({@code restHouseTravel.guideEnabled}). */
+        /** The Safari Guide of a rest house ({@code restHouses.travel.guide}). */
         GUIDE,
-        /** The Escape Rope ({@code restHouseTravel.ropeEnabled}). */
+        /** The Escape Rope ({@code escapeRope.toRestHouse}). */
         ROPE
     }
 
@@ -321,7 +320,7 @@ public final class RestHouseTravel {
      * player stands in. What the guide's dialogue uses to show the option.
      */
     public static boolean canTravelTo(ServerPlayer player, Compass direction) {
-        if (!config().guideEnabled || !SafariDimensions.isSafari(player.level())) {
+        if (!config().guide || !SafariDimensions.isSafari(player.level())) {
             return false;
         }
         RestHouses.HouseSite target = RestHouses.siteIn(direction);
@@ -348,7 +347,7 @@ public final class RestHouseTravel {
      * @return whether a trip started
      */
     private static boolean guideTrip(ServerPlayer player, @Nullable RestHouses.HouseSite target) {
-        if (!config().guideEnabled || !SafariDimensions.isSafari(player.level())
+        if (!config().guide || !SafariDimensions.isSafari(player.level())
                 || !RestHouseStaff.isNearGuide(player) || isTravelling(player)) {
             return false;
         }
@@ -377,7 +376,7 @@ public final class RestHouseTravel {
      * exists, and it is not the one the player stands in.
      */
     public static boolean canTravelToCave(ServerPlayer player, String caveId) {
-        if (!config().guideEnabled || !SafariDimensions.isSafari(player.level())) {
+        if (!config().guide || !SafariDimensions.isSafari(player.level())) {
             return false;
         }
         RestHouses.HouseSite target = RestHouses.caveSite(caveId);
@@ -398,7 +397,8 @@ public final class RestHouseTravel {
 
     /** Whether the rope's "nearest rest house" option is on. */
     public static boolean ropeEnabled() {
-        return config().ropeEnabled;
+        // The rope's own section holds its switch; the trip itself follows restHouses.travel.
+        return SafariConfigManager.get().escapeRope.toRestHouse;
     }
 
     /**
@@ -435,8 +435,8 @@ public final class RestHouseTravel {
      * Starts the rope's climb out of a cave as a burrow: the digger goes down
      * where the player stands and comes out at the open-air spot above
      * (or the nearest one), instead of the instant move of a climb from
-     * under a tree. Only in a cave ({@link SafariCaves}), with the
-     * cinematics on and a digger available, and not during another trip.
+     * under a tree. Only in a cave ({@link SafariCaves}), with a digger
+     * available, and not during another trip.
      * It is not a rest house trip: it starts neither the guide's and rope's
      * shared wait nor the trips statistic.
      *
@@ -444,8 +444,7 @@ public final class RestHouseTravel {
      * @return whether the climb started; false leaves the rope to its instant climb
      */
     public static boolean climbOutOfCave(ServerPlayer player, Consumer<ServerPlayer> arrived) {
-        if (config().cinematicStyle != TravelCinematicStyle.FLIGHT || isTravelling(player)
-                || !SafariCaves.isInCave(player) || !TravelBurrow.available(player)) {
+        if (isTravelling(player) || !SafariCaves.isInCave(player) || !TravelBurrow.available(player)) {
             return false;
         }
         ServerLevel level = (ServerLevel) player.level();
@@ -566,8 +565,7 @@ public final class RestHouseTravel {
      */
     @Nullable
     private static Swim planSwim(ServerLevel level, ServerPlayer player, Vec3 heading, int now) {
-        if (!player.isInWater() || config().cinematicStyle != TravelCinematicStyle.FLIGHT
-                || !TravelSwim.available(player)) {
+        if (!player.isInWater() || !TravelSwim.available(player)) {
             return null;
         }
         Double surface = TravelSwim.waterSurface(player);
@@ -600,7 +598,7 @@ public final class RestHouseTravel {
      * out of one (the guide of an underground house, the rope used in a cave).
      */
     private static boolean burrows(ServerPlayer player, Source source, RestHouses.HouseSite target) {
-        if (config().cinematicStyle != TravelCinematicStyle.FLIGHT || !TravelBurrow.available(player)) {
+        if (!TravelBurrow.available(player)) {
             return false;
         }
         if (target.underground()) {
@@ -661,7 +659,7 @@ public final class RestHouseTravel {
      */
     @Nullable
     private static TakeOff planTakeOff(ServerLevel level, ServerPlayer player, Source source, Vec3 heading) {
-        if (config().cinematicStyle != TravelCinematicStyle.FLIGHT || !TravelFlight.available(player)) {
+        if (!TravelFlight.available(player)) {
             return null;
         }
         BlockPos feet;
@@ -1051,9 +1049,9 @@ public final class RestHouseTravel {
         return here != null && here.anchor() == house.anchor();
     }
 
-    /** The travel section of the current config. */
-    private static SafariConfig.RestHouseTravel config() {
-        return SafariConfigManager.get().restHouseTravel;
+    /** The travel section of the current config ({@code restHouses.travel}). */
+    private static SafariConfig.Travel config() {
+        return SafariConfigManager.get().restHouses.travel;
     }
 
     /** Builds a translation key in the mod namespace. */

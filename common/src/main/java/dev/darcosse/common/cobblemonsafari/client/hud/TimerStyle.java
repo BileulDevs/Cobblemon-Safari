@@ -33,11 +33,11 @@ public final class TimerStyle {
             return COLOR_EXPIRED;
         }
         int seconds = Ticks.toSecondsCeil(remainingTicks);
-        if (seconds <= config.criticalTimeSeconds) {
+        if (seconds <= config.hud.criticalTimeSeconds) {
             boolean bright = (clientGameTime / PULSE_HALF_PERIOD_TICKS) % 2 == 0;
             return bright ? COLOR_CRITICAL : COLOR_CRITICAL_DIM;
         }
-        if (seconds <= config.lowTimeSeconds) {
+        if (seconds <= config.hud.lowTimeSeconds) {
             return COLOR_LOW;
         }
         return COLOR_NORMAL;

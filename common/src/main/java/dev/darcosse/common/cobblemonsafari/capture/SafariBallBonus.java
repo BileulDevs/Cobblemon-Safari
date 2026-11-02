@@ -40,7 +40,7 @@ public final class SafariBallBonus {
         }
         ResourceLocation ball = event.getPokeBallEntity().getPokeBall().getName();
         // The loaned ball is the Safari Ball the bonus is for (one setting, not two that could disagree).
-        if (!ball.toString().equals(SafariConfigManager.get().loan.ballItem)) {
+        if (!ball.toString().equals(SafariConfigManager.get().balls.loan.ballItem)) {
             return;
         }
         event.setCatchRate((float) (event.getCatchRate() * config.safariBallOutOfBattleMultiplier));

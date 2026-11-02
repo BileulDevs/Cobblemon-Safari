@@ -2,7 +2,7 @@ package dev.darcosse.common.cobblemonsafari.config;
 
 /**
  * How a trip to a rest house is shown, by the Safari Guide or by the Escape
- * Rope, chosen in the server config ({@code restHouseTravel.cinematicStyle}).
+ * Rope, chosen in the server config ({@code restHouses.cinematicStyle}).
  * When the flight cannot be played, the guide's trips show the painted
  * landscape and the rope's its own pixel-art scene.
  *

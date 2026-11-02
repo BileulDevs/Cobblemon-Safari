@@ -139,7 +139,7 @@ public final class SafariSessionManager {
         // A player already standing in the Safari (an exempt builder) has no
         // meaningful return point inside it; exiting then falls back to world spawn.
         ReturnPoint returnPoint = alreadyInside ? null : ReturnPoint.of(player);
-        int ballsLoaned = SafariConfigManager.loanedBallItem() != null ? SafariConfigManager.get().loan.count : 0;
+        int ballsLoaned = SafariConfigManager.loanedBallItem() != null ? SafariConfigManager.get().balls.loan.count : 0;
         SafariSession session = new SafariSession(player.getUUID(), ticks, ticks, returnPoint, source, ballsLoaned);
 
         // Stored BEFORE the teleport: the consistency sweep must never see the
@@ -405,7 +405,7 @@ public final class SafariSessionManager {
             if (inside && setFrozen(session.playerId(), frozen)) {
                 announceFrozen(player, session, frozen);
             }
-            boolean counting = (inside && !frozen) || (player == null && !config.pauseTimeWhileOffline);
+            boolean counting = (inside && !frozen) || (player == null && !config.hunt.pauseWhileOffline);
 
             if (counting && session.remainingTicks() > 0) {
                 session.tickDown();
@@ -501,12 +501,12 @@ public final class SafariSessionManager {
 
     /**
      * Whether this player's Safari clock is stopped by their game mode:
-     * {@code exemptCreativeAndSpectator} on, and in creative or spectator.
+     * {@code hunt.exemptCreativeAndSpectator} on, and in creative or spectator.
      * Such a player may also enter with no banked time, and roam without a
      * session.
      */
     public static boolean isClockExempt(ServerPlayer player) {
-        return SafariConfigManager.get().exemptCreativeAndSpectator && (player.isCreative() || player.isSpectator());
+        return SafariConfigManager.get().hunt.exemptCreativeAndSpectator && (player.isCreative() || player.isSpectator());
     }
 
     /** Whether a player's clock is counting down: inside the Safari and not exempt by game mode. */

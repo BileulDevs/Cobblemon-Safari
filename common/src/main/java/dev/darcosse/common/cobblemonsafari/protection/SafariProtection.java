@@ -289,7 +289,7 @@ public final class SafariProtection {
             }
             SafariConfig config = SafariConfigManager.get();
             protectBlocks = config.protection.protectBlocks;
-            exemptCreative = config.exemptCreativeAndSpectator;
+            exemptCreative = config.hunt.exemptCreativeAndSpectator;
         }
         boolean exempt = exemptCreative && (player.isCreative() || player.isSpectator());
         return protectBlocks && !exempt;

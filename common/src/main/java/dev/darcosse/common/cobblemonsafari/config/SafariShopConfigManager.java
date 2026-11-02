@@ -1,5 +1,6 @@
 package dev.darcosse.common.cobblemonsafari.config;
 
+import com.google.gson.JsonObject;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.spawn.Rarity;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -41,9 +42,11 @@ public final class SafariShopConfigManager {
      * ignores unknown keys.
      *
      * <p>History: 2 added the fossil ticket trade to existing files
-     * ({@link #addFossilTrade}).
+     * ({@link #addFossilTrade}). 3 renamed {@code rotating} to
+     * {@code rotatingPokemon}, beside {@code rotatingItems} and
+     * {@code rotatingBalls} (see {@link #migrateTree}).
      */
-    public static final int CURRENT_VERSION = 2;
+    public static final int CURRENT_VERSION = 3;
 
     /** First version whose default entries include the fossil ticket trade. */
     private static final int FOSSIL_TRADE_VERSION = 2;
@@ -61,7 +64,7 @@ public final class SafariShopConfigManager {
      */
     private static final int MAX_COUNT = 64;
 
-    /** Rarity names accepted in rotating.rarities: Cobblemon's spawn buckets, as {@link Rarity} names them. */
+    /** Rarity names accepted in rotatingPokemon.rarities: Cobblemon's spawn buckets, as {@link Rarity} names them. */
     private static final Set<String> KNOWN_RARITIES = Arrays.stream(Rarity.values())
             .map(rarity -> rarity.bucket).collect(Collectors.toUnmodifiableSet());
 
@@ -69,7 +72,8 @@ public final class SafariShopConfigManager {
     private static final String BALL_SUFFIX = "_ball";
 
     private static final JsonConfigFile<SafariShopConfig> FILE =
-            new JsonConfigFile<>(FILE_NAME, SafariShopConfig.class, SafariShopConfig::new);
+            new JsonConfigFile<>(FILE_NAME, SafariShopConfig.class, SafariShopConfig::new,
+                    SafariShopConfigManager::migrateTree);
 
     private static SafariShopConfig config = new SafariShopConfig();
 
@@ -104,6 +108,15 @@ public final class SafariShopConfigManager {
         c.entries.add(SafariShopConfig.fossilTrade());
         CobblemonSafari.LOGGER.info("Added the fossil ticket trade to {} (shop version {} -> {})", FILE_NAME,
                 c.configVersion, CURRENT_VERSION);
+    }
+
+    /**
+     * Puts the keys of an older file in their current place, on the raw tree
+     * before binding (see {@link ConfigTreeMigration}). Only keys that are
+     * there move, so a converted file goes through unchanged.
+     */
+    private static void migrateTree(String fileName, JsonObject root) {
+        new ConfigTreeMigration(fileName, root).move("rotating", "rotatingPokemon");
     }
 
     /** Current shop. Treat as read-only. */
@@ -267,11 +280,11 @@ public final class SafariShopConfigManager {
      */
     private static boolean validateRotating(SafariShopConfig c) {
         boolean corrected = false;
-        if (c.rotating == null) {
-            c.rotating = new SafariShopConfig.Rotating();
+        if (c.rotatingPokemon == null) {
+            c.rotatingPokemon = new SafariShopConfig.Rotating();
             return true;
         }
-        SafariShopConfig.Rotating r = c.rotating;
+        SafariShopConfig.Rotating r = c.rotatingPokemon;
         int count = Math.max(0, Math.min(MAX_ROTATING, r.count));
         if (count != r.count) {
             r.count = count;
@@ -289,7 +302,7 @@ public final class SafariShopConfigManager {
             corrected = true;
         }
         if (r.rarities.removeIf(name -> name == null || !KNOWN_RARITIES.contains(name))) {
-            CobblemonSafari.LOGGER.warn("Removed unknown rarities from rotating.rarities in {}; known: {}",
+            CobblemonSafari.LOGGER.warn("Removed unknown rarities from rotatingPokemon.rarities in {}; known: {}",
                     FILE_NAME, KNOWN_RARITIES);
             corrected = true;
         }
@@ -300,7 +313,7 @@ public final class SafariShopConfigManager {
         if (r.tab == null || c.tabs.stream().noneMatch(tab -> tab.id.equals(r.tab))) {
             String fallback = c.tabs.stream().anyMatch(tab -> tab.id.equals(SafariShopConfig.Tab.POKEMON))
                     ? SafariShopConfig.Tab.POKEMON : c.tabs.get(0).id;
-            CobblemonSafari.LOGGER.warn("rotating.tab '{}' is not a tab of {}; using '{}'", r.tab, FILE_NAME, fallback);
+            CobblemonSafari.LOGGER.warn("rotatingPokemon.tab '{}' is not a tab of {}; using '{}'", r.tab, FILE_NAME, fallback);
             r.tab = fallback;
             corrected = true;
         }

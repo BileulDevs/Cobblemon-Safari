@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Which species the missions are drawn from ({@code bounties.speciesFilter}).
+ * Which species the missions are drawn from ({@code missions.speciesFilter}).
  * It decides the species missions' targets, the types a type mission may
  * ask and the habitats a habitat mission may name, so none asks for a
  * Pokémon too hard to find.

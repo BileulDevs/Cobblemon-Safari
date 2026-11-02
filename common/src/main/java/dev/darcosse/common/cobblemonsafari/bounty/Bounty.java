@@ -41,7 +41,7 @@ public record Bounty(BountyKind kind, String target, int count, int reward) {
                 yield Component.translatable(prefix + "species", count, name);
             }
             // "one of" reads better than "1 of": the default asks a single special.
-            case FEATURED -> count == 1 ? Component.translatable(prefix + "featured")
+            case SPECIAL -> count == 1 ? Component.translatable(prefix + "featured")
                     : Component.translatable(prefix + "featured_many", count);
             case HABITAT -> {
                 ResourceLocation id = ResourceLocation.tryParse(target);

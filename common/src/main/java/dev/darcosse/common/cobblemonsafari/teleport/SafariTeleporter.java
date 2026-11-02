@@ -139,7 +139,7 @@ public final class SafariTeleporter {
      */
     public static void sendOut(ServerPlayer player, @Nullable ReturnPoint returnPoint) {
         MinecraftServer server = player.getServer();
-        if (SafariConfigManager.get().exitDestination == ExitDestination.RETURN_POINT && returnPoint != null) {
+        if (SafariConfigManager.get().hunt.exitDestination == ExitDestination.RETURN_POINT && returnPoint != null) {
             ServerLevel target = server.getLevel(returnPoint.dimensionKey());
             // A return point inside the Safari itself would bounce the player straight back in.
             if (target != null && !SafariDimensions.isSafari(target)) {

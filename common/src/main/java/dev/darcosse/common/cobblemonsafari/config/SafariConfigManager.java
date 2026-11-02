@@ -5,6 +5,10 @@ import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.bounty.BountyKind;
 import dev.darcosse.common.cobblemonsafari.bounty.SafariBounties;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
@@ -14,6 +18,7 @@ import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -77,8 +82,10 @@ public final class SafariConfigManager {
      * ticket loot (every village chest), applied to files still holding the
      * old default list. 6 added the fishing missions to
      * {@code bounties.allowedKinds}, once, in files written before they existed.
+     * 7 grouped the settings by subject and renamed several (see
+     * {@link #migrateToSections}); older files are converted on load.
      */
-    public static final int CURRENT_CONFIG_VERSION = 6;
+    public static final int CURRENT_CONFIG_VERSION = 7;
 
     /** First version that knows the fishing missions. */
     private static final int FISHING_MISSION_VERSION = 6;
@@ -140,14 +147,14 @@ public final class SafariConfigManager {
     private static final double MAX_SNACK_DENSITY_MULTIPLIER = 4.0;
 
     /**
-     * Default restHouseTravel.cooldownSeconds. Long enough that the houses
+     * Default restHouses.travel.cooldownSeconds. Long enough that the houses
      * are not an instant network; short enough to come back to a house
      * after the next cave.
      */
     public static final int DEFAULT_TRAVEL_COOLDOWN_SECONDS = 30;
 
     /**
-     * Default restHouseTravel.cinematicSeconds: long enough to read the
+     * Default restHouses.travel.cinematicSeconds: long enough to read the
      * destination, short enough not to feel like a loading screen.
      */
     public static final int DEFAULT_TRAVEL_CINEMATIC_SECONDS = 3;
@@ -170,7 +177,8 @@ public final class SafariConfigManager {
     private static final int MIN_DURATION_SECONDS = 1;
 
     private static final JsonConfigFile<SafariConfig> FILE =
-            new JsonConfigFile<>(FILE_NAME, SafariConfig.class, SafariConfig::new);
+            new JsonConfigFile<>(FILE_NAME, SafariConfig.class, SafariConfig::new,
+                    SafariConfigManager::migrateTree);
 
     private static SafariConfig config = new SafariConfig();
     private static Set<ResourceLocation> allowedBalls = Set.of();
@@ -199,124 +207,214 @@ public final class SafariConfigManager {
     }
 
     /**
-     * Converts a file written by an older version of the mod, before it is
-     * validated. Each step only runs for files older than the version that
-     * introduced it.
+     * Converts the values of a file written by an older version of the mod,
+     * once its keys are in their current place ({@link #migrateTree}) and
+     * before it is validated. Each step only runs for files older than the
+     * version that introduced it.
      */
     private static void migrate(SafariConfig c) {
-        // Gson builds a missing featured section, or missing keys in it, from
-        // the default constructor, so "absent" cannot be told from "set to the
-        // defaults": the version is the only reliable signal. Without this
-        // copy, a server that allowed legendaries in v1 would silently lose
-        // them from the board on update.
-        if (c.configVersion < SPLIT_SPECIES_RULES_VERSION && c.spawns != null) {
-            if (c.featured == null) {
-                c.featured = new SafariConfig.Featured();
-            }
-            ensureCategories(c.spawns);
-            if (c.spawns.excludedSpecies == null) {
-                c.spawns.excludedSpecies = new ArrayList<>();
-            }
-            c.featured.copyRulesFrom(c.spawns);
-            CobblemonSafari.LOGGER.info("Copied the species rules of spawns to featured in {} (config version {} -> {})",
-                    FILE_NAME, c.configVersion, CURRENT_CONFIG_VERSION);
-        }
-        // Read whatever the version: a file saved by a build between 2 and 3
-        // may carry the old key with version 2 or, rewritten by hand, 3.
-        if (c.escapeRope != null && c.escapeRope.restHouseCooldownSeconds != null) {
-            if (c.restHouseTravel == null) {
-                c.restHouseTravel = new SafariConfig.RestHouseTravel();
-            }
-            if (c.configVersion < TRAVEL_SECTION_VERSION) {
-                c.restHouseTravel.cooldownSeconds = c.escapeRope.restHouseCooldownSeconds;
-                CobblemonSafari.LOGGER.info("Moved escapeRope.restHouseCooldownSeconds to restHouseTravel.cooldownSeconds in {}",
-                        FILE_NAME);
-            }
-            c.escapeRope.restHouseCooldownSeconds = null;
-        }
-        migrateBounties(c);
-        migrateFlee(c);
         if (c.configVersion < TICKET_LOOT_VERSION) {
             migrateTicketLoot(c);
         }
         // A file older than the fishing missions could not list them, so its list
         // says nothing against them: they are added once, like a new default.
-        if (c.configVersion < FISHING_MISSION_VERSION && c.bounties != null && c.bounties.allowedKinds != null
-                && !c.bounties.allowedKinds.contains(BountyKind.FISHING)) {
-            c.bounties.allowedKinds.add(BountyKind.FISHING);
-            CobblemonSafari.LOGGER.info("Added the fishing missions (FISHING) to bounties.allowedKinds in {}",
+        if (c.configVersion < FISHING_MISSION_VERSION && c.missions != null && c.missions.allowedKinds != null
+                && !c.missions.allowedKinds.contains(BountyKind.FISHING)) {
+            c.missions.allowedKinds.add(BountyKind.FISHING);
+            CobblemonSafari.LOGGER.info("Added the fishing missions (FISHING) to missions.allowedKinds in {}",
                     FILE_NAME);
         }
     }
 
     /**
-     * Moves the flee keys of earlier 1.4.0 builds into
-     * {@code capture.flee.rarities}: the four {@code xxxChance} values, the
-     * single {@code specialCategories} switch, and the switch-only
-     * {@code rarity} object. Read whatever the version, like the rope
-     * cooldown: development builds wrote them without a version bump. Each
-     * key is then set back to null, so the rewritten file only shows
-     * {@code rarities}. Runs before validation, which fills what is missing.
+     * Puts every key of an older file in its current place, on the raw tree
+     * before binding: a key the config classes no longer have would be lost
+     * once bound. Steps that depend on the version read the file's own
+     * {@code configVersion}; the moves themselves only act on keys that are
+     * there, so a file already converted goes through unchanged.
      */
-    private static void migrateFlee(SafariConfig c) {
-        if (c.capture == null || c.capture.flee == null) {
-            return;
-        }
-        SafariConfig.Flee f = c.capture.flee;
-        boolean legacy = f.commonChance != null || f.uncommonChance != null || f.rareChance != null
-                || f.ultraRareChance != null || f.specialCategories != null || f.rarity != null;
-        if (!legacy) {
-            return;
-        }
-        if (f.rarities == null) {
-            f.rarities = new SafariConfig.FleeRarities();
-        }
-        SafariConfig.FleeRarities r = f.rarities;
-        moveChance(f.commonChance, r.common);
-        moveChance(f.uncommonChance, r.uncommon);
-        moveChance(f.rareChance, r.rare);
-        moveChance(f.ultraRareChance, r.ultraRare);
-        if (f.specialCategories != null) {
-            moveSwitch(f.specialCategories, r.legendary);
-            moveSwitch(f.specialCategories, r.mythical);
-            moveSwitch(f.specialCategories, r.ultraBeast);
-            moveSwitch(f.specialCategories, r.paradox);
-        }
-        // Applied after specialCategories: a file that has both comes from the
-        // later build, whose per-category switches are the more precise.
-        if (f.rarity != null) {
-            SafariConfig.LegacyFleeSwitches old = f.rarity;
-            moveSwitch(old.common, r.common);
-            moveSwitch(old.uncommon, r.uncommon);
-            moveSwitch(old.rare, r.rare);
-            moveSwitch(old.ultraRare, r.ultraRare);
-            moveSwitch(old.legendary, r.legendary);
-            moveSwitch(old.mythical, r.mythical);
-            moveSwitch(old.ultraBeast, r.ultraBeast);
-            moveSwitch(old.paradox, r.paradox);
-        }
-        f.commonChance = null;
-        f.uncommonChance = null;
-        f.rareChance = null;
-        f.ultraRareChance = null;
-        f.specialCategories = null;
-        f.rarity = null;
-        CobblemonSafari.LOGGER.info("Moved the old capture.flee chances and switches into capture.flee.rarities in {}",
-                FILE_NAME);
+    private static void migrateTree(String fileName, JsonObject root) {
+        ConfigTreeMigration tree = new ConfigTreeMigration(fileName, root);
+        int version = tree.version(CURRENT_CONFIG_VERSION);
+        migrateLegacyKeys(tree, version);
+        migrateToSections(tree);
     }
 
-    /** Copies a legacy chance into an entry, when there is one; a missing entry is left to validation. */
-    private static void moveChance(Double chance, SafariConfig.FleeRarity entry) {
-        if (chance != null && entry != null) {
-            entry.chance = chance;
+    /**
+     * The key moves of versions 2 to 6 and of the 1.4.0 development builds,
+     * written against the layout of their time; {@link #migrateToSections}
+     * then carries the result into the current one.
+     */
+    private static void migrateLegacyKeys(ConfigTreeMigration tree, int version) {
+        // Version 2 split the species rules: up to 1, spawns' categories
+        // governed every way in. Gson builds a missing section from its
+        // defaults, so "absent" cannot be told from "set to the defaults":
+        // the version is the only reliable signal. Without this copy, a server
+        // that allowed legendaries in v1 would lose them from the board.
+        if (version < SPLIT_SPECIES_RULES_VERSION && tree.get("spawns") instanceof JsonObject spawns) {
+            JsonObject featured = tree.object("featured");
+            for (String key : List.of("legendary", "mythical", "ultraBeast", "paradox", "excludedSpecies")) {
+                if (spawns.has(key)) {
+                    featured.add(key, spawns.get(key).deepCopy());
+                }
+            }
+            CobblemonSafari.LOGGER.info("{}: copied the species rules of spawns to featured (config version {})",
+                    FILE_NAME, version);
+        }
+        // Version 3 moved the rest house wait out of escapeRope. Dropped whatever
+        // the version: a build between 2 and 3 may have left it in a file marked 3.
+        if (version < TRAVEL_SECTION_VERSION) {
+            tree.move("escapeRope.restHouseCooldownSeconds", "restHouseTravel.cooldownSeconds");
+        }
+        tree.remove("escapeRope.restHouseCooldownSeconds", "replaced by restHouses.travel.cooldownSeconds");
+        // Version 4 gave each kind of mission its own tuning, where the three
+        // rewards of bounties went. Written straight under the current names
+        // of the kinds' fields, which migrateToSections then leaves alone.
+        BountyKinds kindDefaults = new BountyKinds();
+        if (version < BOUNTY_KINDS_VERSION) {
+            moveLegacyReward(tree, "bounties.typeRewardPerCatch", "bounties.kinds.type", kindDefaults.type,
+                    "pointsPerCatch");
+            moveLegacyReward(tree, "bounties.speciesReward", "bounties.kinds.species", kindDefaults.species,
+                    "rewardPoints");
+            moveLegacyReward(tree, "bounties.featuredReward", "bounties.kinds.featured", kindDefaults.special,
+                    "rewardPoints");
+        }
+        for (String legacy : List.of("typeRewardPerCatch", "speciesReward", "featuredReward")) {
+            tree.remove("bounties." + legacy, "replaced by missions.kinds");
+        }
+        migrateLegacyFlee(tree);
+    }
+
+    /**
+     * Carries one pre-4 mission reward into its kind, creating the kind from
+     * its defaults when absent. Set, not {@link ConfigTreeMigration#move}:
+     * the kind created from its defaults already holds the field, and in a
+     * pre-4 file the old reward is the one the admin chose, as before 1.4.0.
+     */
+    private static void moveLegacyReward(ConfigTreeMigration tree, String from, String kindPath, Object kindDefaults,
+                                         String field) {
+        JsonElement reward = tree.get(from);
+        if (reward != null) {
+            tree.objectOr(kindPath, kindDefaults);
+            tree.set(kindPath + "." + field, reward.deepCopy(), "from " + from);
+            tree.remove(from, "moved into " + kindPath);
         }
     }
 
-    /** Copies a legacy switch into an entry, when there is one; a missing entry is left to validation. */
-    private static void moveSwitch(Boolean enabled, SafariConfig.FleeRarity entry) {
-        if (enabled != null && entry != null) {
-            entry.enabled = enabled;
+    /**
+     * The flee keys of the 1.4.0 development builds: four flat chances, one
+     * switch for the four categories, then a switch-only {@code rarity}
+     * object. Moved into the entries of {@code capture.flee.rarities}; an
+     * entry they create holds only those keys, and validation completes it
+     * from that entry's own defaults. {@code rarity} goes last: a file with
+     * both comes from the later build, whose switches are the more precise.
+     */
+    private static void migrateLegacyFlee(ConfigTreeMigration tree) {
+        String flee = "capture.flee";
+        String[] rarities = {"common", "uncommon", "rare", "ultraRare"};
+        for (String rarity : rarities) {
+            tree.move(flee + "." + rarity + "Chance", flee + ".rarities." + rarity + ".chance");
         }
+        String[] categories = {"legendary", "mythical", "ultraBeast", "paradox"};
+        JsonElement special = tree.get(flee + ".specialCategories");
+        if (special != null) {
+            for (String category : categories) {
+                if (!tree.has(flee + ".rarities." + category + ".enabled")) {
+                    tree.set(flee + ".rarities." + category + ".enabled", special.deepCopy(),
+                            "from capture.flee.specialCategories");
+                }
+            }
+            tree.remove(flee + ".specialCategories", "replaced by capture.flee.rarities");
+        }
+        if (tree.get(flee + ".rarity") instanceof JsonObject switches) {
+            for (Map.Entry<String, JsonElement> entry : switches.entrySet()) {
+                tree.set(flee + ".rarities." + entry.getKey() + ".enabled", entry.getValue().deepCopy(),
+                        "from capture.flee.rarity");
+            }
+            tree.remove(flee + ".rarity", "replaced by capture.flee.rarities");
+        }
+    }
+
+    /**
+     * Version 7: the settings grouped by subject, with clearer names. Each
+     * line is one key's old and new place.
+     */
+    private static void migrateToSections(ConfigTreeMigration tree) {
+        tree.move("maxDurationSeconds", "hunt.maxDurationSeconds");
+        tree.move("pauseTimeWhileOffline", "hunt.pauseWhileOffline");
+        tree.move("warningThresholdsSeconds", "hunt.warningsAtSeconds");
+        tree.move("exitDestination", "hunt.exitDestination");
+        tree.move("exemptCreativeAndSpectator", "hunt.exemptCreativeAndSpectator");
+
+        tree.move("ticket.defaultDurationSeconds", "tickets.defaultDurationSeconds");
+        tree.move("ticket.minAddedSeconds", "tickets.minAddedSeconds");
+        tree.move("ticket.extendsActiveSession", "tickets.addToCurrentHunt");
+        tree.move("ticket.maxCreditSeconds", "tickets.maxBankedSeconds");
+        tree.move("ticket.refundUnusedTimeOnLeave", "tickets.refundUnusedTimeOnLeave");
+        tree.removeIfEmpty("ticket");
+        tree.move("ticketLoot", "tickets.loot");
+
+        tree.move("allowedBalls", "balls.allowed");
+        tree.move("loan", "balls.loan");
+
+        tree.move("allowBattles", "battles.enabled");
+        tree.move("fishingStartsBattle", "battles.fishingStartsBattle");
+        tree.move("battleGraceSeconds", "battles.graceSeconds");
+
+        tree.move("capture.awardSafariMark", "capture.marks.safari");
+        for (String mark : List.of("special", "swarm", "fullMoon", "angler")) {
+            tree.move("capture.eventMarks." + mark, "capture.marks." + mark);
+        }
+        tree.removeIfEmpty("capture.eventMarks");
+
+        if (!tree.has("specials")) {
+            tree.move("featured", "specials");
+        }
+        String[][] specials = {
+                {"uncommonSlots", "slots.uncommon"}, {"rareSlots", "slots.rare"},
+                {"ultraRareSlots", "slots.ultraRare"},
+                {"spawnIntervalSeconds", "spawn.checkEverySeconds"}, {"spawnChance", "spawn.chance"},
+                {"maxNearbyPerPlayer", "spawn.maxAroundPlayer"},
+                {"weightUncommon", "spawn.weights.uncommon"}, {"weightRare", "spawn.weights.rare"},
+                {"weightUltraRare", "spawn.weights.ultraRare"}};
+        for (String[] pair : specials) {
+            tree.move("specials." + pair[0], "specials." + pair[1]);
+        }
+
+        for (String rarity : List.of("common", "uncommon", "rare", "ultraRare")) {
+            tree.move("points." + rarity, "points.perCatch." + rarity);
+        }
+        tree.move("points.featuredBonus", "points.specialBonus");
+
+        if (!tree.has("missions")) {
+            tree.move("bounties", "missions");
+        }
+        tree.move("missions.allDoneBonus", "missions.allMissionsBonusPoints");
+        tree.move("missions.kinds.featured", "missions.kinds.special");
+        tree.renameInEach("missions.kinds", "reward", "rewardPoints");
+        tree.renameInEach("missions.kinds", "rewardPerCatch", "pointsPerCatch");
+        if (tree.get("missions.allowedKinds") instanceof JsonArray kinds) {
+            for (int i = 0; i < kinds.size(); i++) {
+                if (kinds.get(i) instanceof JsonPrimitive kind && "FEATURED".equals(kind.getAsString())) {
+                    kinds.set(i, new JsonPrimitive(BountyKind.SPECIAL.name()));
+                    CobblemonSafari.LOGGER.info("{}: renamed FEATURED to SPECIAL in missions.allowedKinds", FILE_NAME);
+                }
+            }
+        }
+
+        if (!tree.has("restHouses")) {
+            tree.move("restHouseTravel", "restHouses");
+        }
+        tree.move("restHouses.prebuildHouses", "restHouses.prebuild");
+        tree.move("restHouses.guideEnabled", "restHouses.travel.guide");
+        tree.move("restHouses.ropeEnabled", "escapeRope.toRestHouse");
+        // An earlier 1.4.0 build wrote these straight under restHouses.
+        for (String key : List.of("guide", "cooldownSeconds", "cinematicSeconds")) {
+            tree.move("restHouses." + key, "restHouses.travel." + key);
+        }
+        // Not a setting any more: the trips are always filmed, falling back on
+        // their own to the painted scenes when the flight cannot be staged.
+        tree.remove("restHouses.cinematicStyle", "the trips are always filmed");
     }
 
     /**
@@ -326,12 +424,12 @@ public final class SafariConfigManager {
      * alone: only an untouched list can be told to mean "the defaults".
      */
     private static void migrateTicketLoot(SafariConfig c) {
-        if (c.ticketLoot == null || c.ticketLoot.sources == null
-                || !sameSources(c.ticketLoot.sources, SafariConfig.TicketLoot.PRE_1_3_DEFAULTS)) {
+        if (c.tickets == null || c.tickets.loot == null || c.tickets.loot.sources == null
+                || !sameSources(c.tickets.loot.sources, SafariConfig.TicketLoot.PRE_1_3_DEFAULTS)) {
             return;
         }
-        c.ticketLoot.sources = new SafariConfig.TicketLoot().sources;
-        CobblemonSafari.LOGGER.info("Updated ticketLoot.sources in {} to the 1.3.0 defaults (every village chest)",
+        c.tickets.loot.sources = new SafariConfig.TicketLoot().sources;
+        CobblemonSafari.LOGGER.info("Updated tickets.loot.sources in {} to the 1.3.0 defaults (every village chest)",
                 FILE_NAME);
     }
 
@@ -348,43 +446,6 @@ public final class SafariConfigManager {
             }
         }
         return true;
-    }
-
-    /**
-     * Moves the three rewards {@code bounties} had before version 4 into the
-     * kinds they belong to. Read whatever the version, for a file edited by
-     * hand; only a file older than 4 has its values carried over.
-     */
-    private static void migrateBounties(SafariConfig c) {
-        SafariConfig.Bounties b = c.bounties;
-        if (b == null) {
-            return;
-        }
-        if (b.kinds == null) {
-            b.kinds = new BountyKinds();
-        }
-        b.kinds.fillMissing();
-        if (c.configVersion < BOUNTY_KINDS_VERSION) {
-            boolean moved = false;
-            if (b.typeRewardPerCatch != null) {
-                b.kinds.type.rewardPerCatch = b.typeRewardPerCatch;
-                moved = true;
-            }
-            if (b.speciesReward != null) {
-                b.kinds.species.reward = b.speciesReward;
-                moved = true;
-            }
-            if (b.featuredReward != null) {
-                b.kinds.featured.reward = b.featuredReward;
-                moved = true;
-            }
-            if (moved) {
-                CobblemonSafari.LOGGER.info("Moved the bounty rewards of {} into bounties.kinds", FILE_NAME);
-            }
-        }
-        b.typeRewardPerCatch = null;
-        b.speciesReward = null;
-        b.featuredReward = null;
     }
 
     /** Re-reads the file; callers are responsible for re-syncing clients afterwards. */
@@ -415,26 +476,27 @@ public final class SafariConfigManager {
 
     /** Maximum remaining time, in ticks. */
     public static int maxDurationTicks() {
-        return Ticks.fromSeconds(config.maxDurationSeconds);
+        return Ticks.fromSeconds(config.hunt.maxDurationSeconds);
     }
 
     /** Extra time allowed after expiry while in battle, in ticks. */
     public static int battleGraceTicks() {
-        return Ticks.fromSeconds(config.battleGraceSeconds);
+        return Ticks.fromSeconds(config.battles.graceSeconds);
     }
 
     /** Recomputes the parsed and converted values read on hot paths, after every load. */
     private static void rebuildDerived() {
         Set<ResourceLocation> balls = new LinkedHashSet<>();
-        for (String raw : config.allowedBalls) {
+        for (String raw : config.balls.allowed) {
             ResourceLocation id = ResourceLocation.tryParse(raw);
             if (id != null) {
                 balls.add(id);
             }
         }
-        loanedBallItem = config.loan.count > 0 ? ResourceLocation.tryParse(config.loan.ballItem) : null;
+        SafariConfig.Loan loan = config.balls.loan;
+        loanedBallItem = loan.count > 0 ? ResourceLocation.tryParse(loan.ballItem) : null;
         // The loaned ball must always work inside: an admin removing safari_ball
-        // from allowedBalls would otherwise hand out balls nobody can throw.
+        // from balls.allowed would otherwise hand out balls nobody can throw.
         // Ball ids and item ids coincide for every Cobblemon ball.
         if (loanedBallItem != null) {
             balls.add(loanedBallItem);
@@ -442,7 +504,7 @@ public final class SafariConfigManager {
         allowedBalls = Collections.unmodifiableSet(balls);
 
         Set<Integer> ticks = new LinkedHashSet<>();
-        for (int seconds : config.warningThresholdsSeconds) {
+        for (int seconds : config.hunt.warningsAtSeconds) {
             ticks.add(Ticks.fromSeconds(seconds));
         }
         warningTicks = Collections.unmodifiableSet(ticks);
@@ -493,7 +555,7 @@ public final class SafariConfigManager {
 
     /**
      * Fixes the categories and exclusions of one rules section ({@code spawns}
-     * or {@code featured}).
+     * or {@code specials}).
      *
      * @param name the section's key, for the log
      * @return true if anything changed
@@ -521,49 +583,28 @@ public final class SafariConfigManager {
         boolean corrected = false;
         SafariConfig defaults = new SafariConfig();
 
-        if (c.maxDurationSeconds < MIN_DURATION_SECONDS) {
-            warn("maxDurationSeconds", c.maxDurationSeconds, defaults.maxDurationSeconds);
-            c.maxDurationSeconds = defaults.maxDurationSeconds;
+        if (c.hunt == null) {
+            c.hunt = new SafariConfig.Hunt();
             corrected = true;
         }
-        if (c.battleGraceSeconds < 0) {
-            warn("battleGraceSeconds", c.battleGraceSeconds, 0);
-            c.battleGraceSeconds = 0;
+        SafariConfig.Hunt hunt = c.hunt;
+        SafariConfig.Hunt huntDefaults = defaults.hunt;
+        if (hunt.maxDurationSeconds < MIN_DURATION_SECONDS) {
+            warn("hunt.maxDurationSeconds", hunt.maxDurationSeconds, huntDefaults.maxDurationSeconds);
+            hunt.maxDurationSeconds = huntDefaults.maxDurationSeconds;
             corrected = true;
         }
-        if (c.exitDestination == null) {
-            warn("exitDestination", null, defaults.exitDestination);
-            c.exitDestination = defaults.exitDestination;
+        if (hunt.exitDestination == null) {
+            warn("hunt.exitDestination", null, huntDefaults.exitDestination);
+            hunt.exitDestination = huntDefaults.exitDestination;
             corrected = true;
         }
-
-        if (c.allowedBalls == null) {
-            warn("allowedBalls", null, defaults.allowedBalls);
-            c.allowedBalls = defaults.allowedBalls;
-            corrected = true;
-        } else {
-            List<String> kept = new ArrayList<>();
-            for (String raw : c.allowedBalls) {
-                if (raw != null && ResourceLocation.tryParse(raw) != null) {
-                    kept.add(raw);
-                } else {
-                    CobblemonSafari.LOGGER.warn("Ignoring invalid ball id '{}' in allowedBalls", raw);
-                    corrected = true;
-                }
-            }
-            c.allowedBalls = kept;
-        }
-        // An empty list is legal (no capture at all), but almost always a mistake worth flagging.
-        if (c.allowedBalls.isEmpty()) {
-            CobblemonSafari.LOGGER.warn("allowedBalls is empty: no Pokémon can be caught inside the Safari");
-        }
-
-        if (c.warningThresholdsSeconds == null) {
-            c.warningThresholdsSeconds = defaults.warningThresholdsSeconds;
+        if (hunt.warningsAtSeconds == null) {
+            hunt.warningsAtSeconds = huntDefaults.warningsAtSeconds;
             corrected = true;
         } else {
             List<Integer> kept = new ArrayList<>();
-            for (Integer seconds : c.warningThresholdsSeconds) {
+            for (Integer seconds : hunt.warningsAtSeconds) {
                 if (seconds != null && seconds > 0 && !kept.contains(seconds)) {
                     kept.add(seconds);
                 } else {
@@ -571,7 +612,43 @@ public final class SafariConfigManager {
                 }
             }
             kept.sort(Comparator.reverseOrder());
-            c.warningThresholdsSeconds = kept;
+            hunt.warningsAtSeconds = kept;
+        }
+
+        if (c.battles == null) {
+            c.battles = new SafariConfig.Battles();
+            corrected = true;
+        }
+        if (c.battles.graceSeconds < 0) {
+            warn("battles.graceSeconds", c.battles.graceSeconds, 0);
+            c.battles.graceSeconds = 0;
+            corrected = true;
+        }
+
+        if (c.balls == null) {
+            c.balls = new SafariConfig.Balls();
+            corrected = true;
+        }
+        SafariConfig.Balls balls = c.balls;
+        if (balls.allowed == null) {
+            warn("balls.allowed", null, defaults.balls.allowed);
+            balls.allowed = defaults.balls.allowed;
+            corrected = true;
+        } else {
+            List<String> kept = new ArrayList<>();
+            for (String raw : balls.allowed) {
+                if (raw != null && ResourceLocation.tryParse(raw) != null) {
+                    kept.add(raw);
+                } else {
+                    CobblemonSafari.LOGGER.warn("Ignoring invalid ball id '{}' in balls.allowed", raw);
+                    corrected = true;
+                }
+            }
+            balls.allowed = kept;
+        }
+        // An empty list is legal (no capture at all), but almost always a mistake worth flagging.
+        if (balls.allowed.isEmpty()) {
+            CobblemonSafari.LOGGER.warn("balls.allowed is empty: no Pokémon can be caught inside the Safari");
         }
 
         if (c.protection == null) {
@@ -597,63 +674,23 @@ public final class SafariConfigManager {
             }
             c.protection.placeableBlocks = kept;
         }
-        if (c.loan == null) {
-            c.loan = new SafariConfig.Loan();
+        if (balls.loan == null) {
+            balls.loan = new SafariConfig.Loan();
             corrected = true;
         }
-        if (c.loan.count < 0 || c.loan.count > MAX_LOANED_BALLS) {
-            int fixed = Math.max(0, Math.min(MAX_LOANED_BALLS, c.loan.count));
-            warn("loan.count", c.loan.count, fixed);
-            c.loan.count = fixed;
+        SafariConfig.Loan loan = balls.loan;
+        if (loan.count < 0 || loan.count > MAX_LOANED_BALLS) {
+            int fixed = Math.max(0, Math.min(MAX_LOANED_BALLS, loan.count));
+            warn("balls.loan.count", loan.count, fixed);
+            loan.count = fixed;
             corrected = true;
         }
-        if (c.loan.ballItem == null || ResourceLocation.tryParse(c.loan.ballItem) == null) {
-            warn("loan.ballItem", c.loan.ballItem, new SafariConfig.Loan().ballItem);
-            c.loan.ballItem = new SafariConfig.Loan().ballItem;
+        if (loan.ballItem == null || ResourceLocation.tryParse(loan.ballItem) == null) {
+            warn("balls.loan.ballItem", loan.ballItem, new SafariConfig.Loan().ballItem);
+            loan.ballItem = new SafariConfig.Loan().ballItem;
             corrected = true;
         }
-        if (c.ticket == null) {
-            c.ticket = new SafariConfig.Ticket();
-            corrected = true;
-        }
-        if (c.ticket.defaultDurationSeconds < MIN_DURATION_SECONDS) {
-            int fixed = new SafariConfig.Ticket().defaultDurationSeconds;
-            warn("ticket.defaultDurationSeconds", c.ticket.defaultDurationSeconds, fixed);
-            c.ticket.defaultDurationSeconds = fixed;
-            corrected = true;
-        }
-        if (c.ticketLoot == null) {
-            c.ticketLoot = new SafariConfig.TicketLoot();
-            corrected = true;
-        }
-        if (c.ticketLoot.sources == null) {
-            c.ticketLoot.sources = new ArrayList<>();
-            corrected = true;
-        }
-        int sourceCount = c.ticketLoot.sources.size();
-        c.ticketLoot.sources.removeIf(source -> source == null || source.table == null
-                || ResourceLocation.tryParse(source.table) == null);
-        if (c.ticketLoot.sources.size() != sourceCount) {
-            CobblemonSafari.LOGGER.warn("Removed ticketLoot sources with an invalid table id from {}", FILE_NAME);
-            corrected = true;
-        }
-        for (SafariConfig.TicketLoot.Source source : c.ticketLoot.sources) {
-            if (!(source.chance >= 0.0D && source.chance <= 1.0D)) {
-                warn("ticketLoot chance of " + source.table, source.chance, 0);
-                source.chance = Math.max(0.0D, Math.min(1.0D, Double.isNaN(source.chance) ? 0.0D : source.chance));
-                corrected = true;
-            }
-        }
-        if (c.ticket.minAddedSeconds < 0) {
-            warn("ticket.minAddedSeconds", c.ticket.minAddedSeconds, 0);
-            c.ticket.minAddedSeconds = 0;
-            corrected = true;
-        }
-        if (c.ticket.maxCreditSeconds < 0) {
-            warn("ticket.maxCreditSeconds", c.ticket.maxCreditSeconds, 0);
-            c.ticket.maxCreditSeconds = 0;
-            corrected = true;
-        }
+        corrected |= validateTickets(c);
         if (c.reset == null) {
             c.reset = new SafariConfig.Reset();
             corrected = true;
@@ -684,45 +721,95 @@ public final class SafariConfigManager {
             c.capture.safariBallOutOfBattleMultiplier = 1.0;
             corrected = true;
         }
+        if (c.capture.marks == null) {
+            c.capture.marks = new SafariConfig.Marks();
+            corrected = true;
+        }
         corrected |= validateGate(c);
         corrected |= validatePoints(c);
-        corrected |= validateBounties(c);
+        corrected |= validateMissions(c);
         if (c.escapeRope == null) {
             c.escapeRope = new SafariConfig.EscapeRope();
             corrected = true;
         }
-        corrected |= validateTravel(c);
+        corrected |= validateRestHouses(c);
         corrected |= validateSpawns(c);
-        corrected |= validateFeatured(c);
+        corrected |= validateSpecials(c);
         corrected |= validateFlee(c);
         corrected |= validateEvents(c);
         return corrected;
     }
 
-    /** Fixes the rest house travel section: no negative wait, a bounded cinematic. Returns true if anything changed. */
-    private static boolean validateTravel(SafariConfig c) {
-        if (c.restHouseTravel == null) {
-            c.restHouseTravel = new SafariConfig.RestHouseTravel();
+    /** Fixes the tickets section and its chest loot; returns true if anything changed. */
+    private static boolean validateTickets(SafariConfig c) {
+        boolean corrected = false;
+        if (c.tickets == null) {
+            c.tickets = new SafariConfig.Tickets();
+            corrected = true;
+        }
+        SafariConfig.Tickets t = c.tickets;
+        if (t.defaultDurationSeconds < MIN_DURATION_SECONDS) {
+            int fixed = new SafariConfig.Tickets().defaultDurationSeconds;
+            warn("tickets.defaultDurationSeconds", t.defaultDurationSeconds, fixed);
+            t.defaultDurationSeconds = fixed;
+            corrected = true;
+        }
+        if (t.minAddedSeconds < 0) {
+            warn("tickets.minAddedSeconds", t.minAddedSeconds, 0);
+            t.minAddedSeconds = 0;
+            corrected = true;
+        }
+        if (t.maxBankedSeconds < 0) {
+            warn("tickets.maxBankedSeconds", t.maxBankedSeconds, 0);
+            t.maxBankedSeconds = 0;
+            corrected = true;
+        }
+        if (t.loot == null) {
+            t.loot = new SafariConfig.TicketLoot();
+            corrected = true;
+        }
+        if (t.loot.sources == null) {
+            t.loot.sources = new ArrayList<>();
+            corrected = true;
+        }
+        int sourceCount = t.loot.sources.size();
+        t.loot.sources.removeIf(source -> source == null || source.table == null
+                || ResourceLocation.tryParse(source.table) == null);
+        if (t.loot.sources.size() != sourceCount) {
+            CobblemonSafari.LOGGER.warn("Removed tickets.loot sources with an invalid table id from {}", FILE_NAME);
+            corrected = true;
+        }
+        for (SafariConfig.TicketLoot.Source source : t.loot.sources) {
+            if (!(source.chance >= 0.0D && source.chance <= 1.0D)) {
+                warn("tickets.loot chance of " + source.table, source.chance, 0);
+                source.chance = Math.max(0.0D, Math.min(1.0D, Double.isNaN(source.chance) ? 0.0D : source.chance));
+                corrected = true;
+            }
+        }
+        return corrected;
+    }
+
+    /** Fixes the rest houses section: no negative wait, a bounded cinematic. Returns true if anything changed. */
+    private static boolean validateRestHouses(SafariConfig c) {
+        if (c.restHouses == null) {
+            c.restHouses = new SafariConfig.RestHouses();
             return true;
         }
-        SafariConfig.RestHouseTravel t = c.restHouseTravel;
+        if (c.restHouses.travel == null) {
+            c.restHouses.travel = new SafariConfig.Travel();
+            return true;
+        }
+        SafariConfig.Travel t = c.restHouses.travel;
         boolean corrected = false;
         if (t.cooldownSeconds < 0) {
-            warn("restHouseTravel.cooldownSeconds", t.cooldownSeconds, 0);
+            warn("restHouses.travel.cooldownSeconds", t.cooldownSeconds, 0);
             t.cooldownSeconds = 0;
             corrected = true;
         }
         if (t.cinematicSeconds < 0 || t.cinematicSeconds > MAX_TRAVEL_CINEMATIC_SECONDS) {
             int fixed = Math.max(0, Math.min(MAX_TRAVEL_CINEMATIC_SECONDS, t.cinematicSeconds));
-            warn("restHouseTravel.cinematicSeconds", t.cinematicSeconds, fixed);
+            warn("restHouses.travel.cinematicSeconds", t.cinematicSeconds, fixed);
             t.cinematicSeconds = fixed;
-            corrected = true;
-        }
-        // Gson leaves null for a value that names no constant (a typo).
-        if (t.cinematicStyle == null) {
-            CobblemonSafari.LOGGER.warn("{}: restHouseTravel.cinematicStyle is not FLIGHT or PANORAMA; using FLIGHT",
-                    FILE_NAME);
-            t.cinematicStyle = TravelCinematicStyle.FLIGHT;
             corrected = true;
         }
         return corrected;
@@ -736,14 +823,19 @@ public final class SafariConfigManager {
         }
         SafariConfig.Points p = c.points;
         boolean corrected = false;
-        if (p.common < 0 || p.uncommon < 0 || p.rare < 0 || p.ultraRare < 0
-                || p.featuredBonus < 0 || p.shinyBonus < 0) {
-            warn("points rewards", "a negative value", "0");
-            p.common = Math.max(0, p.common);
-            p.uncommon = Math.max(0, p.uncommon);
-            p.rare = Math.max(0, p.rare);
-            p.ultraRare = Math.max(0, p.ultraRare);
-            p.featuredBonus = Math.max(0, p.featuredBonus);
+        if (p.perCatch == null) {
+            p.perCatch = new SafariConfig.CatchPoints();
+            corrected = true;
+        }
+        SafariConfig.CatchPoints each = p.perCatch;
+        if (each.common < 0 || each.uncommon < 0 || each.rare < 0 || each.ultraRare < 0
+                || p.specialBonus < 0 || p.shinyBonus < 0) {
+            warn("points", "a negative value", "0");
+            each.common = Math.max(0, each.common);
+            each.uncommon = Math.max(0, each.uncommon);
+            each.rare = Math.max(0, each.rare);
+            each.ultraRare = Math.max(0, each.ultraRare);
+            p.specialBonus = Math.max(0, p.specialBonus);
             p.shinyBonus = Math.max(0, p.shinyBonus);
             corrected = true;
         }
@@ -751,36 +843,36 @@ public final class SafariConfigManager {
     }
 
     /**
-     * Fixes the bounties section: a count of 0 to 8, known kinds only,
+     * Fixes the missions section: a count of 0 to 8, known kinds only,
      * sane tunings, known rarities. Returns true if anything changed.
      */
-    private static boolean validateBounties(SafariConfig c) {
-        if (c.bounties == null) {
-            c.bounties = new SafariConfig.Bounties();
+    private static boolean validateMissions(SafariConfig c) {
+        if (c.missions == null) {
+            c.missions = new SafariConfig.Missions();
             return true;
         }
-        SafariConfig.Bounties b = c.bounties;
+        SafariConfig.Missions b = c.missions;
         boolean corrected = false;
         if (b.count < 0 || b.count > MAX_BOUNTIES) {
             int fixed = Math.max(0, Math.min(MAX_BOUNTIES, b.count));
-            warn("bounties.count", b.count, fixed);
+            warn("missions.count", b.count, fixed);
             b.count = fixed;
             corrected = true;
         }
-        if (b.allDoneBonus < 0) {
-            warn("bounties.allDoneBonus", b.allDoneBonus, 0);
-            b.allDoneBonus = 0;
+        if (b.allMissionsBonusPoints < 0) {
+            warn("missions.allMissionsBonusPoints", b.allMissionsBonusPoints, 0);
+            b.allMissionsBonusPoints = 0;
             corrected = true;
         }
         if (b.allowedKinds == null) {
-            b.allowedKinds = new SafariConfig.Bounties().allowedKinds;
+            b.allowedKinds = new SafariConfig.Missions().allowedKinds;
             corrected = true;
         } else {
             // Gson reads a name that is no kind as null; duplicates would only weigh twice.
             List<BountyKind> kinds = new ArrayList<>(new LinkedHashSet<>(b.allowedKinds));
             kinds.removeIf(Objects::isNull);
             if (kinds.size() != b.allowedKinds.size()) {
-                CobblemonSafari.LOGGER.warn("{}: bounties.allowedKinds had unknown or repeated kinds; kept {}",
+                CobblemonSafari.LOGGER.warn("{}: missions.allowedKinds had unknown or repeated kinds; kept {}",
                         FILE_NAME, kinds);
                 b.allowedKinds = kinds;
                 corrected = true;
@@ -792,11 +884,11 @@ public final class SafariConfigManager {
         }
         corrected |= b.kinds.fillMissing();
         for (BountyKind kind : BountyKind.values()) {
-            corrected |= validateKind("bounties.kinds." + jsonKey(kind), b.kinds.of(kind));
+            corrected |= validateKind("missions.kinds." + jsonKey(kind), b.kinds.of(kind));
         }
         BountyKinds.SpeciesBounty species = b.kinds.species;
         if (species.commonCount < 1 || species.uncommonCount < 1 || species.rareCount < 1) {
-            warn("bounties.kinds.species counts", "below 1", "1");
+            warn("missions.kinds.species counts", "below 1", "1");
             species.commonCount = Math.max(1, species.commonCount);
             species.uncommonCount = Math.max(1, species.uncommonCount);
             species.rareCount = Math.max(1, species.rareCount);
@@ -806,7 +898,7 @@ public final class SafariConfigManager {
         int minLevel = Math.max(1, Math.min(MAX_POKEMON_LEVEL, level.minLevel));
         int maxLevel = Math.max(minLevel, Math.min(MAX_POKEMON_LEVEL, level.maxLevel));
         if (minLevel != level.minLevel || maxLevel != level.maxLevel) {
-            warn("bounties.kinds.level levels", level.minLevel + "-" + level.maxLevel, minLevel + "-" + maxLevel);
+            warn("missions.kinds.level levels", level.minLevel + "-" + level.maxLevel, minLevel + "-" + maxLevel);
             level.minLevel = minLevel;
             level.maxLevel = maxLevel;
             corrected = true;
@@ -831,7 +923,7 @@ public final class SafariConfigManager {
             }
         }
         if (!rarities.equals(filter.rarities)) {
-            warn("bounties.speciesFilter.rarities", filter.rarities, rarities);
+            warn("missions.speciesFilter.rarities", filter.rarities, rarities);
             filter.rarities = rarities;
             corrected = true;
         }
@@ -840,7 +932,7 @@ public final class SafariConfigManager {
             corrected = true;
         }
         if (b.swap.cost < 0 || b.swap.perRotation < 0 || b.swap.perRotation > MAX_BOUNTY_SWAPS) {
-            warn("bounties.swap", b.swap.cost + " / " + b.swap.perRotation, "clamped");
+            warn("missions.swap", b.swap.cost + " / " + b.swap.perRotation, "clamped");
             b.swap.cost = Math.max(0, b.swap.cost);
             b.swap.perRotation = Math.max(0, Math.min(MAX_BOUNTY_SWAPS, b.swap.perRotation));
             corrected = true;
@@ -848,7 +940,7 @@ public final class SafariConfigManager {
         return corrected;
     }
 
-    /** The key of a kind under {@code bounties.kinds}, as the file spells it: OUT_OF_BATTLE is outOfBattle. */
+    /** The key of a kind under {@code missions.kinds}, as the file spells it: OUT_OF_BATTLE is outOfBattle. */
     private static String jsonKey(BountyKind kind) {
         StringBuilder key = new StringBuilder();
         for (String word : kind.name().toLowerCase(Locale.ROOT).split("_")) {
@@ -860,11 +952,11 @@ public final class SafariConfigManager {
     /** Fixes one kind's tuning: no negative weight or reward, at least one catch, min not above max. */
     private static boolean validateKind(String field, BountyKindSettings settings) {
         boolean corrected = false;
-        if (settings.weight < 0 || settings.reward < 0 || settings.rewardPerCatch < 0) {
+        if (settings.weight < 0 || settings.rewardPoints < 0 || settings.pointsPerCatch < 0) {
             warn(field, "a negative weight or reward", "0");
             settings.weight = Math.max(0, settings.weight);
-            settings.reward = Math.max(0, settings.reward);
-            settings.rewardPerCatch = Math.max(0, settings.rewardPerCatch);
+            settings.rewardPoints = Math.max(0, settings.rewardPoints);
+            settings.pointsPerCatch = Math.max(0, settings.pointsPerCatch);
             corrected = true;
         }
         int min = Math.max(1, settings.minCount);
@@ -981,64 +1073,90 @@ public final class SafariConfigManager {
         return false;
     }
 
-    /** Fixes the featured section; returns true if anything changed. */
-    private static boolean validateFeatured(SafariConfig c) {
-        if (c.featured == null) {
-            c.featured = new SafariConfig.Featured();
+    /** Fixes the specials section; returns true if anything changed. */
+    private static boolean validateSpecials(SafariConfig c) {
+        if (c.specials == null) {
+            c.specials = new SafariConfig.Specials();
             return true;
         }
-        SafariConfig.Featured f = c.featured;
+        SafariConfig.Specials f = c.specials;
         boolean corrected = false;
         if (f.rotationMinutes < 1) {
-            warn("featured.rotationMinutes", f.rotationMinutes, 1);
+            warn("specials.rotationMinutes", f.rotationMinutes, 1);
             f.rotationMinutes = 1;
             corrected = true;
         }
-        if (f.uncommonSlots < 0 || f.rareSlots < 0 || f.ultraRareSlots < 0) {
-            f.uncommonSlots = Math.max(0, f.uncommonSlots);
-            f.rareSlots = Math.max(0, f.rareSlots);
-            f.ultraRareSlots = Math.max(0, f.ultraRareSlots);
-            warn("featured.*Slots", "negative", 0);
+        if (f.slots == null) {
+            f.slots = new SafariConfig.SpecialSlots();
             corrected = true;
         }
-        if (f.weightUncommon < 0 || f.weightRare < 0 || f.weightUltraRare < 0) {
-            f.weightUncommon = Math.max(0, f.weightUncommon);
-            f.weightRare = Math.max(0, f.weightRare);
-            f.weightUltraRare = Math.max(0, f.weightUltraRare);
-            warn("featured.weight*", "negative", 0);
+        SafariConfig.SpecialSlots slots = f.slots;
+        if (slots.common < 0 || slots.uncommon < 0 || slots.rare < 0 || slots.ultraRare < 0) {
+            slots.common = Math.max(0, slots.common);
+            slots.uncommon = Math.max(0, slots.uncommon);
+            slots.rare = Math.max(0, slots.rare);
+            slots.ultraRare = Math.max(0, slots.ultraRare);
+            warn("specials.slots", "negative", 0);
             corrected = true;
         }
-        if (f.spawnIntervalSeconds < 1) {
-            warn("featured.spawnIntervalSeconds", f.spawnIntervalSeconds, 1);
-            f.spawnIntervalSeconds = 1;
+        if (f.spawn == null) {
+            f.spawn = new SafariConfig.SpecialSpawn();
             corrected = true;
         }
-        if (!(f.spawnChance >= 0.0 && f.spawnChance <= 1.0)) {
-            double fixed = Double.isNaN(f.spawnChance) ? 0.0 : Math.max(0.0, Math.min(1.0, f.spawnChance));
-            warn("featured.spawnChance", f.spawnChance, fixed);
-            f.spawnChance = fixed;
+        SafariConfig.SpecialSpawn spawn = f.spawn;
+        if (spawn.weights == null) {
+            spawn.weights = new SafariConfig.SpawnWeights();
             corrected = true;
         }
-        if (f.maxNearbyPerPlayer < 0) {
-            warn("featured.maxNearbyPerPlayer", f.maxNearbyPerPlayer, 0);
-            f.maxNearbyPerPlayer = 0;
+        SafariConfig.SpawnWeights weights = spawn.weights;
+        if (weights.common < 0 || weights.uncommon < 0 || weights.rare < 0 || weights.ultraRare < 0) {
+            weights.common = Math.max(0, weights.common);
+            weights.uncommon = Math.max(0, weights.uncommon);
+            weights.rare = Math.max(0, weights.rare);
+            weights.ultraRare = Math.max(0, weights.ultraRare);
+            warn("specials.spawn.weights", "negative", 0);
             corrected = true;
         }
-        corrected |= validateSpeciesRules("featured", f);
+        // Legal, but almost always a slip: such specials show on the board and never appear.
+        warnIfUnspawnable("common", slots.common, weights.common);
+        warnIfUnspawnable("uncommon", slots.uncommon, weights.uncommon);
+        warnIfUnspawnable("rare", slots.rare, weights.rare);
+        warnIfUnspawnable("ultraRare", slots.ultraRare, weights.ultraRare);
+        if (spawn.checkEverySeconds < 1) {
+            warn("specials.spawn.checkEverySeconds", spawn.checkEverySeconds, 1);
+            spawn.checkEverySeconds = 1;
+            corrected = true;
+        }
+        if (!(spawn.chance >= 0.0 && spawn.chance <= 1.0)) {
+            double fixed = Double.isNaN(spawn.chance) ? 0.0 : Math.max(0.0, Math.min(1.0, spawn.chance));
+            warn("specials.spawn.chance", spawn.chance, fixed);
+            spawn.chance = fixed;
+            corrected = true;
+        }
+        if (spawn.maxAroundPlayer < 0) {
+            warn("specials.spawn.maxAroundPlayer", spawn.maxAroundPlayer, 0);
+            spawn.maxAroundPlayer = 0;
+            corrected = true;
+        }
+        corrected |= validateSpeciesRules("specials", f);
         return corrected;
     }
 
-    /** Fixes the capture.flee section (and a missing capture.eventMarks); returns true if anything changed. */
+    /** Logs a rarity given slots on the board but a spawn weight of 0, so its specials never appear. */
+    private static void warnIfUnspawnable(String rarity, int slots, int weight) {
+        if (slots > 0 && weight == 0) {
+            CobblemonSafari.LOGGER.warn("{}: specials.slots.{} is {} but specials.spawn.weights.{} is 0: those specials are shown on the board but never spawn",
+                    FILE_NAME, rarity, slots, rarity);
+        }
+    }
+
+    /** Fixes the capture.flee section; returns true if anything changed. */
     private static boolean validateFlee(SafariConfig c) {
         if (c.capture == null) {
             c.capture = new SafariConfig.Capture();
             return true;
         }
         boolean corrected = false;
-        if (c.capture.eventMarks == null) {
-            c.capture.eventMarks = new SafariConfig.EventMarks();
-            corrected = true;
-        }
         if (c.capture.flee == null) {
             c.capture.flee = new SafariConfig.Flee();
             return true;

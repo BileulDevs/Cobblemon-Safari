@@ -12,7 +12,7 @@ import net.minecraft.server.level.ServerPlayer;
 /**
  * Optionally forbids battles inside the Safari, as in the original games.
  *
- * <p>Off by default ({@code allowBattles = true}): forbidding battles removes
+ * <p>Off by default ({@code battles.enabled = true}): forbidding battles removes
  * the usual way of weakening a Pokémon before throwing, which changes the feel
  * of Cobblemon captures a lot. The config value is read at event time, so a
  * reload applies immediately.
@@ -29,7 +29,7 @@ public final class BattleGuard {
 
     /** Cancels a battle involving a player inside the Safari, when the config forbids battles there. */
     private static void onBattleStart(BattleStartedEvent.Pre event) {
-        if (SafariConfigManager.get().allowBattles) {
+        if (SafariConfigManager.get().battles.enabled) {
             return;
         }
         for (ServerPlayer player : event.getBattle().getPlayers()) {
