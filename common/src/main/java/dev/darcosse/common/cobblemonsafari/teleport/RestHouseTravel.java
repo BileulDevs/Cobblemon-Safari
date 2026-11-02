@@ -817,7 +817,8 @@ public final class RestHouseTravel {
                 if (trip.landingFeet == null) {
                     landing = null;
                 } else if (trip.burrow) {
-                    // Out of the ground facing the house, as the player will stand.
+                    // Out of the ground facing the camera; the player then stands facing the house
+                    // (trip.landingYaw), which also places the camera, in front of the actors first.
                     landing = TravelBurrow.emerge(safari, player, trip.landingFeet,
                             Vec3.directionFromRotation(0.0F, trip.landingYaw), now);
                 } else {
