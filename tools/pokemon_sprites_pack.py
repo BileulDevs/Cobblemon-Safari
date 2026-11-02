@@ -29,7 +29,7 @@ to them, says so, and must stay with them (MPL 2.0, sections 3.1 and 3.2).
 
 Each sprite is stored as an indexed (palette) PNG when it has 256 colours or
 fewer, which every sprite of this kind has: the pixels are kept exactly, at
-about a quarter of the size of a full-colour PNG (the 1002 base sprites take
+about a quarter of the size of a full-colour PNG (the 1025 base sprites take
 0.7 MiB in the jar instead of 2 MiB). Minecraft reads both.
 
 Usage (from the repository root; needs Pillow):
