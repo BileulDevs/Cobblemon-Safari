@@ -4,9 +4,16 @@ Installs the Pokémon sprites used by the wall screens' sprite mode
 (board.useSprites = true in the client config), into the mod's own
 resources or as a separate resource pack.
 
-Input: a folder of sprites laid out as <dex>_<name>/<name>[_<form>][_shiny].png,
-e.g. 0019_rattata/rattata_alolan_shiny.png. Sub-folders and files whose name
-does not contain the species are skipped (and listed).
+Input: a folder of sprites, in either layout:
+  * one folder per species, <dex>_<name>/<name>[_<form>][_shiny].png, e.g.
+    0019_rattata/rattata_alolan_shiny.png; files whose name does not contain
+    the species are skipped (and listed);
+  * flat, <dex>_<name>[_<form>].png, as the E19 pack's
+    assets/xaerominimap/entity/icon/sprite/regular folder (shiny sprites live
+    in a folder of their own there); the species is the part of the name all
+    files of a number share (shellos_east and shellos_west: shellos), mapped
+    through SPECIES_ALIASES where the pack spells it differently. Number 0000
+    (ghost, substitute) is no species and is skipped.
 
 Output: each sprite at
     assets/cobblemon_safari/textures/pokemon_sprites/<species>[_<form>][_shiny].png
@@ -30,7 +37,7 @@ to them, says so, and must stay with them (MPL 2.0, sections 3.1 and 3.2).
 Each sprite is stored as an indexed (palette) PNG when it has 256 colours or
 fewer, which every sprite of this kind has: the pixels are kept exactly, at
 about a quarter of the size of a full-colour PNG (the 1025 base sprites take
-0.7 MiB in the jar instead of 2 MiB). Minecraft reads both.
+about 0.5 MiB in the jar). Minecraft reads both.
 
 Usage (from the repository root; needs Pillow):
     python3 tools/pokemon_sprites_pack.py <sprite folder> --mod [--all-forms]
@@ -80,10 +87,50 @@ def sprite_name(species, stem):
     return None
 
 
+# Species the flat layout names differently from Cobblemon's id.
+SPECIES_ALIASES = {"nidoranfemale": "nidoranf", "nidoranmale": "nidoranm"}
+
+# Flat layout file name: four-digit national number, then the name.
+FLAT_NAME = re.compile(r"^(\d{4})_(.+)\.png$", re.IGNORECASE)
+
+# National number of the flat layout's non-species icons.
+NOT_A_SPECIES = "0000"
+
+
+def collect_flat(source, names, skipped):
+    """Adds the flat layout's sprites (files directly in the folder) to names."""
+    by_number = {}
+    for file in sorted(os.listdir(source)):
+        match = FLAT_NAME.match(file)
+        if match is None or os.path.isdir(os.path.join(source, file)):
+            continue
+        if match.group(1) == NOT_A_SPECIES:
+            skipped.append(file)
+            continue
+        by_number.setdefault(match.group(1), []).append((file, match.group(2).lower().split("_")))
+    for files in by_number.values():
+        # The species is what every file of the number starts with.
+        shared = []
+        for tokens in zip(*(parts for _, parts in files)):
+            if len(set(tokens)) != 1:
+                break
+            shared.append(tokens[0])
+        species = species_id("".join(shared))
+        species = SPECIES_ALIASES.get(species, species)
+        for file, parts in files:
+            form = [re.sub(r"[^a-z0-9]", "_", t) for t in parts[len(shared):]]
+            name = "_".join([species] + form)
+            if not species or name in names:
+                skipped.append(file)
+                continue
+            names[name] = file
+
+
 def collect(source):
-    """Maps each pack name to its source file; returns (names, skipped)."""
+    """Maps each pack name to its source file, in either layout; returns (names, skipped)."""
     skipped = []
     names = {}
+    collect_flat(source, names, skipped)
     for folder in sorted(os.listdir(source)):
         path = os.path.join(source, folder)
         if not os.path.isdir(path) or "_" not in folder:
@@ -120,6 +167,16 @@ DEFAULT_FORMS = {
     "hippopotas": "male", "hippowdon": "male", "unfezant": "male",
     "frillish": "male", "jellicent": "male",
     "basculegion": "male", "oinkologne": "male",
+    "indeedee": "male", "meowstic": "male", "pyroar": "male",
+    "burmy": "plant", "wormadam": "plant",
+    "flabebe": "red", "floette": "red", "florges": "red",
+    "vivillon": "meadow",
+    "lycanroc": "midday",
+    "oricorio": "baile",
+    "toxtricity": "amped",
+    "urshifu": "single",
+    "unown": "a",
+    "zygarde": "50",
 }
 
 # Name parts of sprites never taken as a base sprite: they are not a
@@ -142,9 +199,10 @@ These files are subject to the terms of the Mozilla Public License, v. 2.0.
 If a copy of the MPL was not distributed with this file, you can obtain one at
 https://mozilla.org/MPL/2.0/.
 
-Changes made by Cobblemon Safari: stored as indexed PNGs (same pixels); the
-sprites of species with no plain sprite taken from one of their forms and
-centred in their 64 x 64 frame.
+Taken from the pack's assets/xaerominimap/entity/icon/sprite/regular folder.
+Changes made by Cobblemon Safari: each sprite centred in its 64 x 64 frame
+and stored as an indexed PNG (same pixels); a species with no plain sprite
+uses one of its forms.
 """
 
 NOTICE_NAME = "NOTICE.txt"

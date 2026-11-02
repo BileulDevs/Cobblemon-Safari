@@ -11,6 +11,7 @@ These files are subject to the terms of the Mozilla Public License, v. 2.0.
 If a copy of the MPL was not distributed with this file, you can obtain one at
 https://mozilla.org/MPL/2.0/.
 
-Changes made by Cobblemon Safari: stored as indexed PNGs (same pixels); the
-sprites of species with no plain sprite taken from one of their forms and
-centred in their 64 x 64 frame.
+Taken from the pack's assets/xaerominimap/entity/icon/sprite/regular folder.
+Changes made by Cobblemon Safari: each sprite centred in its 64 x 64 frame
+and stored as an indexed PNG (same pixels); a species with no plain sprite
+uses one of its forms.
