@@ -100,7 +100,7 @@ public final class SafariPlayerActions {
 
     /**
      * Lists in chat the Poké Balls that work inside the Safari, by their item
-     * names (in the reader's language): the configured {@code allowedBalls},
+     * names (in the reader's language): the configured {@code balls.allowed},
      * plus the lent ball when the loan is on. Asked of the gate warden before
      * going in, or of a rest house clerk.
      */

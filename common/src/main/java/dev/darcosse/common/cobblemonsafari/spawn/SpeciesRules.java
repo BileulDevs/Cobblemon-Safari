@@ -15,7 +15,7 @@ import java.util.Set;
  * Decides which species may come into the Safari through each way
  * ({@link SpawnSource}): special categories (legendary, mythical, ultra
  * beast, paradox) and the excluded list, read from the section of the config
- * that way follows ({@code spawns} or {@code featured}).
+ * that way follows ({@code spawns} or {@code specials}).
  *
  * <p>Every check takes the way explicitly, so a caller can never apply the
  * board's rules to a natural spawn by mistake.

@@ -1,0 +1,27 @@
+{
+  "parent": "cobblemon_safari:safari/nest_egg",
+  "display": {
+    "icon": {
+      "id": "minecraft:gold_block"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.safari_fortune.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.safari_fortune.description"
+    },
+    "frame": "challenge"
+  },
+  "criteria": {
+    "points": {
+      "trigger": "cobblemon_safari:safari_event",
+      "conditions": {
+        "event": "points_earned",
+        "value": {
+          "min": 25000
+        }
+      }
+    }
+  },
+  "sends_telemetry_event": false
+}

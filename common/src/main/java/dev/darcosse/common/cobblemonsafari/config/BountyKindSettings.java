@@ -2,8 +2,8 @@ package dev.darcosse.common.cobblemonsafari.config;
 
 /**
  * The tuning of one kind of mission: how often it is drawn, how many
- * catches it asks, and what it pays (a flat {@link #reward} plus
- * {@link #rewardPerCatch} for each catch asked).
+ * catches it asks, and what it pays (a flat {@link #rewardPoints} plus
+ * {@link #pointsPerCatch} for each catch asked).
  */
 public class BountyKindSettings {
     /**
@@ -16,9 +16,9 @@ public class BountyKindSettings {
     /** Most catches a mission of this kind asks. At least {@link #minCount}. */
     public int maxCount = 1;
     /** Points paid on completion, whatever the count. */
-    public int reward = 0;
+    public int rewardPoints = 0;
     /** Points paid on completion for each catch the mission asked. */
-    public int rewardPerCatch = 0;
+    public int pointsPerCatch = 0;
 
     /** Gson's constructor. */
     public BountyKindSettings() {
@@ -30,13 +30,13 @@ public class BountyKindSettings {
         settings.weight = weight;
         settings.minCount = minCount;
         settings.maxCount = maxCount;
-        settings.reward = reward;
-        settings.rewardPerCatch = rewardPerCatch;
+        settings.rewardPoints = reward;
+        settings.pointsPerCatch = rewardPerCatch;
         return settings;
     }
 
     /** What a mission asking {@code count} catches pays. */
     public int rewardFor(int count) {
-        return reward + rewardPerCatch * count;
+        return rewardPoints + pointsPerCatch * count;
     }
 }

@@ -15,7 +15,6 @@ public final class BountyClientState {
     private static boolean enabled;
     private static List<Bounty> bounties = List.of();
     private static List<Integer> progress = List.of();
-    private static int allDoneBonus;
 
     private BountyClientState() {
     }
@@ -25,7 +24,6 @@ public final class BountyClientState {
         enabled = payload.enabled();
         bounties = payload.bounties();
         progress = payload.progress();
-        allDoneBonus = payload.allDoneBonus();
     }
 
     /** Forgets everything; called on disconnect. */
@@ -33,7 +31,6 @@ public final class BountyClientState {
         enabled = false;
         bounties = List.of();
         progress = List.of();
-        allDoneBonus = 0;
     }
 
     /** Whether the board should show a missions page. */
@@ -49,10 +46,5 @@ public final class BountyClientState {
     /** Local player's catches toward mission {@code index}, capped at its count. */
     public static int progress(int index) {
         return index < progress.size() ? Math.min(progress.get(index), bounties.get(index).count()) : 0;
-    }
-
-    /** Points paid once every mission is done. */
-    public static int allDoneBonus() {
-        return allDoneBonus;
     }
 }

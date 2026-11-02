@@ -78,7 +78,7 @@ public final class BountyDialogueTexts {
         public MutableComponent invoke(ActiveDialogue dialogue) {
             ServerPlayer player = dialogue.getPlayerEntity();
             return Component.translatable(CobblemonSafari.MOD_ID + ".dialogue.safari_clerk.swap_prompt",
-                    SafariPointsIcon.amount(SafariConfigManager.get().bounties.swap.cost),
+                    SafariPointsIcon.amount(SafariConfigManager.get().missions.swap.cost),
                     SafariBounties.swapsLeft(player));
         }
     }

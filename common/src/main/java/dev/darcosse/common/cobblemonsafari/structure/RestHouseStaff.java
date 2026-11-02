@@ -17,6 +17,7 @@ import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -32,7 +33,7 @@ import java.util.function.Function;
  *   missions of the day;</li>
  *   <li>the guide, in the south hall, whose dialogue takes the player to
  *   another rest house of the map ({@code RestHouseTravel}); only while
- *   {@code restHouseTravel.guideEnabled} is on, and removed when it is off.</li>
+ *   {@code restHouses.travel.guide} is on, and removed when it is off.</li>
  * </ul>
  *
  * <p>Kept by {@link #tick}: whenever a built house is loaded and misses one
@@ -63,6 +64,20 @@ public final class RestHouseStaff {
     private static final int MIN_HEADROOM = 2;
 
     /**
+     * Distance from their spot, in blocks, beyond which a staff member is
+     * put back on it. Staff do not walk, so only a wrong spot (a roof, from
+     * before this check) gets that far; smaller would fight the small moves
+     * of their head-turning.
+     */
+    private static final double MISPLACED_DISTANCE = 1.5D;
+
+    /**
+     * Height of the template's roof above its ground layer (its top layer):
+     * where the floor search starts in a house whose height is known.
+     */
+    private static final int HOUSE_ROOF_ABOVE_GROUND = RestHouses.TEMPLATE_HEIGHT - 1;
+
+    /**
      * How close, in blocks, a player must be to a guide for the guide's
      * travel to work (see {@link #isNearGuide}). Survival players reach an
      * entity from 3 blocks; the margin covers the time the dialogue stays
@@ -91,7 +106,7 @@ public final class RestHouseStaff {
             new Role(GUIDE_TAG, CobblemonSafari.id("safari_guide"),
                     (centre, door) -> RestHouseBuilder.guideColumn(centre.getX(), centre.getZ(), door),
                     RestHouseBuilder::guideFacing,
-                    () -> SafariConfigManager.get().restHouseTravel.guideEnabled)
+                    () -> SafariConfigManager.get().restHouses.travel.guide)
     );
 
     private static int ticks;
@@ -120,14 +135,19 @@ public final class RestHouseStaff {
                 continue;
             }
             for (Role role : ROLES) {
-                maintain(safari, site.x(), site.z(), role);
+                maintain(safari, site, role);
             }
         }
     }
 
-    /** Spawns one role of one house if it is loaded and has none; removes extra ones. */
-    private static void maintain(ServerLevel level, int centerX, int centerZ, Role role) {
-        Direction door = RestHouses.doorFacing(centerX, centerZ);
+    /**
+     * Spawns one role of one house if it is loaded and has none, removes
+     * extra ones, and puts back one standing away from their spot.
+     */
+    private static void maintain(ServerLevel level, RestHouses.HouseSite site, Role role) {
+        int centerX = site.x();
+        int centerZ = site.z();
+        Direction door = site.facing();
         BlockPos column = role.column().apply(new BlockPos(centerX, 0, centerZ), door);
         // Entity ticking: the chunk AND its entities are loaded, so someone
         // already there is seen and a new one is saved with the chunk.
@@ -135,8 +155,12 @@ public final class RestHouseStaff {
             return;
         }
         int half = RestHouses.HALF_SIZE;
-        AABB house = new AABB(centerX - half, level.getMinBuildHeight(), centerZ - half,
-                centerX + half + 1, level.getMaxBuildHeight(), centerZ + half + 1);
+        // The house's own height only when known: staff of a house in a cave
+        // below (or above) must not be counted as this one's.
+        int minY = site.minY() == RestHouses.UNKNOWN_Y ? level.getMinBuildHeight() : site.minY();
+        int maxY = Math.min(site.maxY(), level.getMaxBuildHeight());
+        AABB house = new AABB(centerX - half, minY, centerZ - half,
+                centerX + half + 1, maxY, centerZ + half + 1);
         List<NPCEntity> found = level.getEntitiesOfClass(NPCEntity.class, house,
                 entity -> entity.getTags().contains(role.tag()));
         // Switched off in the config: the role goes, and is not brought back.
@@ -147,13 +171,38 @@ public final class RestHouseStaff {
         if (keep == 0) {
             return;
         }
-        if (!found.isEmpty()) {
+        BlockPos feet = floorUnderRoof(level, column, roofOf(level, site, column));
+        if (feet == null) {
             return;
         }
-        BlockPos feet = floorUnderRoof(level, column);
-        if (feet != null) {
+        if (found.isEmpty()) {
             spawn(level, feet, role.facing().apply(door), role);
+            return;
         }
+        // A clerk put on the roof by an older version is in the house's box,
+        // so found and kept: without this, they stayed there for good.
+        NPCEntity staff = found.get(0);
+        if (staff.distanceToSqr(Vec3.atBottomCenterOf(feet)) > MISPLACED_DISTANCE * MISPLACED_DISTANCE) {
+            place(staff, feet, role.facing().apply(door));
+        }
+    }
+
+    /**
+     * The top of the house's roof at a staff column, where the floor search
+     * starts. From the house's own height when it is known (every house
+     * built since 1.4.0, and every underground one): the highest block
+     * within the template. The sky's heightmap is only a fallback for older
+     * houses, without leaves: a jungle tree or a big oak left standing
+     * beside the house spreads its leaves over the roof, and the air
+     * between them and the roof was taken for the room, which put the clerk
+     * on the roof. Underground, the sky's heightmap gives the cave's roof,
+     * far above.
+     */
+    private static int roofOf(ServerLevel level, RestHouses.HouseSite site, BlockPos column) {
+        if (site.groundY() != RestHouses.UNKNOWN_Y) {
+            return roofTop(level, column, site.groundY());
+        }
+        return level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, column.getX(), column.getZ()) - 1;
     }
 
     /**
@@ -163,8 +212,7 @@ public final class RestHouseStaff {
      * there), so nobody is put on a roof.
      */
     @Nullable
-    private static BlockPos floorUnderRoof(ServerLevel level, BlockPos column) {
-        int top = level.getHeight(Heightmap.Types.MOTION_BLOCKING, column.getX(), column.getZ()) - 1;
+    private static BlockPos floorUnderRoof(ServerLevel level, BlockPos column, int top) {
         int y = top;
         while (y > top - MAX_ROOF_DEPTH && !level.getBlockState(column.atY(y)).isAir()) {
             y--;
@@ -181,6 +229,19 @@ public final class RestHouseStaff {
     }
 
     /**
+     * The top of a house's roof at a column: the highest block within the
+     * template's height above its ground layer. Whatever stands higher (a
+     * cave's roof, a tree's leaves) is never reached.
+     */
+    private static int roofTop(ServerLevel level, BlockPos column, int groundY) {
+        int y = groundY + HOUSE_ROOF_ABOVE_GROUND;
+        while (y > groundY && level.getBlockState(column.atY(y)).isAir()) {
+            y--;
+        }
+        return y;
+    }
+
+    /**
      * Spawns a staff member standing on the given block.
      *
      * @param facing direction they look toward
@@ -193,13 +254,18 @@ public final class RestHouseStaff {
             return;
         }
         NPCEntity npc = new NPCEntity(level);
-        float yaw = facing.toYRot();
-        npc.moveTo(feet.getX() + 0.5D, feet.getY(), feet.getZ() + 0.5D, yaw, 0.0F);
-        npc.setYHeadRot(yaw);
+        place(npc, feet, facing);
         npc.setNpc(npcClass);
         npc.initialize(1);
         npc.addTag(role.tag());
         level.addFreshEntity(npc);
+    }
+
+    /** Puts a staff member on a block, looking the given way. */
+    private static void place(NPCEntity npc, BlockPos feet, Direction facing) {
+        float yaw = facing.toYRot();
+        npc.moveTo(feet.getX() + 0.5D, feet.getY(), feet.getZ() + 0.5D, yaw, 0.0F);
+        npc.setYHeadRot(yaw);
     }
 
     /**

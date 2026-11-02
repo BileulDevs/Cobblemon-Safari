@@ -4,7 +4,7 @@ Copy `cobblemon_safari/` into the `config/` folder of the game (client) or of th
 
 The three files are complete and valid: every key is present with its value. Most values are the defaults; the ones below were changed to show what each kind of setting does. A key left out of a file takes its default value, and the mod writes it back the next time it saves the file.
 
-JSON has no comments, so this page says what the example files change. [CONFIG.md](../../CONFIG.md) explains every key.
+JSON has no comments, so this page says what the example files change. They are in the current layout (`server.json` version 7); a file of an older version is converted on load (see "Older files" in CONFIG.md). [CONFIG.md](../../CONFIG.md) explains every key.
 
 ## What the example files change
 
@@ -12,20 +12,20 @@ JSON has no comments, so this page says what the example files change. [CONFIG.m
 
 | Key | Example | Default | Effect |
 |---|---|---|---|
-| `maxDurationSeconds` | `3600` | `7200` | Hunts last one hour at most. |
-| `allowedBalls` | adds `cobblemon:premier_ball` | Safari and Master Balls | Premier Balls work inside the park too. |
-| `exitDestination` | `"WORLD_SPAWN"` | `"RETURN_POINT"` | Players leaving the Safari arrive at the world spawn (for a hub server) instead of where they entered. The only two values. |
+| `hunt.maxDurationSeconds` | `3600` | `7200` | Hunts last one hour at most. |
+| `balls.allowed` | adds `cobblemon:premier_ball` | Safari and Master Balls | Premier Balls work inside the park too. |
+| `hunt.exitDestination` | `"WORLD_SPAWN"` | `"RETURN_POINT"` | Players leaving the Safari arrive at the world spawn (for a hub server) instead of where they entered. The only two values. |
 | `protection.placeableBlocks` | adds `minecraft:torch` | Poké Cake, Poké Snack | Players may place torches in caves (they vanish with the daily map). |
-| `loan.count` | `30` | `0` | The games' loan: 30 Safari Balls lent on entry, taken back on exit. |
+| `balls.loan.count` | `30` | `0` | The games' loan: 30 Safari Balls lent on entry, taken back on exit. |
 | `reset.timeZone` | `"Europe/Paris"` | `""` | The new map starts at 4:00 Paris time, whatever the server's clock. |
-| `ticketLoot.sources` | adds `minecraft:chests/shipwreck_treasure` at `0.2` | 8 sources | Shipwreck treasure chests may hold a ticket. A folder ending in `/` (`cobblemon:ruins/common/`) covers every table under it. |
+| `tickets.loot.sources` | adds `minecraft:chests/shipwreck_treasure` at `0.2` | 8 sources | Shipwreck treasure chests may hold a ticket. A folder ending in `/` (`cobblemon:ruins/common/`) covers every table under it. |
 | `gate.companions` | adds `scyther level=30 shiny=yes` | Kangaskhan, Tauros, Chansey | A shiny Scyther roams around each gate. Any Cobblemon properties work. |
-| `bounties.count` | `4` | `3` | Four missions per rotation. |
+| `missions.count` | `4` | `3` | Four missions per rotation. |
 | `spawns.legendary.allowSpawn` | `true` | `false` | Legendaries can come through Cobblemon's natural spawns, at most one of each species per rotation (`maxSpawnPerPokemon`). |
 | `spawns.excludedSpecies` | `["cobblemon:ditto"]` | `[]` | Ditto never comes through the natural spawns. |
-| `featured.legendary.allowSpawn` | `true` | `false` | Legendaries can be drawn on the board and brought in by the mod, at most one of each species per rotation, counted apart from the natural ones. |
-| `featured.excludedSpecies` | `["cobblemon:ditto"]` | `[]` | Ditto is never one of the specials. |
-| `featured.rotationMinutes` | `1440` | `240` | One set of specials, missions and shop Pokémon per day instead of every four hours. |
+| `specials.legendary.allowSpawn` | `true` | `false` | Legendaries can be drawn on the board and brought in by the mod, at most one of each species per rotation, counted apart from the natural ones. |
+| `specials.excludedSpecies` | `["cobblemon:ditto"]` | `[]` | Ditto is never one of the specials. |
+| `specials.rotationMinutes` | `1440` | `240` | One set of specials, missions and shop Pokémon per day instead of every four hours. |
 
 ### `shop.json`
 
@@ -35,7 +35,7 @@ JSON has no comments, so this page says what the example files change. [CONFIG.m
 | `entries` | `eevee level=10` with `"price": "auto"` | A fixed Pokémon priced like the random ones: its rarity in the Safari times its evolution stage. |
 | `entries` | `dratini level=15 shiny=yes`, 3000 points, `"limitPerRotation": 1`, tab `rewards` | A shiny Dratini, once per player and per rotation. |
 | `entries` | `cobblemon:master_ball`, 500 points plus a `cost` of 4 items of `#cobblemon:evolution_stones` and 2 diamonds, `"limitPerRotation": 1`, `"cooldownHours": 168` | A trade: points and items together, at most once a week per player. A cost takes an item id or a `#tag`. |
-| `rotating.count`, `rotating.excludedSpecies` | `12`, `["cobblemon:ditto"]` | 12 random Pokémon per rotation, never Ditto. |
+| `rotatingPokemon.count`, `rotatingPokemon.excludedSpecies` | `12`, `["cobblemon:ditto"]` | 12 random Pokémon per rotation, never Ditto. |
 | `rotatingItems.always` | `["cobblemon:full_restore"]` | Full Restores are sold every rotation, at the price of their rule in `rotatingItems.prices`. |
 
 The default entries, kept in the file, show the other kinds:
@@ -47,7 +47,7 @@ The default entries, kept in the file, show the other kinds:
 
 | Key | Example | Default | Effect |
 |---|---|---|---|
-| `hudAnchor`, `hudOffsetX`, `hudOffsetY` | `"TOP_RIGHT"`, `-24`, `24` | `"BOTTOM_LEFT"`, `20`, `-16` | The timer sits in the top right corner. Anchors: `TOP_LEFT`, `TOP_CENTER`, `TOP_RIGHT`, `BOTTOM_LEFT`, `BOTTOM_CENTER`, `BOTTOM_RIGHT`. |
+| `hud.anchor`, `hud.offsetX`, `hud.offsetY` | `"TOP_RIGHT"`, `-24`, `24` | `"BOTTOM_LEFT"`, `20`, `-16` | The timer sits in the top right corner. Anchors: `TOP_LEFT`, `TOP_CENTER`, `TOP_RIGHT`, `BOTTOM_LEFT`, `BOTTOM_CENTER`, `BOTTOM_RIGHT`. |
 | `board.useSprites` | `true` | `false` | Wall screens draw flat sprites instead of 3D models. |
 | `board.panelOpacity` | `0.6` | `0.72` | More of the landscape shows through the panels. |
 | `board.colors.title` | `"#7CFC00"` | `"#FFB000"` | Green titles. |

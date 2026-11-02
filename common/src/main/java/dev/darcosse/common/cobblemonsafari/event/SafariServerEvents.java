@@ -4,7 +4,13 @@ import dev.darcosse.common.cobblemonsafari.stats.SafariStatistics;
 import dev.darcosse.common.cobblemonsafari.network.SafariNetwork;
 import com.mojang.brigadier.CommandDispatcher;
 import dev.darcosse.common.cobblemonsafari.structure.RestHouseStaff;
+import dev.darcosse.common.cobblemonsafari.advancement.SafariAdvancements;
 import dev.darcosse.common.cobblemonsafari.capture.CaptureGuard;
+import dev.darcosse.common.cobblemonsafari.capture.SafariFlee;
+import dev.darcosse.common.cobblemonsafari.capture.FishedTracker;
+import dev.darcosse.common.cobblemonsafari.capture.ThrowTracker;
+import dev.darcosse.common.cobblemonsafari.battle.FishingBattleGuard;
+import dev.darcosse.common.cobblemonsafari.dex.SafariDex;
 import dev.darcosse.common.cobblemonsafari.command.SafariCommands;
 import dev.darcosse.common.cobblemonsafari.park.SafariBorder;
 import dev.darcosse.common.cobblemonsafari.bounty.SafariBounties;
@@ -17,6 +23,8 @@ import dev.darcosse.common.cobblemonsafari.spawn.FeaturedRotation;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedSpawner;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedSync;
 import dev.darcosse.common.cobblemonsafari.spawn.SafariSpawnBoost;
+import dev.darcosse.common.cobblemonsafari.spawn.SafariHappenings;
+import dev.darcosse.common.cobblemonsafari.spawn.SafariHappeningsInfluence;
 import dev.darcosse.common.cobblemonsafari.spawn.SafariSpawnFilter;
 import dev.darcosse.common.cobblemonsafari.spawn.SpecialSpawnCounter;
 import dev.darcosse.common.cobblemonsafari.structure.RestHousePrebuilder;
@@ -69,6 +77,13 @@ public final class SafariServerEvents {
         FeaturedRotation.attach(server);
         FeaturedSync.reset();
         SafariBounties.reset();
+        ThrowTracker.reset();
+        FishedTracker.reset();
+        FishingBattleGuard.reset();
+        SafariDex.reset();
+        SafariFlee.reset();
+        SafariHappenings.reset();
+        SafariHappeningsInfluence.clear();
         SafariSpawnBoost.reset();
         SpecialSpawnCounter.reset();
         RestHouseTravel.reset();
@@ -88,6 +103,8 @@ public final class SafariServerEvents {
     public static void onDataReload(MinecraftServer server) {
         FeaturedRotation.invalidate();
         SafariSpawnFilter.invalidate();
+        // Types may have changed with the species data.
+        SafariHappeningsInfluence.clear();
     }
 
     /** End of every server tick. */
@@ -97,6 +114,9 @@ public final class SafariServerEvents {
         FeaturedSpawner.tick(server);
         SpecialSpawnCounter.tick(server);
         FeaturedSync.tick(server);
+        SafariDex.tick(server);
+        SafariFlee.tick(server);
+        SafariHappenings.tick(server);
         SafariBounties.tick(server);
         SafariSpawnBoost.tick(server);
         RestHouses.tick(server);
@@ -124,7 +144,10 @@ public final class SafariServerEvents {
         FeaturedSync.sendTo(player);
         SafariBounties.sendTo(player);
         SafariNetwork.sendStats(player);
+        SafariDex.sendTo(player);
         SafariStatistics.catchUp(player);
+        // After the catch-up: thresholds passed before the advancements existed are granted from the totals.
+        SafariAdvancements.onJoin(player);
         JOINED.add(player.getUUID());
     }
 
@@ -209,7 +232,11 @@ public final class SafariServerEvents {
      * @return true when the loader must cancel the damage
      */
     public static boolean onIncomingDamage(LivingEntity entity, DamageSource source) {
-        return SafariProtection.shouldCancelDamage(entity, source) || GateResidents.shouldCancelDamage(entity, source)
+        if (GateResidents.shouldCancelDamage(entity, source)) {
+            SafariAdvancements.onGateResidentHit(source);
+            return true;
+        }
+        return SafariProtection.shouldCancelDamage(entity, source)
                 || RestHouseStaff.shouldCancelDamage(entity, source) || RestHouseTravel.shouldCancelDamage(entity, source);
     }
 }

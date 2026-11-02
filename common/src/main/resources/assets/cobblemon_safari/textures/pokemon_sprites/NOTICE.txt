@@ -1,0 +1,17 @@
+Pokemon sprites: E19 Cobblemon Minimap Icons by Emery319, icons by MBCMechachu.
+https://www.curseforge.com/minecraft/texture-packs/e19-cobblemon-minimap-icons
+
+Licence as published on the project's licence page
+(https://www.curseforge.com/minecraft/texture-packs/e19-cobblemon-minimap-icons/license)
+when these files were taken: Mozilla Public License 2.0, checked on 2026-11-02.
+Recorded so that the terms these copies were received under stay known,
+whatever the page says later.
+
+These files are subject to the terms of the Mozilla Public License, v. 2.0.
+If a copy of the MPL was not distributed with this file, you can obtain one at
+https://mozilla.org/MPL/2.0/.
+
+Taken from the pack's assets/xaerominimap/entity/icon/sprite/regular folder.
+Changes made by Cobblemon Safari: each sprite centred in its 64 x 64 frame
+and stored as an indexed PNG (same pixels); a species with no plain sprite
+uses one of its forms.

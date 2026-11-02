@@ -1,0 +1,24 @@
+{
+  "parent": "cobblemon_safari:safari/enter",
+  "display": {
+    "icon": {
+      "id": "cobblemon:red_apricorn"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.fair_trade.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.fair_trade.description"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "trade": {
+      "trigger": "cobblemon_safari:safari_event",
+      "conditions": {
+        "event": "shop_trade"
+      }
+    }
+  },
+  "sends_telemetry_event": false
+}

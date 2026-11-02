@@ -1,0 +1,35 @@
+{
+  "parent": "cobblemon_safari:safari/snack_time",
+  "display": {
+    "icon": {
+      "id": "cobblemon:poke_cake"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.layer_cake.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.layer_cake.description"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "placed": {
+      "trigger": "minecraft:placed_block",
+      "conditions": {
+        "location": [
+          {
+            "condition": "minecraft:location_check",
+            "predicate": {
+              "dimension": "cobblemon_safari:safari"
+            }
+          },
+          {
+            "condition": "minecraft:block_state_property",
+            "block": "cobblemon:poke_cake"
+          }
+        ]
+      }
+    }
+  },
+  "sends_telemetry_event": false
+}

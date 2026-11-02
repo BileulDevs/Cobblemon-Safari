@@ -24,8 +24,6 @@ public final class SafariClientState {
     private static boolean active;
     private static int remainingAtSnapshot;
     private static boolean running;
-    private static int catches;
-    private static int ballsLoaned;
     private static int grantedTicks;
     /**
      * Client game time the last snapshot is anchored to. Left unset on receipt
@@ -41,6 +39,8 @@ public final class SafariClientState {
     private static boolean protectBlocks;
     private static boolean exemptCreativeAndSpectator;
     private static Set<ResourceLocation> placeableBlocks = Set.of();
+    /** {@code protection.interact} as sent by the server; nothing allowed before the rules arrive. */
+    private static int harvestMask;
     private static List<SafariRulesPayload.HouseColumn> restHouses = List.of();
 
     private SafariClientState() {
@@ -51,8 +51,6 @@ public final class SafariClientState {
         active = payload.active();
         remainingAtSnapshot = payload.remainingTicks();
         running = payload.running();
-        catches = payload.catches();
-        ballsLoaned = payload.ballsLoaned();
         grantedTicks = payload.grantedTicks();
         anchorPending = true;
     }
@@ -64,6 +62,7 @@ public final class SafariClientState {
         protectBlocks = payload.protectBlocks();
         exemptCreativeAndSpectator = payload.exemptCreativeAndSpectator();
         placeableBlocks = Set.copyOf(payload.placeableBlocks());
+        harvestMask = payload.harvestMask();
         restHouses = payload.restHouses();
     }
 
@@ -72,8 +71,6 @@ public final class SafariClientState {
         active = false;
         remainingAtSnapshot = 0;
         running = false;
-        catches = 0;
-        ballsLoaned = 0;
         grantedTicks = 0;
         anchorPending = false;
         safariDimension = null;
@@ -81,31 +78,25 @@ public final class SafariClientState {
         protectBlocks = false;
         exemptCreativeAndSpectator = false;
         placeableBlocks = Set.of();
+        harvestMask = 0;
         restHouses = List.of();
     }
 
     /**
-     * Whether a column lies inside the walls of a rest house (its plaza is
-     * outside). A few comparisons per house: cheap enough for the per-tick
-     * music check. Does not look at the dimension; callers do.
+     * Whether a position lies inside the walls of a rest house (its plaza is
+     * outside), height included: a house underground does not count for a
+     * player walking above it, nor a surface house for one in a cave below.
+     * A few comparisons per house: cheap enough for the per-tick music
+     * check. Does not look at the dimension; callers do.
      */
-    public static boolean isInRestHouse(int x, int z) {
+    public static boolean isInRestHouse(int x, int y, int z) {
         for (SafariRulesPayload.HouseColumn house : restHouses) {
-            if (Math.abs(x - house.x()) <= RestHouses.HALF_SIZE && Math.abs(z - house.z()) <= RestHouses.HALF_SIZE) {
+            if (Math.abs(x - house.x()) <= RestHouses.HALF_SIZE && Math.abs(z - house.z()) <= RestHouses.HALF_SIZE
+                    && y >= house.minY() && y <= house.maxY()) {
                 return true;
             }
         }
         return false;
-    }
-
-    /** Pokémon caught this session, as last reported by the server. */
-    public static int catches() {
-        return catches;
-    }
-
-    /** Safari Balls lent at the entrance; 0 when the server does not lend any. */
-    public static int ballsLoaned() {
-        return ballsLoaned;
     }
 
     /** Total time granted over the session, additions included; 0 without a session. */
@@ -154,6 +145,11 @@ public final class SafariClientState {
     /** Block ids the server lets players place and break despite the protection; empty before the rules arrive. */
     public static Set<ResourceLocation> placeableBlocks() {
         return placeableBlocks;
+    }
+
+    /** The server's {@code protection.interact} switches, as a bit set by {@code HarvestCategory} ordinal. */
+    public static int harvestMask() {
+        return harvestMask;
     }
 
     /** Whether creative/spectator players are exempt from terrain protection. */

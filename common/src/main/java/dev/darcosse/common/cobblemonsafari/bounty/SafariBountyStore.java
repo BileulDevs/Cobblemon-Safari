@@ -174,11 +174,11 @@ public final class SafariBountyStore extends SavedData {
 
     /** A mission written by {@link #write}; null for a kind this build does not know. */
     private static Bounty read(CompoundTag tag) {
-        try {
-            return new Bounty(BountyKind.valueOf(tag.getString("kind")), tag.getString("target"),
-                    Math.max(1, tag.getInt("count")), tag.getInt("reward"));
-        } catch (IllegalArgumentException e) {
+        // fromSavedName: missions saved before 1.4.0 name the specials' kind FEATURED.
+        BountyKind kind = BountyKind.fromSavedName(tag.getString("kind"));
+        if (kind == null) {
             return null;
         }
+        return new Bounty(kind, tag.getString("target"), Math.max(1, tag.getInt("count")), tag.getInt("reward"));
     }
 }

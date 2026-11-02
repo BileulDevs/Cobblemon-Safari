@@ -18,18 +18,19 @@ import java.util.List;
  * @param enabled      whether missions are switched on; when false the board skips their page
  * @param bounties     this player's missions: the shared ones, with those the player swapped
  * @param progress     this player's catches toward each mission, same order and size as {@code bounties}
- * @param allDoneBonus points paid once every mission is done
  */
-public record SafariBountiesPayload(boolean enabled, List<Bounty> bounties, List<Integer> progress,
-                                    int allDoneBonus) implements CustomPacketPayload {
+public record SafariBountiesPayload(boolean enabled, List<Bounty> bounties, List<Integer> progress)
+        implements CustomPacketPayload {
 
     /**
      * Wire format version, checked before anything else is read. The format
      * is positional: adding, removing or reordering a field (or changing what
      * one means) without raising this makes a peer of another build read
      * garbage without an error. Raise it on every change to write/read.
+     *
+     * <p>History: 2: nine new mission kinds (ordinals 3 to 11); 3: the all-missions bonus dropped, no screen showed it.
      */
-    public static final int WIRE_VERSION = 2; // 2: nine new mission kinds (ordinals 3 to 11)
+    public static final int WIRE_VERSION = 3;
 
     /** Guard against corrupted or hostile packets announcing huge lists. */
     private static final int MAX_BOUNTIES = 64;
@@ -54,7 +55,6 @@ public record SafariBountiesPayload(boolean enabled, List<Bounty> bounties, List
             buf.writeVarInt(bounty.reward());
             buf.writeVarInt(progress.get(i));
         }
-        buf.writeVarInt(allDoneBonus);
     }
 
     /** MUST list the same fields in the same order as {@link #write}. */
@@ -80,8 +80,7 @@ public record SafariBountiesPayload(boolean enabled, List<Bounty> bounties, List
             bounties.add(new Bounty(kinds[kind], buf.readUtf(), buf.readVarInt(), buf.readVarInt()));
             progress.add(buf.readVarInt());
         }
-        int allDoneBonus = buf.readVarInt();
-        return new SafariBountiesPayload(enabled, List.copyOf(bounties), List.copyOf(progress), allDoneBonus);
+        return new SafariBountiesPayload(enabled, List.copyOf(bounties), List.copyOf(progress));
     }
 
     /** Type under which each loader registers this payload. */

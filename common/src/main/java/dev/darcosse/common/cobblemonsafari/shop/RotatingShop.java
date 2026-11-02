@@ -96,7 +96,7 @@ public final class RotatingShop {
      */
     public static List<SafariShopConfig.Entry> entries(MinecraftServer server) {
         SafariShopConfig config = SafariShopConfigManager.get();
-        if (!config.rotating.enabled || config.rotating.count == 0) {
+        if (!config.rotatingPokemon.enabled || config.rotatingPokemon.count == 0) {
             return List.of();
         }
         long period = period();
@@ -111,7 +111,7 @@ public final class RotatingShop {
             // Not cached: Cobblemon is still loading, the next opening retries.
             return List.of();
         }
-        List<SafariShopConfig.Entry> drawn = draw(index, specials, fixedForms(config), config.rotating, period,
+        List<SafariShopConfig.Entry> drawn = draw(index, specials, fixedForms(config), config.rotatingPokemon, period,
                 SafariWorldState.get(server).rotationSalt());
         cached = drawn;
         cachedPeriod = period;
@@ -260,7 +260,7 @@ public final class RotatingShop {
         HabitatEntry entry = FeaturedRotation.index(server).get(species.getResourceIdentifier());
         Rarity rarity = entry != null ? entry.rarity()
                 : SpeciesRules.isSpecial(species) ? Rarity.ULTRA_RARE : Rarity.RARE;
-        return price(rarity, species, SafariShopConfigManager.get().rotating);
+        return price(rarity, species, SafariShopConfigManager.get().rotatingPokemon);
     }
 
     /** Price of a Pokémon: its rarity's base price times its evolution stage's multiplier, rounded. */

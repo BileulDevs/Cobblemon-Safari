@@ -32,7 +32,7 @@ import net.minecraft.world.phys.AABB;
  *
  * <p>The mod's own special spawns do not go through Cobblemon's spawner and
  * are not filtered here; {@link FeaturedSpawner} applies the rules of
- * {@code featured} itself, which may differ from these.
+ * {@code specials} itself, which may differ from these.
  */
 public final class NativeSpawnRules {
 
@@ -90,7 +90,8 @@ public final class NativeSpawnRules {
             // Wild only: a player's own Pokémon sent out nearby is not part of the habitat.
             int sameSpecies = level.getEntitiesOfClass(PokemonEntity.class, area,
                     other -> other.getPokemon().isWild() && other.getPokemon().getSpecies() == species).size();
-            if (sameSpecies >= config.maxSameSpeciesNearby) {
+            if (sameSpecies >= Swarm.sameSpeciesCap(species.getResourceIdentifier().toString(),
+                    config.maxSameSpeciesNearby)) {
                 event.cancel();
                 return;
             }

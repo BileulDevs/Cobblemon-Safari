@@ -32,7 +32,7 @@ public class WallScreenSettingsScreen extends Screen {
 
     /** Panel size in GUI pixels. Taller fits more content choices; the buttons are laid out from the top. */
     private static final int PANEL_WIDTH = 220;
-    private static final int PANEL_HEIGHT = 188;
+    private static final int PANEL_HEIGHT = 212;
     private static final int MARGIN = 10;
     private static final int TITLE_HEIGHT = 20;
     private static final int BUTTON_HEIGHT = 20;

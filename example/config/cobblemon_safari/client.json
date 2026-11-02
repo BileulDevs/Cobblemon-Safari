@@ -1,18 +1,23 @@
 {
-  "configVersion": 1,
-  "hudEnabled": true,
-  "hudAnchor": "TOP_RIGHT",
-  "hudOffsetX": -24,
-  "hudOffsetY": 24,
-  "lowTimeSeconds": 60,
-  "criticalTimeSeconds": 10,
+  "configVersion": 2,
+  "hud": {
+    "enabled": true,
+    "anchor": "TOP_RIGHT",
+    "offsetX": -24,
+    "offsetY": 24,
+    "lowTimeSeconds": 60,
+    "criticalTimeSeconds": 10
+  },
   "board": {
     "useSprites": true,
     "backgroundImage": true,
     "panelOpacity": 0.6,
-    "featuredFooter": "SESSION",
-    "statsFooter": "ROTATION",
-    "bountiesFooter": "SESSION",
+    "footers": {
+      "specials": "SESSION",
+      "stats": "ROTATION",
+      "missions": "SESSION",
+      "dex": "ROTATION"
+    },
     "colors": {
       "bezel": "#1A1C22",
       "background": "#0A1220",

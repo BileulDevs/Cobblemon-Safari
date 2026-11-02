@@ -2,6 +2,7 @@ package dev.darcosse.common.cobblemonsafari.network;
 
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
+import dev.darcosse.common.cobblemonsafari.protection.HarvestCategory;
 import dev.darcosse.common.cobblemonsafari.platform.Platform;
 import dev.darcosse.common.cobblemonsafari.points.SafariPoints;
 import dev.darcosse.common.cobblemonsafari.stats.PlayerSafariStats;
@@ -29,15 +30,15 @@ public final class SafariNetwork {
      * version, so that a client of another build is refused at login with a
      * clear message instead of failing on the first packet.
      */
-    public static final String PROTOCOL_VERSION = "1.4.0";
+    public static final String PROTOCOL_VERSION = "1.5.0";
 
     private SafariNetwork() {
     }
 
-    /** Sends the current state of a player's session: clock, catches and loan. */
+    /** Sends the current state of a player's session clock. */
     public static void sendTimer(ServerPlayer player, SafariSession session, boolean running) {
         Platform.get().sendToPlayer(player, new SafariTimerPayload(true, session.remainingTicks(), running,
-                session.catches().size(), session.ballsLoaned(), session.grantedTicks()));
+                session.grantedTicks()));
     }
 
     /** Tells a player they no longer have a session, hiding their HUD. */
@@ -111,20 +112,22 @@ public final class SafariNetwork {
         return new SafariRulesPayload(SafariDimensions.key().location(),
                 List.copyOf(SafariConfigManager.allowedBalls()),
                 SafariConfigManager.get().protection.protectBlocks,
-                SafariConfigManager.get().exemptCreativeAndSpectator,
+                SafariConfigManager.get().hunt.exemptCreativeAndSpectator,
                 List.copyOf(SafariConfigManager.placeableBlocks()),
+                HarvestCategory.maskOf(SafariConfigManager.get().protection.interact),
                 restHouseColumns());
     }
 
     /**
-     * Centre columns of the rest houses where they stand or will stand,
+     * Centre columns and height spans of the rest houses where they stand or will stand,
      * built or not yet (the site search may move them from their generated
      * anchors); none when the Safari level is missing.
      */
     private static List<SafariRulesPayload.HouseColumn> restHouseColumns() {
         List<SafariRulesPayload.HouseColumn> columns = new ArrayList<>();
         for (RestHouses.HouseSite site : RestHouses.sites()) {
-            columns.add(new SafariRulesPayload.HouseColumn(site.x(), site.z()));
+            int minY = site.minY() == RestHouses.UNKNOWN_Y ? Integer.MIN_VALUE : site.minY();
+            columns.add(new SafariRulesPayload.HouseColumn(site.x(), site.z(), minY, site.maxY()));
         }
         return List.copyOf(columns);
     }

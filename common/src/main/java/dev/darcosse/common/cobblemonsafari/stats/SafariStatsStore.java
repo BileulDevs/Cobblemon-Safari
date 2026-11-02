@@ -47,6 +47,20 @@ public final class SafariStatsStore extends SavedData {
     }
 
     /**
+     * Notes that a player starts a hunt on the map of the given salt, and
+     * marks the store dirty when that is a new map for them.
+     *
+     * @return the player's number of distinct maps hunted on
+     */
+    public int markMapHunted(UUID playerId, long mapSalt) {
+        PlayerSafariStats stats = getOrCreate(playerId);
+        if (stats.markMapHunted(mapSalt)) {
+            setDirty();
+        }
+        return stats.mapsHunted();
+    }
+
+    /**
      * The best hunters by total catches, ties broken by best single session.
      * Sorts the whole map: fine for a command, never call it per tick.
      */

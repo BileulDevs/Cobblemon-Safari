@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "cobblemon_safari:grassland",
+    "cobblemon_safari:flower_meadow",
+    "cobblemon_safari:rocky_hills",
+    "cobblemon_safari:savanna"
+  ]
+}

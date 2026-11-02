@@ -1,0 +1,142 @@
+package dev.darcosse.common.cobblemonsafari.spawn;
+
+import com.cobblemon.mod.common.api.pokemon.PokemonSpecies;
+import com.cobblemon.mod.common.api.spawning.detail.PokemonSpawnDetail;
+import com.cobblemon.mod.common.api.spawning.detail.SpawnDetail;
+import com.cobblemon.mod.common.api.spawning.influence.SpawningInfluence;
+import com.cobblemon.mod.common.api.spawning.position.SpawnablePosition;
+import com.cobblemon.mod.common.api.spawning.spawner.PlayerSpawner;
+import com.cobblemon.mod.common.api.types.ElementalType;
+import com.cobblemon.mod.common.pokemon.Species;
+import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
+import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
+import net.minecraft.resources.ResourceLocation;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Applies the Safari's rare happenings to Cobblemon's natural spawns around
+ * players in the Safari:
+ * <ul>
+ *   <li>the swarm ({@link Swarm}): in its habitat, the swarming species is
+ *       also offered among the common Pokémon (its own spawn details, which
+ *       still check the spot), and its weight is multiplied there, so it
+ *       makes up much of what spawns;</li>
+ *   <li>the full moon ({@link SafariHappenings}): at night under a full
+ *       moon, Pokémon of the configured types weigh more, within their
+ *       rarity.</li>
+ * </ul>
+ *
+ * <p>One shared instance on each player's spawner, put there by
+ * {@link SafariSpawnBoost}. Outside the Safari, or for a spawner that is not
+ * a player's, it changes nothing.
+ *
+ * <p>Thread safety: Cobblemon may weigh spawns off the server thread; this
+ * reads the published snapshots of {@link Swarm} and
+ * {@link SafariHappenings} and a concurrent cache of species types.
+ */
+public final class SafariHappeningsInfluence implements SpawningInfluence {
+
+    /** The one instance; spawners hold it, so it is found again by identity. */
+    public static final SafariHappeningsInfluence INSTANCE = new SafariHappeningsInfluence();
+
+    /** Species id to its lower-case type names; species types never change while the data stays. */
+    private static final Map<String, Set<String>> TYPES = new ConcurrentHashMap<>();
+
+    private SafariHappeningsInfluence() {
+    }
+
+    /** Forgets the type cache, after a data reload or a server start. */
+    public static void clear() {
+        TYPES.clear();
+    }
+
+    /**
+     * Offers the swarming species among the common Pokémon, at a spot of its
+     * habitat. Called by Cobblemon for every bucket of every spot asked;
+     * returns null at once anywhere else.
+     */
+    @Override
+    public List<SpawnDetail> injectSpawns(String bucket, SpawnablePosition position) {
+        Swarm.Active swarm = Swarm.active();
+        if (swarm == null || swarm.details().isEmpty() || !Swarm.COMMON_BUCKET.equals(bucket)
+                || !applies(position) || !position.getBiomeHolder().is(swarm.biome())) {
+            return null;
+        }
+        List<SpawnDetail> offered = new ArrayList<>(swarm.details().size());
+        for (SpawnDetail detail : swarm.details()) {
+            // Cobblemon does not check injected details itself: the detail's own
+            // conditions (kind of spot, light, time) must accept the spot.
+            if (detail.isSatisfiedBy(position)) {
+                offered.add(detail);
+            }
+        }
+        return offered.isEmpty() ? null : offered;
+    }
+
+    /**
+     * Multiplies the weight of the swarming species in its habitat, and of
+     * the full moon's types on a full moon night. Called for every candidate
+     * of every spawn attempt: a few field reads and set lookups.
+     */
+    @Override
+    public float affectWeight(SpawnDetail detail, SpawnablePosition position, float weight) {
+        if (!(detail instanceof PokemonSpawnDetail pokemonDetail) || !applies(position)) {
+            return weight;
+        }
+        String raw = pokemonDetail.getPokemon().getSpecies();
+        if (raw == null) {
+            return weight;
+        }
+        String speciesId = SpeciesRules.normalizeId(raw);
+        float result = weight;
+        Swarm.Active swarm = Swarm.active();
+        if (swarm != null && swarm.speciesId().equals(speciesId) && position.getBiomeHolder().is(swarm.biome())) {
+            result *= (float) SafariConfigManager.get().events.swarm.weightMultiplier;
+        }
+        if (SafariHappenings.fullMoon() && favouredByMoon(speciesId)) {
+            result *= (float) SafariConfigManager.get().events.fullMoon.weightMultiplier;
+        }
+        return result;
+    }
+
+    /** Whether the spot is one of a player's spawner in the Safari. */
+    private static boolean applies(SpawnablePosition position) {
+        return position.getSpawner() instanceof PlayerSpawner && SafariDimensions.isSafari(position.getWorld());
+    }
+
+    /** Whether one of the species' types is favoured by the full moon. */
+    private static boolean favouredByMoon(String speciesId) {
+        Set<String> favoured = SafariHappenings.fullMoonTypes();
+        if (favoured.isEmpty()) {
+            return false;
+        }
+        Set<String> types = TYPES.computeIfAbsent(speciesId, SafariHappeningsInfluence::typesOf);
+        for (String type : types) {
+            if (favoured.contains(type)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** The species' type names, lower case; empty for an unknown species. */
+    private static Set<String> typesOf(String speciesId) {
+        ResourceLocation id = ResourceLocation.tryParse(speciesId);
+        Species species = id == null ? null : PokemonSpecies.getByIdentifier(id);
+        if (species == null) {
+            return Set.of();
+        }
+        Set<String> names = new HashSet<>();
+        for (ElementalType type : species.getTypes()) {
+            names.add(type.getName().toLowerCase(Locale.ROOT));
+        }
+        return Set.copyOf(names);
+    }
+}

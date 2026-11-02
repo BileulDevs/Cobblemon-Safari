@@ -21,7 +21,9 @@ public enum WallScreenContent implements StringRepresentable {
     /** The viewer's lifetime Safari record and points. */
     STATS,
     /** Today's missions and the viewer's progress. */
-    BOUNTIES;
+    BOUNTIES,
+    /** The viewer's Safari Pokédex: species caught per habitat. */
+    DEX;
 
     /** Name used in the block state. */
     @Override

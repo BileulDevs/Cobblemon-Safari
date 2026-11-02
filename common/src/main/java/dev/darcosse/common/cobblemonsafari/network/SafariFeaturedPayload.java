@@ -23,9 +23,11 @@ import java.util.List;
  *                             relative, because server and client clocks need not agree
  * @param rotationLengthMillis length of a whole rotation, for the progress bar
  * @param entries              the specials, most common first
+ * @param swarm                the species swarming during the rotation, with the habitat it swarms
+ *                             in as {@link Entry#habitat()}; null when the rotation has no swarm
  */
 public record SafariFeaturedPayload(boolean enabled, long millisUntilRotation, long rotationLengthMillis,
-                                    List<Entry> entries) implements CustomPacketPayload {
+                                    List<Entry> entries, @Nullable Entry swarm) implements CustomPacketPayload {
 
     /**
      * Wire format version, checked before anything else is read. The format
@@ -33,7 +35,7 @@ public record SafariFeaturedPayload(boolean enabled, long millisUntilRotation, l
      * one means) without raising this makes a peer of another build read
      * garbage without an error. Raise it on every change to write/read.
      */
-    public static final int WIRE_VERSION = 1;
+    public static final int WIRE_VERSION = 2;
 
     /**
      * Upper bound on entries read from the wire. Far above any sane slot
@@ -76,20 +78,29 @@ public record SafariFeaturedPayload(boolean enabled, long millisUntilRotation, l
         buf.writeVarLong(rotationLengthMillis);
         buf.writeVarInt(entries.size());
         for (Entry entry : entries) {
-            buf.writeResourceLocation(entry.species());
-            buf.writeVarInt(entry.aspects().size());
-            for (String aspect : entry.aspects()) {
-                buf.writeUtf(aspect);
-            }
-            buf.writeVarInt(entry.rarity().ordinal());
-            buf.writeBoolean(entry.habitat() != null);
-            if (entry.habitat() != null) {
-                buf.writeResourceLocation(entry.habitat());
-            }
-            buf.writeBoolean(entry.special());
-            buf.writeVarInt(entry.minLevel());
-            buf.writeVarInt(entry.maxLevel());
+            writeEntry(buf, entry);
         }
+        buf.writeBoolean(swarm != null);
+        if (swarm != null) {
+            writeEntry(buf, swarm);
+        }
+    }
+
+    /** One entry; MUST list the same fields in the same order as {@link #readEntry}. */
+    private static void writeEntry(FriendlyByteBuf buf, Entry entry) {
+        buf.writeResourceLocation(entry.species());
+        buf.writeVarInt(entry.aspects().size());
+        for (String aspect : entry.aspects()) {
+            buf.writeUtf(aspect);
+        }
+        buf.writeVarInt(entry.rarity().ordinal());
+        buf.writeBoolean(entry.habitat() != null);
+        if (entry.habitat() != null) {
+            buf.writeResourceLocation(entry.habitat());
+        }
+        buf.writeBoolean(entry.special());
+        buf.writeVarInt(entry.minLevel());
+        buf.writeVarInt(entry.maxLevel());
     }
 
     /**
@@ -110,24 +121,31 @@ public record SafariFeaturedPayload(boolean enabled, long millisUntilRotation, l
         int count = checkedCount(buf.readVarInt(), MAX_ENTRIES, "entries");
         List<Entry> entries = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
-            ResourceLocation species = buf.readResourceLocation();
-            int aspectCount = checkedCount(buf.readVarInt(), MAX_ASPECTS, "aspects");
-            List<String> aspects = new ArrayList<>(aspectCount);
-            for (int a = 0; a < aspectCount; a++) {
-                aspects.add(buf.readUtf());
-            }
-            int rarityIndex = buf.readVarInt();
-            if (rarityIndex < 0 || rarityIndex >= Rarity.values().length) {
-                throw new IllegalStateException("Cobblemon Safari: unknown rarity index " + rarityIndex);
-            }
-            ResourceLocation habitat = buf.readBoolean() ? buf.readResourceLocation() : null;
-            boolean special = buf.readBoolean();
-            int minLevel = buf.readVarInt();
-            int maxLevel = buf.readVarInt();
-            entries.add(new Entry(species, List.copyOf(aspects), Rarity.values()[rarityIndex], habitat, special,
-                    minLevel, maxLevel));
+            entries.add(readEntry(buf));
         }
-        return new SafariFeaturedPayload(enabled, millisUntilRotation, rotationLengthMillis, List.copyOf(entries));
+        Entry swarm = buf.readBoolean() ? readEntry(buf) : null;
+        return new SafariFeaturedPayload(enabled, millisUntilRotation, rotationLengthMillis, List.copyOf(entries),
+                swarm);
+    }
+
+    /** One entry; MUST list the same fields in the same order as {@link #writeEntry}. */
+    private static Entry readEntry(FriendlyByteBuf buf) {
+        ResourceLocation species = buf.readResourceLocation();
+        int aspectCount = checkedCount(buf.readVarInt(), MAX_ASPECTS, "aspects");
+        List<String> aspects = new ArrayList<>(aspectCount);
+        for (int a = 0; a < aspectCount; a++) {
+            aspects.add(buf.readUtf());
+        }
+        int rarityIndex = buf.readVarInt();
+        if (rarityIndex < 0 || rarityIndex >= Rarity.values().length) {
+            throw new IllegalStateException("Cobblemon Safari: unknown rarity index " + rarityIndex);
+        }
+        ResourceLocation habitat = buf.readBoolean() ? buf.readResourceLocation() : null;
+        boolean special = buf.readBoolean();
+        int minLevel = buf.readVarInt();
+        int maxLevel = buf.readVarInt();
+        return new Entry(species, List.copyOf(aspects), Rarity.values()[rarityIndex], habitat, special,
+                minLevel, maxLevel);
     }
 
     /** Rejects a list length outside {@code [0, max]}. */

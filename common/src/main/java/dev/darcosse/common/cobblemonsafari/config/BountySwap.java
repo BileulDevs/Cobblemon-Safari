@@ -1,7 +1,7 @@
 package dev.darcosse.common.cobblemonsafari.config;
 
 /**
- * Swapping a mission at the rest house clerk ({@code bounties.swap}): a
+ * Swapping a mission at the rest house clerk ({@code missions.swap}): a
  * player who finds a mission too hard pays to replace it with another, for
  * themselves only. The new mission starts from zero; a mission already done
  * cannot be swapped.

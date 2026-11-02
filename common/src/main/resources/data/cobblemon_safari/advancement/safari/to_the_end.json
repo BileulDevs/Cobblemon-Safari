@@ -1,0 +1,24 @@
+{
+  "parent": "cobblemon_safari:safari/enter",
+  "display": {
+    "icon": {
+      "id": "minecraft:clock"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.to_the_end.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.to_the_end.description"
+    },
+    "frame": "goal"
+  },
+  "criteria": {
+    "hunt": {
+      "trigger": "cobblemon_safari:safari_event",
+      "conditions": {
+        "event": "full_hunt"
+      }
+    }
+  },
+  "sends_telemetry_event": false
+}

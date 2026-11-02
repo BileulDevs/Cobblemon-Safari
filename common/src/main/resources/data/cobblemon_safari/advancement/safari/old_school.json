@@ -1,0 +1,24 @@
+{
+  "parent": "cobblemon_safari:safari/first_catch",
+  "display": {
+    "icon": {
+      "id": "cobblemon:safari_ball"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.old_school.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.old_school.description"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "catch": {
+      "trigger": "cobblemon_safari:safari_event",
+      "conditions": {
+        "event": "catch_safari_ball_out_of_battle"
+      }
+    }
+  },
+  "sends_telemetry_event": false
+}

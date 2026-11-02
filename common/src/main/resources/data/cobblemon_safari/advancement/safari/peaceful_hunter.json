@@ -1,0 +1,24 @@
+{
+  "parent": "cobblemon_safari:safari/reporting_in",
+  "display": {
+    "icon": {
+      "id": "minecraft:poppy"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.peaceful_hunter.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.peaceful_hunter.description"
+    },
+    "frame": "goal"
+  },
+  "criteria": {
+    "mission": {
+      "trigger": "cobblemon_safari:safari_event",
+      "conditions": {
+        "event": "mission_out_of_battle"
+      }
+    }
+  },
+  "sends_telemetry_event": false
+}

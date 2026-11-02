@@ -564,6 +564,19 @@ E_DEEP_CAVERN = [-1.0, E_DEEP_CAVERN_MAX]
 E_NOT_DEEP_CAVERN = [E_DEEP_CAVERN_MAX, 1.0]
 # Humidity above which caves are lush: the southern sectors (direction_z > 0.5).
 LUSH_HUMIDITY = 0.5 * CLIMATE_SCALE
+# Humidity written underground inside the lush cavern (humidity_router_df),
+# so the whole cave system is lush grotto whatever the sector borders and
+# the erosion under it. Natural humidity never leaves about
+# +-CLIMATE_SCALE * (1 + CLIMATE_NOISE), some 0.06: anything far above it
+# is reserved for the cavern, and only its own climate point (and the
+# ordinary lush ones) can match it. Lowered near natural values, the
+# southern caves around the cavern would turn into its forced point too.
+LUSH_FORCED_FROM = 0.5
+LUSH_FORCED_HUMIDITY = 1.0
+# How far around the lush cavern the forced humidity reaches, in squared
+# zone radii like CAVERN_DRY_REACH: a little past its edge, so the walls
+# and the rock around its last chambers are lush too.
+LUSH_BIOME_REACH = 1.3
 
 
 def point(biome, t, h, c=C_INLAND, e=E_ALL, w=W_ALL, depth=D_SURFACE):
@@ -598,7 +611,11 @@ def climate_points():
         point("lush_grotto", ANY, [LUSH_HUMIDITY, 2.0], c=C_COAST_AND_INLAND, depth=D_SHALLOW),
         point("cavern", ANY, [-2.0, LUSH_HUMIDITY], c=C_COAST_AND_INLAND, e=E_NOT_DEEP_CAVERN, depth=D_DEEP),
         point("lush_grotto", ANY, [LUSH_HUMIDITY, 2.0], c=C_COAST_AND_INLAND, e=E_NOT_DEEP_CAVERN, depth=D_DEEP),
-        point("deep_cavern", ANY, ANY, c=C_COAST_AND_INLAND, e=E_DEEP_CAVERN, depth=D_DEEP),
+        # Never at the lush cavern's forced humidity, or its deepest chambers
+        # under the inner rocky ring (low erosion) would turn deep cavern.
+        point("deep_cavern", ANY, [-2.0, LUSH_FORCED_FROM], c=C_COAST_AND_INLAND, e=E_DEEP_CAVERN, depth=D_DEEP),
+        # The lush cavern itself, at any erosion and depth underground.
+        point("lush_grotto", ANY, [LUSH_FORCED_FROM, 2.0], c=C_COAST_AND_INLAND, e=ANY, depth=D_UNDERGROUND),
     ]
     for biome, angle in ROCKY_RING:
         t, h = on_circle(angle)
@@ -782,9 +799,21 @@ GIANT_CAVERN_TUNNEL = {"name": "giant_cavern_passage", "x": 90, "z": 0, "y": 10,
 # opens between the southern and eastern rest houses. Like vanilla's cheese
 # caves, its caves stay a dozen blocks under the ground (the sloped_cheese
 # guard in cavern_df), river beds included, so no river pours into them.
-LUSH_CAVERN_Z = round(0.35 * ISLAND_RADIUS)
-LUSH_CAVERN = {"x": 0, "z": LUSH_CAVERN_Z, "radius": 80, "center_y": 30, "half_height": 45, "boost": 0.35}
-LUSH_CAVERN_TUNNEL = {"name": "lush_cavern_passage", "x": -60, "z": LUSH_CAVERN_Z, "y": 14, "direction": 1, "slope": 0.25, "length": 320,
+# It is as large as the giant cavern (same radius, height and boost), so
+# both cave systems play alike. Its centre sits at 0.4 of the radius: the
+# two zones then keep about 67 blocks of rock between their edges (centre
+# distance minus both radii); back at 0.35 they would nearly touch (about
+# 29 blocks) and their dry zones (CAVERN_DRY_REACH, about 137 blocks each
+# at this radius) would overlap. Its southern edge (about z 427) passes
+# under the southern rest house's anchor (z 422): harmless, the caves stay
+# a dozen blocks under the ground, but moving it further south puts more
+# of it under that house.
+LUSH_CAVERN_Z = round(0.4 * ISLAND_RADIUS)
+LUSH_CAVERN = {"x": 0, "z": LUSH_CAVERN_Z, "radius": 120, "center_y": 30, "half_height": 60, "boost": 0.3}
+# Starts at the same share of the radius from the centre as the giant
+# cavern's passage (0.75), and is lengthened by as much as it moved its
+# start, so its mouth opens where it did before (around x 260).
+LUSH_CAVERN_TUNNEL = {"name": "lush_cavern_passage", "x": -90, "z": LUSH_CAVERN_Z, "y": 14, "direction": 1, "slope": 0.25, "length": 350,
                       "half_width": 4.0, "half_height": 3.5}
 # How much of vanilla's cave layering (cave_layer, which flattens cheese
 # caves into horizontal sheets) is removed at a cavern's centre: 0 keeps
@@ -819,6 +848,42 @@ TUNNEL_WALL_NOISE = 0.35
 # the walls.
 CAVERN_DRY_REACH = 1.3
 TUNNEL_DRY_REACH = 3.0
+# Strength of the rock kept under the surface over a cavern, as a multiple
+# of vanilla's guard (sloped_cheese, at most 0.5). Vanilla's 0.5 suits its
+# own threshold; with a cavern's boost, cheese noise down to -1 beat it, and
+# a cavern reaching near the ground (the lush one, under the low south)
+# opened into the sky in wide holes with floating rock between them. At 3,
+# the guard tops out at 1.5, more than the cheese can ever cancel, over the
+# same band of ground as vanilla's: caverns end under a solid roof. Lower
+# values bring the holes back; higher ones change nothing more (the band is
+# set by sloped_cheese, not by this factor). Passages are not affected:
+# their mouths still open.
+CAVERN_ROOF_STRENGTH = 3.0
+
+# Rest houses underground, one per cavern, built in a chamber the mod digs
+# beside the cavern's passage (CaveChamber in Java), so a player walking in
+# through the passage always finds it. Each is placed where its passage
+# crosses the cavern's centre column (x of the zone), at the passage's
+# floor there, beside it on the side given by "side" (+1: south), door
+# turned toward it. Written to ParkGeometry.CAVE_REST_HOUSES with what the
+# chamber needs of the passage: its z, its slope along x, how far it can
+# wind sideways.
+CAVE_REST_HOUSES = [
+    {"id": "giant_cavern", "cavern": GIANT_CAVERN, "passage": GIANT_CAVERN_TUNNEL, "side": 1},
+    {"id": "lush_cavern", "cavern": LUSH_CAVERN, "passage": LUSH_CAVERN_TUNNEL, "side": 1},
+]
+# How far a passage's walls can stray sideways from its axis, in blocks:
+# the bends (TUNNEL_WIGGLE, on noise that rarely exceeds 1.2) plus its
+# half width roughened by TUNNEL_WALL_NOISE. The chamber's ramp covers
+# this band, so it cuts the passage wherever its bends put it.
+CAVE_HOUSE_PASSAGE_REACH = math.ceil(TUNNEL_WIGGLE * 1.2 + 4.0 * (1.0 + TUNNEL_WALL_NOISE))
+# Blocks between the passage's band and the house's door. The chamber's
+# floor goes from the passage's slope to the plaza's level across them
+# (CaveChamber.RAMP_BLEND); less brings the passage against the steps.
+CAVE_HOUSE_GAP = 6
+# Distance from the house's centre to its door side: half the template's
+# depth (RestHouseBuilder SIZE_X 20, pivot 10).
+CAVE_HOUSE_HALF_DEPTH = 10
 
 # ---------------------------------------------------------------------------
 # Island density functions
@@ -949,6 +1014,28 @@ def humidity_df():
     return df_mul(CLIMATE_SCALE, df_add(island("direction_z"), df_mul(CLIMATE_NOISE, noise_df("vegetation"))))
 
 
+# The router's depth: 0 at the surface, 0.2 and more underground (D_UNDERGROUND).
+DEPTH_DF = f"{MOD_ID}:safari/depth"
+
+
+def humidity_router_df():
+    """
+    The humidity of the noise router: humidity_df, except underground in and
+    around the lush cavern, where it is LUSH_FORCED_HUMIDITY so the whole
+    cavern is lush grotto. Only underground (depth past D_UNDERGROUND's
+    start): the surface above the cavern keeps its own sector's biome.
+    Both choices evaluate only the branch they pick, so the rest of the
+    island pays one distance per sample.
+    """
+    natural = humidity_df()
+    underground = {"type": "minecraft:range_choice", "input": DEPTH_DF,
+                   "min_inclusive": D_UNDERGROUND[0], "max_exclusive": 1000.0,
+                   "when_in_range": LUSH_FORCED_HUMIDITY, "when_out_of_range": natural}
+    return {"type": "minecraft:range_choice", "input": zone_distance(LUSH_CAVERN),
+            "min_inclusive": 0.0, "max_exclusive": LUSH_BIOME_REACH,
+            "when_in_range": underground, "when_out_of_range": natural}
+
+
 
 CARVED_CAVES_DF = f"{MOD_ID}:safari/carved_caves"
 CAVES_DRY_DF = f"{MOD_ID}:safari/carved_caves_dry"
@@ -1006,9 +1093,11 @@ def cavern_df(c):
     layer = df_mul(layer, df_add(1.0, df_mul(-CAVERN_LAYER_CUT, weight)))
     cheese = df_clamp(df_add(VANILLA_CHEESE_OFFSET - c["boost"],
                              noise3(f"{MOD_ID}:{CAVERN_NOISE}", 1.0, 0.6666666666666666)), -1.0, 1.0)
-    # Vanilla's guard keeping cheese caves about a dozen blocks under the
-    # surface, so the caverns never open into the sky by themselves.
-    guard = df_clamp(df_add(1.5, df_mul(-0.64, f"{MOD_ID}:safari/sloped_cheese")), 0.0, 0.5)
+    # Vanilla's guard keeping cheese caves under the surface, made strong
+    # enough for the cavern's lower threshold (CAVERN_ROOF_STRENGTH), so the
+    # caverns never open into the sky by themselves.
+    guard = df_mul(CAVERN_ROOF_STRENGTH,
+                   df_clamp(df_add(1.5, df_mul(-0.64, f"{MOD_ID}:safari/sloped_cheese")), 0.0, 0.5))
     fade = df_mul(CAVERN_FADE, df_add(1.0, df_mul(-1.0, weight)))
     return df_add(df_add(layer, cheese), df_add(guard, fade))
 
@@ -1298,9 +1387,32 @@ SAFARI_STRUCTURE_SETS = {
                "dry": {"footprint_radius": 8, "max_relief": 4}},
     "ruins": {"spacing": 14, "separation": 6, "salt": 1729384751,
               "dry": {"footprint_radius": 10, "max_relief": 6}},
+    # Cobblemon's small habitats (clearings, ponds, mounds...), drawn at
+    # random among those that suit the spot. One candidate per 256 blocks:
+    # about eleven on the island, of which about two thirds land in a habitat
+    # that has one and pass the dry check, so seven or eight per map. A
+    # smaller spacing gives more; separation keeps two of them at least
+    # that many chunks apart, and the exclusion zone keeps them off the ruins.
+    "habitats": {"spacing": 16, "separation": 8, "salt": 1904417263,
+                 "dry": {"footprint_radius": 8, "max_relief": 5},
+                 "exclusion_zone": {"other_set": "ruins", "chunk_count": 3}},
 }
 SURFACE_JIGSAW = {"step": "surface_structures", "start_height": {"absolute": 0}, "size": 7,
                   "terrain_adaptation": "beard_thin"}
+# Settings shared by Cobblemon's habitats: decorations of the ground, placed
+# in its local modifications step and projected onto the surface.
+HABITAT_JIGSAW = {"step": "local_modifications", "start_height": {"absolute": 0}, "size": 3,
+                  "terrain_adaptation": "beard_box"}
+
+
+def habitat(pool, habitats, **settings):
+    """A Safari habitat entry: Cobblemon's start pool, the Safari habitats it suits, its own jigsaw settings."""
+    return ("habitats", pool, habitats, dict(HABITAT_JIGSAW, **settings))
+
+
+TEMPERATE_LAND = ["grassland", "flower_meadow", "rocky_hills", "woodland", "deep_forest"]
+OPEN_LAND = ["grassland", "flower_meadow", "rocky_hills", "savanna"]
+
 SAFARI_STRUCTURES = {
     # Gimmighoul towers, one look per climate.
     "tower_temperate": ("towers", "cobblemon:ruins/temperate_gimmi_tower",
@@ -1334,6 +1446,39 @@ SAFARI_STRUCTURES = {
                           dict(SURFACE_JIGSAW, step="underground_structures", terrain_adaptation="beard_box")),
     "ruin_overgrown_trial": ("ruins", "cobblemon:ruins/overgrown_trial_ruins", ["jungle", "mushroom_grove"],
                              dict(SURFACE_JIGSAW, step="underground_structures")),
+    # Cobblemon's habitats, each with the settings of its own structure file
+    # (data/cobblemon/worldgen/structure/habitats) and the Safari habitats its
+    # biome tag reaches through the bridge.
+    "habitat_berry_patch": habitat("cobblemon:habitats/berry_patches_start", TEMPERATE_LAND,
+                                   size=1, start_height={"absolute": -1}, terrain_adaptation="none"),
+    "habitat_freshwater_pond": habitat("cobblemon:habitats/freshwater_pond_start", TEMPERATE_LAND, size=1),
+    "habitat_sunflowerbed_clearing": habitat("cobblemon:habitats/sunflowerbed_clearing_start", OPEN_LAND,
+                                             size=1, terrain_adaptation="none"),
+    "habitat_flowerbed_clearing": habitat("cobblemon:habitats/flowerbed_clearing_start", ["flower_meadow"],
+                                          size=1, terrain_adaptation="none"),
+    "habitat_pinkflowerbed_clearing": habitat("cobblemon:habitats/pinkflowerbed_clearing_start", ["flower_meadow"],
+                                              size=1, terrain_adaptation="none"),
+    "habitat_sandpit_clearing": habitat("cobblemon:habitats/sandpit_clearing_start", OPEN_LAND,
+                                        size=2, terrain_adaptation="none"),
+    "habitat_oak_wildfire_scar": habitat("cobblemon:habitats/oak_wildlife_scar_start", OPEN_LAND),
+    "habitat_birch_wildfire_scar": habitat("cobblemon:habitats/birch_wildlife_scar_start", ["rocky_hills"]),
+    "habitat_parched_peat_bog": habitat("cobblemon:habitats/parched_peat_bog_connector_start", OPEN_LAND),
+    "habitat_bug_mound": habitat("cobblemon:habitats/bug_mound_start", ["savanna"],
+                                 size=5, terrain_adaptation="beard_thin"),
+    "habitat_fae_mounds": habitat("cobblemon:habitats/fae_mounds_start", ["mushroom_grove"],
+                                  terrain_adaptation="beard_thin"),
+    "habitat_carved_ice_spikes": habitat("cobblemon:habitats/carved_ice_spikes_start", ["snowfield", "glacier"],
+                                         start_height={"absolute": -4}, terrain_adaptation="beard_thin",
+                                         liquid_settings="apply_waterlogging"),
+    "habitat_badlands_shaded_rock": habitat("cobblemon:habitats/badlands_shaded_rock_start", ["badlands", "volcanic"],
+                                            size=2, terrain_adaptation="beard_thin"),
+    "habitat_meteorite_impact": habitat("cobblemon:habitats/meteorite_impact_start", ["badlands", "volcanic"],
+                                        size=5, terrain_adaptation="beard_thin"),
+    "habitat_lush_canopy": habitat("cobblemon:habitats/lush_canopy_start", ["jungle"], size=5),
+    "habitat_lush_peat_bog": habitat("cobblemon:habitats/lush_peat_bog_connector_start", ["jungle"]),
+    "habitat_zen_garden": habitat("cobblemon:habitats/zen_garden_start", ["jungle"], size=1),
+    "habitat_thermal_crevices": habitat("cobblemon:habitats/thermal_crevices_start", ["jungle"],
+                                        size=2, start_height={"absolute": -1}, terrain_adaptation="none"),
 }
 # Folders owned by write_safari_structures, rebuilt from scratch on each run.
 SAFARI_STRUCTURE_DIR = "safari_ruins"
@@ -1364,6 +1509,8 @@ def write_safari_structures(written):
             "terrain_adaptation": settings["terrain_adaptation"],
             "use_expansion_hack": False,
         }
+        if "liquid_settings" in settings:
+            jigsaw["liquid_settings"] = settings["liquid_settings"]
         # Wrapped in the mod's dry_jigsaw type (DryJigsawStructure): a land
         # biome still has ponds and flooded hollows, and a structure projected
         # onto water would float in them.
@@ -1378,18 +1525,31 @@ def write_safari_structures(written):
             "max_relief": dry["max_relief"],
             "jigsaw": jigsaw,
         }, written)
+    # Every Safari ruin and tower, for the structure tags written by hand that
+    # name them all (keeps_lakes_away, see worldgen/LakeGuard).
+    write(f"tags/worldgen/structure/{SAFARI_STRUCTURE_DIR}.json", {
+        "replace": False,
+        "values": [f"{MOD_ID}:{SAFARI_STRUCTURE_DIR}/{n}" for n in SAFARI_STRUCTURES],
+    }, written)
     for set_name, placement in SAFARI_STRUCTURE_SETS.items():
         members = [n for n, v in SAFARI_STRUCTURES.items() if v[0] == set_name]
         # Several variants per set: at a candidate spot, Minecraft tries them in
         # turn until one suits the biome there.
+        spread = {
+            "type": "minecraft:random_spread",
+            "spacing": placement["spacing"],
+            "separation": placement["separation"],
+            "salt": placement["salt"],
+        }
+        if "exclusion_zone" in placement:
+            zone = placement["exclusion_zone"]
+            if zone["other_set"] not in SAFARI_STRUCTURE_SETS:
+                sys.exit(f"Structure set {set_name} excludes unknown set {zone['other_set']}")
+            spread["exclusion_zone"] = {"other_set": f"{MOD_ID}:{SAFARI_STRUCTURE_DIR}/{zone['other_set']}",
+                                        "chunk_count": zone["chunk_count"]}
         write(f"worldgen/structure_set/{SAFARI_STRUCTURE_DIR}/{set_name}.json", {
             "structures": [{"structure": f"{MOD_ID}:{SAFARI_STRUCTURE_DIR}/{m}", "weight": 1} for m in members],
-            "placement": {
-                "type": "minecraft:random_spread",
-                "spacing": placement["spacing"],
-                "separation": placement["separation"],
-                "salt": placement["salt"],
-            },
+            "placement": spread,
         }, written)
 
 
@@ -1528,7 +1688,7 @@ def main():
     settings["noise_router"]["fluid_level_floodedness"] = carved_caves_dry(
         settings["noise_router"]["fluid_level_floodedness"])
     settings["noise_router"]["temperature"] = temperature_df()
-    settings["noise_router"]["vegetation"] = humidity_df()
+    settings["noise_router"]["vegetation"] = humidity_router_df()
     settings["surface_rule"] = surface_rule(vanilla("worldgen/noise_settings/overworld")["surface_rule"])
     write("worldgen/noise_settings/safari.json", settings, written)
 
@@ -1588,6 +1748,21 @@ def write_park_geometry():
         houses.append((ISLAND_CENTER_X + round(ring * math.sin(angle)),
                        ISLAND_CENTER_Z - round(ring * math.cos(angle))))
     house_lines = ",\n".join(f"            new Column({x}, {z})" for x, z in houses)
+    cave_lines = []
+    for cave in CAVE_REST_HOUSES:
+        t = cave["passage"]
+        x = cave["cavern"]["x"]
+        along = t["direction"] * (x - t["x"])
+        # The passage's floor where it crosses the house's column: its axis
+        # minus its half height. The house's ground layer is the block under
+        # it, so players walk out of the door at the passage's level.
+        floor = t["y"] + t["slope"] * along - t["half_height"]
+        ground_y = math.floor(floor) - 1
+        z = t["z"] + cave["side"] * (CAVE_HOUSE_PASSAGE_REACH + CAVE_HOUSE_GAP + CAVE_HOUSE_HALF_DEPTH)
+        rise = t["slope"] * t["direction"]
+        cave_lines.append(f'            new CaveHouse("{cave["id"]}", {x}, {ground_y}, {z}, {t["z"]}, {rise}, '
+                          f'{CAVE_HOUSE_PASSAGE_REACH})')
+    cave_house_lines = ",\n".join(cave_lines)
     source = f"""package dev.darcosse.common.cobblemonsafari.park;
 
 import java.util.List;
@@ -1624,8 +1799,33 @@ public final class ParkGeometry {{
 {house_lines}
     );
 
+    /**
+     * Rest houses underground, one per cavern, each in a chamber dug beside
+     * its cavern's passage (structure.CaveChamber). Fixed positions: no site
+     * search, the chamber is dug whatever the rock. Also identified in the
+     * saved world state by their column, after the surface anchors.
+     */
+    public static final List<CaveHouse> CAVE_REST_HOUSES = List.of(
+{cave_house_lines}
+    );
+
     /** A column of the park, x and z in blocks. */
     public record Column(int x, int z) {{
+    }}
+
+    /**
+     * An underground rest house and the passage its chamber opens on.
+     *
+     * @param id            name of the cavern, as dialogue functions and translation keys write it
+     * @param x             centre column of the house
+     * @param groundY       height of the house's ground layer: players walk out at groundY + 1
+     * @param z             centre column of the house
+     * @param passageZ      z of the passage's axis, which runs along x past the house's door
+     * @param passageRise   blocks the passage's floor climbs per block toward +x
+     * @param passageReach  how far, in blocks, the passage's walls can stray from its axis
+     */
+    public record CaveHouse(String id, int x, int groundY, int z, int passageZ, double passageRise,
+                            int passageReach) {{
     }}
 
     private ParkGeometry() {{

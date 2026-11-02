@@ -28,95 +28,186 @@ public class SafariConfig {
      */
     public int configVersion = SafariConfigManager.CURRENT_CONFIG_VERSION;
 
-    /**
-     * Hard cap on the remaining time; adding time never goes above it. Also
-     * the most banked time one entry spends, the rest staying in the bank.
-     */
-    public int maxDurationSeconds = 2 * 60 * 60;
+    /** How long a hunt lasts, when the clock runs, and where it ends. */
+    public Hunt hunt = new Hunt();
 
-    /** Poké Ball ids (as in Cobblemon, e.g. {@code cobblemon:safari_ball}) usable inside the Safari. */
-    public List<String> allowedBalls = new ArrayList<>(List.of(
-            "cobblemon:safari_ball",
-            "cobblemon:master_ball"
-    ));
-
-    /**
-     * When true the clock only runs while the player is online and inside.
-     * When false it keeps running while they are offline, and they are escorted
-     * out on their next login if it ran out.
-     */
-    public boolean pauseTimeWhileOffline = true;
-
-    /** Whether Pokémon battles may start inside the Safari. The games forbid them. */
-    public boolean allowBattles = true;
-
-    /**
-     * Extra time a player may stay after their clock hits zero when they are in
-     * the middle of a battle, so the battle is not torn apart by a teleport.
-     */
-    public int battleGraceSeconds = 120;
-
-    /** Where players go when their session ends. */
-    public ExitDestination exitDestination = ExitDestination.RETURN_POINT;
-
-    /**
-     * Creative and spectator players may enter and roam without a session
-     * (building, moderation). Not on login: a player who logs in inside
-     * without a session is sent out whatever their game mode.
-     */
-    public boolean exemptCreativeAndSpectator = true;
-
-    /**
-     * Remaining times, in seconds, at which the player gets a warning in
-     * chat. Its colour follows the time left, whatever the list holds:
-     * white, yellow from 5 minutes, red from 1 minute
-     * (SafariSessionManager.WARNING_YELLOW_SECONDS and WARNING_RED_SECONDS).
-     */
-    public List<Integer> warningThresholdsSeconds = new ArrayList<>(List.of(900, 600, 300, 60, 30, 10));
-
-    /** What players can and cannot do to themselves and to the terrain inside the Safari. */
-    public Protection protection = new Protection();
-
-    /** Safari Balls lent at the entrance, as in the games. */
-    public Loan loan = new Loan();
-
-    /** Catch rate adjustments inside the Safari. */
-    public Capture capture = new Capture();
-
-    /** Daily regeneration of the Safari map. */
-    public Reset reset = new Reset();
-
-    /** Behaviour of the Safari Ticket item. */
-    public Ticket ticket = new Ticket();
-
-    /** Safari Tickets found in overworld chests. */
-    public TicketLoot ticketLoot = new TicketLoot();
+    /** The Safari Ticket, the time bank it fills, and the tickets found in chests. */
+    public Tickets tickets = new Tickets();
 
     /** The Safari Gates found in the overworld: entry, warden and roaming Pokémon. */
     public Gate gate = new Gate();
 
-    /** Safari points earned by catching Pokémon, spent at the warden's shop. */
-    public Points points = new Points();
+    /** Which Poké Balls work inside, and the games' loan of Safari Balls. */
+    public Balls balls = new Balls();
 
-    /** The Escape Rope lent at the entrance, to get out of caves. */
-    public EscapeRope escapeRope = new EscapeRope();
+    /** Pokémon battles inside the Safari. */
+    public Battles battles = new Battles();
 
-    /** Travel to the rest houses: by the Safari Guide of each house, and by the Escape Rope. */
-    public RestHouseTravel restHouseTravel = new RestHouseTravel();
+    /** Catch rate, marks, and Pokémon running away after a failed ball. */
+    public Capture capture = new Capture();
 
-    /** Daily missions shown on the wall screens, paid in Safari points. */
-    public Bounties bounties = new Bounties();
+    /** What players can and cannot do to themselves and to the terrain inside the Safari. */
+    public Protection protection = new Protection();
 
     /** Cobblemon's natural spawns inside the Safari: which Pokémon may come in, and how many. */
     public Spawns spawns = new Spawns();
 
-    /** The daily rotation of special Pokémon, its board and the spawner that brings them in. */
-    public Featured featured = new Featured();
+    /** The rotation of special Pokémon, its board and the spawner that brings them in. */
+    public Specials specials = new Specials();
+
+    /** Rare happenings in the Safari: swarms and full moon nights. */
+    public Events events = new Events();
+
+    /** Safari points earned by catching Pokémon, spent at the warden's shop. */
+    public Points points = new Points();
+
+    /** The rest houses: their building on a new map, their Safari Guide and the trips to them. */
+    public RestHouses restHouses = new RestHouses();
+
+    /** The Escape Rope lent at the entrance, to get out of caves. */
+    public EscapeRope escapeRope = new EscapeRope();
+
+    /** Daily regeneration of the Safari map. */
+    public Reset reset = new Reset();
+
+    /**
+     * The missions of each rotation, paid in Safari points. Last on purpose:
+     * Gson writes fields in declaration order, and this long section (one
+     * entry per kind) would otherwise bury the short ones after it.
+     */
+    public Missions missions = new Missions();
+
+    /** How long a hunt lasts, when its clock runs, and where it ends. */
+    public static class Hunt {
+        /**
+         * Hard cap on the remaining time; adding time never goes above it.
+         * Also the most banked time one entry spends, the rest staying in
+         * the bank.
+         */
+        public int maxDurationSeconds = 2 * 60 * 60;
+
+        /**
+         * When true the clock only runs while the player is online and
+         * inside. When false it keeps running while they are offline, and
+         * they are escorted out on their next login if it ran out.
+         */
+        public boolean pauseWhileOffline = true;
+
+        /**
+         * Remaining times, in seconds, at which the player gets a warning in
+         * chat. Its colour follows the time left, whatever the list holds:
+         * white, yellow from 5 minutes, red from 1 minute
+         * (SafariSessionManager.WARNING_YELLOW_SECONDS and WARNING_RED_SECONDS).
+         */
+        public List<Integer> warningsAtSeconds = new ArrayList<>(List.of(900, 600, 300, 60, 30, 10));
+
+        /** Where players go when their hunt ends. */
+        public ExitDestination exitDestination = ExitDestination.RETURN_POINT;
+
+        /**
+         * Creative and spectator players (building, moderation) may roam
+         * inside without a hunt, may enter through a gate, its warden or
+         * {@code /safari enter} with an empty time bank (a hunt holding no
+         * time, which ends once they switch to survival or adventure), keep
+         * their clock stopped while they stay in that mode, and ignore the
+         * terrain protection. Not on login: a player who logs in inside
+         * without a hunt is sent out whatever their game mode.
+         */
+        public boolean exemptCreativeAndSpectator = true;
+    }
+
+    /** Which Poké Balls work inside, and the games' loan of Safari Balls. */
+    public static class Balls {
+        /** Poké Ball ids (as in Cobblemon, e.g. {@code cobblemon:safari_ball}) usable inside the Safari. */
+        public List<String> allowed = new ArrayList<>(List.of(
+                "cobblemon:safari_ball",
+                "cobblemon:master_ball"
+        ));
+
+        /** Safari Balls lent at the entrance, as in the games. */
+        public Loan loan = new Loan();
+    }
+
+    /** Pokémon battles inside the Safari. */
+    public static class Battles {
+        /** Whether Pokémon battles may start inside the Safari. The games forbid them. */
+        public boolean enabled = true;
+
+        /**
+         * Whether a Pokémon fished inside the Safari starts a battle with the
+         * angler, as Cobblemon does everywhere one second after the bite.
+         * False leaves the Pokémon free on the bank, to be caught with a ball
+         * out of battle (Safari Ball bonus included) or battled on purpose,
+         * the Safari way, hence the default.
+         */
+        public boolean fishingStartsBattle = false;
+
+        /**
+         * Extra time a player may stay after their clock hits zero when they
+         * are in the middle of a battle, so the battle is not torn apart by a
+         * teleport.
+         */
+        public int graceSeconds = 120;
+    }
+
+    /** Rare happenings that change Cobblemon's natural spawns in the Safari for a while. */
+    public static class Events {
+        /** One species swarming in one habitat for a whole rotation. */
+        public Swarm swarm = new Swarm();
+        /** Some types coming out more on full moon nights. */
+        public FullMoon fullMoon = new FullMoon();
+    }
+
+    /**
+     * A swarm: with each rotation of the specials, maybe, one uncommon or
+     * rare species of the Safari comes out in numbers in one of its
+     * habitats. It is announced to the players in the Safari and on the
+     * specials board. Only Cobblemon's natural spawns change: in that
+     * habitat, the species is offered with the common Pokémon and its weight
+     * is multiplied.
+     */
+    public static class Swarm {
+        /** Master switch. */
+        public boolean enabled = true;
+
+        /** Chance, from 0 to 1, that a rotation has a swarm. 1 makes every rotation have one. */
+        public double chance = 0.5;
+
+        /**
+         * How much more often the swarming species is picked in its habitat,
+         * among the common Pokémon. 10 makes it most of what spawns there;
+         * 1 leaves only the move into the common pick. 1 to 100.
+         */
+        public double weightMultiplier = 10.0;
+
+        /**
+         * Same-species cap around a player for the swarming species, instead
+         * of spawns.maxSameSpeciesNearby, so a swarm can look like one. 0 or
+         * less keeps the usual cap.
+         */
+        public int maxNearby = 10;
+    }
+
+    /**
+     * Full moon nights: while the moon is full and it is night in the
+     * Safari, Pokémon of some types come out more often in Cobblemon's
+     * natural spawns. Announced to the players in the Safari at nightfall.
+     */
+    public static class FullMoon {
+        /** Master switch. */
+        public boolean enabled = true;
+
+        /** Cobblemon type names whose Pokémon come out more. */
+        public List<String> types = new ArrayList<>(List.of("fairy", "ghost"));
+
+        /** How much more often those Pokémon are picked, within their rarity. 1 to 20. */
+        public double weightMultiplier = 3.0;
+    }
 
     /**
      * Which species one way into the Safari lets through: the four special
      * categories and a list of excluded species. Shared by {@link Spawns}
-     * (Cobblemon's natural spawns) and {@link Featured} (the board and the
+     * (Cobblemon's natural spawns) and {@link Specials} (the board and the
      * mod's own spawner), which each carry their own copy, so a legendary can
      * be on the board while staying out of the natural spawns, or the reverse.
      *
@@ -150,24 +241,11 @@ public class SafariConfig {
 
         /** Species ids that never come in this way, e.g. {@code cobblemon:ditto}. */
         public List<String> excludedSpecies = new ArrayList<>();
-
-        /**
-         * Copies another section's categories and exclusions into this one.
-         * Used once, to carry the rules of a pre-split file over to the
-         * section that did not exist yet; the copies are independent.
-         */
-        public void copyRulesFrom(SpeciesRulesSection other) {
-            legendary = other.legendary.copy();
-            mythical = other.mythical.copy();
-            ultraBeast = other.ultraBeast.copy();
-            paradox = other.paradox.copy();
-            excludedSpecies = new ArrayList<>(other.excludedSpecies);
-        }
     }
 
     /**
      * Cobblemon's natural spawns inside the Safari. The special Pokémon of
-     * the day follow {@link Featured} instead, categories included.
+     * the day follow {@link Specials} instead, categories included.
      *
      * <p>Cobblemon's own spawner populates the Safari through the biome tag
      * bridge ({@code data/cobblemon/tags/worldgen/biome}): each habitat gets the
@@ -216,12 +294,30 @@ public class SafariConfig {
          * same.
          */
         public double caughtSpeciesWeight = SafariConfigManager.DEFAULT_CAUGHT_SPECIES_WEIGHT;
+
+        /**
+         * Distance from a Poké Snack, in blocks, within which no natural
+         * Pokémon spawns in the Safari, so the snack's own spawner has room
+         * to bring some. 16 is twice the snack's spawn radius. Larger empties
+         * more of the surroundings (and searches a little further for
+         * snacks each second); smaller leaves natural Pokémon close enough to
+         * fill the snack's count again. 0 turns the clearing off. 0 to 32.
+         */
+        public int snackClearRadius = SafariConfigManager.DEFAULT_SNACK_CLEAR_RADIUS;
+
+        /**
+         * Cap of a Poké Snack's spawner in the Safari, as a multiple of the
+         * Safari's density (Cobblemon's Pokémon per chunk times
+         * pokemonPerChunkMultiplier). Above 1 the snack still brings
+         * Pokémon in a full area; higher packs more around it. 1 to 4.
+         */
+        public double snackDensityMultiplier = SafariConfigManager.DEFAULT_SNACK_DENSITY_MULTIPLIER;
     }
 
     /**
      * Whether, and how often, one category of special Pokémon (legendary,
      * mythical, ultra beast, paradox) may come into the Safari through one
-     * way: {@code spawns} for Cobblemon's natural spawns, {@code featured}
+     * way: {@code spawns} for Cobblemon's natural spawns, {@code specials}
      * for the board and the mod's spawner. Each way keeps its own count.
      */
     public static class SpecialCategory {
@@ -232,7 +328,7 @@ public class SafariConfig {
 
         /**
          * Most Pokémon of each species of this category per rotation of the
-         * specials (featured.rotationMinutes) coming in this way, counting
+         * specials (specials.rotationMinutes) coming in this way, counting
          * those caught in the Safari plus those still roaming: with 2, once
          * two Rayquaza from this way are caught, no third shows up through it
          * before the next rotation. The other way counts separately, so caps
@@ -254,11 +350,6 @@ public class SafariConfig {
             category.allowSpawn = allowSpawn;
             category.maxSpawnPerPokemon = cap;
             return category;
-        }
-
-        /** An independent copy, so two sections never share one object. */
-        public SpecialCategory copy() {
-            return of(allowSpawn, maxSpawnPerPokemon);
         }
     }
 
@@ -282,12 +373,12 @@ public class SafariConfig {
         public String timeZone = "";
 
         /**
-         * How hilly each new map is: FLAT, ROLLING (the island as always) or
-         * MOUNTAINOUS. Only new maps take it: the map on disk keeps the
-         * relief it was generated with, or new chunks would rise as cliffs
-         * against the old ones.
+         * How hilly each new map is: FLAT, GENTLE (the default), ROLLING (the
+         * island as it was before 1.4.0) or MOUNTAINOUS. Only new maps take
+         * it: the map on disk keeps the relief it was generated with, or new
+         * chunks would rise as cliffs against the old ones.
          */
-        public IslandRelief relief = IslandRelief.ROLLING;
+        public IslandRelief relief = IslandRelief.GENTLE;
     }
 
     /**
@@ -342,20 +433,25 @@ public class SafariConfig {
 
         /**
          * Points for a capture, by the species' rarity in the Safari (its
-         * Cobblemon spawn bucket). Sized with the bounties for about 600
+         * Cobblemon spawn bucket). Sized with the missions for about 600
          * points per hour of active hunting, which buys a first-stage Pokémon
          * of the shop in about a quarter of an hour.
          */
+        public CatchPoints perCatch = new CatchPoints();
+
+        /** Extra points when the species is one of the specials of the rotation. */
+        public int specialBonus = 50;
+
+        /** Extra points for a shiny. */
+        public int shinyBonus = 250;
+    }
+
+    /** Points for a capture by rarity ({@code points.perCatch}). */
+    public static class CatchPoints {
         public int common = 10;
         public int uncommon = 20;
         public int rare = 50;
         public int ultraRare = 120;
-
-        /** Extra points when the species is one of today's specials. */
-        public int featuredBonus = 50;
-
-        /** Extra points for a shiny. */
-        public int shinyBonus = 250;
     }
 
     /**
@@ -365,7 +461,7 @@ public class SafariConfig {
      * the missions name are drawn under {@link #speciesFilter}, and a player
      * may swap a mission at the clerk ({@link #swap}).
      */
-    public static class Bounties {
+    public static class Missions {
         /** Master switch for the missions, their rewards and their page on the board. */
         public boolean enabled = true;
 
@@ -379,11 +475,11 @@ public class SafariConfig {
          * (no specials, no species for a habitat) is skipped.
          */
         public List<BountyKind> allowedKinds = new ArrayList<>(List.of(BountyKind.SPECIES, BountyKind.TYPE,
-                BountyKind.FEATURED, BountyKind.HABITAT, BountyKind.ANY, BountyKind.DIFFERENT,
-                BountyKind.OUT_OF_BATTLE, BountyKind.NIGHT, BountyKind.EVOLVED, BountyKind.LEVEL));
+                BountyKind.SPECIAL, BountyKind.HABITAT, BountyKind.ANY, BountyKind.DIFFERENT,
+                BountyKind.OUT_OF_BATTLE, BountyKind.NIGHT, BountyKind.EVOLVED, BountyKind.LEVEL, BountyKind.FISHING));
 
         /** Extra points once every mission of the rotation is done. */
-        public int allDoneBonus = 200;
+        public int allMissionsBonusPoints = 200;
 
         /** The tuning of each kind: how often it is drawn, how many catches it asks, what it pays. */
         public BountyKinds kinds = new BountyKinds();
@@ -393,16 +489,6 @@ public class SafariConfig {
 
         /** Swapping a mission at the rest house clerk. */
         public BountySwap swap = new BountySwap();
-
-        /** Former reward of a type mission, per catch; moved to {@code kinds.type.rewardPerCatch} (config version 4). */
-        @Deprecated
-        public Integer typeRewardPerCatch = null;
-        /** Former reward of a species mission; moved to {@code kinds.species.reward} (config version 4). */
-        @Deprecated
-        public Integer speciesReward = null;
-        /** Former reward of a specials mission; moved to {@code kinds.featured.reward} (config version 4). */
-        @Deprecated
-        public Integer featuredReward = null;
     }
 
 
@@ -416,27 +502,14 @@ public class SafariConfig {
         public boolean enabled = true;
 
         /**
-         * Former home of {@link RestHouseTravel#cooldownSeconds}, read once
-         * by the config manager to carry an older file's value over (config
-         * version 2), then cleared. Null in any current file: Gson leaves
-         * null fields out when writing, so the key disappears.
+         * The rope's "nearest rest house" option, with the trip's cooldown
+         * and cinematic of {@code restHouses}. Climbing to the open air stays.
          */
-        @Deprecated
-        public Integer restHouseCooldownSeconds = null;
+        public boolean toRestHouse = true;
     }
 
-    /**
-     * Travel to the rest houses. Every trip shows a short loading cinematic
-     * while the destination loads, and builds itself first if nobody went
-     * near it on this map yet.
-     */
-    public static class RestHouseTravel {
-        /** The Safari Guide of every rest house; when false, the houses have no guide. */
-        public boolean guideEnabled = true;
-
-        /** The Escape Rope's "nearest rest house" option; climbing to the open air stays. */
-        public boolean ropeEnabled = true;
-
+    /** The rest houses: their building on a new map, and the trips to them. */
+    public static class RestHouses {
         /**
          * Builds every rest house of a new map in the background, one at a
          * time, from shortly after the server starts, so trips rarely wait
@@ -445,7 +518,22 @@ public class SafariConfig {
          * When false, a house is built the first time a player goes near it
          * or travels to it.
          */
-        public boolean prebuildHouses = true;
+        public boolean prebuild = true;
+
+        /** The trips between the houses. */
+        public Travel travel = new Travel();
+    }
+
+    /**
+     * The trips to a rest house, by its Safari Guide or by the Escape Rope.
+     * Every trip is filmed while the destination loads (the player's double
+     * flies, burrows or swims there, or a painted scene when that cannot be
+     * staged; not a setting), and builds the house first if it is not
+     * standing yet.
+     */
+    public static class Travel {
+        /** The Safari Guide of every rest house; when false, the houses have no guide. */
+        public boolean guide = true;
 
         /**
          * Seconds before the same player can travel to a rest house again,
@@ -460,20 +548,9 @@ public class SafariConfig {
          * or be built first. 0 teleports as soon as it is ready.
          */
         public int cinematicSeconds = SafariConfigManager.DEFAULT_TRAVEL_CINEMATIC_SECONDS;
-
-        /**
-         * How the trips to a rest house are shown: FLIGHT (the player's
-         * double flies off on their own flying Pokémon, or a Staraptor, seen
-         * by everyone around; from the guide's steps, or from where the rope
-         * was used, after a climb to the open air in a cave) or PANORAMA (the
-         * painted landscape for the guide, the pixel-art scene for the rope).
-         * FLIGHT falls back to PANORAMA's scenes on its own when the sky is
-         * closed, or when the player has no flyer and Staraptor is missing.
-         */
-        public TravelCinematicStyle cinematicStyle = TravelCinematicStyle.FLIGHT;
     }
 
-    /** Catch rate adjustments inside the Safari. */
+    /** Catch rate, marks, and Pokémon running away inside the Safari. */
     public static class Capture {
         /**
          * Multiplies the species catch rate when the loaned ball ({@link
@@ -485,25 +562,123 @@ public class SafariConfig {
          */
         public double safariBallOutOfBattleMultiplier = 3.0;
 
-        /**
-         * Gives the Safari Mark ("the Safari Find") to every Pokémon caught in
-         * the Safari, shown in its summary's marks page. false gives none;
-         * marks already given stay.
-         */
-        public boolean awardSafariMark = true;
+        /** The marks given to Pokémon caught in the Safari, each with its switch. */
+        public Marks marks = new Marks();
+
+        /** Wild Pokémon running away after a failed throw. */
+        public Flee flee = new Flee();
     }
 
     /**
-     * Special Pokémon of the day: a handful of uncommon, rare and ultra-rare
-     * species drawn from what is installed (Cobblemon and datapacks), shown on
-     * the wall screens and spawned in their habitat by the mod itself.
+     * The Safari's marks, shown in a caught Pokémon's summary. False stops
+     * giving that mark; marks already given stay. The event marks come on
+     * top of the Safari Mark, and their title takes the place of its title.
+     */
+    public static class Marks {
+        /** "the Safari Find": every Pokémon caught in the Safari. */
+        public boolean safari = true;
+        /** "the Star of the Day": one of the specials of the rotation. */
+        public boolean special = true;
+        /** "of the Swarm": the swarming species, caught in the swarm's habitat. */
+        public boolean swarm = true;
+        /** "of the Full Moon": caught on a full moon night. */
+        public boolean fullMoon = true;
+        /** "the Safari Catch": fished with a rod in the Safari, then caught. */
+        public boolean angler = true;
+    }
+
+    /**
+     * After a ball fails on a wild Pokémon outside of a battle, inside the
+     * Safari, the Pokémon may run away (it vanishes in a puff), as in the
+     * Safari Zone of the games. The chance depends on how rare the species
+     * is in the Safari, and grows with each ball that already failed on it.
+     * Never in a battle: Cobblemon handles fleeing there.
+     */
+    public static class Flee {
+        /** Master switch. False: no Pokémon ever runs away after a failed ball. */
+        public boolean enabled = true;
+
+        /**
+         * Added to the chance for each ball that already failed on the same
+         * Pokémon: 0.05 makes the fourth failed ball on a rare one a 25 %
+         * risk. 0 keeps the chance flat. Shared by every rarity.
+         */
+        public double perFailedBall = 0.05;
+
+        /**
+         * Highest chance, whatever the rarity and the failed balls: keeps a
+         * long chase possible. Shared by every rarity. Higher lets a long
+         * chase end in a flight more often than not.
+         */
+        public double maxChance = 0.35;
+
+        /** Whether shiny Pokémon may run away. */
+        public boolean shinies = false;
+
+        /**
+         * Whether, and how likely, each kind of Pokémon runs away: the four
+         * rarities of the Safari, then the four legendary-class categories,
+         * which take precedence over the rarity.
+         */
+        public FleeRarities rarities = new FleeRarities();
+    }
+
+    /**
+     * The eight entries of {@code capture.flee.rarities}. The four rarities
+     * are the Safari's own (habitat index; a species it does not know counts
+     * as common). The four categories are Cobblemon's labels: a Pokémon that
+     * carries one follows that entry only, never its rarity's, so a
+     * legendary the Safari lists as ultra-rare follows {@link #legendary}.
+     */
+    public static class FleeRarities {
+        public FleeRarity common = new FleeRarity(true, 0.05);
+        public FleeRarity uncommon = new FleeRarity(true, 0.08);
+        public FleeRarity rare = new FleeRarity(true, 0.10);
+        public FleeRarity ultraRare = new FleeRarity(true, 0.12);
+        public FleeRarity legendary = new FleeRarity(false, 0.25);
+        public FleeRarity mythical = new FleeRarity(false, 0.25);
+        public FleeRarity ultraBeast = new FleeRarity(false, 0.20);
+        public FleeRarity paradox = new FleeRarity(false, 0.18);
+    }
+
+    /**
+     * One entry of {@code capture.flee.rarities}. Boxed so that a key left
+     * out of a hand-written entry reads as null and the config manager can
+     * put that entry's own default back, rather than Gson's false and 0.
+     */
+    public static class FleeRarity {
+        /** Whether these Pokémon may run away at all. */
+        public Boolean enabled;
+
+        /**
+         * Chance, from 0 to 1, that one of them runs away after a failed
+         * ball, before {@link Flee#perFailedBall} and {@link Flee#maxChance}.
+         */
+        public Double chance;
+
+        /** For Gson: an entry whose keys are all missing, filled in by validation. */
+        public FleeRarity() {
+        }
+
+        /** An entry with its default values. */
+        public FleeRarity(boolean enabled, double chance) {
+            this.enabled = enabled;
+            this.chance = chance;
+        }
+    }
+
+
+    /**
+     * Special Pokémon of the rotation: a handful of species drawn from what
+     * is installed (Cobblemon and datapacks), shown on the wall screens and
+     * spawned in their habitat by the mod itself.
      *
      * <p>The categories and exclusions inherited from
      * {@link SpeciesRulesSection} decide which species the board may draw and
      * the mod's spawner may bring in; Cobblemon's natural spawns follow
      * {@link Spawns} instead.
      */
-    public static class Featured extends SpeciesRulesSection {
+    public static class Specials extends SpeciesRulesSection {
         /** Master switch for the rotation, the board content and the special spawner. */
         public boolean enabled = true;
 
@@ -511,44 +686,68 @@ public class SafariConfig {
          * Length of one rotation, in real minutes (240 = four hours, 1440 =
          * one day). Rotations are aligned on midnight UTC when the length
          * divides a day, so 240 changes the specials at 0, 4, 8, 12, 16 and
-         * 20 h UTC. The bounties are redrawn with each rotation, so a shorter
-         * rotation also means more bounty sets (and bonuses) per day.
+         * 20 h UTC. The missions are redrawn with each rotation, so a shorter
+         * rotation also means more mission sets (and bonuses) per day.
          * Changing it starts a new draw right away.
          */
         public int rotationMinutes = SafariConfigManager.DEFAULT_ROTATION_MINUTES;
 
-        /**
-         * Species featured per rotation, by rarity. Weighted toward the rare
-         * end: the specials are what is worth a trip, and the board shows
-         * six of them at most comfortably on a 4 x 2 screen. A slot a rarity
-         * cannot fill goes to the next more common one.
-         */
-        public int uncommonSlots = 1;
-        /** Rare species featured per rotation. */
-        public int rareSlots = 2;
-        /** Ultra-rare species featured per rotation. Legendaries land here when allowed. */
-        public int ultraRareSlots = 3;
+        /** Species drawn per rotation, by rarity. */
+        public SpecialSlots slots = new SpecialSlots();
 
-        /** Relative chance of an uncommon special being picked for a spawn. */
-        public int weightUncommon = 10;
-        /** Relative chance of a rare special being picked for a spawn. */
-        public int weightRare = 4;
-        /** Relative chance of an ultra-rare special being picked for a spawn. */
-        public int weightUltraRare = 1;
+        /** The mod's spawner, which brings the specials into their habitat around the players. */
+        public SpecialSpawn spawn = new SpecialSpawn();
+    }
 
+    /**
+     * Species drawn per rotation, by rarity ({@code specials.slots}).
+     * Weighted toward the rare end: the specials are what is worth a trip,
+     * and the board shows six of them at most comfortably on a 4 x 2 screen.
+     * A rare or ultra-rare slot its rarity cannot fill goes to the next more
+     * common one, down to uncommon; commons only fill their own slots, so 0
+     * keeps them off the board whatever happens.
+     */
+    public static class SpecialSlots {
+        /** Common species per rotation. 0 by default: a common Pokémon is no reason for a trip. */
+        public int common = 0;
+        /** Uncommon species per rotation. */
+        public int uncommon = 1;
+        /** Rare species per rotation. */
+        public int rare = 2;
+        /** Ultra-rare species per rotation. Legendaries land here when allowed. */
+        public int ultraRare = 3;
+    }
+
+    /** The specials' own spawner ({@code specials.spawn}). */
+    public static class SpecialSpawn {
         /** Seconds between two spawn attempts around each player in the Safari. */
-        public int spawnIntervalSeconds = 15;
+        public int checkEverySeconds = 15;
 
         /** Chance that an attempt goes ahead, between 0 and 1. */
-        public double spawnChance = 0.35;
+        public double chance = 0.35;
 
         /**
          * Special Pokémon allowed around one player at once (within
          * FeaturedSpawner.NEARBY_RADIUS). Also caps each species to one around
          * the player, so no special takes over.
          */
-        public int maxNearbyPerPlayer = 2;
+        public int maxAroundPlayer = 2;
 
+        /**
+         * Which special comes when an attempt goes ahead: each special's
+         * chance is its rarity's weight against the others'. 10 / 4 / 1
+         * brings an uncommon one ten times as often as an ultra-rare one.
+         */
+        public SpawnWeights weights = new SpawnWeights();
+    }
+
+    /** Relative weights of the specials' rarities in their spawner ({@code specials.spawn.weights}). */
+    public static class SpawnWeights {
+        /** Weight of a common special; only matters when {@code specials.slots.common} draws some. */
+        public int common = 0;
+        public int uncommon = 10;
+        public int rare = 4;
+        public int ultraRare = 1;
     }
 
     /**
@@ -567,7 +766,7 @@ public class SafariConfig {
 
         /**
          * Item id of the loaned ball. It is always usable inside the Safari,
-         * even if it is missing from {@code allowedBalls}.
+         * even if it is missing from {@code balls.allowed}.
          */
         public String ballItem = "cobblemon:safari_ball";
     }
@@ -639,11 +838,12 @@ public class SafariConfig {
     }
 
     /**
-     * The Safari Ticket: the built-in item access method. A ticket may carry its
-     * own duration in its custom data ({@code duration_seconds}), so tickets
-     * sold at different prices can grant different hunts.
+     * The Safari Ticket: the built-in item access method, and the time bank
+     * it fills. A ticket may carry its own duration in its custom data
+     * ({@code duration_seconds}), so tickets sold at different prices can
+     * grant different hunts.
      */
-    public static class Ticket {
+    public static class Tickets {
         /** Time a Safari Ticket adds, unless the ticket carries its own (custom data). */
         public int defaultDurationSeconds = 30 * 60;
 
@@ -656,29 +856,34 @@ public class SafariConfig {
         public int minAddedSeconds = 20 * 60;
 
         /**
-         * Using a ticket while already inside adds its duration to the running
-         * session (capped by {@code maxDurationSeconds}) instead of being refused.
+         * Using a ticket while already inside adds its duration to the
+         * current hunt (capped by {@code hunt.maxDurationSeconds}) instead of
+         * being refused.
          */
-        public boolean extendsActiveSession = true;
+        public boolean addToCurrentHunt = true;
 
         /**
          * Most Safari time a player can bank with tickets, in seconds. Tickets
          * used outside the Safari add to this bank; entering spends it.
          */
-        public int maxCreditSeconds = 4 * 60 * 60;
+        public int maxBankedSeconds = 4 * 60 * 60;
 
         /**
          * Gives the unused time of a hunt paid with banked time back to the bank
-         * when the player leaves on purpose (through the clerk) or dies
-         * inside. Time running out or an operator ending the hunt never refund.
+         * when the player leaves on purpose (through the clerk), dies inside,
+         * or is taken out by other means (a /tp, a home or waystone command).
+         * Time running out or an operator ending the hunt never refund.
          */
         public boolean refundUnusedTimeOnLeave = true;
+
+        /** Safari Tickets found in overworld chests. */
+        public TicketLoot loot = new TicketLoot();
     }
 
     /**
      * Protection rules. Creative and spectator players are exempt from the
-     * terrain rules when {@link #exemptCreativeAndSpectator} is on, so builders
-     * can still work on the park.
+     * terrain rules when {@link Hunt#exemptCreativeAndSpectator} is on, so
+     * builders can still work on the park.
      */
     public static class Protection {
         /**
@@ -687,6 +892,14 @@ public class SafariConfig {
          * in the void would fall forever.
          */
         public boolean invulnerablePlayers = true;
+
+        /**
+         * Whether hunger is frozen for players inside. On, the food bar and
+         * its saturation stay where they were on entering (eating still fills
+         * them), so a timed hunt is not spent eating. Off (the default), the
+         * bar goes down as it does everywhere else.
+         */
+        public boolean hunger = false;
 
         /**
          * Players cannot break blocks, place blocks, empty or fill buckets, or
@@ -709,5 +922,45 @@ public class SafariConfig {
                 "cobblemon:poke_cake",
                 "cobblemon:poke_snack"
         ));
+
+        /**
+         * Cobblemon plants players may harvest despite {@link #protectBlocks},
+         * one switch each. Only read while the terrain is protected.
+         */
+        public Interact interact = new Interact();
+    }
+
+    /**
+     * The switches of {@code protection.interact}. The defaults keep what
+     * the protection always allowed: plants picked with a click (berries,
+     * apricorns, Galarica nuts) stay pickable, plants harvested by breaking
+     * them stay protected, so they are there for every player until the
+     * next map. Roots are the exception: shears used to strip them, a hole
+     * in the protection, now closed unless {@link #roots} is on.
+     */
+    public static class Interact {
+        /** Picking ripe berries with a right-click. The tree is never broken. */
+        public boolean berries = true;
+        /** Picking ripe apricorns with a right- or left-click. The tree is never broken. */
+        public boolean apricorns = true;
+        /** Picking ripe Galarica nuts with a right-click. The bush is never broken. */
+        public boolean galaricaNuts = true;
+        /** Breaking mint plants, which is how they are harvested. Gone until the next map. */
+        public boolean mints = false;
+        /** Breaking Revival Herbs. Gone until the next map. */
+        public boolean revivalHerbs = false;
+        /** Breaking Medicinal Leeks. Gone until the next map. */
+        public boolean medicinalLeeks = false;
+        /** Breaking Vivichokes. Gone until the next map. */
+        public boolean vivichokes = false;
+        /** Breaking Hearty Grains. Gone until the next map. */
+        public boolean heartyGrains = false;
+        /** Breaking Bugwort. Gone until the next map. */
+        public boolean bugwort = false;
+        /**
+         * Shearing big and energy roots (which leaves a smaller root) and
+         * breaking them.
+         */
+        public boolean roots = false;
     }
 }

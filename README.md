@@ -17,10 +17,9 @@ The Safari is its own dimension: a single island in a turquoise sea, with its ow
 
 - **Fourteen habitats** laid out around a central summit: grassland, savanna, dunes, badlands, jungle, marsh, mushroom grove, flower meadow, woodland, deep forest, taiga, snowfield, glacier and rocky hills, plus the peaks, a volcano, lakes and rivers.
 - **Caves everywhere**, a giant pillared cavern under the summit and a lush cavern in the south, each reached by its own winding passage.
-- **Cobblemon ruins and Gimmighoul towers** scattered over the island.
-- **A new map every day.** At the first server start of a new day, the island is regenerated with a new layout, flat, rolling or mountainous as you choose. Sessions, stats, banked time and points are kept.
+- **A new map every day.** At the first server start of a new day, the island is regenerated with a new layout, flat, gentle (the default), rolling or mountainous as you choose. Sessions, stats, banked time and points are kept.
 - **Its own soundtrack**: six original tracks, one per zone, and the cries of the Pokémon that actually live in each biome.
-- **Nothing to break.** Inside, players take no damage and cannot change the terrain. Poké Cakes and Poké Snacks can still be placed as bait.
+- **Nothing to break.** Inside, players take no damage and cannot change the terrain. Poké Cakes and Poké Snacks can still be placed as bait, and berries, apricorns and Galarica nuts picked; each Cobblemon plant has its own switch. Hunger can be frozen too, so a timed hunt is not spent eating.
 
 ### Safari Gates
 
@@ -31,33 +30,36 @@ Rare lodges in the overworld's plains, meadows, light forests and savannas. Stan
 - **Safari Tickets** add 30 minutes of Safari time, banked up to 4 hours. Entering at a gate spends the bank, up to 2 hours per hunt.
 - **Earn tickets** by trading overworld goods at the shop (16 Apricorns, 24 Berries, 1 evolution stone or 1 fossil, once per rotation each, choosing which kind you give) or by finding them in village chests, desert and jungle temples and Cobblemon ruins.
 - **A stopwatch HUD**, made of a Safari Ball, whose hand spins faster as time runs out, with chat warnings from 15 minutes down to 10 seconds.
-- **An end-of-game recap** with every Pokémon caught. Leave early through a rest house clerk and the unused time goes back to your bank.
+- **An end-of-game recap** with every Pokémon caught, the Safari points earned, the missions completed, the species new to your Safari Pokédex, a beaten record and the advancements unlocked. Leave early through a rest house clerk and the unused time goes back to your bank.
 
 ### Restricted Poké Balls
 
-Only Safari Balls and Master Balls work inside by default (configurable). A Safari Ball thrown at a Pokémon outside of battle gets a strong catch bonus, so hunting without battling feels right. The shop hands out 30 free Safari Balls once a day.
+Only Safari Balls and Master Balls work inside by default (configurable). A Safari Ball thrown at a Pokémon outside of battle gets a strong catch bonus, so hunting without battling feels right, and a Pokémon you fish is left free on the bank instead of starting a battle. But miss, and the Pokémon may run away, all the more likely the rarer it is and the more balls you already wasted on it (configurable; legendaries and shinies stay by default). The shop hands out 30 free Safari Balls once a day.
 
 ### Rare Pokémon of the day
 
 Every four hours, the mod draws a few uncommon, rare and ultra-rare species from whatever is installed (Cobblemon and your spawn datapacks) and spawns them near players, **only in their own habitat and at their own hours**: a nocturnal species comes out at night, a cave dweller waits for darkness. Legendary, mythical, ultra beast and paradox Pokémon each have their own switch and a per-rotation cap.
 
+Some rotations bring a **swarm**: one species comes out in numbers in one habitat until the next rotation. And on **full moon nights**, Fairy and Ghost Pokémon come out more. Both are announced in the chat and configurable.
+
 Cobblemon's natural spawns fill the park too, faster than usual, and they favour species you have not caught yet.
 
 ### Rest houses
 
-Eight Pokémon Centers stand on every map, the entrance one right where you arrive. Each has two Healing Machines, a PC, a cooking corner with a Poké Pot, a **Safari Clerk** who runs the shop, lists the missions and can walk you out early, and a **Safari Guide** who takes you to any other rest house of the island, named by its biome, with a short travel cinematic: a double of you flies off on your own flying Pokémon (or a Staraptor if you have none), seen by everyone around, and lands at the destination. One trip every 30 seconds by default, a wait shared with the Escape Rope, whose trips fly too.
+Ten Pokémon Centers stand on every map: eight on the surface, the entrance one right where you arrive, and one deep in each of the two great caverns, beside the passage that leads down to it. Each has two Healing Machines, a PC, a cooking corner with a Poké Pot, a **Safari Clerk** who runs the shop, lists the missions and can walk you out early, and a **Safari Guide** who takes you to any other rest house of the island, named by its biome, with a short travel cinematic seen by everyone around: a double of you leaps off on your own flying Pokémon (or a Staraptor if you have none) in a gust of wind and lands at the destination, or, to and from the caverns, rides a digger of your party (or a Dugtrio) that dives into the ground and bursts out in front of the destination. One trip every 30 seconds by default, a wait shared with the Escape Rope, whose trips are filmed too, with a dive under the water when used in it.
 
 ### Missions and Safari points
 
 - Every catch earns **Safari points**, more for rare species, today's specials and shinies.
-- Each rotation brings **three missions** drawn among twelve kinds (a species, a type, one of today's specials, a habitat, different species, without a battle, at night...), the same for everyone, paid once per player, with a bonus when all are done. Too hard? The clerk swaps one for you, for a few points. Every kind, its reward and the species it may ask can be configured.
-- Every Pokémon you catch there keeps the **Safari Mark**: "Tauros the Safari Find".
-- Your Safari career shows in the game's own **Statistics** screen: hunts, time hunted, Pokémon, shinies and specials caught, best hunt, points earned and spent, missions completed.
+- Each rotation brings **three missions** drawn among thirteen kinds (a species, a type, one of today's specials, a habitat, different species, without a battle, at night, fishing...), the same for everyone, paid once per player, with a bonus when all are done. Too hard? The clerk swaps one for you, for a few points. Every kind, its reward and the species it may ask can be configured.
+- Every Pokémon you catch there keeps the **Safari Mark**: "Tauros the Safari Find". Catch it at the right moment and it gets an event mark too: one of the specials of the day ("the Star of the Day"), a swarm ("of the Swarm"), a full moon night ("of the Full Moon"), or fished first ("the Safari Catch").
+- Your Safari career shows in the game's own **Statistics** screen: hunts, time hunted, Pokémon, shinies and specials caught, best hunt, points earned and spent, missions completed, rest house trips, Pokémon fished.
+- A **Safari advancement tab** of 47 advancements, from your first steps in the tall grass to fishing from a boat, with a few hidden ones.
 - The **shop** sells a fixed list plus random Pokémon, items and Poké Balls that change with each rotation, a cooking tab, and the ticket trades. Pokémon cards show the animated Cobblemon model.
 
 ### Safari Wall Screens
 
-A screen on an arm that you can tilt toward the floor or the ceiling, up to three wide. It shows today's specials with their animated models, your own Safari record, or the missions with your progress, over a pixel-art landscape that follows the time of day. Every colour can be changed.
+A screen on an arm that you can tilt toward the floor or the ceiling, up to three wide. It shows today's specials with their animated models, your own Safari record, the missions with your progress, or your Safari Pokédex (the species you caught in each habitat), over a pixel-art landscape that follows the time of day. Every colour can be changed.
 
 ### Decoration
 
@@ -97,7 +99,7 @@ The Safari Gate block is creative-only, for operators who want to build their ow
 
 ### Commands
 
-Players have one command: `/safari`, which shows their time left, banked time and points. Everything else goes through the gates, the NPCs and the wall screens.
+Players have two commands: `/safari`, which shows their time left, banked time and points, and `/safari dex [habitat]`, their Safari Pokédex (progress per habitat, or the species caught and missing in one habitat). Everything else goes through the gates, the NPCs and the wall screens.
 
 Operators (level 2) have `/safari info`, `enter`, `exit`, `time`, `credit add`, `points add`, `stats`, `top`, `today`, `shop`, `rotate`, `reset` and `reload`.
 
@@ -137,8 +139,9 @@ In single player, nothing else to do.
 ## Credits & License
 
 - **Developer**: Darcosse
-- **Music, textures, Pokémon sprites and NPC models**: original, made for the mod
-- **License**: [MIT](https://opensource.org/licenses/MIT)
+- **Music, textures and NPC models**: original, made for the mod
+- **Pokémon sprites** (wall screens' sprite mode): [E19 Cobblemon Minimap Icons](https://www.curseforge.com/minecraft/texture-packs/e19-cobblemon-minimap-icons) by Emery319, icons by MBCMechachu, under the [Mozilla Public License 2.0](https://mozilla.org/MPL/2.0/) (see `NOTICE.txt` next to them)
+- **License**: [MIT](https://opensource.org/licenses/MIT), except the Pokémon sprites (MPL 2.0, above)
 
 Found a bug or have an idea? Open an issue on [GitHub](https://github.com/BileulDevs/Cobblemon-Safari/issues).
 

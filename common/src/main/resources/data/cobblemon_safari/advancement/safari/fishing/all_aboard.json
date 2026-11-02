@@ -1,0 +1,36 @@
+{
+  "parent": "cobblemon_safari:safari/fishing/first_bite",
+  "display": {
+    "icon": {
+      "id": "minecraft:oak_boat"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.fishing.all_aboard.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.fishing.all_aboard.description"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "fished": {
+      "trigger": "cobblemon_safari:safari_event",
+      "conditions": {
+        "event": "fished",
+        "player": [
+          {
+            "condition": "minecraft:entity_properties",
+            "entity": "this",
+            "predicate": {
+              "location": {
+                "dimension": "cobblemon_safari:safari",
+                "structures": "#cobblemon:fishing_boat"
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "sends_telemetry_event": false
+}

@@ -1,0 +1,24 @@
+{
+  "parent": "cobblemon_safari:safari/fishing/first_bite",
+  "display": {
+    "icon": {
+      "id": "cobblemon:dive_ball"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.fishing.the_big_one.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.fishing.the_big_one.description"
+    },
+    "frame": "challenge"
+  },
+  "criteria": {
+    "fished": {
+      "trigger": "cobblemon_safari:safari_event",
+      "conditions": {
+        "event": "fished_special"
+      }
+    }
+  },
+  "sends_telemetry_event": false
+}

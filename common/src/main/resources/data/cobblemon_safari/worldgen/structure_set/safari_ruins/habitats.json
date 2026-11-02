@@ -1,0 +1,86 @@
+{
+  "structures": [
+    {
+      "structure": "cobblemon_safari:safari_ruins/habitat_berry_patch",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/habitat_freshwater_pond",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/habitat_sunflowerbed_clearing",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/habitat_flowerbed_clearing",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/habitat_pinkflowerbed_clearing",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/habitat_sandpit_clearing",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/habitat_oak_wildfire_scar",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/habitat_birch_wildfire_scar",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/habitat_parched_peat_bog",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/habitat_bug_mound",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/habitat_fae_mounds",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/habitat_carved_ice_spikes",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/habitat_badlands_shaded_rock",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/habitat_meteorite_impact",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/habitat_lush_canopy",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/habitat_lush_peat_bog",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/habitat_zen_garden",
+      "weight": 1
+    },
+    {
+      "structure": "cobblemon_safari:safari_ruins/habitat_thermal_crevices",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 16,
+    "separation": 8,
+    "salt": 1904417263,
+    "exclusion_zone": {
+      "other_set": "cobblemon_safari:safari_ruins/ruins",
+      "chunk_count": 3
+    }
+  }
+}

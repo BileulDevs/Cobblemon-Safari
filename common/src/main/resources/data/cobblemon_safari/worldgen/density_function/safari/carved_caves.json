@@ -116,18 +116,22 @@
         "argument2": {
           "type": "minecraft:add",
           "argument1": {
-            "type": "minecraft:clamp",
-            "input": {
-              "type": "minecraft:add",
-              "argument1": 1.5,
-              "argument2": {
-                "type": "minecraft:mul",
-                "argument1": -0.64,
-                "argument2": "cobblemon_safari:safari/sloped_cheese"
-              }
-            },
-            "min": 0.0,
-            "max": 0.5
+            "type": "minecraft:mul",
+            "argument1": 3.0,
+            "argument2": {
+              "type": "minecraft:clamp",
+              "input": {
+                "type": "minecraft:add",
+                "argument1": 1.5,
+                "argument2": {
+                  "type": "minecraft:mul",
+                  "argument1": -0.64,
+                  "argument2": "cobblemon_safari:safari/sloped_cheese"
+                }
+              },
+              "min": 0.0,
+              "max": 0.5
+            }
           },
           "argument2": {
             "type": "minecraft:mul",
@@ -341,16 +345,16 @@
             "type": "cobblemon_safari:island_coordinate",
             "mode": "radial",
             "center_x": 0,
-            "center_z": 269,
-            "radius": 80
+            "center_z": 307,
+            "radius": 120
           }
         },
         "argument2": {
           "type": "minecraft:square",
           "argument": {
             "type": "minecraft:y_clamped_gradient",
-            "from_y": -60,
-            "to_y": 120,
+            "from_y": -90,
+            "to_y": 150,
             "from_value": -2.0,
             "to_value": 2.0
           }
@@ -402,16 +406,16 @@
                               "type": "cobblemon_safari:island_coordinate",
                               "mode": "radial",
                               "center_x": 0,
-                              "center_z": 269,
-                              "radius": 80
+                              "center_z": 307,
+                              "radius": 120
                             }
                           },
                           "argument2": {
                             "type": "minecraft:square",
                             "argument": {
                               "type": "minecraft:y_clamped_gradient",
-                              "from_y": -60,
-                              "to_y": 120,
+                              "from_y": -90,
+                              "to_y": 150,
                               "from_value": -2.0,
                               "to_value": 2.0
                             }
@@ -430,7 +434,7 @@
             "type": "minecraft:clamp",
             "input": {
               "type": "minecraft:add",
-              "argument1": -0.07999999999999996,
+              "argument1": -0.02999999999999997,
               "argument2": {
                 "type": "minecraft:noise",
                 "noise": "cobblemon_safari:cavern",
@@ -445,18 +449,22 @@
         "argument2": {
           "type": "minecraft:add",
           "argument1": {
-            "type": "minecraft:clamp",
-            "input": {
-              "type": "minecraft:add",
-              "argument1": 1.5,
-              "argument2": {
-                "type": "minecraft:mul",
-                "argument1": -0.64,
-                "argument2": "cobblemon_safari:safari/sloped_cheese"
-              }
-            },
-            "min": 0.0,
-            "max": 0.5
+            "type": "minecraft:mul",
+            "argument1": 3.0,
+            "argument2": {
+              "type": "minecraft:clamp",
+              "input": {
+                "type": "minecraft:add",
+                "argument1": 1.5,
+                "argument2": {
+                  "type": "minecraft:mul",
+                  "argument1": -0.64,
+                  "argument2": "cobblemon_safari:safari/sloped_cheese"
+                }
+              },
+              "min": 0.0,
+              "max": 0.5
+            }
           },
           "argument2": {
             "type": "minecraft:mul",
@@ -486,16 +494,16 @@
                               "type": "cobblemon_safari:island_coordinate",
                               "mode": "radial",
                               "center_x": 0,
-                              "center_z": 269,
-                              "radius": 80
+                              "center_z": 307,
+                              "radius": 120
                             }
                           },
                           "argument2": {
                             "type": "minecraft:square",
                             "argument": {
                               "type": "minecraft:y_clamped_gradient",
-                              "from_y": -60,
-                              "to_y": 120,
+                              "from_y": -90,
+                              "to_y": 150,
                               "from_value": -2.0,
                               "to_value": 2.0
                             }
@@ -518,7 +526,7 @@
       "type": "minecraft:range_choice",
       "input": "cobblemon_safari:safari/lush_cavern_passage_along",
       "min_inclusive": 0.0,
-      "max_exclusive": 320.0,
+      "max_exclusive": 350.0,
       "when_in_range": {
         "type": "minecraft:max",
         "argument1": {
@@ -542,7 +550,7 @@
                           "type": "cobblemon_safari:island_coordinate",
                           "mode": "z",
                           "center_x": 0,
-                          "center_z": 269,
+                          "center_z": 307,
                           "radius": 1.0,
                           "limit": 100000.0
                         },
@@ -651,7 +659,7 @@
           "argument2": {
             "type": "minecraft:add",
             "argument1": "cobblemon_safari:safari/lush_cavern_passage_along",
-            "argument2": -320
+            "argument2": -350
           }
         }
       },

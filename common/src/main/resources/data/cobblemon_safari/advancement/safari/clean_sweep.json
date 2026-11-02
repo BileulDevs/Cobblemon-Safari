@@ -1,0 +1,24 @@
+{
+  "parent": "cobblemon_safari:safari/reporting_in",
+  "display": {
+    "icon": {
+      "id": "minecraft:written_book"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.clean_sweep.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.clean_sweep.description"
+    },
+    "frame": "goal"
+  },
+  "criteria": {
+    "all": {
+      "trigger": "cobblemon_safari:safari_event",
+      "conditions": {
+        "event": "all_missions"
+      }
+    }
+  },
+  "sends_telemetry_event": false
+}

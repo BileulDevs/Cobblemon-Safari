@@ -1,0 +1,24 @@
+{
+  "parent": "cobblemon_safari:safari/root",
+  "display": {
+    "icon": {
+      "id": "minecraft:short_grass"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.enter.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.enter.description"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "entered": {
+      "trigger": "minecraft:changed_dimension",
+      "conditions": {
+        "to": "cobblemon_safari:safari"
+      }
+    }
+  },
+  "sends_telemetry_event": false
+}

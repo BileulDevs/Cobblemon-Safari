@@ -46,7 +46,7 @@ public final class SafariItems {
      * once, after {@code SafariBlocks.register}: block items wrap existing blocks.
      */
     public static void register(BiConsumer<ResourceLocation, Item> registrar) {
-        // One ticket item: its length comes from ticket.defaultDurationSeconds,
+        // One ticket item: its length comes from tickets.defaultDurationSeconds,
         // or from its own custom data (see SafariTicketItem).
         safariTicket = new SafariTicketItem(new Item.Properties().stacksTo(TICKET_STACK_SIZE).rarity(Rarity.UNCOMMON));
         registrar.accept(SAFARI_TICKET_ID, safariTicket);

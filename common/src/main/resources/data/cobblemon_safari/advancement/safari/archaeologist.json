@@ -1,0 +1,69 @@
+{
+  "parent": "cobblemon_safari:safari/enter",
+  "display": {
+    "icon": {
+      "id": "minecraft:brush"
+    },
+    "title": {
+      "translate": "advancements.cobblemon_safari.archaeologist.title"
+    },
+    "description": {
+      "translate": "advancements.cobblemon_safari.archaeologist.description"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "ruin": {
+      "trigger": "minecraft:location",
+      "conditions": {
+        "player": [
+          {
+            "condition": "minecraft:entity_properties",
+            "entity": "this",
+            "predicate": {
+              "location": {
+                "dimension": "cobblemon_safari:safari",
+                "structures": [
+                  "cobblemon_safari:safari_ruins/ruin_stone_henge",
+                  "cobblemon_safari:safari_ruins/ruin_moon_henge",
+                  "cobblemon_safari:safari_ruins/ruin_sun_henge",
+                  "cobblemon_safari:safari_ruins/ruin_toppled_pillars",
+                  "cobblemon_safari:safari_ruins/ruin_shaded",
+                  "cobblemon_safari:safari_ruins/ruin_overgrown_trial"
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    "fossil": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "player": [
+          {
+            "condition": "minecraft:entity_properties",
+            "entity": "this",
+            "predicate": {
+              "location": {
+                "dimension": "cobblemon_safari:safari"
+              }
+            }
+          }
+        ],
+        "items": [
+          {
+            "items": "#cobblemon:fossils"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "ruin",
+      "fossil"
+    ]
+  ],
+  "sends_telemetry_event": false
+}

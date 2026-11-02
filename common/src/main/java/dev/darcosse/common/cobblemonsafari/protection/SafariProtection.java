@@ -44,7 +44,8 @@ import java.util.Set;
  * <p>Interactions that do not change blocks stay allowed on purpose: opening
  * doors and chests, Cobblemon's PC, healing machine and Poké Pot, sitting,
  * riding. The exception is Cobblemon's disc shelf, whose Technical Machines
- * are decoration of the rest houses, not loot.
+ * are decoration of the rest houses, not loot. Cobblemon's plants are
+ * governed one by one by {@code protection.interact} ({@link HarvestCategory}).
  */
 public final class SafariProtection {
 
@@ -91,11 +92,43 @@ public final class SafariProtection {
     }
 
     /**
+     * Whether a player's food exhaustion must be ignored: inside the Safari
+     * while {@code protection.hunger} is on. Exhaustion is the only
+     * way the food bar and its saturation go down (running, jumping,
+     * healing, the Hunger effect), so ignoring it keeps them where they are.
+     * Server side only: the client's food bar follows the server's.
+     */
+    public static boolean shouldIgnoreExhaustion(Player player) {
+        return player instanceof ServerPlayer
+                && SafariConfigManager.get().protection.hunger
+                && SafariDimensions.isSafari(player.level());
+    }
+
+    /**
      * Whether breaking a block must be refused, at the moment it would break.
-     * Tells the player why. Placeable blocks (baits) can be picked up again.
+     * Tells the player why. Placeable blocks (baits) can be picked up again,
+     * and so can the Cobblemon plants harvested by breaking them when their
+     * switch in {@code protection.interact} is on.
      */
     public static boolean shouldBlockBreak(Player player, BlockState state) {
+        HarvestCategory harvest = HarvestCategory.of(state.getBlock());
+        if (harvest != null && harvest.byBreak() && isHarvestAllowed(player, harvest)) {
+            return false;
+        }
         return deny(player, !isPlaceable(player, state.getBlock()) && isTerrainProtectedFor(player));
+    }
+
+    /**
+     * Whether the start of a left click on a block must be refused. Only
+     * apricorns care: Cobblemon also picks a ripe one on a left click, which
+     * no break check sees. Every other block returns at the first test, so
+     * mining and punching Pokémon are untouched. Both sides, so the client
+     * does not pick the fruit locally before the server says no.
+     */
+    public static boolean shouldBlockAttack(Player player, BlockState state) {
+        HarvestCategory harvest = HarvestCategory.of(state.getBlock());
+        return harvest == HarvestCategory.APRICORNS && isTerrainProtectedFor(player)
+                && deny(player, !isHarvestAllowed(player, harvest));
     }
 
     /**
@@ -117,9 +150,24 @@ public final class SafariProtection {
      * the PC or the Healing Machine shut. And a crouching click on a campfire
      * is refused, because it takes the rest house's Poké Pot off.
      *
+     * <p>Cobblemon plants picked with a click follow
+     * {@code protection.interact}: off, any click on them is refused; on,
+     * the click goes on to the usual checks, so holding a block or a tool
+     * against them is still refused, except the plant's own harvest tool
+     * (shears for roots).
+     *
      * @param clicked the block right-clicked
      */
     public static boolean shouldBlockUseOn(Player player, ItemStack stack, BlockState clicked) {
+        HarvestCategory harvest = HarvestCategory.of(clicked.getBlock());
+        if (harvest != null && harvest.byClick() && isTerrainProtectedFor(player)) {
+            if (!isHarvestAllowed(player, harvest)) {
+                return deny(player, true);
+            }
+            if (harvest.isHarvestTool(stack)) {
+                return false;
+            }
+        }
         if (isDiscShelf(clicked) && isTerrainProtectedFor(player)) {
             player.displayClientMessage(Component.translatable(CobblemonSafari.MOD_ID + ".message.shelf_locked"), true);
             return true;
@@ -155,6 +203,17 @@ public final class SafariProtection {
     private static boolean isCampfire(BlockState state) {
         ResourceLocation id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
         return id.equals(COBBLEMON_CAMPFIRE) || id.equals(COBBLEMON_SOUL_CAMPFIRE);
+    }
+
+    /**
+     * Whether a category's switch in {@code protection.interact} is on, read
+     * from the server config or, on the client, from the rules the server
+     * sent (all off until they arrive: the server decides then).
+     */
+    private static boolean isHarvestAllowed(Player player, HarvestCategory category) {
+        return player.level().isClientSide()
+                ? category.allowedBy(SafariClientState.harvestMask())
+                : category.allowedBy(SafariConfigManager.get().protection.interact);
     }
 
     /**
@@ -230,7 +289,7 @@ public final class SafariProtection {
             }
             SafariConfig config = SafariConfigManager.get();
             protectBlocks = config.protection.protectBlocks;
-            exemptCreative = config.exemptCreativeAndSpectator;
+            exemptCreative = config.hunt.exemptCreativeAndSpectator;
         }
         boolean exempt = exemptCreative && (player.isCreative() || player.isSpectator());
         return protectBlocks && !exempt;

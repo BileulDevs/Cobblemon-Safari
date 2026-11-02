@@ -1,5 +1,6 @@
 package dev.darcosse.common.cobblemonsafari.stats;
 
+import dev.darcosse.common.cobblemonsafari.dex.SafariDex;
 import dev.darcosse.common.cobblemonsafari.network.SafariNetwork;
 import dev.darcosse.common.cobblemonsafari.session.CatchRecord;
 import dev.darcosse.common.cobblemonsafari.session.SafariSession;
@@ -22,8 +23,13 @@ public final class SafariStatsListener implements SafariSessionListener {
         SafariStatsStore store = SafariStatsStore.get(player.getServer());
         PlayerSafariStats stats = store.getOrCreate(player.getUUID());
         stats.setName(player.getGameProfile().getName());
-        stats.addCatch(record.speciesId(), record.shiny());
+        boolean newSpecies = stats.addCatch(record.speciesId(), record.shiny());
         store.setDirty();
+        if (newSpecies) {
+            session.addNewSpecies();
+            // Only a new species moves the Pokédex: no packet for the hundredth Pidgey.
+            SafariDex.sendTo(player);
+        }
         SafariStatistics.increment(player, SafariStatistics.POKEMON_CAUGHT);
         if (record.shiny()) {
             SafariStatistics.increment(player, SafariStatistics.SHINY_CAUGHT);

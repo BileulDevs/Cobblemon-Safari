@@ -293,28 +293,90 @@
       }
     },
     "vegetation": {
-      "type": "minecraft:mul",
-      "argument1": 0.05,
-      "argument2": {
+      "type": "minecraft:range_choice",
+      "input": {
         "type": "minecraft:add",
         "argument1": {
-          "type": "cobblemon_safari:island_coordinate",
-          "mode": "direction_z",
-          "center_x": 0,
-          "center_z": 0,
-          "radius": 768
+          "type": "minecraft:square",
+          "argument": {
+            "type": "cobblemon_safari:island_coordinate",
+            "mode": "radial",
+            "center_x": 0,
+            "center_z": 307,
+            "radius": 120
+          }
         },
         "argument2": {
+          "type": "minecraft:square",
+          "argument": {
+            "type": "minecraft:y_clamped_gradient",
+            "from_y": -90,
+            "to_y": 150,
+            "from_value": -2.0,
+            "to_value": 2.0
+          }
+        }
+      },
+      "min_inclusive": 0.0,
+      "max_exclusive": 1.3,
+      "when_in_range": {
+        "type": "minecraft:range_choice",
+        "input": "cobblemon_safari:safari/depth",
+        "min_inclusive": 0.2,
+        "max_exclusive": 1000.0,
+        "when_in_range": 1.0,
+        "when_out_of_range": {
           "type": "minecraft:mul",
-          "argument1": 0.15,
+          "argument1": 0.05,
           "argument2": {
-            "type": "minecraft:shifted_noise",
-            "noise": "cobblemon_safari:vegetation",
-            "shift_x": "minecraft:shift_x",
-            "shift_y": 0.0,
-            "shift_z": "minecraft:shift_z",
-            "xz_scale": 0.25,
-            "y_scale": 0.0
+            "type": "minecraft:add",
+            "argument1": {
+              "type": "cobblemon_safari:island_coordinate",
+              "mode": "direction_z",
+              "center_x": 0,
+              "center_z": 0,
+              "radius": 768
+            },
+            "argument2": {
+              "type": "minecraft:mul",
+              "argument1": 0.15,
+              "argument2": {
+                "type": "minecraft:shifted_noise",
+                "noise": "cobblemon_safari:vegetation",
+                "shift_x": "minecraft:shift_x",
+                "shift_y": 0.0,
+                "shift_z": "minecraft:shift_z",
+                "xz_scale": 0.25,
+                "y_scale": 0.0
+              }
+            }
+          }
+        }
+      },
+      "when_out_of_range": {
+        "type": "minecraft:mul",
+        "argument1": 0.05,
+        "argument2": {
+          "type": "minecraft:add",
+          "argument1": {
+            "type": "cobblemon_safari:island_coordinate",
+            "mode": "direction_z",
+            "center_x": 0,
+            "center_z": 0,
+            "radius": 768
+          },
+          "argument2": {
+            "type": "minecraft:mul",
+            "argument1": 0.15,
+            "argument2": {
+              "type": "minecraft:shifted_noise",
+              "noise": "cobblemon_safari:vegetation",
+              "shift_x": "minecraft:shift_x",
+              "shift_y": 0.0,
+              "shift_z": "minecraft:shift_z",
+              "xz_scale": 0.25,
+              "y_scale": 0.0
+            }
           }
         }
       }

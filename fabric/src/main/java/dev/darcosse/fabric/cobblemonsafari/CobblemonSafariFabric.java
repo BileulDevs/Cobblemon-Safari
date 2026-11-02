@@ -1,6 +1,7 @@
 package dev.darcosse.fabric.cobblemonsafari;
 
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
+import dev.darcosse.common.cobblemonsafari.advancement.SafariAdvancements;
 import dev.darcosse.common.cobblemonsafari.event.SafariServerEvents;
 import dev.darcosse.common.cobblemonsafari.block.SafariBlockEntities;
 import dev.darcosse.common.cobblemonsafari.block.SafariBlocks;
@@ -60,6 +61,8 @@ public class CobblemonSafariFabric implements ModInitializer {
         Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, SafariCreativeTab.ID,
                 SafariCreativeTab.build(FabricItemGroup.builder()));
         SafariStatistics.register((id, value) -> Registry.register(BuiltInRegistries.CUSTOM_STAT, id, value));
+        // Before datapacks load: the Safari advancements name this trigger and fail to load without it.
+        SafariAdvancements.registerTrigger((id, trigger) -> Registry.register(BuiltInRegistries.TRIGGER_TYPES, id, trigger));
         FabricSafariNetworking.registerPayloadTypes();
 
         // STARTING fires before the levels load, which the map reset needs.

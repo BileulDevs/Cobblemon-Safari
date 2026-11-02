@@ -35,12 +35,12 @@ import java.util.List;
  * appears where it lives, so finding the rare ones means exploring the right
  * corner of the park, as in the games.
  *
- * <p>Anti-monopoly: at most {@code maxNearbyPerPlayer} specials around a
+ * <p>Anti-monopoly: at most {@code specials.spawn.maxAroundPlayer} specials around a
  * player, never two of the same species around them, never more than one
  * legendary-class special in the whole park at once, and no more appearances
  * of a legendary-class species per rotation than its category in
- * {@code featured} allows ({@link SpecialSpawnCounter}, board count). Which
- * species may come at all follows {@code featured} too, not {@code spawns}.
+ * {@code specials} allows ({@link SpecialSpawnCounter}, board count). Which
+ * species may come at all follows {@code specials} too, not {@code spawns}.
  */
 public final class FeaturedSpawner {
 
@@ -63,7 +63,7 @@ public final class FeaturedSpawner {
      * Radius of the "specials already around this player" check, in blocks.
      * Wider counts specials the player cannot see; each check scans the
      * entity sections the box touches. Quoted in the comment of
-     * featured.maxNearbyPerPlayer (SafariConfig): keep both in step.
+     * specials.spawn.maxAroundPlayer (SafariConfig): keep both in step.
      */
     private static final int NEARBY_RADIUS = 64;
 
@@ -87,13 +87,13 @@ public final class FeaturedSpawner {
      *
      * <p>Cost on an attempt tick: per player in the Safari, one random roll,
      * then at most two entity queries and one heightmap read in an already
-     * loaded chunk. One attempt every {@code spawnIntervalSeconds} (15 s by
+     * loaded chunk. One attempt every {@code specials.spawn.checkEverySeconds} (15 s by
      * default) keeps this negligible.
      */
     public static void tick(MinecraftServer server) {
         tickCounter++;
-        SafariConfig.Featured config = SafariConfigManager.get().featured;
-        if (!config.enabled || tickCounter % Ticks.fromSeconds(config.spawnIntervalSeconds) != 0) {
+        SafariConfig.Specials config = SafariConfigManager.get().specials;
+        if (!config.enabled || tickCounter % Ticks.fromSeconds(config.spawn.checkEverySeconds) != 0) {
             return;
         }
         ServerLevel safari = SafariDimensions.level(server);
@@ -112,7 +112,7 @@ public final class FeaturedSpawner {
             if (SafariSessionManager.getSession(player) == null) {
                 continue;
             }
-            if (safari.getRandom().nextDouble() < config.spawnChance) {
+            if (safari.getRandom().nextDouble() < config.spawn.chance) {
                 trySpawnNear(safari, player, specials, config);
             }
         }
@@ -120,11 +120,11 @@ public final class FeaturedSpawner {
 
     /** One spawn attempt around a player: picks a loaded surface spot, then a special living there. */
     private static void trySpawnNear(ServerLevel level, ServerPlayer player, List<HabitatEntry> specials,
-                                     SafariConfig.Featured config) {
+                                     SafariConfig.Specials config) {
         AABB around = player.getBoundingBox().inflate(NEARBY_RADIUS, CHECK_HALF_HEIGHT, NEARBY_RADIUS);
         List<PokemonEntity> nearbySpecials = level.getEntitiesOfClass(PokemonEntity.class, around,
                 entity -> entity.getTags().contains(FEATURED_TAG));
-        if (nearbySpecials.size() >= config.maxNearbyPerPlayer) {
+        if (nearbySpecials.size() >= config.spawn.maxAroundPlayer) {
             return;
         }
 
@@ -133,7 +133,7 @@ public final class FeaturedSpawner {
         double distance = MIN_DISTANCE + random.nextDouble() * (MAX_DISTANCE - MIN_DISTANCE);
         int x = (int) Math.floor(player.getX() + Math.cos(angle) * distance);
         int z = (int) Math.floor(player.getZ() + Math.sin(angle) * distance);
-        if (ParkBoundary.isOutside(x, z) || RestHouses.isNear(x, z, HOUSE_MARGIN)) {
+        if (ParkBoundary.isOutside(x, z) || RestHouses.isNearSurfaceHouse(x, z, HOUSE_MARGIN)) {
             return;
         }
         // Only loaded chunks: generating terrain for a spawn would stall the tick.
@@ -224,11 +224,12 @@ public final class FeaturedSpawner {
 
     /** Configured pick weight of a rarity. */
     private static int weight(Rarity rarity) {
-        SafariConfig.Featured config = SafariConfigManager.get().featured;
+        SafariConfig.SpawnWeights weights = SafariConfigManager.get().specials.spawn.weights;
         return switch (rarity) {
-            case COMMON, UNCOMMON -> config.weightUncommon;
-            case RARE -> config.weightRare;
-            case ULTRA_RARE -> config.weightUltraRare;
+            case COMMON -> weights.common;
+            case UNCOMMON -> weights.uncommon;
+            case RARE -> weights.rare;
+            case ULTRA_RARE -> weights.ultraRare;
         };
     }
 
@@ -239,7 +240,7 @@ public final class FeaturedSpawner {
      * modifiers such as a Shiny Charm apply.
      */
     private static void spawn(ServerLevel level, ServerPlayer player, HabitatEntry entry, BlockPos pos,
-                              SafariConfig.Featured config, RandomSource random) {
+                              SafariConfig.Specials config, RandomSource random) {
         PokemonProperties properties = entry.template() != null ? entry.template().copy() : new PokemonProperties();
         properties.setSpecies(entry.species().getResourceIdentifier().toString());
         properties.setLevel(level(entry, config, random));
@@ -256,7 +257,7 @@ public final class FeaturedSpawner {
     }
 
     /** A level within the natural range, or the configured fallback when the species has none. */
-    private static int level(HabitatEntry entry, SafariConfig.Featured config, RandomSource random) {
+    private static int level(HabitatEntry entry, SafariConfig.Specials config, RandomSource random) {
         int min = entry.minLevel() > 0 ? entry.minLevel() : FALLBACK_MIN_LEVEL;
         int max = entry.maxLevel() >= min ? entry.maxLevel() : Math.max(min, FALLBACK_MAX_LEVEL);
         return min + random.nextInt(max - min + 1);

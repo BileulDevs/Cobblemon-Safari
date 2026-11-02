@@ -1053,7 +1053,7 @@ public class SafariShopScreen extends Screen {
      * soon as the rope is picked up, without a refresh.
      */
     private boolean alreadyCarried(SafariShopPayload.Entry entry) {
-        return entry.kind() == SafariShopPayload.KIND_ITEM && entry.item().getItem() instanceof SafariEscapeRopeItem
+        return isEscapeRope(entry)
                 && minecraft != null && minecraft.player != null
                 && minecraft.player.getInventory().countItem(entry.item().getItem()) > 0;
     }
@@ -1199,19 +1199,33 @@ public class SafariShopScreen extends Screen {
     }
 
     /**
-     * Indices of the entries shown in a tab. Without any tab (a server
-     * config with none cannot be sent, but a stale client might see one)
-     * every entry shows.
+     * Indices of the entries shown in a tab, in display order. Without any
+     * tab (a server config with none cannot be sent, but a stale client
+     * might see one) every entry shows. The Escape Rope is shown first in
+     * its tab, as the Safari Balls are in theirs: it is the one item every
+     * hunter needs back after losing it.
      */
     private List<Integer> entriesOf(int tabIndex) {
-        List<Integer> out = new ArrayList<>();
+        List<Integer> ropes = new ArrayList<>();
+        List<Integer> others = new ArrayList<>();
         List<SafariShopPayload.Entry> entries = data.entries();
         for (int i = 0; i < entries.size(); i++) {
-            if (data.tabs().isEmpty() || entries.get(i).tab() == tabIndex) {
-                out.add(i);
+            SafariShopPayload.Entry entry = entries.get(i);
+            if (data.tabs().isEmpty() || entry.tab() == tabIndex) {
+                // Display order only: the server keeps the rope last in its
+                // catalogue so the purchase indices of every other entry do
+                // not depend on where the shop stands. Indices stay global
+                // here, so selection and purchase are unaffected.
+                (isEscapeRope(entry) ? ropes : others).add(i);
             }
         }
-        return out;
+        ropes.addAll(others);
+        return ropes;
+    }
+
+    /** Whether an entry gives the Escape Rope. */
+    private static boolean isEscapeRope(SafariShopPayload.Entry entry) {
+        return entry.kind() == SafariShopPayload.KIND_ITEM && entry.item().getItem() instanceof SafariEscapeRopeItem;
     }
 
     /** The first tab holding something, so the screen never opens on an empty tab; 0 when all are empty. */

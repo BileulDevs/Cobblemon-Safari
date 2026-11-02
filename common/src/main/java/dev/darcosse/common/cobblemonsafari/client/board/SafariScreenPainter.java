@@ -7,6 +7,7 @@ import dev.darcosse.common.cobblemonsafari.block.WallScreenContent;
 import dev.darcosse.common.cobblemonsafari.bounty.Bounty;
 import dev.darcosse.common.cobblemonsafari.client.BountyClientState;
 import dev.darcosse.common.cobblemonsafari.client.StatsClientState;
+import dev.darcosse.common.cobblemonsafari.client.DexClientState;
 import dev.darcosse.common.cobblemonsafari.client.FeaturedClientState;
 import dev.darcosse.common.cobblemonsafari.client.SafariClientState;
 import dev.darcosse.common.cobblemonsafari.config.BoardPalette;
@@ -15,6 +16,7 @@ import dev.darcosse.common.cobblemonsafari.config.WallScreenFooter;
 import dev.darcosse.common.cobblemonsafari.config.SafariClientConfigManager;
 import dev.darcosse.common.cobblemonsafari.network.SafariFeaturedPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariStatsPayload;
+import dev.darcosse.common.cobblemonsafari.network.SafariDexPayload;
 import dev.darcosse.common.cobblemonsafari.points.SafariPointsIcon;
 import dev.darcosse.common.cobblemonsafari.spawn.Rarity;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
@@ -24,6 +26,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -102,6 +105,16 @@ public class SafariScreenPainter {
     private static final float ROW_BAR_HEIGHT = 3.0F;
     /** Width of the coloured strip on the left of each mission row. */
     private static final float ROW_STRIP = 2.0F;
+    /**
+     * Smallest Pokédex row, in canvas pixels: the name line and its bar.
+     * Lower fits more habitats per page in smaller type.
+     */
+    private static final float MIN_DEX_ROW_HEIGHT = 16.0F;
+    /**
+     * Narrowest Pokédex column: a wide screen lays the habitats out in as
+     * many columns of at least this width, so it needs fewer pages.
+     */
+    private static final float MIN_DEX_COLUMN_WIDTH = 90.0F;
     /** Cell width at which cell text is drawn at full size; narrower cells shrink their text. */
     private static final float CELL_TEXT_REFERENCE_WIDTH = 64.0F;
     private static final float MIN_CELL_TEXT_SCALE = 0.5F;
@@ -285,6 +298,7 @@ public class SafariScreenPainter {
         Page page = switch (content) {
             case STATS -> drawStats(p, x0, bodyTop, x1, bodyBottom, now, gameTime);
             case BOUNTIES -> drawBounties(p, x0, bodyTop, x1, bodyBottom, now);
+            case DEX -> drawDex(p, x0, bodyTop, x1, bodyBottom, now);
             default -> drawBody(p, x0, bodyTop, x1, bodyBottom, FeaturedClientState.entries(), now);
         };
         drawHeader(p, x0, headerTop, x1, page, now, titleKey(content));
@@ -308,6 +322,8 @@ public class SafariScreenPainter {
         return switch (content) {
             case STATS -> SafariLandscapes.RECORD;
             case BOUNTIES -> SafariLandscapes.MISSIONS;
+            // The record's scene: both pages are about the viewer's own career.
+            case DEX -> SafariLandscapes.RECORD;
             default -> SafariLandscapes.BOARD;
         };
     }
@@ -317,6 +333,7 @@ public class SafariScreenPainter {
         return switch (content) {
             case STATS -> "screen.stats_title";
             case BOUNTIES -> "screen.bounties_title";
+            case DEX -> "screen.dex_title";
             default -> "screen.title";
         };
     }
@@ -383,7 +400,7 @@ public class SafariScreenPainter {
      * @return the page shown, for the header's page counter
      */
     private Page drawBody(BoardPainter p, float x0, float y0, float x1, float y1,
-                          List<SafariFeaturedPayload.Entry> entries, long now) {
+                          List<SafariFeaturedPayload.Entry> specials, long now) {
         float centerY = (y0 + y1) / 2.0F - LINE_HEIGHT / 2.0F;
         if (!FeaturedClientState.received()) {
             int dots = (int) ((now / CONNECTING_DOT_MS) % 4);
@@ -395,6 +412,14 @@ public class SafariScreenPainter {
             drawCentered(p, tr("screen.featured_off"), x0, x1, centerY, pal.muted());
             return Page.SINGLE;
         }
+        // The swarm, when the rotation has one, takes the last cell, after the specials.
+        SafariFeaturedPayload.Entry swarm = FeaturedClientState.swarm();
+        List<SafariFeaturedPayload.Entry> entries = specials;
+        if (swarm != null) {
+            entries = new ArrayList<>(specials);
+            entries.add(swarm);
+        }
+        int swarmIndex = swarm == null ? -1 : entries.size() - 1;
         if (entries.isEmpty()) {
             drawCentered(p, tr("board.empty"), x0, x1, centerY, pal.muted());
             return Page.SINGLE;
@@ -423,7 +448,8 @@ public class SafariScreenPainter {
             int row = slot / grid.columns();
             float cx = x0 + column * (grid.cellWidth() + GAP);
             float cy = y0 + row * (grid.cellHeight() + GAP);
-            drawCell(p, cx, cy, grid.cellWidth(), grid.cellHeight(), entries.get(i), slot, revealStart, now);
+            drawCell(p, cx, cy, grid.cellWidth(), grid.cellHeight(), entries.get(i), i == swarmIndex, slot,
+                    revealStart, now);
         }
         return new Page(pageIndex, pageCount);
     }
@@ -545,6 +571,104 @@ public class SafariScreenPainter {
         return new Page(pageIndex, pageCount);
     }
 
+    /**
+     * The viewer's Safari Pokédex: a first row with every habitat together,
+     * then one row per habitat, laid out in as many columns as the width
+     * allows and paged when they do not fit.
+     *
+     * @return the page shown, for the header's page counter
+     */
+    private Page drawDex(BoardPainter p, float x0, float y0, float x1, float y1, long now) {
+        float centerY = (y0 + y1) / 2.0F - LINE_HEIGHT / 2.0F;
+        SafariDexPayload dex = DexClientState.dex();
+        if (dex == null) {
+            int dots = (int) ((now / CONNECTING_DOT_MS) % 4);
+            drawCentered(p, tr("screen.connecting") + ".".repeat(dots), x0, x1, centerY, pal.muted());
+            return Page.SINGLE;
+        }
+        if (dex.habitats().isEmpty()) {
+            drawCentered(p, tr("screen.dex.empty"), x0, x1, centerY, pal.muted());
+            return Page.SINGLE;
+        }
+        List<DexRow> rows = new ArrayList<>(dex.habitats().size() + 1);
+        rows.add(new DexRow(tr("screen.dex.total"), dex.caught(), dex.total(), true));
+        for (SafariDexPayload.Habitat habitat : dex.habitats()) {
+            // Built every frame: the biome's name follows the language, a couple of dozen rows at most.
+            String name = Component.translatable("biome." + habitat.biome().getNamespace() + "."
+                    + habitat.biome().getPath()).getString();
+            rows.add(new DexRow(name, habitat.caught(), habitat.total(), false));
+        }
+        float width = x1 - x0;
+        float height = y1 - y0;
+        int columns = Math.max(1, (int) ((width + GAP) / (MIN_DEX_COLUMN_WIDTH + GAP)));
+        int perColumn = rows.size();
+        while (perColumn > 1 && rowHeight(perColumn, height) < MIN_DEX_ROW_HEIGHT) {
+            perColumn--;
+        }
+        // No wider than needed: three habitats on a wide screen keep readable columns.
+        columns = Math.min(columns, (rows.size() + perColumn - 1) / perColumn);
+        float columnWidth = (width - (columns - 1) * GAP) / columns;
+        float rowHeight = Math.min(MAX_ROW_HEIGHT, rowHeight(perColumn, height));
+        int perPage = perColumn * columns;
+        int pageCount = (rows.size() + perPage - 1) / perPage;
+        int pageIndex = (int) ((now / PAGE_DURATION_MS) % pageCount);
+        int first = pageIndex * perPage;
+        int last = Math.min(rows.size(), first + perPage);
+        for (int i = first; i < last; i++) {
+            int slot = i - first;
+            float left = x0 + (slot / perColumn) * (columnWidth + GAP);
+            float rowTop = y0 + (slot % perColumn) * (rowHeight + GAP);
+            drawDexRow(p, left, rowTop, left + columnWidth, rowHeight, rows.get(i), now);
+        }
+        return new Page(pageIndex, pageCount);
+    }
+
+    /**
+     * One Pokédex row: the habitat and its count on the first line, a
+     * progress bar under it. A complete habitat turns green; the overall row
+     * wears the star colour.
+     */
+    private void drawDexRow(BoardPainter p, float x0, float y, float x1, float h, DexRow row, long now) {
+        boolean done = row.total() > 0 && row.caught() >= row.total();
+        int accent = done ? pal.barSessionOk() : row.overall() ? pal.star() : pal.barRotation();
+        p.fill(x0, y, x1, y + h, Z_PANEL, panel(pal.cell()));
+        p.fill(x0, y, x0 + ROW_STRIP, y + h, Z_DETAIL, accent);
+
+        // Text shrinks with the row so the line and its bar always fit.
+        float needed = LINE_HEIGHT + ROW_BAR_HEIGHT + 3.0F * TILE_INNER_GAP;
+        float scale = Math.max(MIN_CELL_TEXT_SCALE, Math.min(1.0F, h / needed));
+        float left = x0 + ROW_STRIP + TILE_INNER_GAP;
+        float right = x1 - TILE_INNER_GAP;
+
+        String count = row.caught() + "/" + row.total();
+        float countWidth = p.width(count) * scale;
+        float lineY = y + TILE_INNER_GAP;
+        p.text(count, right - countWidth, lineY, Z_TEXT, scale, done ? accent : pal.text());
+        String mark = done ? "✔ " : "• ";
+        float markWidth = p.width(mark) * scale;
+        p.text(mark, left, lineY, Z_TEXT, scale, accent);
+        drawMarquee(p, row.name(), left + markWidth, right - countWidth - HEADER_SPACING, lineY, scale,
+                row.overall() ? pal.star() : pal.text(), now, false);
+
+        float barTop = lineY + LINE_HEIGHT * scale + TILE_INNER_GAP;
+        if (barTop + ROW_BAR_HEIGHT <= y + h) {
+            p.fill(left, barTop, right, barTop + ROW_BAR_HEIGHT, Z_DETAIL, panel(pal.barBackground()));
+            float fraction = Math.min(1.0F, row.caught() / (float) Math.max(1, row.total()));
+            p.fill(left, barTop, left + (right - left) * fraction, barTop + ROW_BAR_HEIGHT, Z_DETAIL_TOP, accent);
+        }
+    }
+
+    /**
+     * One line of the Pokédex page.
+     *
+     * @param name    the habitat's name, or the label of the overall row
+     * @param caught  species caught
+     * @param total   species of the habitat
+     * @param overall whether it is the every-habitat row
+     */
+    private record DexRow(String name, int caught, int total, boolean overall) {
+    }
+
     /** Height of each of {@code rows} rows sharing {@code height}, gaps included. */
     private static float rowHeight(int rows, float height) {
         return (height - (rows - 1) * GAP) / rows;
@@ -648,9 +772,12 @@ public class SafariScreenPainter {
         return true;
     }
 
-    /** One special: rarity strip, turning model, name, rarity and, when there is room, habitat. */
+    /**
+     * One special: rarity strip, turning model, name, rarity and, when there
+     * is room, habitat. The swarm's cell says "swarm" instead of its rarity.
+     */
     private void drawCell(BoardPainter p, float x, float y, float w, float h, SafariFeaturedPayload.Entry entry,
-                          int slot, long revealStart, long now) {
+                          boolean swarm, int slot, long revealStart, long now) {
         int rarityColor = rarityColor(entry);
         p.fill(x, y, x + w, y + h, Z_PANEL, panel(pal.cell()));
         p.fill(x, y, x + w, y + RARITY_STRIP, Z_DETAIL, rarityColor);
@@ -713,7 +840,8 @@ public class SafariScreenPainter {
         // Rarity and habitat in smaller type; a line still too long scrolls.
         float lineLeft = x + 2.0F;
         float lineRight = x + w - 2.0F;
-        String rarity = entry.rarity().displayName().getString();
+        // A swarm says so where a special shows its rarity: the habitat under it is where to go.
+        String rarity = swarm ? tr("screen.swarm") : entry.rarity().displayName().getString();
         drawMarquee(p, rarity, lineLeft, lineRight, textTop + line, subScale, rarityColor, now);
         if (showHabitat) {
             drawMarquee(p, habitatName(entry.habitat()), lineLeft, lineRight, textTop + line + subLine, subScale,
@@ -799,9 +927,10 @@ public class SafariScreenPainter {
     /** What the footer of a kind of screen counts down, from the viewer's client config. */
     private static WallScreenFooter footerOf(SafariClientConfig.Board board, WallScreenContent content) {
         return switch (content) {
-            case STATS -> board.statsFooter;
-            case BOUNTIES -> board.bountiesFooter;
-            default -> board.featuredFooter;
+            case STATS -> board.footers.stats;
+            case BOUNTIES -> board.footers.missions;
+            case DEX -> board.footers.dex;
+            default -> board.footers.specials;
         };
     }
 
@@ -868,10 +997,10 @@ public class SafariScreenPainter {
     /** Bar colour for the hunt, with the same thresholds as the HUD timer. */
     private int sessionColor(int remainingTicks, SafariClientConfig config) {
         int seconds = Ticks.toSecondsCeil(remainingTicks);
-        if (seconds <= config.criticalTimeSeconds) {
+        if (seconds <= config.hud.criticalTimeSeconds) {
             return pal.barSessionCritical();
         }
-        if (seconds <= config.lowTimeSeconds) {
+        if (seconds <= config.hud.lowTimeSeconds) {
             return pal.barSessionLow();
         }
         return pal.barSessionOk();

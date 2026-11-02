@@ -2,7 +2,7 @@ package dev.darcosse.common.cobblemonsafari.bounty;
 
 import com.cobblemon.mod.common.api.Priority;
 import com.cobblemon.mod.common.api.events.CobblemonEvents;
-import com.cobblemon.mod.common.api.events.pokeball.PokemonCatchRateEvent;
+import com.cobblemon.mod.common.api.events.fishing.BobberSpawnPokemonEvent;
 import com.cobblemon.mod.common.api.events.pokemon.PokemonCapturedEvent;
 import com.cobblemon.mod.common.api.types.ElementalType;
 import com.cobblemon.mod.common.entity.pokeball.EmptyPokeBallEntity;
@@ -10,6 +10,8 @@ import com.cobblemon.mod.common.pokemon.Pokemon;
 import com.cobblemon.mod.common.pokemon.Species;
 import com.cobblemon.mod.common.pokemon.properties.HiddenAbilityProperty;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
+import dev.darcosse.common.cobblemonsafari.advancement.SafariAdvancements;
+import dev.darcosse.common.cobblemonsafari.capture.ThrowTracker;
 import dev.darcosse.common.cobblemonsafari.config.BountyKindSettings;
 import dev.darcosse.common.cobblemonsafari.config.BountyKinds;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
@@ -33,7 +35,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.biome.Biome;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -41,11 +42,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.WeakHashMap;
+import java.util.function.BiPredicate;
+import java.util.function.Supplier;
 
 /**
  * Bounties: the missions of the rotation, drawn with each rotation of the
- * specials among the kinds {@code bounties.allowedKinds} lets in, the same
+ * specials among the kinds {@code missions.allowedKinds} lets in, the same
  * for every player, and paid once per player in Safari points when
  * completed. A player may swap one at the clerk for another, for themselves
  * only.
@@ -65,7 +67,7 @@ public final class SafariBounties {
     private static final long SEED_MIX = 0x5AFA_B0B7_1E5L;
 
     /**
-     * Most missions per rotation (bounties.count is clamped to it). The
+     * Most missions per rotation (missions.count is clamped to it). The
      * clerk's dialogue has one swap answer per mission, so raising it needs
      * as many new answers in the dialogue files, and as many functions
      * (SafariDialogueFunctions registers them up to this).
@@ -90,14 +92,6 @@ public final class SafariBounties {
     /** The level a level mission asks is a multiple of this: "level 25 or higher" reads better than 27. */
     private static final int LEVEL_STEP = 5;
 
-    /**
-     * Night as Cobblemon's spawner counts it (its "night" time range, in
-     * ticks of the day), so that a night mission and the night spawns agree.
-     */
-    private static final long NIGHT_START = 12_542L;
-    private static final long NIGHT_END = 23_459L;
-    private static final long TICKS_PER_DAY = 24_000L;
-
     private static List<Bounty> current = List.of();
     private static long currentPeriod = Long.MIN_VALUE;
     private static long currentRevision = Long.MIN_VALUE;
@@ -105,22 +99,18 @@ public final class SafariBounties {
     /** Missions last broadcast, to push only when they change. */
     private static List<Bounty> sent;
 
-    /**
-     * Balls thrown at a Pokémon in a battle, recorded when Cobblemon computes
-     * the catch rate (which it does for every throw, in battle or not) and
-     * read on capture. Weak: a ball that missed or broke free is forgotten
-     * with its entity.
-     */
-    private static final Map<EmptyPokeBallEntity, Boolean> IN_BATTLE = new WeakHashMap<>();
-
     private SafariBounties() {
     }
 
-    /** Subscribes to throws and captures. Called once from common init. */
+    /**
+     * Subscribes to captures and to the rod's bites. Called once from common
+     * init; throws are recorded by {@link ThrowTracker}.
+     */
     public static void register() {
         // LOWEST: the capture is final, as for points and catch records.
         CobblemonEvents.POKEMON_CAPTURED.subscribe(Priority.LOWEST, SafariBounties::onCaptured);
-        CobblemonEvents.POKEMON_CATCH_RATE.subscribe(Priority.LOWEST, SafariBounties::onCatchRate);
+        // LOWEST: only reads the bite, after any addon that might change the Pokémon.
+        CobblemonEvents.BOBBER_SPAWN_POKEMON_POST.subscribe(Priority.LOWEST, SafariBounties::onFished);
     }
 
     /** Forgets cached missions; call when a server starts, since single player reuses this class. */
@@ -130,7 +120,6 @@ public final class SafariBounties {
         currentRevision = Long.MIN_VALUE;
         tickCounter = 0;
         sent = null;
-        IN_BATTLE.clear();
         BountyPool.invalidate();
     }
 
@@ -140,7 +129,7 @@ public final class SafariBounties {
      * the habitat index changes (data or config reload).
      */
     public static List<Bounty> today(MinecraftServer server) {
-        SafariConfig.Bounties config = SafariConfigManager.get().bounties;
+        SafariConfig.Missions config = SafariConfigManager.get().missions;
         if (!config.enabled || config.count == 0) {
             return List.of();
         }
@@ -217,9 +206,9 @@ public final class SafariBounties {
         for (int count : progress.counts) {
             counts.add(count);
         }
-        SafariConfig.Bounties config = SafariConfigManager.get().bounties;
+        SafariConfig.Missions config = SafariConfigManager.get().missions;
         Platform.get().sendToPlayer(player, new SafariBountiesPayload(config.enabled, missionsOf(shared, progress),
-                counts, config.allDoneBonus));
+                counts));
     }
 
     /** Chat lines of the clerk's "missions" answer: each mission with the player's progress and reward. */
@@ -243,7 +232,7 @@ public final class SafariBounties {
                     .append(Component.translatable(key("bounty.reward"), SafariPointsIcon.amount(bounty.reward())).withStyle(ChatFormatting.GOLD))
                     .withStyle(done ? ChatFormatting.GREEN : ChatFormatting.WHITE));
         }
-        int bonus = SafariConfigManager.get().bounties.allDoneBonus;
+        int bonus = SafariConfigManager.get().missions.allMissionsBonusPoints;
         if (bonus > 0) {
             lines.add(Component.translatable(key("bounty.all_done_hint"), SafariPointsIcon.amount(bonus)).withStyle(ChatFormatting.GRAY));
         }
@@ -270,7 +259,7 @@ public final class SafariBounties {
     /** Whether mission {@code slot} (from 0) of the player can be swapped. */
     public static boolean canSwap(ServerPlayer player, int slot) {
         MinecraftServer server = player.getServer();
-        SafariConfig.Bounties config = SafariConfigManager.get().bounties;
+        SafariConfig.Missions config = SafariConfigManager.get().missions;
         if (server == null || !config.swap.enabled || config.swap.perRotation == 0) {
             return false;
         }
@@ -285,7 +274,7 @@ public final class SafariBounties {
 
     /**
      * Replaces mission {@code slot} of the player with another, for
-     * {@code bounties.swap.cost} points. The new mission starts from zero.
+     * {@code missions.swap.cost} points. The new mission starts from zero.
      * Tells the player the outcome in chat.
      *
      * @return whether the mission was replaced
@@ -295,7 +284,7 @@ public final class SafariBounties {
         if (server == null) {
             return false;
         }
-        SafariConfig.Bounties config = SafariConfigManager.get().bounties;
+        SafariConfig.Missions config = SafariConfigManager.get().missions;
         if (!canSwap(player, slot)) {
             // Out of swaps is the one reason worth naming; the others (switched off, mission
             // done or gone) only happen with a stale dialogue page.
@@ -326,6 +315,7 @@ public final class SafariBounties {
         progress.clearSlot(slot);
         progress.swaps++;
         store.changed();
+        SafariAdvancements.fire(player, SafariAdvancements.MISSION_SWAP);
         player.sendSystemMessage(Component.translatable(key("bounty.swap.done"), replacement.describe(),
                 SafariPointsIcon.amount(replacement.reward())).withStyle(ChatFormatting.GREEN));
         sendTo(player);
@@ -339,17 +329,10 @@ public final class SafariBounties {
             return 0;
         }
         SafariBountyStore.Progress progress = progressOf(server, player, today(server));
-        return Math.max(0, SafariConfigManager.get().bounties.swap.perRotation - progress.swaps);
+        return Math.max(0, SafariConfigManager.get().missions.swap.perRotation - progress.swaps);
     }
 
     // ------------------------------------------------------------- captures
-
-    /** Remembers whether a ball was thrown in a battle, for the out-of-battle missions. */
-    private static void onCatchRate(PokemonCatchRateEvent event) {
-        if (event.getPokeBallEntity() != null && event.getPokemonEntity() != null) {
-            IN_BATTLE.put(event.getPokeBallEntity(), event.getPokemonEntity().getBattleId() != null);
-        }
-    }
 
     /** Counts a capture made inside the Safari toward every matching mission, paying those it completes. */
     private static void onCaptured(PokemonCapturedEvent event) {
@@ -358,6 +341,37 @@ public final class SafariBounties {
         if (server == null || !SafariDimensions.isSafari(player.level())) {
             return;
         }
+        // Built only when a mission is there to read it: Capture.of reads the biome and the ball.
+        Capture[] capture = new Capture[1];
+        advance(server, player, (bounty, seen) -> {
+            if (capture[0] == null) {
+                capture[0] = Capture.of(server, player, event);
+            }
+            return matches(bounty, capture[0], seen);
+        }, () -> capture[0].speciesId);
+    }
+
+    /** Counts a Pokémon a rod brought up inside the Safari toward the fishing missions. */
+    private static void onFished(BobberSpawnPokemonEvent.Post event) {
+        if (!(event.getBobber().getPlayerOwner() instanceof ServerPlayer player)) {
+            return;
+        }
+        MinecraftServer server = player.getServer();
+        if (server == null || !SafariDimensions.isSafari(player.level())) {
+            return;
+        }
+        advance(server, player, (bounty, seen) -> bounty.kind() == BountyKind.FISHING, () -> "");
+    }
+
+    /**
+     * Moves every unfinished mission of the player that the event matches
+     * one step, pays those it completes and the bonus when all are done.
+     *
+     * @param matcher   whether the event counts for a mission, given the species it already counted
+     * @param speciesId the species to remember for a "different species" mission it moved
+     */
+    private static void advance(MinecraftServer server, ServerPlayer player,
+                                BiPredicate<Bounty, Set<String>> matcher, Supplier<String> speciesId) {
         List<Bounty> shared = today(server);
         if (shared.isEmpty()) {
             return;
@@ -365,15 +379,14 @@ public final class SafariBounties {
         SafariBountyStore store = SafariBountyStore.get(server);
         SafariBountyStore.Progress progress = progressOf(server, player, shared);
         List<Bounty> bounties = missionsOf(shared, progress);
-        Capture capture = Capture.of(server, player, event);
         boolean moved = false;
         for (int i = 0; i < bounties.size(); i++) {
             Bounty bounty = bounties.get(i);
-            if (progress.counts[i] >= bounty.count() || !matches(bounty, capture, progress.seen.get(i))) {
+            if (progress.counts[i] >= bounty.count() || !matcher.test(bounty, progress.seen.get(i))) {
                 continue;
             }
             if (bounty.kind() == BountyKind.DIFFERENT) {
-                progress.seen.get(i).add(capture.speciesId);
+                progress.seen.get(i).add(speciesId.get());
             }
             progress.counts[i]++;
             moved = true;
@@ -386,7 +399,9 @@ public final class SafariBounties {
         }
         if (!progress.bonusPaid && allDone(bounties, progress)) {
             progress.bonusPaid = true;
-            int bonus = SafariConfigManager.get().bounties.allDoneBonus;
+            // Even with no bonus configured: the feat is finishing them all, not the payout.
+            SafariAdvancements.fire(player, SafariAdvancements.ALL_MISSIONS);
+            int bonus = SafariConfigManager.get().missions.allMissionsBonusPoints;
             if (bonus > 0) {
                 int added = SafariPoints.add(player, bonus);
                 SafariStatistics.add(player, SafariStatistics.POINTS_EARNED, added);
@@ -411,14 +426,13 @@ public final class SafariBounties {
             boolean featured = FeaturedRotation.today(server).stream().anyMatch(entry -> entry.species() == species);
             EmptyPokeBallEntity ball = event.getPokeBallEntity();
             // A ball the catch rate never saw (another mod's capture) counts as out of battle.
-            Boolean inBattle = ball == null ? null : IN_BATTLE.remove(ball);
+            Boolean inBattle = ThrowTracker.wasInBattle(ball);
             // Where the Pokémon was: the ball lies on it. The player when there is no ball.
             Entity where = ball != null ? ball : player;
-            long time = Math.floorMod(where.level().getDayTime(), TICKS_PER_DAY);
             String biome = where.level().getBiome(where.blockPosition()).unwrapKey()
                     .map(ResourceKey::location).map(Object::toString).orElse("");
             return new Capture(pokemon, species.getResourceIdentifier().toString(), featured,
-                    Boolean.TRUE.equals(inBattle), time >= NIGHT_START && time <= NIGHT_END, biome);
+                    Boolean.TRUE.equals(inBattle), ThrowTracker.isNight(where), biome);
         }
     }
 
@@ -435,7 +449,7 @@ public final class SafariBounties {
                 yield false;
             }
             case SPECIES -> capture.speciesId.equals(bounty.target());
-            case FEATURED -> capture.featured;
+            case SPECIAL -> capture.featured;
             case HABITAT -> capture.biome.equals(bounty.target());
             case ANY -> true;
             case DIFFERENT -> !seen.contains(capture.speciesId);
@@ -446,6 +460,8 @@ public final class SafariBounties {
             case LEVEL -> pokemon.getLevel() >= bounty.level();
             case HIDDEN_ABILITY -> new HiddenAbilityProperty(true).matches(pokemon);
             case SHINY -> pokemon.getShiny();
+            // Counted at the bite (onFished), not at the capture.
+            case FISHING -> false;
         };
     }
 
@@ -458,6 +474,9 @@ public final class SafariBounties {
                 .withStyle(ChatFormatting.GREEN));
         player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                 SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.6F, 1.2F);
+        if (bounty.kind() == BountyKind.OUT_OF_BATTLE) {
+            SafariAdvancements.fire(player, SafariAdvancements.MISSION_OUT_OF_BATTLE);
+        }
     }
 
     /** Whether the player has completed every mission of the rotation. */
@@ -473,11 +492,11 @@ public final class SafariBounties {
     // ---------------------------------------------------------------- draws
 
     /**
-     * Draws the shared missions of a rotation: {@code bounties.count}
+     * Draws the shared missions of a rotation: {@code missions.count}
      * missions, each of a kind drawn by weight among the allowed kinds, all
      * different kinds while there are enough of them.
      */
-    private static List<Bounty> draw(MinecraftServer server, long period, SafariConfig.Bounties config) {
+    private static List<Bounty> draw(MinecraftServer server, long period, SafariConfig.Missions config) {
         Random random = new Random(period * 31L ^ SafariWorldState.get(server).rotationSalt() ^ SEED_MIX);
         List<Bounty> drawn = new ArrayList<>();
         while (drawn.size() < config.count) {
@@ -495,7 +514,7 @@ public final class SafariBounties {
      * when one can be drawn, otherwise of any allowed kind. Null when no
      * allowed kind can make a new mission (pool too small, kinds all off).
      */
-    private static Bounty drawOne(MinecraftServer server, Random random, SafariConfig.Bounties config,
+    private static Bounty drawOne(MinecraftServer server, Random random, SafariConfig.Missions config,
                                   List<Bounty> taken) {
         Set<BountyKind> takenKinds = new HashSet<>();
         taken.forEach(bounty -> takenKinds.add(bounty.kind()));
@@ -515,7 +534,7 @@ public final class SafariBounties {
     }
 
     /** A mission of one of {@code kinds}, drawn by weight; a kind that fails is dropped for this draw. */
-    private static Bounty drawFrom(MinecraftServer server, Random random, SafariConfig.Bounties config,
+    private static Bounty drawFrom(MinecraftServer server, Random random, SafariConfig.Missions config,
                                    BountyPool pool, List<BountyKind> kinds, List<Bounty> taken) {
         List<BountyKind> left = new ArrayList<>(kinds);
         while (!left.isEmpty()) {
@@ -571,7 +590,7 @@ public final class SafariBounties {
                         : rarity == Rarity.UNCOMMON ? speciesTuning.uncommonCount : speciesTuning.rareCount;
                 yield new Bounty(kind, species.getResourceIdentifier().toString(), count, tuning.rewardFor(count));
             }
-            case FEATURED -> {
+            case SPECIAL -> {
                 List<HabitatEntry> specials = FeaturedRotation.today(server);
                 if (specials.isEmpty()) {
                     yield null;
@@ -601,6 +620,8 @@ public final class SafariBounties {
                 yield new Bounty(kind, "", count, tuning.rewardFor(count));
             }
             case EVOLVED -> pool.evolved.isEmpty() ? null : counted(random, kind, "", tuning);
+            // Never drawn on an island where nothing bites.
+            case FISHING -> pool.fishable ? counted(random, kind, "", tuning) : null;
             case LEVEL -> {
                 int highest = 0;
                 for (int level : pool.maxLevel.values()) {

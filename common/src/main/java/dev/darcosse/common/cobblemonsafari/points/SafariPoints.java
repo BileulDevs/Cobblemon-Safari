@@ -108,15 +108,15 @@ public final class SafariPoints {
         HabitatEntry entry = FeaturedRotation.index(player.getServer()).get(speciesId);
         Rarity rarity = entry != null ? entry.rarity() : Rarity.COMMON;
         int points = switch (rarity) {
-            case COMMON -> config.common;
-            case UNCOMMON -> config.uncommon;
-            case RARE -> config.rare;
-            case ULTRA_RARE -> config.ultraRare;
+            case COMMON -> config.perCatch.common;
+            case UNCOMMON -> config.perCatch.uncommon;
+            case RARE -> config.perCatch.rare;
+            case ULTRA_RARE -> config.perCatch.ultraRare;
         };
         boolean featured = FeaturedRotation.today(player.getServer()).stream()
                 .anyMatch(special -> special.species() == pokemon.getSpecies());
         if (featured) {
-            points += config.featuredBonus;
+            points += config.specialBonus;
         }
         if (pokemon.getShiny()) {
             points += config.shinyBonus;

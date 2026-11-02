@@ -1,6 +1,10 @@
 package dev.darcosse.common.cobblemonsafari;
 
+import dev.darcosse.common.cobblemonsafari.advancement.SafariAdvancements;
 import dev.darcosse.common.cobblemonsafari.battle.BattleGuard;
+import dev.darcosse.common.cobblemonsafari.battle.FishingBattleGuard;
+import dev.darcosse.common.cobblemonsafari.capture.SafariFlee;
+import dev.darcosse.common.cobblemonsafari.capture.ThrowTracker;
 import dev.darcosse.common.cobblemonsafari.capture.CaptureGuard;
 import dev.darcosse.common.cobblemonsafari.capture.SafariBallBonus;
 import dev.darcosse.common.cobblemonsafari.credit.SafariCredit;
@@ -27,8 +31,9 @@ import org.slf4j.LoggerFactory;
  * Loader-independent entry point of Cobblemon Safari.
  *
  * <p>Each loader module calls {@link #init(PlatformAdapter)} once, as early as
- * possible, registers {@code SafariBlocks}, then {@code SafariItems}, and the
- * {@code SafariWorldgen} types in its own registry phase, then wires its own
+ * possible, registers {@code SafariBlocks}, then {@code SafariItems}, the
+ * {@code SafariWorldgen} types and the advancement trigger
+ * ({@code SafariAdvancements.registerTrigger}) in its own registry phase, then wires its own
  * events to {@code SafariServerEvents}. Nothing in here may touch client-only
  * classes: this runs on dedicated servers too.
  */
@@ -51,8 +56,11 @@ public final class CobblemonSafari {
         Platform.set(adapter);
         SafariConfigManager.load();
         CaptureGuard.register();
+        ThrowTracker.register();
         CatchTracker.register();
+        SafariFlee.register();
         BattleGuard.register();
+        FishingBattleGuard.register();
         NativeSpawnRules.register();
         SpecialSpawnCounter.register();
         SafariBallBonus.register();
@@ -65,6 +73,7 @@ public final class CobblemonSafari {
         RestHouseNameText.register();
         BountyDialogueTexts.register();
         SafariSessionManager.addListener(new SafariStatsListener());
+        SafariAdvancements.register();
         LOGGER.info("Cobblemon Safari initialised");
     }
 

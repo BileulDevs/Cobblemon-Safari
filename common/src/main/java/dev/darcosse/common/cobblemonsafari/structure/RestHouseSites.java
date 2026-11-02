@@ -2,6 +2,7 @@ package dev.darcosse.common.cobblemonsafari.structure;
 
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.park.ParkBoundary;
+import dev.darcosse.common.cobblemonsafari.worldgen.SafariStructureFilter;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
@@ -103,7 +104,8 @@ final class RestHouseSites {
     /** Structure sets written by tools/worldgen/generate_worldgen.py (SAFARI_STRUCTURE_SETS). */
     private static final List<ResourceKey<StructureSet>> SAFARI_STRUCTURE_SETS = List.of(
             ResourceKey.create(Registries.STRUCTURE_SET, CobblemonSafari.id("safari_ruins/towers")),
-            ResourceKey.create(Registries.STRUCTURE_SET, CobblemonSafari.id("safari_ruins/ruins")));
+            ResourceKey.create(Registries.STRUCTURE_SET, CobblemonSafari.id("safari_ruins/ruins")),
+            ResourceKey.create(Registries.STRUCTURE_SET, CobblemonSafari.id("safari_ruins/habitats")));
 
     private RestHouseSites() {
     }
@@ -239,7 +241,7 @@ final class RestHouseSites {
         return false;
     }
 
-    /** Whether a Safari ruin or tower may generate within {@link #STRUCTURE_CLEARANCE_CHUNKS} of a column. */
+    /** Whether a Safari ruin, tower or habitat may generate within {@link #STRUCTURE_CLEARANCE_CHUNKS} of a column. */
     private static boolean nearStructure(Context context, int x, int z) {
         int chunkX = x >> 4;
         int chunkZ = z >> 4;
@@ -269,7 +271,10 @@ final class RestHouseSites {
             var registry = level.registryAccess().registryOrThrow(Registries.STRUCTURE_SET);
             for (ResourceKey<StructureSet> key : SAFARI_STRUCTURE_SETS) {
                 // Missing only if the data pack was altered: houses then ignore structures.
-                registry.getHolder(key).ifPresent(structureSets::add);
+                // A set the Safari does not allow generates nothing: no room to keep for it.
+                registry.getHolder(key)
+                        .filter(set -> !SafariStructureFilter.refuses(set.value(), generator.getBiomeSource()))
+                        .ifPresent(structureSets::add);
             }
         }
 

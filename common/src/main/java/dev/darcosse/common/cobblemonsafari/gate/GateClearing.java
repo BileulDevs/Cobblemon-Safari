@@ -1,6 +1,7 @@
 package dev.darcosse.common.cobblemonsafari.gate;
 
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
+import dev.darcosse.common.cobblemonsafari.util.FluidGuard;
 import dev.darcosse.common.cobblemonsafari.util.LoadedChunks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -230,12 +231,14 @@ public final class GateClearing {
             if (!level.getBlockState(pos).is(BlockTags.LOGS)) {
                 continue;
             }
-            level.setBlock(pos, Blocks.AIR.defaultBlockState(), PLACE_FLAGS);
+            // A trunk in a pond (or a waterlogged mangrove root) leaves its water, and the water
+            // around is told to settle, as when a player cuts it: otherwise it hangs by the gap.
+            FluidGuard.remove(level, pos, PLACE_FLAGS);
             // A bee nest hangs under a branch, a cocoa pod on a jungle trunk: they would float like the crown.
             for (Direction side : Direction.values()) {
                 BlockPos next = pos.relative(side);
                 if (level.getBlockState(next).is(Blocks.BEE_NEST) || level.getBlockState(next).is(Blocks.COCOA)) {
-                    level.setBlock(next, Blocks.AIR.defaultBlockState(), PLACE_FLAGS);
+                    FluidGuard.remove(level, next, PLACE_FLAGS);
                     nests++;
                 }
             }
@@ -243,12 +246,13 @@ public final class GateClearing {
         for (long leaf : orphanLeaves) {
             BlockPos pos = BlockPos.of(leaf);
             if (level.getBlockState(pos).is(BlockTags.LEAVES)) {
-                level.setBlock(pos, Blocks.AIR.defaultBlockState(), PLACE_FLAGS);
+                // A waterlogged leaf leaves its water rather than a hole in the pond.
+                FluidGuard.remove(level, pos, PLACE_FLAGS);
             }
         }
         int lostVines = detachVines(level);
         if (!cutLogs.isEmpty() || !orphanLeaves.isEmpty() || lostVines > 0) {
-            CobblemonSafari.LOGGER.info("{} at {}: removed {} logs, {} leaves, {} bee nests or cocoa pods and {} vines of cut trees",
+            CobblemonSafari.LOGGER.debug("{} at {}: removed {} logs, {} leaves, {} bee nests or cocoa pods and {} vines of cut trees",
                     owner, middle.toShortString(), cutLogs.size(), orphanLeaves.size(), nests, lostVines);
         }
     }
@@ -280,9 +284,11 @@ public final class GateClearing {
             if (updated == state) {
                 continue;
             }
-            level.setBlock(cursor, updated, PLACE_FLAGS);
             if (updated.isAir()) {
+                FluidGuard.remove(level, cursor, PLACE_FLAGS);
                 removed++;
+            } else {
+                level.setBlock(cursor, updated, PLACE_FLAGS);
             }
         }
         return removed;
