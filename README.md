@@ -139,8 +139,9 @@ In single player, nothing else to do.
 ## Credits & License
 
 - **Developer**: Darcosse
-- **Music, textures, Pokémon sprites and NPC models**: original, made for the mod
-- **License**: [MIT](https://opensource.org/licenses/MIT)
+- **Music, textures and NPC models**: original, made for the mod
+- **Pokémon sprites** (wall screens' sprite mode): [E19 Cobblemon Minimap Icons](https://www.curseforge.com/minecraft/texture-packs/e19-cobblemon-minimap-icons) by Emery319, icons by MBCMechachu, under the [Mozilla Public License 2.0](https://mozilla.org/MPL/2.0/) (see `NOTICE.txt` next to them)
+- **License**: [MIT](https://opensource.org/licenses/MIT), except the Pokémon sprites (MPL 2.0, above)
 
 Found a bug or have an idea? Open an issue on [GitHub](https://github.com/BileulDevs/Cobblemon-Safari/issues).
 

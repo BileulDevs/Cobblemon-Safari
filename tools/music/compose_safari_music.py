@@ -46,9 +46,11 @@ OUT_DIR = os.path.join(ROOT, "common", "src", "main", "resources", "assets", "co
 # shrink the files but dull the bells and shakers.
 SAMPLE_RATE = 44100
 
-# Vorbis quality (-q:a). 2 is about 96 kbit/s stereo: transparent enough for
-# soft synthesised music. Each step up adds roughly 15% to the jar size.
-VORBIS_QUALITY = 2
+# Vorbis quality (-q:a). 0 gives 40 to 55 kbit/s stereo on these tracks
+# (3.4 MiB for the six), soft synthesised music the lower rate barely
+# touches; 2 gave 5 MiB, the largest part of the jar. Each step up adds
+# roughly 15 to 20% to the music's size.
+VORBIS_QUALITY = 0
 
 # Loudness target of the finished track, as RMS in dBFS, and peak ceiling.
 # Vanilla music sits around -20 dBFS RMS; louder would make the Safari jump
