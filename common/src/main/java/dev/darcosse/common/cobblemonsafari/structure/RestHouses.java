@@ -34,9 +34,13 @@ import java.util.concurrent.CompletableFuture;
  * seed produced (see {@link RestHouseBuilder}).
  *
  * <p>When: at server start, every house gets its site, chosen from the
- * noise without generating a chunk (the searches run in parallel). None is
- * built then: the entrance house is the first one {@link RestHousePrebuilder}
- * loads in the background, right after the start, and it is built in steps
+ * noise without generating a chunk (the searches run in parallel on
+ * background threads), and the start never waits for them: {@link #tick}
+ * takes them in as they finish, a few seconds later. Waiting for them held
+ * up the creation of every new map (and each daily reset) for about ten
+ * seconds; only a player entering before the entrance's search ends waits
+ * for it ({@link #ensureEntrance}). None is built then: the entrance house
+ * is the first one {@link RestHousePrebuilder} loads in the background, right after the start, and it is built in steps
  * like the others; the others are built the first time a player has loaded
  * the chunks around them, or by the prebuilder. Building the entrance during
  * the start generated its chunks on the server thread, several seconds
@@ -143,6 +147,49 @@ public final class RestHouses {
     private static int ticksSinceLook;
 
     /**
+     * Site searches still running, in anchor order. Taken in strictly in
+     * that order, so a house's candidates are checked against every house
+     * before it, as when they were all waited for. Server thread only.
+     */
+    private static final Deque<SiteSearch> searches = new ArrayDeque<>();
+
+    /**
+     * Sites already given to a house this run, built or planned, and the
+     * squares of the underground houses: what a new candidate must keep
+     * away from. Server thread only.
+     */
+    private static final List<int[]> taken = new ArrayList<>();
+
+    /**
+     * One house's site search, running on a background thread.
+     * {@code retried} is set once a second search, knowing every house
+     * placed before it, has been started because the first one's candidates
+     * were all too close to them; if that one finds nothing either, the
+     * house stands on its anchor.
+     */
+    private static final class SiteSearch {
+        private final ParkGeometry.Column anchor;
+        private final int radius;
+        private CompletableFuture<List<int[]>> future;
+        private boolean retried;
+
+        /** Starts a search around the anchor, keeping away from {@code known}. */
+        private SiteSearch(ServerLevel level, ParkGeometry.Column anchor, int radius, List<int[]> known) {
+            this.anchor = anchor;
+            this.radius = radius;
+            this.future = start(level, known);
+        }
+
+        /** Runs the search on a background thread; it reads the noise only, never a chunk. */
+        private CompletableFuture<List<int[]>> start(ServerLevel level, List<int[]> known) {
+            List<int[]> snapshot = List.copyOf(known);
+            return CompletableFuture.supplyAsync(
+                    () -> RestHouseSites.candidates(level, anchor.x(), anchor.z(), radius, snapshot),
+                    Util.backgroundExecutor());
+        }
+    }
+
+    /**
      * Where one house stands or will stand.
      *
      * @param x        centre column
@@ -226,6 +273,19 @@ public final class RestHouses {
         paused.clear();
         ticksSinceLook = 0;
         sites = null;
+        dropSearches();
+    }
+
+    /**
+     * Forgets the running site searches. They cannot be stopped mid-way
+     * (cancel does not interrupt them); their results are simply never read.
+     */
+    private static void dropSearches() {
+        for (SiteSearch search : searches) {
+            search.future.cancel(false);
+        }
+        searches.clear();
+        taken.clear();
     }
 
     /**
@@ -234,9 +294,10 @@ public final class RestHouses {
      * start ({@link RestHousePrebuilder}), the others by {@link #tick} as
      * players or the prebuilder come near.
      *
-     * <p>Cost, on a new map: the site searches (noise reads, about a second,
-     * all houses at once on background threads). Called at server start
-     * only, never per tick; {@code /safari reload} uses {@link #refresh}.
+     * <p>Cost: none on the server thread; on a new map, the site searches run
+     * on background threads (noise reads, a few seconds in all) and are taken
+     * in by {@link #tick}. Called at server start only, never per tick;
+     * {@code /safari reload} uses {@link #refresh}.
      */
     public static void prepare(MinecraftServer server) {
         ServerLevel safari = SafariDimensions.level(server);
@@ -245,7 +306,7 @@ public final class RestHouses {
             return;
         }
         SafariWorldState state = SafariWorldState.get(server);
-        planMissingSites(safari, state);
+        startSiteSearches(safari, state);
         refreshSites(state);
     }
 
@@ -258,14 +319,21 @@ public final class RestHouses {
      * terrain is not built on twice.
      *
      * <p>Cost: nothing once built; before that, the stall the server start
-     * used to take (about 16 chunks and the build), paid by the first player
-     * entering within the first seconds of a new map.
+     * used to take (its site search if still running, about 16 chunks and
+     * the build), paid by the first player entering within the first seconds
+     * of a new map.
      */
     public static void ensureEntrance(ServerLevel level) {
         SafariWorldState state = SafariWorldState.get(level.getServer());
         ParkGeometry.Column anchor = ParkGeometry.REST_HOUSES.get(0);
         if (state.isHouseBuilt(anchor.x(), anchor.z())) {
             return;
+        }
+        // The start no longer waits for the entrance's site: a player this early does.
+        if (state.housePlan(anchor.x(), anchor.z()).isEmpty()
+                && takeFinishedSearches(level, state, true)) {
+            refreshSites(state);
+            SafariNetwork.broadcastRules(level.getServer());
         }
         PendingBuild running = paused.remove(key(anchor));
         if (running == null) {
@@ -306,7 +374,8 @@ public final class RestHouses {
      * command). At server start nobody is waiting; here everybody is.
      *
      * <p>Cost: nothing when every house is planned (the normal case, since the
-     * start plans them all); otherwise the noise searches of the start.
+     * start plans them all); otherwise the noise searches of the start, all
+     * on background threads, the entrance's included.
      */
     public static void refresh(MinecraftServer server) {
         ServerLevel safari = SafariDimensions.level(server);
@@ -315,7 +384,8 @@ public final class RestHouses {
             return;
         }
         SafariWorldState state = SafariWorldState.get(server);
-        planMissingSites(safari, state);
+        startSiteSearches(safari, state);
+        takeFinishedSearches(safari, state, false);
         refreshSites(state);
         ParkGeometry.Column entrance = ParkGeometry.REST_HOUSES.get(0);
         if (!state.isHouseBuilt(entrance.x(), entrance.z())) {
@@ -327,21 +397,20 @@ public final class RestHouses {
     }
 
     /**
-     * Gives a list of candidate sites to every unbuilt house that has none.
-     * The searches run in parallel without knowing each other's result; the
-     * lists are then checked in order, and a candidate too close to a house
-     * already placed or planned is dropped. A house left with no candidate is
-     * searched again, alone, knowing the others; its anchor is the last resort.
+     * Starts a site search for every unbuilt house that has no plan. The
+     * searches run in parallel without knowing each other's result;
+     * {@link #takeFinishedSearches} then checks them in order and drops a
+     * candidate too close to a house already placed or planned. Searches
+     * still running from an earlier call are dropped and started again.
      */
-    private static void planMissingSites(ServerLevel level, SafariWorldState state) {
-        List<ParkGeometry.Column> anchors = ParkGeometry.REST_HOUSES;
-        List<int[]> taken = new ArrayList<>();
+    private static void startSiteSearches(ServerLevel level, SafariWorldState state) {
+        dropSearches();
         // A surface house over an underground one would share its square:
         // both would answer the column queries made with an unknown height.
         for (ParkGeometry.CaveHouse cave : ParkGeometry.CAVE_REST_HOUSES) {
             taken.add(new int[]{cave.x(), cave.z()});
         }
-        Map<Integer, CompletableFuture<List<int[]>>> searches = new HashMap<>();
+        List<ParkGeometry.Column> anchors = ParkGeometry.REST_HOUSES;
         for (int i = 0; i < anchors.size(); i++) {
             ParkGeometry.Column anchor = anchors.get(i);
             int[] built = state.houseSite(anchor.x(), anchor.z());
@@ -352,29 +421,44 @@ public final class RestHouses {
                 taken.add(plan.get(0));
             } else {
                 int radius = i == 0 ? ENTRANCE_SEARCH_RADIUS : SEARCH_RADIUS;
-                List<int[]> known = List.copyOf(taken);
-                searches.put(i, CompletableFuture.supplyAsync(
-                        () -> RestHouseSites.candidates(level, anchor.x(), anchor.z(), radius, known),
-                        Util.backgroundExecutor()));
+                searches.add(new SiteSearch(level, anchor, radius, taken));
             }
         }
-        for (int i = 0; i < anchors.size(); i++) {
-            CompletableFuture<List<int[]>> search = searches.get(i);
-            if (search == null) {
-                continue;
+    }
+
+    /**
+     * Turns the finished searches at the head of the queue into house
+     * plans, in anchor order: a search finished early waits for those before
+     * it. A house left with no candidate once the others are kept away from
+     * gets a second search, knowing them; if that one finds nothing either,
+     * it stands on its anchor.
+     *
+     * @param waitForEntrance whether to block until the entrance's search is
+     *                        done (a player entering before it); the others are
+     *                        never waited for
+     * @return whether a house got its plan, i.e. the sites changed
+     */
+    private static boolean takeFinishedSearches(ServerLevel level, SafariWorldState state, boolean waitForEntrance) {
+        boolean changed = false;
+        while (!searches.isEmpty()) {
+            SiteSearch search = searches.peekFirst();
+            boolean entrance = search.anchor.equals(ParkGeometry.REST_HOUSES.get(0));
+            if (!search.future.isDone() && !(waitForEntrance && entrance)) {
+                break;
             }
-            ParkGeometry.Column anchor = anchors.get(i);
-            int radius = i == 0 ? ENTRANCE_SEARCH_RADIUS : SEARCH_RADIUS;
+            ParkGeometry.Column anchor = search.anchor;
             List<int[]> candidates = new ArrayList<>();
             try {
-                candidates.addAll(search.join());
+                candidates.addAll(search.future.join());
             } catch (RuntimeException e) {
                 CobblemonSafari.LOGGER.error("Site search for the rest house near {}, {} failed; searching again",
                         anchor.x(), anchor.z(), e);
             }
             candidates.removeIf(site -> RestHouseSites.tooClose(site[0], site[1], taken));
-            if (candidates.isEmpty()) {
-                candidates.addAll(RestHouseSites.candidates(level, anchor.x(), anchor.z(), radius, taken));
+            if (candidates.isEmpty() && !search.retried) {
+                search.retried = true;
+                search.future = search.start(level, taken);
+                continue;
             }
             if (candidates.isEmpty()) {
                 CobblemonSafari.LOGGER.warn("No spot found for the rest house near {}, {}; it will stand on that position",
@@ -383,7 +467,10 @@ public final class RestHouses {
             }
             state.setHousePlan(anchor.x(), anchor.z(), candidates);
             taken.add(candidates.get(0));
+            searches.pollFirst();
+            changed = true;
         }
+        return changed;
     }
 
     /**
@@ -450,15 +537,25 @@ public final class RestHouses {
      * surroundings are loaded and starts building it. Called each server
      * tick.
      *
-     * <p>Cost: with no build under way, once every {@link #LOOK_INTERVAL_TICKS},
-     * a loaded-chunk lookup per house still to build (about 16 each). During a
-     * build, one step of it per tick (see {@link RestHouseBuilder.Job#step}):
-     * a few ticks of up to a few thousand block changes, once per house and map.
+     * <p>Cost: while site searches run (the first seconds of a new map), a
+     * check of the oldest one per tick. With no build under way, once every
+     * {@link #LOOK_INTERVAL_TICKS}, a loaded-chunk lookup per house still to
+     * build (about 16 each). During a build, one step of it per tick (see
+     * {@link RestHouseBuilder.Job#step}): a few ticks of up to a few thousand
+     * block changes, once per house and map.
      */
     public static void tick(MinecraftServer server) {
         ServerLevel safari = SafariDimensions.level(server);
         if (safari == null) {
             return;
+        }
+        if (!searches.isEmpty()) {
+            SafariWorldState state = SafariWorldState.get(server);
+            if (takeFinishedSearches(safari, state, false)) {
+                // New planned houses: the guide, the music and the spawns keep clear of them from now on.
+                refreshSites(state);
+                SafariNetwork.broadcastRules(server);
+            }
         }
         if (!builds.isEmpty()) {
             stepBuild(server, safari);

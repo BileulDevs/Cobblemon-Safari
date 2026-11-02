@@ -39,6 +39,7 @@ New network protocol (`1.5.0`): clients and servers must both update.
 
 ### Fixed
 
+- Creating a world, and the first start after each daily reset of the Safari, took about ten seconds longer than without the mod: the server waited for the spot of every rest house to be chosen. The spots are now chosen in the background during the first seconds; only a player entering the Safari before the entrance house's spot is chosen waits for it.
 - Shears could strip Cobblemon's big and energy roots in the Safari despite the terrain protection, turning them into a smaller root. It is now refused unless `protection.interact.roots` is on.
 - The rest houses built in the background after the server start did not tell the clients their height or their final spot: the Pokémon Center theme could play above or below a house (on the surface over an underground one, in a cave under a surface one), or around the wrong spot, until the player logged in again. Every build now sends the update.
 - A rest house's clerk or guide could stand on the roof, mostly in the jungle, where the leaves of a tree left beside the house spread over it. The staff now always find the floor from the house's own roof, and those already on a roof are put back behind the counter.
