@@ -428,7 +428,7 @@ public final class RestHouses {
             if (wet == 0) {
                 return candidate;
             }
-            CobblemonSafari.LOGGER.info("Rest house spot {}, {} has water on {} columns; trying the next one",
+            CobblemonSafari.LOGGER.debug("Rest house spot {}, {} has water on {} columns; trying the next one",
                     candidate[0], candidate[1], wet);
             if (wet < driestWet) {
                 driestWet = wet;
@@ -559,13 +559,70 @@ public final class RestHouses {
     private static void markBuilt(MinecraftServer server, SafariWorldState state, ParkGeometry.Column anchor,
                                   RestHouseBuilder.Job job) {
         state.markHouseBuilt(anchor.x(), anchor.z(), job.centerX, job.centerZ, job.groundY());
-        CobblemonSafari.LOGGER.info("Built Safari rest house at {}, {} (anchor {}, {})",
-                job.centerX, job.centerZ, anchor.x(), anchor.z());
         refreshSites(state);
+        logBuilt(server, job);
         // Here, for every way a house gets built: its height is known now, and it may
         // stand at another of its sites than planned, so the clients' music (and the
         // shop's notion of "inside") must follow. The background builds used to skip it.
         SafariNetwork.broadcastRules(server);
+    }
+
+    /**
+     * The one line a server owner sees per house: where it stands, by its
+     * biome or cavern, and how many of the map's houses stand now
+     * ("Safari RestHouse built in Jungle 3/9"). Coordinates and the details
+     * of the build (trees felled, items swept) are logged at debug level.
+     */
+    private static void logBuilt(MinecraftServer server, RestHouseBuilder.Job job) {
+        List<HouseSite> all = sites();
+        int built = 0;
+        HouseSite site = null;
+        for (HouseSite candidate : all) {
+            if (candidate.built()) {
+                built++;
+            }
+            if (candidate.x() == job.centerX && candidate.z() == job.centerZ) {
+                site = candidate;
+            }
+        }
+        CobblemonSafari.LOGGER.info("Safari RestHouse built in {} {}/{}", placeName(server, site, job), built,
+                all.size());
+        CobblemonSafari.LOGGER.debug("Safari RestHouse at {}, {}, ground {}", job.centerX, job.centerZ,
+                job.groundY());
+    }
+
+    /**
+     * Where a house stands, in plain English for the log: its cavern for an
+     * underground one ("Giant Cavern"), else the biome at its door
+     * ("Flower Meadow"), from the ids, as a dedicated server has no
+     * translations. "Unknown" when neither can be read.
+     */
+    private static String placeName(MinecraftServer server, @Nullable HouseSite site, RestHouseBuilder.Job job) {
+        if (site != null && site.underground()) {
+            return humanize(site.caveId());
+        }
+        ServerLevel safari = SafariDimensions.level(server);
+        if (safari == null) {
+            return "Unknown";
+        }
+        return safari.getBiome(new BlockPos(job.centerX, job.groundY(), job.centerZ)).unwrapKey()
+                .map(key -> humanize(key.location().getPath()))
+                .orElse("Unknown");
+    }
+
+    /** "flower_meadow" as "Flower Meadow". */
+    private static String humanize(String id) {
+        StringBuilder name = new StringBuilder();
+        for (String word : id.split("_")) {
+            if (word.isEmpty()) {
+                continue;
+            }
+            if (!name.isEmpty()) {
+                name.append(' ');
+            }
+            name.append(Character.toUpperCase(word.charAt(0))).append(word.substring(1));
+        }
+        return name.toString();
     }
 
     // ---- Queries ----------------------------------------------------------

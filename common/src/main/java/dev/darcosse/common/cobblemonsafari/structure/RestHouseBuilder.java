@@ -748,7 +748,7 @@ final class RestHouseBuilder {
                     startTime = level.getGameTime();
                     survey = Survey.read(level, rect);
                     if (survey.wetColumns > 0 && !acceptWater) {
-                        CobblemonSafari.LOGGER.info("Rest house spot {}, {} has water on {} columns; trying the next one",
+                        CobblemonSafari.LOGGER.debug("Rest house spot {}, {} has water on {} columns; trying the next one",
                                 centerX, centerZ, survey.wetColumns);
                         return Progress.WET;
                     }
@@ -1301,7 +1301,7 @@ final class RestHouseBuilder {
                 felled += group.size();
             }
             if (trees > 0) {
-                CobblemonSafari.LOGGER.info("Safari rest house at {}, {}: felled {} trees ({} logs) it would have cut",
+                CobblemonSafari.LOGGER.debug("Safari rest house at {}, {}: felled {} trees ({} logs) it would have cut",
                         centerX, centerZ, trees, felled);
             }
         }
@@ -1390,7 +1390,7 @@ final class RestHouseBuilder {
                 item.discard();
             }
             if (!drops.isEmpty()) {
-                CobblemonSafari.LOGGER.info("Safari rest house at {}, {}: removed {} dropped items", centerX, centerZ,
+                CobblemonSafari.LOGGER.debug("Safari rest house at {}, {}: removed {} dropped items", centerX, centerZ,
                         drops.size());
             }
         }

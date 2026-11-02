@@ -252,7 +252,7 @@ public final class GateClearing {
         }
         int lostVines = detachVines(level);
         if (!cutLogs.isEmpty() || !orphanLeaves.isEmpty() || lostVines > 0) {
-            CobblemonSafari.LOGGER.info("{} at {}: removed {} logs, {} leaves, {} bee nests or cocoa pods and {} vines of cut trees",
+            CobblemonSafari.LOGGER.debug("{} at {}: removed {} logs, {} leaves, {} bee nests or cocoa pods and {} vines of cut trees",
                     owner, middle.toShortString(), cutLogs.size(), orphanLeaves.size(), nests, lostVines);
         }
     }
