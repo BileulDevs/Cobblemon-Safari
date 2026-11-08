@@ -248,9 +248,8 @@ public class SafariConfig {
     }
 
     /**
-     * The legendary-class categories in swarms ({@code events.swarm.rarities})
-     * and in the storm ({@code events.storm.rarities}): the same switch and
-     * cap as in {@code spawns}, for that event alone.
+     * The legendary-class categories in swarms ({@code events.swarm.rarities}):
+     * the same switch and cap as in {@code spawns}, for the swarm alone.
      */
     public static class SwarmCategories {
         /**
@@ -327,7 +326,9 @@ public class SafariConfig {
      * the storm's own spawner brings them near the players standing in one
      * of {@code habitats} or high enough ({@code minAltitudeAboveSea}), with
      * a harmless lightning flash. They come from the Safari's own species of
-     * those types, whatever their usual habitat. A Pokémon the storm brought
+     * those types, whatever their usual habitat, under the natural spawns'
+     * rules (spawns: excluded species, legendary-class categories and their
+     * caps, counted apart from the natural ones). A Pokémon the storm brought
      * gets the Storm Mark when caught. The thunderstorm is the Safari's
      * ordinary weather: nothing here makes it thunder.
      */
@@ -355,14 +356,6 @@ public class SafariConfig {
          * and ultra-rare only by default: the storm is about rare finds.
          */
         public SpawnWeights weights = stormWeights();
-
-        /**
-         * Legendary-class categories in the storm (legendary, mythical,
-         * ultraBeast, paradox), as for the swarm: allowSpawn and the most of
-         * each species the storm brings per rotation (0: no cap). Species of
-         * spawns.excludedSpecies never come either.
-         */
-        public SwarmCategories rarities = new SwarmCategories();
 
         /** Pokémon the storm never brings, as Cobblemon properties: "dragonite", or one form, "vulpix alolan". */
         public List<String> excludeList = new ArrayList<>();

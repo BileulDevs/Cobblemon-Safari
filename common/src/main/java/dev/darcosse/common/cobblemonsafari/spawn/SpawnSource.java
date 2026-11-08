@@ -26,18 +26,18 @@ public enum SpawnSource {
     SWARM,
 
     /**
-     * A Pokémon the storm's spawner brought ({@link Storm}): its categories
-     * and caps are {@code events.storm.rarities}; like the swarm it keeps
-     * the natural spawns' excluded species.
+     * A Pokémon the storm's spawner brought ({@link Storm}): it follows the
+     * natural spawns' rules (excluded species, categories and their caps),
+     * as every event does but the swarm, counted apart from them.
      */
     STORM;
 
     /**
      * The config section holding this way's categories and exclusions. The
      * swarm and the storm have no section of that shape: they keep the
-     * natural spawns' excluded species (a species kept out of the wild stays
-     * out of them) and {@link SpeciesRules} reads their categories from
-     * {@code events.swarm.rarities} and {@code events.storm.rarities}.
+     * natural spawns' (a species kept out of the wild stays out of them);
+     * only the swarm has categories of its own, which {@link SpeciesRules}
+     * reads from {@code events.swarm.rarities}.
      */
     public SafariConfig.SpeciesRulesSection rules(SafariConfig config) {
         return this == FEATURED ? config.specials : config.spawns;

@@ -1459,15 +1459,6 @@ public final class SafariConfigManager {
             weights.ultraRare = Math.max(0, weights.ultraRare);
             corrected = true;
         }
-        if (storm.rarities == null) {
-            storm.rarities = new SafariConfig.SwarmCategories();
-            corrected = true;
-        }
-        corrected |= ensureSwarmCategories(storm.rarities);
-        corrected |= validateCategory("events.storm.rarities.legendary", storm.rarities.legendary);
-        corrected |= validateCategory("events.storm.rarities.mythical", storm.rarities.mythical);
-        corrected |= validateCategory("events.storm.rarities.ultraBeast", storm.rarities.ultraBeast);
-        corrected |= validateCategory("events.storm.rarities.paradox", storm.rarities.paradox);
         if (storm.excludeList == null) {
             storm.excludeList = new ArrayList<>();
             corrected = true;

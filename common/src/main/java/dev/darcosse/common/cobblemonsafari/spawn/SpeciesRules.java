@@ -150,10 +150,6 @@ public final class SpeciesRules {
             SafariConfig.SwarmCategories swarm = config.events.swarm.rarities;
             return categoriesOf(species, swarm.legendary, swarm.mythical, swarm.ultraBeast, swarm.paradox);
         }
-        if (source == SpawnSource.STORM) {
-            SafariConfig.SwarmCategories storm = config.events.storm.rarities;
-            return categoriesOf(species, storm.legendary, storm.mythical, storm.ultraBeast, storm.paradox);
-        }
         SafariConfig.SpeciesRulesSection section = source.rules(config);
         return categoriesOf(species, section.legendary, section.mythical, section.ultraBeast, section.paradox);
     }

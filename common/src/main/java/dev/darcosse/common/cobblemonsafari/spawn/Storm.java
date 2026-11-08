@@ -49,11 +49,12 @@ import java.util.Set;
  * mostly live elsewhere (a Dragon in the lagoon), and Cobblemon would refuse
  * them on a ridge. The pool is drawn when the storm starts from the Safari's
  * own natural species ({@link FeaturedRotation#index}) of the storm's types
- * and weighted rarities, through {@code events.storm.rarities},
- * {@code spawns.excludedSpecies} and {@code events.storm.excludeList}. Each
- * is noted as {@link SpawnSource#STORM} in {@link SpecialSpawnCounter}, so
- * its capture is charged to the storm, never to the natural spawns, and the
- * mark can tell it apart.
+ * and weighted rarities, under the natural spawns' rules ({@code spawns}:
+ * excluded species, legendary-class categories and their caps) plus
+ * {@code events.storm.excludeList}. Each is noted as
+ * {@link SpawnSource#STORM} in {@link SpecialSpawnCounter}: the natural caps
+ * apply to the storm's own count, so its capture never uses up a natural
+ * slot, and the mark can tell it apart.
  *
  * <p>Server thread only. Cost: once a second, a weather and clock read; during
  * the storm, every {@code checkEverySeconds} (15 s by default), per hunting
