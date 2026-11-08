@@ -35,6 +35,7 @@ New network protocol (`1.6.0`): clients and servers must both update (the specia
 
 ### Changed
 
+- **The jungle is more open**: patches of thick jungle and of bamboo jungle in a sparse jungle, so Pokémon can be seen and the biome crossed. Still one biome. New maps only.
 - **The giant cavern looks like the Caves & Cliffs caves**: smooth rock walls instead of small lumps everywhere, ledges and floors, and stone pillars. New maps only; the lush cavern is unchanged.
 - The swarm's weight boost in Cobblemon's spawns applies to the swarm's own spawns only, so an excluded form of the same species keeps its usual weight.
 - `server.json` goes to version 8 so that existing files show the new keys; nothing is converted.

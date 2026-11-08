@@ -206,6 +206,73 @@ EXCLUDED_FEATURES = {
 }
 
 # ---------------------------------------------------------------------------
+# Jungle vegetation
+# ---------------------------------------------------------------------------
+# The Safari jungle mixes vanilla's jungle, sparse jungle and bamboo jungle
+# in one biome. Each look is a placed feature counted by vanilla's
+# noise_threshold_count, which reads one noise for every feature (the
+# biome-info noise, at x/200 and z/200): above JUNGLE_DENSE_NOISE the dense
+# trees grow, below JUNGLE_BAMBOO_NOISE the bamboo and its trees, and the
+# sparse trees grow everywhere, so the middle of the range (most of the
+# biome) is an open jungle with clearings between the thick patches. Patches
+# are about a hundred blocks across.
+#
+# That noise has a fixed seed in vanilla: the patches are at the same place
+# on every map. Getting them to move with the seed needs a placement
+# modifier of our own, in Java.
+#
+# Raising JUNGLE_DENSE_NOISE (or lowering JUNGLE_BAMBOO_NOISE) shrinks those
+# patches, at 1 they vanish; at 0 both looks share the biome with no open
+# part. Counts are attempts per chunk.
+JUNGLE_DENSE_NOISE = 0.35
+JUNGLE_BAMBOO_NOISE = -0.35
+# Vanilla's jungle tries 50 trees a chunk; 35 keeps the thick canopy of a
+# real jungle in its patches while leaving room to walk under it.
+JUNGLE_DENSE_TREES = 35
+# Vanilla's sparse jungle: 2 trees a chunk, 3 one time in ten.
+JUNGLE_SPARSE_TREES = {"type": "minecraft:weighted_list",
+                       "distribution": [{"data": 2, "weight": 9}, {"data": 3, "weight": 1}]}
+# Bamboo stalks per chunk in a bamboo patch. Vanilla's bamboo jungle goes far
+# higher (up to ~200, from its own noise); bamboo walls block the view as
+# much as leaves.
+JUNGLE_BAMBOO_STALKS = 40
+# Trees of a bamboo patch (vanilla's bamboo_vegetation, mostly giant jungle
+# trees): vanilla tries 30, a third of it keeps the patch walkable.
+JUNGLE_BAMBOO_TREES = 10
+
+
+def jungle_placed(feature, count, heightmap, water_filter=True):
+    """A jungle placed feature: `count` attempts a chunk, then vanilla's usual placement for that feature."""
+    placement = [count, {"type": "minecraft:in_square"}]
+    if water_filter:
+        placement.append({"type": "minecraft:surface_water_depth_filter", "max_water_depth": 0})
+    placement += [{"type": "minecraft:heightmap", "heightmap": heightmap}, {"type": "minecraft:biome"}]
+    return {"feature": feature, "placement": placement}
+
+
+def noise_count(level, below, above):
+    """Vanilla's noise_threshold_count: `below` attempts where the biome-info noise is under `level`, else `above`."""
+    return {"type": "minecraft:noise_threshold_count", "noise_level": level, "below_noise": below,
+            "above_noise": above}
+
+
+def jungle_placed_features():
+    """The jungle's four vegetation features, by file name (see JUNGLE_DENSE_NOISE)."""
+    return {
+        # Bamboo first, as in vanilla's bamboo jungle, so trees grow around it.
+        "jungle_bamboo": jungle_placed("minecraft:bamboo_some_podzol",
+                                       noise_count(JUNGLE_BAMBOO_NOISE, JUNGLE_BAMBOO_STALKS, 0),
+                                       "WORLD_SURFACE_WG", water_filter=False),
+        "jungle_bamboo_trees": jungle_placed("minecraft:bamboo_vegetation",
+                                             noise_count(JUNGLE_BAMBOO_NOISE, JUNGLE_BAMBOO_TREES, 0), "OCEAN_FLOOR"),
+        "jungle_dense_trees": jungle_placed("minecraft:trees_jungle",
+                                            noise_count(JUNGLE_DENSE_NOISE, 0, JUNGLE_DENSE_TREES), "OCEAN_FLOOR"),
+        "jungle_sparse_trees": jungle_placed("minecraft:trees_sparse_jungle",
+                                             {"type": "minecraft:count", "count": JUNGLE_SPARSE_TREES}, "OCEAN_FLOOR"),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Biomes
 # ---------------------------------------------------------------------------
 # Each Safari biome borrows features, colours and climate from one or more
@@ -218,7 +285,14 @@ BIOMES = {
     "savanna":        {"models": ["savanna"], "base": "savanna"},
     "dunes":          {"models": ["desert"], "base": "desert"},
     "badlands":       {"models": ["badlands"], "base": "badlands"},
-    "jungle":         {"models": ["jungle"], "base": "jungle"},
+    # One biome, three looks: dense jungle, sparse jungle and bamboo jungle
+    # in patches (see JUNGLE_TREES). Vanilla's jungle alone hid the Pokémon
+    # and was tiring to cross.
+    "jungle":         {"models": ["jungle"], "base": "jungle",
+                       "replace_features": {"minecraft:trees_jungle": [f"{MOD_ID}:safari/{name}"
+                                                                       for name in ("jungle_bamboo", "jungle_bamboo_trees",
+                                                                                    "jungle_dense_trees",
+                                                                                    "jungle_sparse_trees")]}},
     "marsh":          {"models": ["swamp"], "base": "swamp"},
     "flower_meadow":  {"models": ["meadow", "cherry_grove"], "base": "cherry_grove"},
     "woodland":       {"models": ["forest", "birch_forest"], "base": "forest"},
@@ -717,7 +791,13 @@ def build_biome(name, spec, orders):
         for extra in spec.get("extra_features", []):
             if extra in orders[step]:
                 union.add(extra)
-        features.append(sorted(union, key=lambda f: orders[step][f]))
+        ordered = sorted(union, key=lambda f: orders[step][f])
+        # Our own features take the place of the vanilla one they replace:
+        # only this biome lists them, so no order between biomes can conflict.
+        replaced = []
+        for f in ordered:
+            replaced.extend(spec.get("replace_features", {}).get(f, [f]))
+        features.append(replaced)
     placed = {f for step in features for f in step}
     missing = set(spec.get("extra_features", [])) - placed
     if missing:
@@ -1615,7 +1695,7 @@ def validate(files):
                 "worldgen/density_function_type", "worldgen/material_rule", "worldgen/material_condition",
                 "worldgen/biome_source", "worldgen/chunk_generator", "worldgen/biome",
                 "int_provider_type", "dimension_type", "worldgen/carver",
-                "worldgen/structure_placement", "worldgen/structure_type"]:
+                "worldgen/structure_placement", "worldgen/structure_type", "worldgen/placement_modifier_type"]:
         known |= {f"minecraft:{x}" for x in registry(reg)}
     for path in files:
         parts = os.path.relpath(path, OUT).split(os.sep)
@@ -1683,7 +1763,8 @@ def main():
     # Only the folders this script owns. worldgen/structure*, worldgen/template_pool
     # and tags/worldgen/biome/has_structure hold the Safari Gate, written by
     # hand and by safari_gate_assets.py: wiping all of worldgen deleted them.
-    for sub in [os.path.join("worldgen", d) for d in ("biome", "density_function", "noise", "noise_settings")] \
+    for sub in [os.path.join("worldgen", d) for d in ("biome", "density_function", "noise", "noise_settings",
+                                                      "placed_feature")] \
             + [os.path.join("worldgen", "structure", SAFARI_STRUCTURE_DIR),
                os.path.join("worldgen", "structure_set", SAFARI_STRUCTURE_DIR),
                os.path.join("tags", "worldgen", "biome", SAFARI_STRUCTURE_TAG_DIR)] \
@@ -1728,6 +1809,8 @@ def main():
     settings["surface_rule"] = surface_rule(vanilla("worldgen/noise_settings/overworld")["surface_rule"])
     write("worldgen/noise_settings/safari.json", settings, written)
 
+    for name, data in jungle_placed_features().items():
+        write(f"worldgen/placed_feature/safari/{name}.json", data, written)
     orders = global_feature_order()
     for name, spec in BIOMES.items():
         write(f"worldgen/biome/{name}.json", build_biome(name, spec, orders), written)

@@ -18,6 +18,8 @@ Every item of the mod (ticket, Escape Rope, gate, wall screen, decor) is in its 
 
 The Safari is a single island (shape radius 768 blocks, land to about 660, centred on 0,0) in an endless turquoise sea, enclosed by its own square world border. A small summit sits at the centre, ringed by rocky hills and a volcano. Around it, 14 habitats are laid out as sectors from the rocky ring to the coast, each with a whole sector of its own: grassland (north, where players arrive), savanna, dunes, badlands, jungle, marsh, mushroom grove, flower meadow, woodland, deep forest, taiga, snowfield, glacier, rocky hills.
 
+The jungle mixes vanilla's jungle, sparse jungle and bamboo jungle in one biome: its trees are four placed features of our own (`placed_feature/safari/jungle_*`, from `jungle_placed_features` in the generator, in place of vanilla's `trees_jungle` through the biome's `replace_features`), counted by vanilla's `noise_threshold_count` on the biome-info noise: thick jungle where it is above `JUNGLE_DENSE_NOISE`, bamboo and its trees below `JUNGLE_BAMBOO_NOISE`, sparse jungle trees everywhere, so most of the biome is open jungle between patches about a hundred blocks across. That noise has a fixed seed in vanilla, so the patches do not move with the map's seed.
+
 The terrain is kept fairly even from the centre to the coast, so large builds have room: continentalness and erosion follow smooth radial profiles (`CONTINENT_PROFILE`, `EROSION_PROFILE`, through `safari/island_radial`) with only a little noise on top. The summit's peaks are limited to the inner tenth of the radius; the rest of the island is plains and rolling hills (about 65 to 120 blocks high), dropping to the sea over the last eighth of the radius.
 
 Underneath:
