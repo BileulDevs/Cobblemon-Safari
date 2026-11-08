@@ -21,7 +21,7 @@ import java.util.Set;
  * Ground Pokémon (by default) come out more there.
  *
  * <p>Its life is {@link WeatherEvent}'s, with the dawn as trigger and a dry
- * day as condition: at each dawn without rain, a draw decides whether the day
+ * day as condition (by {@link SafariClock}): at each dawn without rain, a draw decides whether the day
  * brings a heatwave, which lasts a drawn time, or less if rain comes or night
  * falls. Rain stopping in the afternoon is no dawn, so it never draws a
  * second time the same day.
@@ -36,17 +36,8 @@ import java.util.Set;
  */
 public final class Heatwave {
 
-    /** Ticks in a Minecraft day. */
-    private static final long DAY_TICKS = 24_000L;
-    /**
-     * End of the day in a day's ticks: 0 is sunrise, 12 000 sunset. Read
-     * from the time, not the sky's brightness, which rain darkens: a rain
-     * passing by would otherwise look like a night and a new dawn.
-     */
-    private static final long SUNSET_TICK = 12_000L;
-
     private static final WeatherEvent EVENT = new WeatherEvent("Heatwave",
-            Heatwave::isDaytime, level -> isDaytime(level) && !level.isRaining());
+            SafariClock::isDaytime, level -> SafariClock.isDaytime(level) && !level.isRaining());
 
     /** Lower-case type names it favours, for the spawn threads. */
     private static volatile Set<String> types = Set.of();
@@ -77,11 +68,6 @@ public final class Heatwave {
     static boolean bakes(Holder<Biome> biome) {
         Set<ResourceLocation> hot = habitats;
         return biome.unwrapKey().map(key -> hot.contains(key.location())).orElse(false);
-    }
-
-    /** Whether it is day in the Safari, by its clock: from sunrise to sunset. */
-    private static boolean isDaytime(ServerLevel level) {
-        return Math.floorMod(level.getDayTime(), DAY_TICKS) < SUNSET_TICK;
     }
 
     /**

@@ -30,7 +30,13 @@ public enum SpawnSource {
      * natural spawns' rules (excluded species, categories and their caps),
      * as every event does but the swarm, counted apart from them.
      */
-    STORM;
+    STORM,
+
+    /**
+     * A Pokémon an aurora brought ({@link Aurora}): the natural spawns'
+     * rules, counted apart from them, as the storm.
+     */
+    AURORA;
 
     /**
      * The config section holding this way's categories and exclusions. The

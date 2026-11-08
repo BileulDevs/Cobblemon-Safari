@@ -34,7 +34,8 @@ import java.util.Set;
  *   <li>the Safari Mark, to every Pokémon caught there ("Tauros the Safari Find");</li>
  *   <li>event marks, for a catch made at a remarkable moment: one of the
  *       specials of the day (the star), a Pokémon of the swarm in its
- *       habitat (the swarm), a Pokémon a storm brought (the storm), a catch
+ *       habitat (the swarm), a Pokémon a storm brought (the storm), a
+ *       Pokémon an aurora brought (the aurora), a catch
  *       where a downpour falls (the downpour),
  *       a catch on a full moon night (the moon), and a Pokémon fished in the
  *       Safari (the angler).</li>
@@ -48,7 +49,7 @@ import java.util.Set;
  * them. Server side.
  *
  * <p>Title: an event mark's title replaces the Safari Mark's as the active
- * one, the rarest moment first (star, swarm, storm, downpour, moon, angler); a title the
+ * one, the rarest moment first (star, swarm, aurora, storm, downpour, moon, angler); a title the
  * Pokémon already has from Cobblemon (weather, personality) stays.
  */
 public final class SafariMark {
@@ -59,6 +60,8 @@ public final class SafariMark {
     public static final ResourceLocation STAR = CobblemonSafari.id("mark_safari_star");
     /** A Pokémon of the swarm, caught in the swarm's habitat. */
     public static final ResourceLocation SWARM = CobblemonSafari.id("mark_safari_swarm");
+    /** Brought by an aurora. */
+    public static final ResourceLocation AURORA = CobblemonSafari.id("mark_safari_aurora");
     /** Brought by a storm. */
     public static final ResourceLocation STORM = CobblemonSafari.id("mark_safari_storm");
     /** Caught where a downpour falls. */
@@ -102,7 +105,10 @@ public final class SafariMark {
         if (marks.swarm && Swarm.isSwarming(pokemon, where.level().getBiome(where.blockPosition()))) {
             addIfLoaded(events, give(pokemon, SWARM));
         }
-        // Noted at its spawn under the storm's way in, which survives the capture.
+        // Noted at its spawn under the event's way in, which survives the capture.
+        if (marks.aurora && SpecialSpawnCounter.cameThrough(server, pokemon.getUuid(), SpawnSource.AURORA)) {
+            addIfLoaded(events, give(pokemon, AURORA));
+        }
         if (marks.storm && SpecialSpawnCounter.cameThrough(server, pokemon.getUuid(), SpawnSource.STORM)) {
             addIfLoaded(events, give(pokemon, STORM));
         }

@@ -90,10 +90,11 @@ public final class SafariConfigManager {
      * nothing to convert, raised only so that existing files are rewritten
      * once and show the new keys.
      * 9 added events.downpour and capture.marks.downpour, 10 events.storm
-     * and capture.marks.storm, 11 events.heatwave: nothing to convert
-     * either, raised for the same reason.
+     * and capture.marks.storm, 11 events.heatwave, 12 events.aurora and
+     * capture.marks.aurora and dropped events.storm.weights (ignored when
+     * read): nothing to convert either, raised for the same reason.
      */
-    public static final int CURRENT_CONFIG_VERSION = 11;
+    public static final int CURRENT_CONFIG_VERSION = 12;
 
     /** First version that knows the fishing missions. */
     private static final int FISHING_MISSION_VERSION = 6;
@@ -1269,8 +1270,8 @@ public final class SafariConfigManager {
     /** Upper bound of events.downpour.weightMultiplier and events.heatwave's, as the full moon's. */
     private static final double MAX_DOWNPOUR_MULTIPLIER = 20.0D;
     /**
-     * Bounds of the durations of events.downpour, events.storm and
-     * events.heatwave, in minutes. Under a minute the
+     * Bounds of the durations of events.downpour, events.storm,
+     * events.heatwave and events.aurora, in minutes. Under a minute the
      * announcement and its end would nearly cross; beyond two hours it
      * outlasts any rain, so the rain's end is what ends it anyway.
      */
@@ -1289,6 +1290,8 @@ public final class SafariConfigManager {
      * longer than most storms, so more would mean one flash per storm.
      */
     private static final int MAX_LIGHTNING_COOLDOWN_SECONDS = 600;
+    /** Upper bound of events.aurora.glowSeconds: longer and the glow gives away every hiding spot. */
+    private static final int MAX_AURORA_GLOW_SECONDS = 60;
 
     /** Fixes the events section; returns true if anything changed. */
     private static boolean validateEvents(SafariConfig c) {
@@ -1320,6 +1323,11 @@ public final class SafariConfigManager {
             corrected = true;
         }
         corrected |= validateHeatwave(c.events.heatwave);
+        if (c.events.aurora == null) {
+            c.events.aurora = new SafariConfig.Aurora();
+            corrected = true;
+        }
+        corrected |= validateAurora(c.events.aurora);
         SafariConfig.Swarm swarm = c.events.swarm;
         if (!(swarm.chance >= 0.0D && swarm.chance <= 1.0D)) {
             double fixed = Double.isNaN(swarm.chance) ? 0.0D : Math.max(0.0D, Math.min(1.0D, swarm.chance));
@@ -1426,6 +1434,49 @@ public final class SafariConfigManager {
         return corrected;
     }
 
+    /** Fixes events.aurora; returns true if anything changed. */
+    private static boolean validateAurora(SafariConfig.Aurora aurora) {
+        boolean corrected = false;
+        if (!(aurora.chance >= 0.0D && aurora.chance <= 1.0D)) {
+            double fixed = Double.isNaN(aurora.chance) ? 0.0D : Math.max(0.0D, Math.min(1.0D, aurora.chance));
+            warn("events.aurora.chance", aurora.chance, fixed);
+            aurora.chance = fixed;
+            corrected = true;
+        }
+        if (aurora.minDurationMinutes < MIN_DOWNPOUR_MINUTES || aurora.minDurationMinutes > MAX_DOWNPOUR_MINUTES) {
+            int fixed = Math.max(MIN_DOWNPOUR_MINUTES, Math.min(MAX_DOWNPOUR_MINUTES, aurora.minDurationMinutes));
+            warn("events.aurora.minDurationMinutes", aurora.minDurationMinutes, fixed);
+            aurora.minDurationMinutes = fixed;
+            corrected = true;
+        }
+        // At least the minimum: the draw takes a duration between the two.
+        if (aurora.maxDurationMinutes < aurora.minDurationMinutes || aurora.maxDurationMinutes > MAX_DOWNPOUR_MINUTES) {
+            int fixed = Math.max(aurora.minDurationMinutes, Math.min(MAX_DOWNPOUR_MINUTES, aurora.maxDurationMinutes));
+            warn("events.aurora.maxDurationMinutes", aurora.maxDurationMinutes, fixed);
+            aurora.maxDurationMinutes = fixed;
+            corrected = true;
+        }
+        if (aurora.types == null) {
+            aurora.types = new ArrayList<>();
+            corrected = true;
+        }
+        if (aurora.excludeList == null) {
+            aurora.excludeList = new ArrayList<>();
+            corrected = true;
+        }
+        if (aurora.habitats == null) {
+            aurora.habitats = new ArrayList<>();
+            corrected = true;
+        }
+        if (aurora.glowSeconds < 0 || aurora.glowSeconds > MAX_AURORA_GLOW_SECONDS) {
+            int fixed = Math.max(0, Math.min(MAX_AURORA_GLOW_SECONDS, aurora.glowSeconds));
+            warn("events.aurora.glowSeconds", aurora.glowSeconds, fixed);
+            aurora.glowSeconds = fixed;
+            corrected = true;
+        }
+        return corrected;
+    }
+
     /** Fixes events.heatwave; returns true if anything changed. */
     private static boolean validateHeatwave(SafariConfig.Heatwave heatwave) {
         boolean corrected = false;
@@ -1491,19 +1542,6 @@ public final class SafariConfigManager {
         }
         if (storm.types == null) {
             storm.types = new ArrayList<>();
-            corrected = true;
-        }
-        if (storm.weights == null) {
-            storm.weights = new SafariConfig.Storm().weights;
-            corrected = true;
-        }
-        SafariConfig.SpawnWeights weights = storm.weights;
-        if (weights.common < 0 || weights.uncommon < 0 || weights.rare < 0 || weights.ultraRare < 0) {
-            CobblemonSafari.LOGGER.warn("Negative events.storm.weights in {}, using 0 for those", FILE_NAME);
-            weights.common = Math.max(0, weights.common);
-            weights.uncommon = Math.max(0, weights.uncommon);
-            weights.rare = Math.max(0, weights.rare);
-            weights.ultraRare = Math.max(0, weights.ultraRare);
             corrected = true;
         }
         if (storm.excludeList == null) {

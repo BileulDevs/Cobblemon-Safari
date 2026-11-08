@@ -131,6 +131,7 @@ Every Pokémon caught in the Safari gets the Safari Mark ("the Safari Find"); on
 | `fullMoon` | `true` | "of the Full Moon": caught on a full moon night. |
 | `downpour` | `true` | "of the Downpour": caught where a downpour falls (see `events.downpour`). |
 | `storm` | `true` | "of the Storm": a Pokémon a storm brought (see `events.storm`). |
+| `aurora` | `true` | "of the Aurora": a Pokémon an aurora brought (see `events.aurora`); not the natural ones caught during it. |
 | `angler` | `true` | "the Safari Catch": fished with a rod in the Safari, then caught. |
 
 #### `capture.flee`: Pokémon running away
@@ -269,7 +270,7 @@ After `/safari reload`, the specials are redrawn with the new rules right away.
 
 `/safari rotate` starts a new rotation now, which lasts a whole `rotationMinutes` from then (the following rotations keep that pace, no longer aligned on midnight UTC); `/safari today` lists the current specials.
 
-### `events`: swarms, full moon nights, downpours, storms and heatwaves
+### `events`: swarms, full moon nights, downpours, storms, heatwaves and auroras
 
 Rare happenings that change Cobblemon's natural spawns in the Safari for a while, announced in the chat (with a chime) to the players in the Safari.
 
@@ -307,7 +308,7 @@ Rare happenings that change Cobblemon's natural spawns in the Safari for a while
 | `types` | `["water", "electric"]` | Cobblemon type names favoured. |
 | `weightMultiplier` | `2.0` | How much more often those Pokémon are picked, within their rarity. 1 to 20. |
 
-**`events.storm`**: some thunderstorms bring rare Pokémon of some types to the high ground: the storm's own spawner brings them near the hunting players standing in one of `habitats` or high enough above the sea, each with a harmless lightning flash, and a Pokémon the storm brought gets the Storm Mark when caught. Its species are the Safari's own natural species of those types and of a rarity with a positive weight, whatever their usual habitat, under the natural spawns' rules: `spawns.excludedSpecies` never come, and legendary-class species follow `spawns.legendary`, `mythical`, `ultraBeast` and `paradox` (switch and cap), the storm's catches counted apart from the natural ones. The thunderstorm is the Safari's ordinary weather: as for the downpour, a draw at each thunderstorm start, a drawn duration, ended by the thunder stopping or a restart. It adds up with a downpour, a thunderstorm being a rain too. Its Pokémon never use up the natural slots of `spawns`.
+**`events.storm`**: some thunderstorms bring rare Pokémon of some types to the high ground: the storm's own spawner brings them near the hunting players standing in one of `habitats` or high enough above the sea, each with a harmless lightning flash, and a Pokémon the storm brought gets the Storm Mark when caught. Its species are the Safari's own rare and ultra-rare natural species of those types (three rare for one ultra-rare), whatever their usual habitat, under the natural spawns' rules: `spawns.excludedSpecies` never come, and legendary-class species follow `spawns.legendary`, `mythical`, `ultraBeast` and `paradox` (switch and cap), the storm's catches counted apart from the natural ones. The thunderstorm is the Safari's ordinary weather: as for the downpour, a draw at each thunderstorm start, a drawn duration, ended by the thunder stopping or a restart. It adds up with a downpour, a thunderstorm being a rain too. Its Pokémon never use up the natural slots of `spawns`.
 
 | Key | Default | What it does |
 |---|---|---|
@@ -316,7 +317,6 @@ Rare happenings that change Cobblemon's natural spawns in the Safari for a while
 | `minDurationMinutes` | `3` | Shortest storm event, in real minutes. 1 to 120. |
 | `maxDurationMinutes` | `8` | Longest storm event, in real minutes, at least `minDurationMinutes`. 1 to 120. A thunderstorm lasts about 3 to 13 minutes. |
 | `types` | `["electric", "dragon"]` | Cobblemon type names of the Pokémon the storm brings. |
-| `weights` | `0` / `0` / `3` / `1` | Chance of each rarity (`common`, `uncommon`, `rare`, `ultraRare`, the species' rarity in the Safari) among the storm's Pokémon; 0 leaves that rarity out. |
 | `excludeList` | `[]` | Pokémon the storm never brings, as Cobblemon properties: `"dragonite"`, or one form, `"vulpix alolan"`. |
 | `habitats` | `["cobblemon_safari:peaks", "cobblemon_safari:rocky_hills", "cobblemon_safari:volcanic"]` | Habitats where the storm brings its Pokémon, by biome id. |
 | `minAltitudeAboveSea` | `45` | Blocks above the sea from which any spot counts as high ground too, for a `ROLLING` map; scaled with `reset.relief` (about 16 on `FLAT`, 29 on `GENTLE`, 72 on `MOUNTAINOUS`). 0: the whole island. 0 to 256. |
@@ -337,6 +337,19 @@ Rare happenings that change Cobblemon's natural spawns in the Safari for a while
 | `types` | `["fire", "ground"]` | Cobblemon type names favoured. |
 | `habitats` | `["cobblemon_safari:dunes", "cobblemon_safari:volcanic", "cobblemon_safari:badlands", "cobblemon_safari:savanna"]` | Habitats the heatwave bakes, by biome id. |
 | `weightMultiplier` | `2.0` | How much more often those Pokémon are picked there, within their rarity. 1 to 20. |
+
+**`events.aurora`**: at each nightfall without rain, a draw may light an aurora on the frozen lands. Each hunting player is then owed one rare Pokémon of some types: it appears 16 to 32 blocks away as soon as they stand in one of `habitats` or anywhere snow falls (cold biomes, and high ground cold enough for snow), retried every 3 seconds until it does or the aurora ends. One per player and aurora, kept by player for the whole aurora (leaving and coming back neither loses nor renews it). Its species are the Safari's own uncommon, rare and ultra-rare natural species of those types (five uncommon for three rare and one ultra-rare: Cobblemon has almost no rare Ice species, so rare-only would always bring Glaceon), under the natural spawns' rules (`spawns.excludedSpecies`, legendary-class switches and caps, counted apart from the natural ones). The pick is the player's own: never the species they got at their previous aurora (unless nothing else is left), and the species they already caught in the Safari weigh `spawns.caughtSpeciesWeight`, as in the natural spawns. It glows for a while, the player is told, and it gets the Aurora Mark when caught. The aurora lasts a drawn time and ends sooner at dawn or when rain comes. Announced and shown in `/safari today`.
+
+| Key | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | `false`: no aurora. |
+| `chance` | `0.1` | Chance (0 to 1) that a nightfall without rain brings an aurora. |
+| `minDurationMinutes` | `3` | Shortest aurora, in real minutes. 1 to 120. |
+| `maxDurationMinutes` | `6` | Longest aurora, in real minutes, at least `minDurationMinutes`. 1 to 120. A night lasts about 7 minutes. |
+| `types` | `["ice"]` | Cobblemon type names of the Pokémon the aurora brings. |
+| `excludeList` | `[]` | Pokémon the aurora never brings, as Cobblemon properties: `"lapras"`, or one form, `"vulpix alolan"`. |
+| `habitats` | `["cobblemon_safari:glacier", "cobblemon_safari:snowfield", "cobblemon_safari:taiga"]` | Habitats where the aurora's Pokémon come, by biome id; any spot where snow falls counts too. |
+| `glowSeconds` | `20` | Seconds the Pokémon glows when it appears, so it can be found. 0 to 60. |
 
 ### `points`: Safari points
 

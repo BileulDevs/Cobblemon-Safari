@@ -31,8 +31,9 @@ import java.util.UUID;
  * spawn threads and tells the players about them: the swarm of the rotation
  * ({@link Swarm}) once per rotation to each player in the Safari, the full
  * moon once per night, the downpour ({@link Downpour}), the storm
- * ({@link Storm}) and the heatwave ({@link Heatwave}) when they start and end; the storm also brings its
- * Pokémon from here.
+ * ({@link Storm}), the heatwave ({@link Heatwave}) and the aurora
+ * ({@link Aurora}) when they start and end; the storm also brings its
+ * Pokémon from here, the aurora its promised ones.
  *
  * <p>The effect on the spawns themselves is {@link SafariHappeningsInfluence}'s.
  * Server side. Cost: once a second, a few comparisons, and the swarm's draw
@@ -75,6 +76,7 @@ public final class SafariHappenings {
         Downpour.reset();
         Storm.reset();
         Heatwave.reset();
+        Aurora.reset();
     }
 
     /** Whether a full moon night is on, for the spawn threads. */
@@ -114,6 +116,7 @@ public final class SafariHappenings {
         Downpour.tick(safari);
         Storm.tick(server, safari);
         Heatwave.tick(safari);
+        Aurora.tick(server, safari);
         Swarm.Active swarm = Swarm.current(server);
         if (safari == null) {
             return;

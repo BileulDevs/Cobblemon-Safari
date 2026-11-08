@@ -6,6 +6,7 @@ Output, in common/src/main/resources/assets/cobblemon_safari/textures/gui/mark/:
   mark_safari_moon.png     the full moon: a pale moon with craters on night blue
   mark_safari_downpour.png the downpour: slanted white rain streaks on storm blue
   mark_safari_storm.png    the storm: a white lightning bolt on thundercloud purple
+  mark_safari_aurora.png   the aurora: three wavy white curtains on polar green
   mark_safari_angler.png   the fished Pokemon: a white hook on water blue
 
 Same frame as the Safari Mark (tools/safari_mark_icon.py) and Cobblemon's own
@@ -48,6 +49,8 @@ WATER = (42, 122, 184, 255)       # 2A7AB8
 STORM = (47, 94, 134, 255)        # 2F5E86
 # Purple, apart from every blue above: the storm's mark must not pass for the downpour's.
 THUNDERCLOUD = (74, 61, 122, 255) # 4A3D7A
+# Green, the aurora's own colour, darker than any other disc so the white curtains stand out.
+POLAR = (31, 110, 90, 255)        # 1F6E5A
 
 MOON = (240, 232, 190, 255)
 CRATER = (196, 188, 150, 255)
@@ -128,6 +131,21 @@ def bolt(x: int, y: int):
     return WHITE if in_polygon(x + 0.5, y + 0.5, BOLT) else THUNDERCLOUD
 
 
+# Aurora curtains: each a column x that sways with y, from its top row down
+# to row 23, as (base x, top y, sway in pixels). A bigger sway reads as
+# drapery; more curtains blur into stripes at 32 pixels.
+CURTAINS = [(11, 9, 1.5), (16, 7, 1.5), (21, 10, 1.5)]
+
+
+def aurora(x: int, y: int):
+    for base, top, sway in CURTAINS:
+        centre = base + round(sway * math.sin((y - top) / 2.5))
+        # Two pixels wide: one-pixel curtains break up where the sway jumps a column.
+        if top <= y <= 23 and centre <= x <= centre + 1:
+            return WHITE
+    return POLAR
+
+
 def hook(x: int, y: int):
     """A fish hook: an eye on top, a shank, a curved bend and a barb."""
     # Eye: a small ring at the top of the shank.
@@ -148,6 +166,7 @@ ICONS = {
     "mark_safari_moon": moon,
     "mark_safari_downpour": downpour,
     "mark_safari_storm": bolt,
+    "mark_safari_aurora": aurora,
     "mark_safari_angler": hook,
 }
 

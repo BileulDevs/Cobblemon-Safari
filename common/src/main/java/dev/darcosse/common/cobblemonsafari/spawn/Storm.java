@@ -1,16 +1,10 @@
 package dev.darcosse.common.cobblemonsafari.spawn;
 
-import com.cobblemon.mod.common.api.pokemon.PokemonProperties;
-import com.cobblemon.mod.common.api.types.ElementalType;
-import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
-import dev.darcosse.common.cobblemonsafari.park.ParkBoundary;
 import dev.darcosse.common.cobblemonsafari.reset.SafariMapReset;
 import dev.darcosse.common.cobblemonsafari.session.SafariSessionManager;
-import dev.darcosse.common.cobblemonsafari.structure.RestHouses;
-import dev.darcosse.common.cobblemonsafari.util.Surface;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -23,17 +17,11 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * The storm ({@code events.storm}): some thunderstorms of the Safari bring
@@ -43,18 +31,10 @@ import java.util.Set;
  *
  * <p>Its life (draw when a thunderstorm starts, drawn duration,
  * announcements, no reroll on restart) is {@link WeatherEvent}'s; it adds up
- * with the downpour, a thunderstorm being a rain too.
- *
- * <p>Its Pokémon do not come through Cobblemon's spawner: their species
- * mostly live elsewhere (a Dragon in the lagoon), and Cobblemon would refuse
- * them on a ridge. The pool is drawn when the storm starts from the Safari's
- * own natural species ({@link FeaturedRotation#index}) of the storm's types
- * and weighted rarities, under the natural spawns' rules ({@code spawns}:
- * excluded species, legendary-class categories and their caps) plus
- * {@code events.storm.excludeList}. Each is noted as
- * {@link SpawnSource#STORM} in {@link SpecialSpawnCounter}: the natural caps
- * apply to the storm's own count, so its capture never uses up a natural
- * slot, and the mark can tell it apart.
+ * with the downpour, a thunderstorm being a rain too. Its pool, pick, spots
+ * and Pokémon are {@link EventSpawns}' (rare and ultra-rare natural species
+ * of its types, under the natural spawns' rules, noted as
+ * {@link SpawnSource#STORM}).
  *
  * <p>Server thread only. Cost: once a second, a weather and clock read; during
  * the storm, every {@code checkEverySeconds} (15 s by default), per hunting
@@ -74,8 +54,6 @@ public final class Storm {
      * events.storm.maxNearby (SafariConfig): keep both in step.
      */
     private static final int NEARBY_RADIUS = 64;
-    /** Height of the nearby check box; covers cliffs without scanning the whole column. */
-    private static final double CHECK_HALF_HEIGHT = 48.0D;
 
     /**
      * Spawn distance from the player, in blocks: out of the player's lap but
@@ -84,13 +62,6 @@ public final class Storm {
      */
     private static final int MIN_DISTANCE = 16;
     private static final int MAX_DISTANCE = 40;
-
-    /** Blocks kept clear around rest houses, so no storm Pokémon lands on a roof. */
-    private static final int HOUSE_MARGIN = 3;
-
-    /** Level range when the species' natural levels are unknown. */
-    private static final int FALLBACK_MIN_LEVEL = 20;
-    private static final int FALLBACK_MAX_LEVEL = 40;
 
     private static final long MILLIS_PER_SECOND = 1000L;
 
@@ -128,7 +99,8 @@ public final class Storm {
         WeatherEvent.Change change = EVENT.tick(safari, config.enabled && !config.types.isEmpty(), config.chance,
                 config.minDurationMinutes, config.maxDurationMinutes, () -> startMessage(config), Storm::endMessage);
         if (change == WeatherEvent.Change.STARTED) {
-            pool = drawPool(server, config);
+            pool = EventSpawns.drawPool(server, config.types, config.excludeList, SpawnSource.STORM,
+                    EventSpawns.Weights.RARE_FINDS);
             secondsSinceAttempt = 0;
             CobblemonSafari.LOGGER.info("Storm pool: {} species", pool.size());
         } else if (change == WeatherEvent.Change.ENDED) {
@@ -177,126 +149,24 @@ public final class Storm {
     /** One attempt around a player: an open-air spot on high ground nearby, then one of the storm's species. */
     private static void trySpawnNear(ServerLevel level, ServerPlayer player, SafariConfig.Storm config,
                                      RandomSource random) {
-        AABB around = player.getBoundingBox().inflate(NEARBY_RADIUS, CHECK_HALF_HEIGHT, NEARBY_RADIUS);
-        if (level.getEntitiesOfClass(PokemonEntity.class, around,
-                entity -> entity.getTags().contains(STORM_TAG)).size() >= config.maxNearby) {
+        if (EventSpawns.countNear(level, player, STORM_TAG, NEARBY_RADIUS) >= config.maxNearby) {
             return;
         }
-        double angle = random.nextDouble() * Math.PI * 2.0D;
-        double distance = MIN_DISTANCE + random.nextDouble() * (MAX_DISTANCE - MIN_DISTANCE);
-        int x = (int) Math.floor(player.getX() + Math.cos(angle) * distance);
-        int z = (int) Math.floor(player.getZ() + Math.sin(angle) * distance);
-        if (ParkBoundary.isOutside(x, z) || RestHouses.isNearSurfaceHouse(x, z, HOUSE_MARGIN)) {
+        // The storm's Pokémon come down on the high ground: the spot must be high ground too.
+        BlockPos spot = EventSpawns.spotNear(level, player, MIN_DISTANCE, MAX_DISTANCE,
+                pos -> isHighGround(level, pos, level.getBiome(pos), config), random);
+        if (spot == null) {
             return;
         }
-        // Only loaded chunks: generating terrain for a spawn would stall the tick.
-        BlockPos feet = Surface.loaded(level, x, z);
-        if (feet == null) {
+        HabitatEntry entry = EventSpawns.pick(level.getServer(), pool, SpawnSource.STORM,
+                EventSpawns.Weights.RARE_FINDS, random);
+        if (entry == null
+                || EventSpawns.spawn(level, player, entry, spot, STORM_TAG, SpawnSource.STORM, random) == null) {
             return;
         }
-        BlockState below = level.getBlockState(feet.below());
-        // Dry ground under the open sky: the storm's Pokémon come down on the high ground.
-        if (below.isAir() || !below.getFluidState().isEmpty() || !level.getBlockState(feet).isAir()
-                || !level.getBlockState(feet.above()).isAir() || !level.canSeeSky(feet)
-                || !isHighGround(level, feet, level.getBiome(feet), config)) {
-            return;
-        }
-        HabitatEntry entry = pick(level.getServer(), config, random);
-        if (entry != null) {
-            spawn(level, player, entry, feet, config, random);
-        }
-    }
-
-    /**
-     * The storm's species: the Safari's natural species with one of its
-     * types, a rarity of positive weight, and allowed in the storm. Drawn
-     * once per storm: the index walk is a few thousand lookups.
-     */
-    private static List<HabitatEntry> drawPool(MinecraftServer server, SafariConfig.Storm config) {
-        Set<String> wanted = new HashSet<>();
-        for (String type : config.types) {
-            wanted.add(type.toLowerCase(Locale.ROOT));
-        }
-        List<SwarmRules.Exclusion> exclusions = SwarmRules.parseExclusions(config.excludeList);
-        List<HabitatEntry> entries = new ArrayList<>();
-        for (Map.Entry<ResourceLocation, HabitatEntry> indexed : FeaturedRotation.index(server).entrySet()) {
-            HabitatEntry entry = indexed.getValue();
-            // Natural species only: a species placed by its types alone does not live in the Safari.
-            if (!entry.natural() || SwarmRules.weightOf(entry.rarity(), config.weights) <= 0
-                    || !hasType(entry, wanted) || !SpeciesRules.isAllowed(entry.species(), SpawnSource.STORM)
-                    || SwarmRules.isExcluded(exclusions, indexed.getKey().toString(), properties(entry))) {
-                continue;
-            }
-            entries.add(entry);
-        }
-        return List.copyOf(entries);
-    }
-
-    /** Whether one of the species' types is wanted. */
-    private static boolean hasType(HabitatEntry entry, Set<String> wanted) {
-        for (ElementalType type : entry.species().getTypes()) {
-            if (wanted.contains(type.getName().toLowerCase(Locale.ROOT))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Weighted pick among the pool, by rarity, leaving out species that used
-     * up their storm appearances for this rotation; null when none is left.
-     */
-    @Nullable
-    private static HabitatEntry pick(MinecraftServer server, SafariConfig.Storm config, RandomSource random) {
-        List<HabitatEntry> candidates = new ArrayList<>();
-        int total = 0;
-        for (HabitatEntry entry : pool) {
-            if (SpecialSpawnCounter.canSpawn(server, entry.species(), SpawnSource.STORM)) {
-                candidates.add(entry);
-                total += SwarmRules.weightOf(entry.rarity(), config.weights);
-            }
-        }
-        if (total <= 0) {
-            return null;
-        }
-        int roll = random.nextInt(total);
-        for (HabitatEntry entry : candidates) {
-            roll -= SwarmRules.weightOf(entry.rarity(), config.weights);
-            if (roll < 0) {
-                return entry;
-            }
-        }
-        return candidates.get(candidates.size() - 1);
-    }
-
-    /** The species' most common natural spawn (form, aspects), as the specials start from. */
-    private static PokemonProperties properties(HabitatEntry entry) {
-        PokemonProperties properties = entry.template() != null ? entry.template().copy() : new PokemonProperties();
-        properties.setSpecies(entry.species().getResourceIdentifier().toString());
-        return properties;
-    }
-
-    /**
-     * Creates and places the Pokémon as the specials' spawner does, notes it
-     * as the storm's, then flashes the lightning when its cooldown allows.
-     */
-    private static void spawn(ServerLevel level, ServerPlayer player, HabitatEntry entry, BlockPos pos,
-                              SafariConfig.Storm config, RandomSource random) {
-        PokemonProperties properties = properties(entry);
-        properties.setLevel(level(entry, random));
-        // The player is passed so shiny-chance modifiers such as a Shiny Charm apply.
-        PokemonEntity pokemonEntity = properties.createEntity(level, player);
-        pokemonEntity.moveTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, random.nextFloat() * 360.0F, 0.0F);
-        pokemonEntity.addTag(STORM_TAG);
-        // Noted only once really added: another mod may veto the entity.
-        if (!level.addFreshEntity(pokemonEntity)) {
-            return;
-        }
-        SpecialSpawnCounter.recordSpawn(level.getServer(), entry.species(), SpawnSource.STORM,
-                pokemonEntity.getUUID(), pokemonEntity.getPokemon().getUuid(), pos);
         long now = System.currentTimeMillis();
         if (config.lightning && now - lastFlashMillis >= config.lightningCooldownSeconds * MILLIS_PER_SECOND) {
-            flash(level, pos);
+            flash(level, spot);
             lastFlashMillis = now;
         }
     }
@@ -314,13 +184,6 @@ public final class Storm {
         bolt.moveTo(Vec3.atBottomCenterOf(pos));
         bolt.setVisualOnly(true);
         level.addFreshEntity(bolt);
-    }
-
-    /** A level within the species' natural range in the Safari, or the fallback when unknown. */
-    private static int level(HabitatEntry entry, RandomSource random) {
-        int min = entry.minLevel() > 0 ? entry.minLevel() : FALLBACK_MIN_LEVEL;
-        int max = entry.maxLevel() >= min ? entry.maxLevel() : Math.max(min, FALLBACK_MAX_LEVEL);
-        return min + random.nextInt(max - min + 1);
     }
 
     /** The storm's line, naming its types; also shown by {@code /safari today}. */

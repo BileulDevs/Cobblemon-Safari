@@ -162,6 +162,8 @@ public class SafariConfig {
         public Storm storm = new Storm();
         /** Some dry days baking the hot lands, with some types coming out more there. */
         public Heatwave heatwave = new Heatwave();
+        /** Some clear nights bringing each player one rare Pokémon of some types on the frozen lands. */
+        public Aurora aurora = new Aurora();
     }
 
     /**
@@ -323,6 +325,50 @@ public class SafariConfig {
     }
 
     /**
+     * The aurora: at each nightfall without rain in the Safari, maybe, an
+     * aurora lights the frozen lands for a while, and each hunting player is
+     * owed one rare Pokémon of the configured types: it appears near them as
+     * soon as they stand in one of {@code habitats} or where snow falls,
+     * retried until it does or the aurora ends. Its species are the Safari's
+     * own uncommon, rare and ultra-rare species of those types, under the
+     * natural spawns' rules; not the one the player got at their previous
+     * aurora, and those they caught less often. It glows for a moment so it can be found, and gets the
+     * Aurora Mark when caught. It ends when its time is up, at dawn or when
+     * rain comes.
+     */
+    public static class Aurora {
+        /** Master switch. */
+        public boolean enabled = true;
+
+        /** Chance, from 0 to 1, that a nightfall without rain brings an aurora. */
+        public double chance = 0.1;
+
+        /**
+         * Shortest and longest aurora, in real minutes, drawn for each one.
+         * It ends sooner at dawn (a night lasts about 7 minutes) or when rain
+         * comes. 1 to 120, max at least min.
+         */
+        public int minDurationMinutes = 3;
+        public int maxDurationMinutes = 6;
+
+        /** Cobblemon type names of the Pokémon the aurora brings. */
+        public List<String> types = new ArrayList<>(List.of("ice"));
+
+        /** Pokémon the aurora never brings, as Cobblemon properties: "lapras", or one form, "vulpix alolan". */
+        public List<String> excludeList = new ArrayList<>();
+
+        /** Habitats where the aurora's Pokémon come, by biome id; any spot where snow falls counts too. */
+        public List<String> habitats = new ArrayList<>(List.of(
+                "cobblemon_safari:glacier", "cobblemon_safari:snowfield", "cobblemon_safari:taiga"));
+
+        /**
+         * Seconds the aurora's Pokémon glows when it appears, so it can be
+         * found 16 to 32 blocks away, in the snow, at night. 0 for none, up to 60.
+         */
+        public int glowSeconds = 20;
+    }
+
+    /**
      * The heatwave: at each dawn without rain in the Safari, maybe, the day
      * bakes the hot lands for a while: Pokémon of the configured types come
      * out more in {@code habitats}. It ends when its time is up, when rain
@@ -361,8 +407,8 @@ public class SafariConfig {
      * Pokémon of the configured types come to the high ground for a while:
      * the storm's own spawner brings them near the players standing in one
      * of {@code habitats} or high enough ({@code minAltitudeAboveSea}), with
-     * a harmless lightning flash. They come from the Safari's own species of
-     * those types, whatever their usual habitat, under the natural spawns'
+     * a harmless lightning flash. They come from the Safari's own rare and
+     * ultra-rare species of those types, whatever their usual habitat, under the natural spawns'
      * rules (spawns: excluded species, legendary-class categories and their
      * caps, counted apart from the natural ones). A Pokémon the storm brought
      * gets the Storm Mark when caught. The thunderstorm is the Safari's
@@ -385,13 +431,6 @@ public class SafariConfig {
 
         /** Cobblemon type names of the Pokémon the storm brings. */
         public List<String> types = new ArrayList<>(List.of("electric", "dragon"));
-
-        /**
-         * Chance of each rarity (the species' rarity in the Safari) among the
-         * storm's Pokémon, against the others; 0 leaves that rarity out. Rare
-         * and ultra-rare only by default: the storm is about rare finds.
-         */
-        public SpawnWeights weights = stormWeights();
 
         /** Pokémon the storm never brings, as Cobblemon properties: "dragonite", or one form, "vulpix alolan". */
         public List<String> excludeList = new ArrayList<>();
@@ -425,16 +464,6 @@ public class SafariConfig {
          * seconds, so several players do not set off a barrage. 0 to 600.
          */
         public int lightningCooldownSeconds = 30;
-
-        /** Rare and ultra-rare only, three rare for one ultra-rare. */
-        private static SpawnWeights stormWeights() {
-            SpawnWeights weights = new SpawnWeights();
-            weights.common = 0;
-            weights.uncommon = 0;
-            weights.rare = 3;
-            weights.ultraRare = 1;
-            return weights;
-        }
     }
 
     /**
@@ -820,6 +849,8 @@ public class SafariConfig {
         public boolean downpour = true;
         /** "of the Storm": a Pokémon the storm brought. */
         public boolean storm = true;
+        /** "of the Aurora": a Pokémon an aurora brought. */
+        public boolean aurora = true;
         /** "the Safari Catch": fished with a rod in the Safari, then caught. */
         public boolean angler = true;
     }

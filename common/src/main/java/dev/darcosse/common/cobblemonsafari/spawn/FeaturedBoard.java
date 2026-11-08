@@ -51,6 +51,9 @@ public final class FeaturedBoard {
         if (Heatwave.isActive()) {
             lines.add(Heatwave.startMessage(SafariConfigManager.get().events.heatwave));
         }
+        if (Aurora.isActive()) {
+            lines.add(Aurora.startMessage(SafariConfigManager.get().events.aurora));
+        }
         lines.add(Component.translatable(key("board.next_rotation"), untilNextRotation())
                 .withStyle(ChatFormatting.DARK_GRAY));
         return lines;
