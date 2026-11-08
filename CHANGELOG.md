@@ -14,6 +14,7 @@ New network protocol (`1.6.0`): clients and servers must both update (the specia
 - **Missions no longer ask for Pokémon met only through Poké Snacks**: species missions are drawn among spawns a player can meet walking around.
 - **The Safari Pokédex no longer lists Pokémon met only through Poké Snacks**, and a species wild in one habitat but snack-only in another is listed under the habitat where it is wild. The Pokédex may count fewer species than in 1.4.0; what was caught stays caught.
 - **Habitats are named without "Safari"** in the guide's specials list and travel menu, the swarm line and on the screens ("Dunes" rather than "Safari Dunes"); the biomes keep their full name elsewhere (F3, other mods).
+- **The travel bird no longer flies through the rest house's roof**: it takes off and lands two blocks further from the house.
 - **Pokémon in the shop no longer move too fast**: their animation followed the frame rate (the higher the FPS, the faster they moved); it now plays in real time, at the speed it has in the world and on the specials board.
 - **`/safari rotate` restarts the rotation timer**: the new rotation lasts a whole `specials.rotationMinutes` from the command, instead of ending at the next scheduled change (a rotation forced with 1:20:30 left used to keep 1:20:30). The following rotations keep that pace from that moment, so they are no longer aligned on midnight UTC once a rotation has been forced.
 
@@ -35,6 +36,7 @@ New network protocol (`1.6.0`): clients and servers must both update (the specia
 
 ### Changed
 
+- **`spawns.caughtSpeciesWeight` defaults to 0.3** (was 0.4): a species not caught yet is more than three times as likely as a caught one. Existing `server.json` files keep their value.
 - **The jungle is more open**: patches of thick jungle and of bamboo jungle in a sparse jungle, so Pokémon can be seen and the biome crossed. Still one biome. New maps only.
 - **The giant cavern looks like the Caves & Cliffs caves**: smooth rock walls instead of small lumps everywhere, ledges and floors, and stone pillars. New maps only; the lush cavern is unchanged.
 - The swarm's weight boost in Cobblemon's spawns applies to the swarm's own spawns only, so an excluded form of the same species keeps its usual weight.

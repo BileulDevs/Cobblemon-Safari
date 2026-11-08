@@ -131,7 +131,7 @@
     "maxSameSpeciesNearby": 4,
     "spawnRateMultiplier": 2.0,
     "pokemonPerChunkMultiplier": 2.0,
-    "caughtSpeciesWeight": 0.4,
+    "caughtSpeciesWeight": 0.3,
     "snackClearRadius": 16,
     "snackDensityMultiplier": 1.5,
     "legendary": {

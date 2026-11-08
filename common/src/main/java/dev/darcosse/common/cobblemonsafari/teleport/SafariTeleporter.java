@@ -11,6 +11,7 @@ import dev.darcosse.common.cobblemonsafari.util.LoadedChunks;
 import dev.darcosse.common.cobblemonsafari.util.Surface;
 import dev.darcosse.common.cobblemonsafari.session.ReturnPoint;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -227,6 +228,24 @@ public final class SafariTeleporter {
         }
         BlockPos feet = surface(level, x, z);
         return isSafe(level, feet) ? feet : findStandingSpotNear(level, x, z);
+    }
+
+    /**
+     * The spot {@code distance} blocks further out than {@link #arrivalFeet}
+     * (away from the house, the way its door opens), on the surface, or null
+     * when the arrival is underground or that spot is not safe ground. The
+     * travel cinematic's bird takes off and lands there: on the arrival
+     * itself, right against the steps, its wings went through the roof's edge.
+     * Loads the chunk it reads, like {@link #arrivalFeet}.
+     */
+    @Nullable
+    public static BlockPos flightFeet(ServerLevel level, RestHouses.Arrival front, Direction outward, int distance) {
+        if (front.exact()) {
+            return null;
+        }
+        BlockPos column = front.column().relative(outward, distance);
+        BlockPos feet = surface(level, column.getX(), column.getZ());
+        return isSafe(level, feet) ? feet : null;
     }
 
     /**

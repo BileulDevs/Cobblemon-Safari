@@ -133,7 +133,7 @@ public final class SafariConfigManager {
      * enough to feel gone from the Safari; higher, the novelty push is
      * barely noticeable.
      */
-    public static final double DEFAULT_CAUGHT_SPECIES_WEIGHT = 0.4;
+    public static final double DEFAULT_CAUGHT_SPECIES_WEIGHT = 0.3;
 
     /** Default spawns.snackClearRadius, in blocks: twice a Poké Snack's own spawn radius (8). */
     public static final int DEFAULT_SNACK_CLEAR_RADIUS = 16;

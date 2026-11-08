@@ -365,7 +365,7 @@ public class SafariConfig {
         /**
          * Weight, in Cobblemon's natural spawns around a player, of the species
          * that player has already caught in the Safari, against 1 for species
-         * they have not: 0.4 makes a new species two and a half times as likely
+         * they have not: 0.3 makes a new species more than three times as likely
          * as a caught one of the same weight. Caught species still appear, only
          * less often; lower values make them feel gone. 1 turns it off; 0 stops
          * them entirely while anything else can spawn. Acts within Cobblemon's

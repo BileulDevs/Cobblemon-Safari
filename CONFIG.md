@@ -228,7 +228,7 @@ On top of the species rules above:
 | `maxSameSpeciesNearby` | `4` | No natural spawn of a species when this many of it already roam nearby, so one common species cannot flood a habitat. 0 turns the cap off. |
 | `spawnRateMultiplier` | `2.0` | How much faster Cobblemon's spawner works for players in the Safari. 1 is Cobblemon's own pace. Higher costs more server time. 0.1 to 10. |
 | `pokemonPerChunkMultiplier` | `2.0` | Multiplies Cobblemon's Pokémon-per-chunk cap for players in the Safari, so faster spawning is not wasted on a full cap. 0.1 to 10. |
-| `caughtSpeciesWeight` | `0.4` | Weight of the species a player already caught in the Safari, in the natural spawns around them (against 1 for species they have not). At 0.4 a new species is two and a half times as likely as a caught one. 1 turns it off; 0 stops caught species entirely while anything else can spawn. 0 to 1. |
+| `caughtSpeciesWeight` | `0.3` | Weight of the species a player already caught in the Safari, in the natural spawns around them (against 1 for species they have not). At 0.3 a new species is more than three times as likely as a caught one. 1 turns it off; 0 stops caught species entirely while anything else can spawn. 0 to 1. |
 | `snackClearRadius` | `16` | Distance from a Poké Snack, in blocks, within which no natural Pokémon spawns, so the snack has room to bring its own. Larger empties more of the surroundings; smaller lets the natural Pokémon fill the snack's area again. 0 turns the clearing off. 0 to 32. |
 | `snackDensityMultiplier` | `1.5` | Cap of a Poké Snack's spawner, as a multiple of the Safari's density (Cobblemon's Pokémon per chunk times `pokemonPerChunkMultiplier`). Above 1 a snack still brings Pokémon in a full area; higher packs more around it. 1 to 4. |
 
