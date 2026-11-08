@@ -1,5 +1,5 @@
 {
-  "configVersion": 10,
+  "configVersion": 11,
   "hunt": {
     "maxDurationSeconds": 3600,
     "pauseWhileOffline": true,
@@ -249,6 +249,15 @@
       "maxNearby": 2,
       "lightning": true,
       "lightningCooldownSeconds": 30
+    },
+    "heatwave": {
+      "enabled": true,
+      "chance": 0.15,
+      "minDurationMinutes": 4,
+      "maxDurationMinutes": 8,
+      "types": ["fire", "ground"],
+      "habitats": ["cobblemon_safari:dunes", "cobblemon_safari:volcanic", "cobblemon_safari:badlands", "cobblemon_safari:savanna"],
+      "weightMultiplier": 2.0
     }
   },
   "points": {

@@ -132,6 +132,8 @@
   "cobblemon_safari.events.downpour.end": "La pluie battante est terminée.",
   "cobblemon_safari.events.storm.announce": "Un orage gronde sur le Safari : des Pokémon de type %s rares descendent sur les hauteurs.",
   "cobblemon_safari.events.storm.end": "L'orage est passé.",
+  "cobblemon_safari.events.heatwave.announce": "Une canicule écrase les terres chaudes du Safari : les Pokémon de type %s y sortent davantage.",
+  "cobblemon_safari.events.heatwave.end": "La canicule est terminée.",
   "cobblemon_safari.screen.title": "Safari · Pokémon spéciaux du moment",
   "cobblemon_safari.screen.title_short": "Safari",
   "cobblemon_safari.screen.live": "En direct",

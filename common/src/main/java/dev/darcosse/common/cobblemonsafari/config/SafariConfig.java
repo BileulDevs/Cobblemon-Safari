@@ -160,6 +160,8 @@ public class SafariConfig {
         public Downpour downpour = new Downpour();
         /** Some thunderstorms bringing rare Pokémon of some types to the high ground. */
         public Storm storm = new Storm();
+        /** Some dry days baking the hot lands, with some types coming out more there. */
+        public Heatwave heatwave = new Heatwave();
     }
 
     /**
@@ -315,6 +317,40 @@ public class SafariConfig {
 
         /** Cobblemon type names whose Pokémon come out more. */
         public List<String> types = new ArrayList<>(List.of("water", "electric"));
+
+        /** How much more often those Pokémon are picked, within their rarity. 1 to 20. */
+        public double weightMultiplier = 2.0;
+    }
+
+    /**
+     * The heatwave: at each dawn without rain in the Safari, maybe, the day
+     * bakes the hot lands for a while: Pokémon of the configured types come
+     * out more in {@code habitats}. It ends when its time is up, when rain
+     * comes or when night falls. It only weighs Cobblemon's own spawns: no
+     * species appears that does not already live there. Announced to the
+     * players in the Safari; no mark.
+     */
+    public static class Heatwave {
+        /** Master switch. */
+        public boolean enabled = true;
+
+        /** Chance, from 0 to 1, that a dawn without rain brings a heatwave. */
+        public double chance = 0.15;
+
+        /**
+         * Shortest and longest heatwave, in real minutes, drawn for each one.
+         * It ends sooner at nightfall (a day lasts 10 minutes) or when rain
+         * comes. 1 to 120, max at least min.
+         */
+        public int minDurationMinutes = 4;
+        public int maxDurationMinutes = 8;
+
+        /** Cobblemon type names whose Pokémon come out more. */
+        public List<String> types = new ArrayList<>(List.of("fire", "ground"));
+
+        /** Habitats the heatwave bakes, by biome id. */
+        public List<String> habitats = new ArrayList<>(List.of("cobblemon_safari:dunes", "cobblemon_safari:volcanic",
+                "cobblemon_safari:badlands", "cobblemon_safari:savanna"));
 
         /** How much more often those Pokémon are picked, within their rarity. 1 to 20. */
         public double weightMultiplier = 2.0;

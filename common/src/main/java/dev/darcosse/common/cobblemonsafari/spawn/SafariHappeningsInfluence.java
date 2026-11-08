@@ -35,7 +35,9 @@ import java.util.concurrent.ConcurrentHashMap;
  *       moon, Pokémon of the configured types weigh more, within their
  *       rarity;</li>
  *   <li>the downpour ({@link Downpour}): during one, Pokémon of its types
- *       weigh more, within their rarity, on spots the rain falls on.</li>
+ *       weigh more, within their rarity, on spots the rain falls on;</li>
+ *   <li>the heatwave ({@link Heatwave}): during one, Pokémon of its types
+ *       weigh more, within their rarity, in its hot habitats.</li>
  * </ul>
  *
  * <p>One shared instance on each player's spawner, put there by
@@ -87,8 +89,8 @@ public final class SafariHappeningsInfluence implements SpawningInfluence {
 
     /**
      * Multiplies the weight of the swarm's details in its habitat, of the
-     * full moon's types on a full moon night, and of the downpour's types
-     * where it falls. Called for every candidate
+     * full moon's types on a full moon night, of the downpour's types
+     * where it falls, and of the heatwave's types in its habitats. Called for every candidate
      * of every spawn attempt: a few field reads, set lookups and an identity
      * scan of the swarm's details (a handful).
      */
@@ -118,6 +120,9 @@ public final class SafariHappeningsInfluence implements SpawningInfluence {
                 && Downpour.fallsOnSpot(position.getCanSeeSky(), position.getBiomeHolder().value(),
                 position.getPosition())) {
             result *= (float) SafariConfigManager.get().events.downpour.weightMultiplier;
+        }
+        if (Heatwave.isActive() && hasType(speciesId, Heatwave.types()) && Heatwave.bakes(position.getBiomeHolder())) {
+            result *= (float) SafariConfigManager.get().events.heatwave.weightMultiplier;
         }
         return result;
     }

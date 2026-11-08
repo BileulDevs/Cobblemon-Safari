@@ -132,6 +132,8 @@
   "cobblemon_safari.events.downpour.end": "L'acquazzone è finito.",
   "cobblemon_safari.events.storm.announce": "Un temporale rimbomba sul Safari: rari Pokémon di tipo %s scendono sulle alture.",
   "cobblemon_safari.events.storm.end": "Il temporale è passato.",
+  "cobblemon_safari.events.heatwave.announce": "Un'ondata di caldo infuoca le terre calde del Safari: lì i Pokémon di tipo %s escono di più.",
+  "cobblemon_safari.events.heatwave.end": "L'ondata di caldo è finita.",
   "cobblemon_safari.screen.title": "Safari · Pokémon speciali del momento",
   "cobblemon_safari.screen.title_short": "Safari",
   "cobblemon_safari.screen.live": "In diretta",

@@ -132,6 +132,8 @@
   "cobblemon_safari.events.downpour.end": "폭우가 그쳤습니다.",
   "cobblemon_safari.events.storm.announce": "사파리에 뇌우가 울립니다: 희귀한 %s 타입 포켓몬이 높은 곳에 내려옵니다.",
   "cobblemon_safari.events.storm.end": "뇌우가 지나갔습니다.",
+  "cobblemon_safari.events.heatwave.announce": "폭염이 사파리의 더운 땅을 달굽니다: 그곳에서 %s 타입 포켓몬이 더 자주 나타납니다.",
+  "cobblemon_safari.events.heatwave.end": "폭염이 끝났습니다.",
   "cobblemon_safari.screen.title": "사파리 · 지금의 특별한 포켓몬",
   "cobblemon_safari.screen.title_short": "사파리",
   "cobblemon_safari.screen.live": "생방송",

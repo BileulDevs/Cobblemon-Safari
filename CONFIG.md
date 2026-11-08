@@ -269,7 +269,7 @@ After `/safari reload`, the specials are redrawn with the new rules right away.
 
 `/safari rotate` starts a new rotation now, which lasts a whole `rotationMinutes` from then (the following rotations keep that pace, no longer aligned on midnight UTC); `/safari today` lists the current specials.
 
-### `events`: swarms, full moon nights, downpours and storms
+### `events`: swarms, full moon nights, downpours, storms and heatwaves
 
 Rare happenings that change Cobblemon's natural spawns in the Safari for a while, announced in the chat (with a chime) to the players in the Safari.
 
@@ -325,6 +325,18 @@ Rare happenings that change Cobblemon's natural spawns in the Safari for a while
 | `maxNearby` | `2` | Most storm Pokémon within 64 blocks of a player; none is brought beyond. |
 | `lightning` | `true` | A harmless lightning flash (no damage, no fire) where a storm Pokémon appears. |
 | `lightningCooldownSeconds` | `30` | Shortest time between two of those flashes in the whole Safari, so several players do not set off a barrage. 0 to 600. |
+
+**`events.heatwave`**: at each dawn without rain, a draw may make the day a heatwave: Pokémon of some types come out more in the hot habitats, within their rarity. It only weighs Cobblemon's own spawns there: no species appears that does not already live there. It lasts a drawn time and ends sooner when rain comes or night falls; rain stopping later the same day does not draw again. Announced to the players in the Safari and shown in `/safari today`; no mark. A server restart ends it, and the first dawn after a start is drawn normally (the day already begun when the server starts is not).
+
+| Key | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | `false`: no heatwave. |
+| `chance` | `0.15` | Chance (0 to 1) that a dawn without rain brings a heatwave. |
+| `minDurationMinutes` | `4` | Shortest heatwave, in real minutes. 1 to 120. |
+| `maxDurationMinutes` | `8` | Longest heatwave, in real minutes, at least `minDurationMinutes`. 1 to 120. A day lasts 10 minutes. |
+| `types` | `["fire", "ground"]` | Cobblemon type names favoured. |
+| `habitats` | `["cobblemon_safari:dunes", "cobblemon_safari:volcanic", "cobblemon_safari:badlands", "cobblemon_safari:savanna"]` | Habitats the heatwave bakes, by biome id. |
+| `weightMultiplier` | `2.0` | How much more often those Pokémon are picked there, within their rarity. 1 to 20. |
 
 ### `points`: Safari points
 

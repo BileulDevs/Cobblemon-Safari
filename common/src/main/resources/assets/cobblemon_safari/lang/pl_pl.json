@@ -132,6 +132,8 @@
   "cobblemon_safari.events.downpour.end": "Ulewa się skończyła.",
   "cobblemon_safari.events.storm.announce": "Nad Safari grzmi burza: na wzniesienia schodzą rzadkie Pokémony typu %s.",
   "cobblemon_safari.events.storm.end": "Burza minęła.",
+  "cobblemon_safari.events.heatwave.announce": "Upał praży gorące tereny Safari: częściej pojawiają się tam Pokémony typu %s.",
+  "cobblemon_safari.events.heatwave.end": "Upał minął.",
   "cobblemon_safari.screen.title": "Safari · Obecne specjalne Pokémony",
   "cobblemon_safari.screen.title_short": "Safari",
   "cobblemon_safari.screen.live": "Na żywo",

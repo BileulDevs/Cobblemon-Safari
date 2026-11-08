@@ -48,6 +48,9 @@ public final class FeaturedBoard {
         if (Storm.isActive()) {
             lines.add(Storm.startMessage(SafariConfigManager.get().events.storm));
         }
+        if (Heatwave.isActive()) {
+            lines.add(Heatwave.startMessage(SafariConfigManager.get().events.heatwave));
+        }
         lines.add(Component.translatable(key("board.next_rotation"), untilNextRotation())
                 .withStyle(ChatFormatting.DARK_GRAY));
         return lines;

@@ -132,6 +132,8 @@
   "cobblemon_safari.events.downpour.end": "The downpour is over.",
   "cobblemon_safari.events.storm.announce": "A thunderstorm rumbles over the Safari: rare %s Pokémon come down on the high ground.",
   "cobblemon_safari.events.storm.end": "The thunderstorm has passed.",
+  "cobblemon_safari.events.heatwave.announce": "A heatwave bakes the Safari's hot lands: %s Pokémon come out more there.",
+  "cobblemon_safari.events.heatwave.end": "The heatwave is over.",
   "cobblemon_safari.screen.title": "Safari · Current special Pokémon",
   "cobblemon_safari.screen.title_short": "Safari",
   "cobblemon_safari.screen.live": "Live",

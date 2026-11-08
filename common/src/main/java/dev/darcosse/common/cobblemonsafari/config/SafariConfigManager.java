@@ -90,10 +90,10 @@ public final class SafariConfigManager {
      * nothing to convert, raised only so that existing files are rewritten
      * once and show the new keys.
      * 9 added events.downpour and capture.marks.downpour, 10 events.storm
-     * and capture.marks.storm: nothing to convert either, raised for the
-     * same reason.
+     * and capture.marks.storm, 11 events.heatwave: nothing to convert
+     * either, raised for the same reason.
      */
-    public static final int CURRENT_CONFIG_VERSION = 10;
+    public static final int CURRENT_CONFIG_VERSION = 11;
 
     /** First version that knows the fishing missions. */
     private static final int FISHING_MISSION_VERSION = 6;
@@ -1266,10 +1266,11 @@ public final class SafariConfigManager {
     private static final int MAX_SWARM_CHECK_SECONDS = 300;
     /** Upper bound of events.fullMoon.weightMultiplier. */
     private static final double MAX_FULL_MOON_MULTIPLIER = 20.0D;
-    /** Upper bound of events.downpour.weightMultiplier, as the full moon's. */
+    /** Upper bound of events.downpour.weightMultiplier and events.heatwave's, as the full moon's. */
     private static final double MAX_DOWNPOUR_MULTIPLIER = 20.0D;
     /**
-     * Bounds of the durations of events.downpour and events.storm, in minutes. Under a minute the
+     * Bounds of the durations of events.downpour, events.storm and
+     * events.heatwave, in minutes. Under a minute the
      * announcement and its end would nearly cross; beyond two hours it
      * outlasts any rain, so the rain's end is what ends it anyway.
      */
@@ -1314,6 +1315,11 @@ public final class SafariConfigManager {
             corrected = true;
         }
         corrected |= validateStorm(c.events.storm);
+        if (c.events.heatwave == null) {
+            c.events.heatwave = new SafariConfig.Heatwave();
+            corrected = true;
+        }
+        corrected |= validateHeatwave(c.events.heatwave);
         SafariConfig.Swarm swarm = c.events.swarm;
         if (!(swarm.chance >= 0.0D && swarm.chance <= 1.0D)) {
             double fixed = Double.isNaN(swarm.chance) ? 0.0D : Math.max(0.0D, Math.min(1.0D, swarm.chance));
@@ -1415,6 +1421,47 @@ public final class SafariConfigManager {
                     : Math.max(1.0D, Math.min(MAX_DOWNPOUR_MULTIPLIER, downpour.weightMultiplier));
             warn("events.downpour.weightMultiplier", downpour.weightMultiplier, fixed);
             downpour.weightMultiplier = fixed;
+            corrected = true;
+        }
+        return corrected;
+    }
+
+    /** Fixes events.heatwave; returns true if anything changed. */
+    private static boolean validateHeatwave(SafariConfig.Heatwave heatwave) {
+        boolean corrected = false;
+        if (!(heatwave.chance >= 0.0D && heatwave.chance <= 1.0D)) {
+            double fixed = Double.isNaN(heatwave.chance) ? 0.0D : Math.max(0.0D, Math.min(1.0D, heatwave.chance));
+            warn("events.heatwave.chance", heatwave.chance, fixed);
+            heatwave.chance = fixed;
+            corrected = true;
+        }
+        if (heatwave.minDurationMinutes < MIN_DOWNPOUR_MINUTES || heatwave.minDurationMinutes > MAX_DOWNPOUR_MINUTES) {
+            int fixed = Math.max(MIN_DOWNPOUR_MINUTES, Math.min(MAX_DOWNPOUR_MINUTES, heatwave.minDurationMinutes));
+            warn("events.heatwave.minDurationMinutes", heatwave.minDurationMinutes, fixed);
+            heatwave.minDurationMinutes = fixed;
+            corrected = true;
+        }
+        // At least the minimum: the draw takes a duration between the two.
+        if (heatwave.maxDurationMinutes < heatwave.minDurationMinutes
+                || heatwave.maxDurationMinutes > MAX_DOWNPOUR_MINUTES) {
+            int fixed = Math.max(heatwave.minDurationMinutes, Math.min(MAX_DOWNPOUR_MINUTES, heatwave.maxDurationMinutes));
+            warn("events.heatwave.maxDurationMinutes", heatwave.maxDurationMinutes, fixed);
+            heatwave.maxDurationMinutes = fixed;
+            corrected = true;
+        }
+        if (heatwave.types == null) {
+            heatwave.types = new ArrayList<>();
+            corrected = true;
+        }
+        if (heatwave.habitats == null) {
+            heatwave.habitats = new ArrayList<>();
+            corrected = true;
+        }
+        if (!(heatwave.weightMultiplier >= 1.0D && heatwave.weightMultiplier <= MAX_DOWNPOUR_MULTIPLIER)) {
+            double fixed = Double.isNaN(heatwave.weightMultiplier) ? 1.0D
+                    : Math.max(1.0D, Math.min(MAX_DOWNPOUR_MULTIPLIER, heatwave.weightMultiplier));
+            warn("events.heatwave.weightMultiplier", heatwave.weightMultiplier, fixed);
+            heatwave.weightMultiplier = fixed;
             corrected = true;
         }
         return corrected;

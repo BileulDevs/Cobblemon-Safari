@@ -132,6 +132,8 @@
   "cobblemon_safari.events.downpour.end": "Ливень закончился.",
   "cobblemon_safari.events.storm.announce": "Над Сафари гремит гроза: на возвышенности спускаются редкие покемоны типа %s.",
   "cobblemon_safari.events.storm.end": "Гроза прошла.",
+  "cobblemon_safari.events.heatwave.announce": "Жара палит знойные земли Сафари: там чаще появляются покемоны типа %s.",
+  "cobblemon_safari.events.heatwave.end": "Жара спала.",
   "cobblemon_safari.screen.title": "Сафари · Особые покемоны сейчас",
   "cobblemon_safari.screen.title_short": "Сафари",
   "cobblemon_safari.screen.live": "Эфир",

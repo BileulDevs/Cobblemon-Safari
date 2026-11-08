@@ -132,6 +132,8 @@
   "cobblemon_safari.events.downpour.end": "どしゃぶりの雨がやみました。",
   "cobblemon_safari.events.storm.announce": "サファリに 雷雨が とどろく：めずらしい %sタイプのポケモンが 高台に 現れます。",
   "cobblemon_safari.events.storm.end": "雷雨が 過ぎ去りました。",
+  "cobblemon_safari.events.heatwave.announce": "熱波が サファリの 暑い土地を 焼きつける：そこでは %sタイプのポケモンが よく現れます。",
+  "cobblemon_safari.events.heatwave.end": "熱波が おさまりました。",
   "cobblemon_safari.screen.title": "サファリ · いまの特別なポケモン",
   "cobblemon_safari.screen.title_short": "サファリ",
   "cobblemon_safari.screen.live": "LIVE",

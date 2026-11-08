@@ -132,6 +132,8 @@
   "cobblemon_safari.events.downpour.end": "倾盆大雨停了。",
   "cobblemon_safari.events.storm.announce": "雷暴在狩猎地带上空轰鸣：稀有的%s属性宝可梦降临高处。",
   "cobblemon_safari.events.storm.end": "雷暴已经过去了。",
+  "cobblemon_safari.events.heatwave.announce": "热浪炙烤着狩猎地带的炎热之地：那里%s属性的宝可梦会更常出现。",
+  "cobblemon_safari.events.heatwave.end": "热浪结束了。",
   "cobblemon_safari.screen.title": "狩猎地带 · 当前特殊宝可梦",
   "cobblemon_safari.screen.title_short": "狩猎地带",
   "cobblemon_safari.screen.live": "直播",

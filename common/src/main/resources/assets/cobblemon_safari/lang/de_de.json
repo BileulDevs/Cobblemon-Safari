@@ -132,6 +132,8 @@
   "cobblemon_safari.events.downpour.end": "Der Wolkenbruch ist vorbei.",
   "cobblemon_safari.events.storm.announce": "Ein Gewitter grollt über der Safari: Seltene Pokémon vom Typ %s kommen auf die Höhen herab.",
   "cobblemon_safari.events.storm.end": "Das Gewitter ist vorübergezogen.",
+  "cobblemon_safari.events.heatwave.announce": "Eine Hitzewelle dörrt die heißen Gebiete der Safari: Pokémon vom Typ %s zeigen sich dort häufiger.",
+  "cobblemon_safari.events.heatwave.end": "Die Hitzewelle ist vorbei.",
   "cobblemon_safari.screen.title": "Safari · Aktuelle besondere Pokémon",
   "cobblemon_safari.screen.title_short": "Safari",
   "cobblemon_safari.screen.live": "Live",

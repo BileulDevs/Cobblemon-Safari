@@ -132,6 +132,8 @@
   "cobblemon_safari.events.downpour.end": "O temporal acabou.",
   "cobblemon_safari.events.storm.announce": "Uma tempestade ruge sobre o Safári: Pokémon raros do tipo %s descem às alturas.",
   "cobblemon_safari.events.storm.end": "A tempestade passou.",
+  "cobblemon_safari.events.heatwave.announce": "Uma onda de calor castiga as terras quentes do Safári: Pokémon do tipo %s aparecem mais por lá.",
+  "cobblemon_safari.events.heatwave.end": "A onda de calor acabou.",
   "cobblemon_safari.screen.title": "Safári · Pokémon especiais do momento",
   "cobblemon_safari.screen.title_short": "Safári",
   "cobblemon_safari.screen.live": "Ao vivo",
