@@ -158,6 +158,8 @@ public class SafariConfig {
         public FullMoon fullMoon = new FullMoon();
         /** Some rains turning into a downpour, with some types coming out more. */
         public Downpour downpour = new Downpour();
+        /** Some thunderstorms bringing rare Pokémon of some types to the high ground. */
+        public Storm storm = new Storm();
     }
 
     /**
@@ -246,8 +248,9 @@ public class SafariConfig {
     }
 
     /**
-     * The legendary-class categories in swarms ({@code events.swarm.rarities}):
-     * the same switch and cap as in {@code spawns}, for the swarm alone.
+     * The legendary-class categories in swarms ({@code events.swarm.rarities})
+     * and in the storm ({@code events.storm.rarities}): the same switch and
+     * cap as in {@code spawns}, for that event alone.
      */
     public static class SwarmCategories {
         /**
@@ -316,6 +319,93 @@ public class SafariConfig {
 
         /** How much more often those Pokémon are picked, within their rarity. 1 to 20. */
         public double weightMultiplier = 2.0;
+    }
+
+    /**
+     * The storm: each time a thunderstorm starts in the Safari, maybe, rare
+     * Pokémon of the configured types come to the high ground for a while:
+     * the storm's own spawner brings them near the players standing in one
+     * of {@code habitats} or high enough ({@code minAltitudeAboveSea}), with
+     * a harmless lightning flash. They come from the Safari's own species of
+     * those types, whatever their usual habitat. A Pokémon the storm brought
+     * gets the Storm Mark when caught. The thunderstorm is the Safari's
+     * ordinary weather: nothing here makes it thunder.
+     */
+    public static class Storm {
+        /** Master switch. */
+        public boolean enabled = true;
+
+        /** Chance, from 0 to 1, that a thunderstorm starting in the Safari brings the storm event. */
+        public double chance = 0.5;
+
+        /**
+         * Shortest and longest storm event, in real minutes, drawn for each
+         * one. It ends sooner when the thunder stops (a thunderstorm lasts
+         * about 3 to 13 minutes). 1 to 120, max at least min.
+         */
+        public int minDurationMinutes = 3;
+        public int maxDurationMinutes = 8;
+
+        /** Cobblemon type names of the Pokémon the storm brings. */
+        public List<String> types = new ArrayList<>(List.of("electric", "dragon"));
+
+        /**
+         * Chance of each rarity (the species' rarity in the Safari) among the
+         * storm's Pokémon, against the others; 0 leaves that rarity out. Rare
+         * and ultra-rare only by default: the storm is about rare finds.
+         */
+        public SpawnWeights weights = stormWeights();
+
+        /**
+         * Legendary-class categories in the storm (legendary, mythical,
+         * ultraBeast, paradox), as for the swarm: allowSpawn and the most of
+         * each species the storm brings per rotation (0: no cap). Species of
+         * spawns.excludedSpecies never come either.
+         */
+        public SwarmCategories rarities = new SwarmCategories();
+
+        /** Pokémon the storm never brings, as Cobblemon properties: "dragonite", or one form, "vulpix alolan". */
+        public List<String> excludeList = new ArrayList<>();
+
+        /** Habitats where the storm brings its Pokémon, by biome id; high ground anywhere counts too. */
+        public List<String> habitats = new ArrayList<>(List.of(
+                "cobblemon_safari:peaks", "cobblemon_safari:rocky_hills", "cobblemon_safari:volcanic"));
+
+        /**
+         * Height above the sea, in blocks, from which any spot counts as high
+         * ground, for the island as generated in "ROLLING" relief: it is
+         * scaled with the map's relief (about 16 blocks on a "FLAT" map, 72 on
+         * a "MOUNTAINOUS" one). 0 makes the whole island count.
+         */
+        public int minAltitudeAboveSea = 45;
+
+        /** Seconds between two spawn attempts around each player. 1 to 300. */
+        public int checkEverySeconds = 15;
+
+        /** Chance, from 0 to 1, that an attempt around a player brings a Pokémon. */
+        public double spawnChance = 0.25;
+
+        /** Most storm Pokémon around a player (within 64 blocks); none is brought beyond. */
+        public int maxNearby = 2;
+
+        /** A harmless lightning flash where a storm Pokémon appears (no damage, no fire). */
+        public boolean lightning = true;
+
+        /**
+         * Shortest time between two of those flashes in the whole Safari, in
+         * seconds, so several players do not set off a barrage. 0 to 600.
+         */
+        public int lightningCooldownSeconds = 30;
+
+        /** Rare and ultra-rare only, three rare for one ultra-rare. */
+        private static SpawnWeights stormWeights() {
+            SpawnWeights weights = new SpawnWeights();
+            weights.common = 0;
+            weights.uncommon = 0;
+            weights.rare = 3;
+            weights.ultraRare = 1;
+            return weights;
+        }
     }
 
     /**
@@ -699,6 +789,8 @@ public class SafariConfig {
         public boolean fullMoon = true;
         /** "of the Downpour": caught where a downpour falls. */
         public boolean downpour = true;
+        /** "of the Storm": a Pokémon the storm brought. */
+        public boolean storm = true;
         /** "the Safari Catch": fished with a rod in the Safari, then caught. */
         public boolean angler = true;
     }

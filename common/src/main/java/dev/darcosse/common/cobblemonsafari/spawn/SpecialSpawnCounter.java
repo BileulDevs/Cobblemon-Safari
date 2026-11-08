@@ -67,16 +67,19 @@ public final class SpecialSpawnCounter extends SavedData {
     /**
      * Save format version. 1 (no key) had one count for both ways; 2 counts
      * each way apart and keeps each roaming Pokémon's way and Pokémon UUID;
-     * 3 adds the swarm's catches ({@link #CAUGHT_SWARM_KEY}).
+     * 3 adds the swarm's catches ({@link #CAUGHT_SWARM_KEY}); 4 the storm's
+     * ({@link #CAUGHT_STORM_KEY}).
      * A version 1 save loads with everything charged to the natural spawns;
-     * a version 2 save loads with no swarm catch.
+     * a version 2 save loads with no swarm catch, a version 3 one with no
+     * storm catch.
      */
-    private static final int SAVE_VERSION = 3;
+    private static final int SAVE_VERSION = 4;
 
     /** Key of the catches charged to each way; the natural one keeps version 1's key, so old saves read into it. */
     private static final String CAUGHT_NATURAL_KEY = "caught";
     private static final String CAUGHT_FEATURED_KEY = "caught_featured";
     private static final String CAUGHT_SWARM_KEY = "caught_swarm";
+    private static final String CAUGHT_STORM_KEY = "caught_storm";
 
     private static final SavedData.Factory<SpecialSpawnCounter> FACTORY =
             new SavedData.Factory<>(SpecialSpawnCounter::new, SpecialSpawnCounter::load, null);
@@ -176,7 +179,7 @@ public final class SpecialSpawnCounter extends SavedData {
      * slot comes back by itself if the Pokémon is never found in the park
      * (see the class comment).
      *
-     * <p>The specials and the swarm are noted even when uncapped: a catch is
+     * <p>The specials, the swarm and the storm are noted even when uncapped: a catch is
      * charged to the way its Pokémon is noted under, and an unnoted one
      * falls back to the natural spawns. A special or swarm Pokémon uncapped
      * in its own way but capped in {@code spawns} took a natural slot when
@@ -274,7 +277,7 @@ public final class SpecialSpawnCounter extends SavedData {
         SpawnSource source = counter.sourceOf(event.getPokemon().getUuid());
         if (source == null) {
             // Never noted: an uncapped natural spawn, a Poké Snack, a version 1
-            // save. The specials and the swarm are always noted (recordSpawn).
+            // save. The specials, the swarm and the storm are always noted (recordSpawn).
             source = SpawnSource.NATURAL;
         }
         if (SpeciesRules.spawnCap(species, source) <= 0) {
@@ -284,6 +287,15 @@ public final class SpecialSpawnCounter extends SavedData {
         // Its roaming entry is dropped by the next sweeps, which no longer find
         // the entity; until then the Pokémon counts twice, on the safe side.
         counter.setDirty();
+    }
+
+    /**
+     * Whether a Pokémon came into the Safari this way, by its Pokémon UUID
+     * (which survives the capture). Only ways always noted can be told
+     * apart: the specials, the swarm, the storm.
+     */
+    public static boolean cameThrough(MinecraftServer server, UUID pokemonId, SpawnSource source) {
+        return get(server).sourceOf(pokemonId) == source;
     }
 
     /**
@@ -374,6 +386,7 @@ public final class SpecialSpawnCounter extends SavedData {
         nbt.put(CAUGHT_NATURAL_KEY, caughtTag(SpawnSource.NATURAL));
         nbt.put(CAUGHT_FEATURED_KEY, caughtTag(SpawnSource.FEATURED));
         nbt.put(CAUGHT_SWARM_KEY, caughtTag(SpawnSource.SWARM));
+        nbt.put(CAUGHT_STORM_KEY, caughtTag(SpawnSource.STORM));
         ListTag roamingTag = new ListTag();
         roaming.forEach((id, pokemon) -> {
             CompoundTag entry = new CompoundTag();
@@ -400,7 +413,7 @@ public final class SpecialSpawnCounter extends SavedData {
     }
 
     /**
-     * Reads what {@link #save} wrote, versions 1 to 3. Missing keys read as
+     * Reads what {@link #save} wrote, versions 1 to 4. Missing keys read as
      * an empty, stale counter; a version 1 save has no featured catches and
      * no way on its roaming entries, which all become natural.
      */
@@ -412,6 +425,8 @@ public final class SpecialSpawnCounter extends SavedData {
         readCaught(nbt.getCompound(CAUGHT_FEATURED_KEY), counter.caught.get(SpawnSource.FEATURED));
         // Absent before version 3: getCompound gives an empty tag, so no swarm catch.
         readCaught(nbt.getCompound(CAUGHT_SWARM_KEY), counter.caught.get(SpawnSource.SWARM));
+        // Absent before version 4: no storm catch.
+        readCaught(nbt.getCompound(CAUGHT_STORM_KEY), counter.caught.get(SpawnSource.STORM));
         for (Tag element : nbt.getList("roaming", Tag.TAG_COMPOUND)) {
             CompoundTag entry = (CompoundTag) element;
             UUID pokemonId = entry.hasUUID("pokemon_id") ? entry.getUUID("pokemon_id") : null;

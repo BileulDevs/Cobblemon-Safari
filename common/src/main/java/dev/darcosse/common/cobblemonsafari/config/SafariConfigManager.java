@@ -89,10 +89,11 @@ public final class SafariConfigManager {
      * minNearby and checkEverySeconds, and protection.invulnerablePokemon:
      * nothing to convert, raised only so that existing files are rewritten
      * once and show the new keys.
-     * 9 added events.downpour and capture.marks.downpour: nothing to
-     * convert either, raised for the same reason.
+     * 9 added events.downpour and capture.marks.downpour, 10 events.storm
+     * and capture.marks.storm: nothing to convert either, raised for the
+     * same reason.
      */
-    public static final int CURRENT_CONFIG_VERSION = 9;
+    public static final int CURRENT_CONFIG_VERSION = 10;
 
     /** First version that knows the fishing missions. */
     private static final int FISHING_MISSION_VERSION = 6;
@@ -1268,12 +1269,25 @@ public final class SafariConfigManager {
     /** Upper bound of events.downpour.weightMultiplier, as the full moon's. */
     private static final double MAX_DOWNPOUR_MULTIPLIER = 20.0D;
     /**
-     * Bounds of events.downpour's durations, in minutes. Under a minute the
+     * Bounds of the durations of events.downpour and events.storm, in minutes. Under a minute the
      * announcement and its end would nearly cross; beyond two hours it
      * outlasts any rain, so the rain's end is what ends it anyway.
      */
     private static final int MIN_DOWNPOUR_MINUTES = 1;
     private static final int MAX_DOWNPOUR_MINUTES = 120;
+    /**
+     * Upper bound of events.storm.minAltitudeAboveSea: the island's land
+     * never rises that far above the sea, so beyond it only the habitats count.
+     */
+    private static final int MAX_STORM_ALTITUDE = 256;
+    /** Bounds of events.storm.checkEverySeconds, as the swarm's spawner. */
+    private static final int MIN_STORM_CHECK_SECONDS = 1;
+    private static final int MAX_STORM_CHECK_SECONDS = 300;
+    /**
+     * Upper bound of events.storm.lightningCooldownSeconds: ten minutes is
+     * longer than most storms, so more would mean one flash per storm.
+     */
+    private static final int MAX_LIGHTNING_COOLDOWN_SECONDS = 600;
 
     /** Fixes the events section; returns true if anything changed. */
     private static boolean validateEvents(SafariConfig c) {
@@ -1295,6 +1309,11 @@ public final class SafariConfigManager {
             corrected = true;
         }
         corrected |= validateDownpour(c.events.downpour);
+        if (c.events.storm == null) {
+            c.events.storm = new SafariConfig.Storm();
+            corrected = true;
+        }
+        corrected |= validateStorm(c.events.storm);
         SafariConfig.Swarm swarm = c.events.swarm;
         if (!(swarm.chance >= 0.0D && swarm.chance <= 1.0D)) {
             double fixed = Double.isNaN(swarm.chance) ? 0.0D : Math.max(0.0D, Math.min(1.0D, swarm.chance));
@@ -1396,6 +1415,94 @@ public final class SafariConfigManager {
                     : Math.max(1.0D, Math.min(MAX_DOWNPOUR_MULTIPLIER, downpour.weightMultiplier));
             warn("events.downpour.weightMultiplier", downpour.weightMultiplier, fixed);
             downpour.weightMultiplier = fixed;
+            corrected = true;
+        }
+        return corrected;
+    }
+
+    /** Fixes events.storm; returns true if anything changed. */
+    private static boolean validateStorm(SafariConfig.Storm storm) {
+        boolean corrected = false;
+        if (!(storm.chance >= 0.0D && storm.chance <= 1.0D)) {
+            double fixed = Double.isNaN(storm.chance) ? 0.0D : Math.max(0.0D, Math.min(1.0D, storm.chance));
+            warn("events.storm.chance", storm.chance, fixed);
+            storm.chance = fixed;
+            corrected = true;
+        }
+        if (storm.minDurationMinutes < MIN_DOWNPOUR_MINUTES || storm.minDurationMinutes > MAX_DOWNPOUR_MINUTES) {
+            int fixed = Math.max(MIN_DOWNPOUR_MINUTES, Math.min(MAX_DOWNPOUR_MINUTES, storm.minDurationMinutes));
+            warn("events.storm.minDurationMinutes", storm.minDurationMinutes, fixed);
+            storm.minDurationMinutes = fixed;
+            corrected = true;
+        }
+        // At least the minimum: the draw takes a duration between the two.
+        if (storm.maxDurationMinutes < storm.minDurationMinutes || storm.maxDurationMinutes > MAX_DOWNPOUR_MINUTES) {
+            int fixed = Math.max(storm.minDurationMinutes, Math.min(MAX_DOWNPOUR_MINUTES, storm.maxDurationMinutes));
+            warn("events.storm.maxDurationMinutes", storm.maxDurationMinutes, fixed);
+            storm.maxDurationMinutes = fixed;
+            corrected = true;
+        }
+        if (storm.types == null) {
+            storm.types = new ArrayList<>();
+            corrected = true;
+        }
+        if (storm.weights == null) {
+            storm.weights = new SafariConfig.Storm().weights;
+            corrected = true;
+        }
+        SafariConfig.SpawnWeights weights = storm.weights;
+        if (weights.common < 0 || weights.uncommon < 0 || weights.rare < 0 || weights.ultraRare < 0) {
+            CobblemonSafari.LOGGER.warn("Negative events.storm.weights in {}, using 0 for those", FILE_NAME);
+            weights.common = Math.max(0, weights.common);
+            weights.uncommon = Math.max(0, weights.uncommon);
+            weights.rare = Math.max(0, weights.rare);
+            weights.ultraRare = Math.max(0, weights.ultraRare);
+            corrected = true;
+        }
+        if (storm.rarities == null) {
+            storm.rarities = new SafariConfig.SwarmCategories();
+            corrected = true;
+        }
+        corrected |= ensureSwarmCategories(storm.rarities);
+        corrected |= validateCategory("events.storm.rarities.legendary", storm.rarities.legendary);
+        corrected |= validateCategory("events.storm.rarities.mythical", storm.rarities.mythical);
+        corrected |= validateCategory("events.storm.rarities.ultraBeast", storm.rarities.ultraBeast);
+        corrected |= validateCategory("events.storm.rarities.paradox", storm.rarities.paradox);
+        if (storm.excludeList == null) {
+            storm.excludeList = new ArrayList<>();
+            corrected = true;
+        }
+        if (storm.habitats == null) {
+            storm.habitats = new ArrayList<>();
+            corrected = true;
+        }
+        if (storm.minAltitudeAboveSea < 0 || storm.minAltitudeAboveSea > MAX_STORM_ALTITUDE) {
+            int fixed = Math.max(0, Math.min(MAX_STORM_ALTITUDE, storm.minAltitudeAboveSea));
+            warn("events.storm.minAltitudeAboveSea", storm.minAltitudeAboveSea, fixed);
+            storm.minAltitudeAboveSea = fixed;
+            corrected = true;
+        }
+        if (storm.checkEverySeconds < MIN_STORM_CHECK_SECONDS || storm.checkEverySeconds > MAX_STORM_CHECK_SECONDS) {
+            int fixed = Math.max(MIN_STORM_CHECK_SECONDS, Math.min(MAX_STORM_CHECK_SECONDS, storm.checkEverySeconds));
+            warn("events.storm.checkEverySeconds", storm.checkEverySeconds, fixed);
+            storm.checkEverySeconds = fixed;
+            corrected = true;
+        }
+        if (!(storm.spawnChance >= 0.0D && storm.spawnChance <= 1.0D)) {
+            double fixed = Double.isNaN(storm.spawnChance) ? 0.0D : Math.max(0.0D, Math.min(1.0D, storm.spawnChance));
+            warn("events.storm.spawnChance", storm.spawnChance, fixed);
+            storm.spawnChance = fixed;
+            corrected = true;
+        }
+        if (storm.maxNearby < 0) {
+            warn("events.storm.maxNearby", storm.maxNearby, 0);
+            storm.maxNearby = 0;
+            corrected = true;
+        }
+        if (storm.lightningCooldownSeconds < 0 || storm.lightningCooldownSeconds > MAX_LIGHTNING_COOLDOWN_SECONDS) {
+            int fixed = Math.max(0, Math.min(MAX_LIGHTNING_COOLDOWN_SECONDS, storm.lightningCooldownSeconds));
+            warn("events.storm.lightningCooldownSeconds", storm.lightningCooldownSeconds, fixed);
+            storm.lightningCooldownSeconds = fixed;
             corrected = true;
         }
         return corrected;

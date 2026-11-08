@@ -1,5 +1,5 @@
 {
-  "configVersion": 9,
+  "configVersion": 10,
   "hunt": {
     "maxDurationSeconds": 3600,
     "pauseWhileOffline": true,
@@ -85,6 +85,7 @@
       "swarm": true,
       "fullMoon": true,
       "downpour": true,
+      "storm": true,
       "angler": true
     },
     "flee": {
@@ -232,6 +233,28 @@
       "maxDurationMinutes": 10,
       "types": ["water", "electric"],
       "weightMultiplier": 2.0
+    },
+    "storm": {
+      "enabled": true,
+      "chance": 0.5,
+      "minDurationMinutes": 3,
+      "maxDurationMinutes": 8,
+      "types": ["electric", "dragon"],
+      "weights": { "common": 0, "uncommon": 0, "rare": 3, "ultraRare": 1 },
+      "rarities": {
+        "legendary": { "allowSpawn": false, "maxSpawnPerPokemon": 0 },
+        "mythical": { "allowSpawn": false, "maxSpawnPerPokemon": 0 },
+        "ultraBeast": { "allowSpawn": false, "maxSpawnPerPokemon": 0 },
+        "paradox": { "allowSpawn": true, "maxSpawnPerPokemon": 0 }
+      },
+      "excludeList": [],
+      "habitats": ["cobblemon_safari:peaks", "cobblemon_safari:rocky_hills", "cobblemon_safari:volcanic"],
+      "minAltitudeAboveSea": 45,
+      "checkEverySeconds": 15,
+      "spawnChance": 0.25,
+      "maxNearby": 2,
+      "lightning": true,
+      "lightningCooldownSeconds": 30
     }
   },
   "points": {

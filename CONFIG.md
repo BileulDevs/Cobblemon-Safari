@@ -130,6 +130,7 @@ Every Pokémon caught in the Safari gets the Safari Mark ("the Safari Find"); on
 | `swarm` | `true` | "of the Swarm": the swarming species, caught in the swarm's habitat (see `events.swarm`). |
 | `fullMoon` | `true` | "of the Full Moon": caught on a full moon night. |
 | `downpour` | `true` | "of the Downpour": caught where a downpour falls (see `events.downpour`). |
+| `storm` | `true` | "of the Storm": a Pokémon a storm brought (see `events.storm`). |
 | `angler` | `true` | "the Safari Catch": fished with a rod in the Safari, then caught. |
 
 #### `capture.flee`: Pokémon running away
@@ -268,7 +269,7 @@ After `/safari reload`, the specials are redrawn with the new rules right away.
 
 `/safari rotate` starts a new rotation now, which lasts a whole `rotationMinutes` from then (the following rotations keep that pace, no longer aligned on midnight UTC); `/safari today` lists the current specials.
 
-### `events`: swarms, full moon nights and downpours
+### `events`: swarms, full moon nights, downpours and storms
 
 Rare happenings that change Cobblemon's natural spawns in the Safari for a while, announced in the chat (with a chime) to the players in the Safari.
 
@@ -305,6 +306,26 @@ Rare happenings that change Cobblemon's natural spawns in the Safari for a while
 | `maxDurationMinutes` | `10` | Longest downpour, in real minutes, at least `minDurationMinutes`. 1 to 120. A rain lasts about 10 to 20 minutes. |
 | `types` | `["water", "electric"]` | Cobblemon type names favoured. |
 | `weightMultiplier` | `2.0` | How much more often those Pokémon are picked, within their rarity. 1 to 20. |
+
+**`events.storm`**: some thunderstorms bring rare Pokémon of some types to the high ground: the storm's own spawner brings them near the hunting players standing in one of `habitats` or high enough above the sea, each with a harmless lightning flash, and a Pokémon the storm brought gets the Storm Mark when caught. Its species are the Safari's own natural species of those types and of a rarity with a positive weight, whatever their usual habitat; legendary-class species follow `rarities`, and `spawns.excludedSpecies` never come. The thunderstorm is the Safari's ordinary weather: as for the downpour, a draw at each thunderstorm start, a drawn duration, ended by the thunder stopping or a restart. It adds up with a downpour, a thunderstorm being a rain too. Its Pokémon never use up the natural slots of `spawns`.
+
+| Key | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | `false`: no storm event. |
+| `chance` | `0.5` | Chance (0 to 1) that a thunderstorm starting in the Safari brings the storm event. |
+| `minDurationMinutes` | `3` | Shortest storm event, in real minutes. 1 to 120. |
+| `maxDurationMinutes` | `8` | Longest storm event, in real minutes, at least `minDurationMinutes`. 1 to 120. A thunderstorm lasts about 3 to 13 minutes. |
+| `types` | `["electric", "dragon"]` | Cobblemon type names of the Pokémon the storm brings. |
+| `weights` | `0` / `0` / `3` / `1` | Chance of each rarity (`common`, `uncommon`, `rare`, `ultraRare`, the species' rarity in the Safari) among the storm's Pokémon; 0 leaves that rarity out. |
+| `rarities` | `allowSpawn`: `false` (`paradox`: `true`), `maxSpawnPerPokemon`: `0` | Legendary-class categories in the storm, as in `events.swarm.rarities`. `maxSpawnPerPokemon`: most Pokémon of each species the storm brings per rotation, 0 for no cap. |
+| `excludeList` | `[]` | Pokémon the storm never brings, as Cobblemon properties: `"dragonite"`, or one form, `"vulpix alolan"`. |
+| `habitats` | `["cobblemon_safari:peaks", "cobblemon_safari:rocky_hills", "cobblemon_safari:volcanic"]` | Habitats where the storm brings its Pokémon, by biome id. |
+| `minAltitudeAboveSea` | `45` | Blocks above the sea from which any spot counts as high ground too, for a `ROLLING` map; scaled with `reset.relief` (about 16 on `FLAT`, 29 on `GENTLE`, 72 on `MOUNTAINOUS`). 0: the whole island. 0 to 256. |
+| `checkEverySeconds` | `15` | Seconds between two spawn attempts around each player. 1 to 300. |
+| `spawnChance` | `0.25` | Chance (0 to 1) that an attempt brings a Pokémon. |
+| `maxNearby` | `2` | Most storm Pokémon within 64 blocks of a player; none is brought beyond. |
+| `lightning` | `true` | A harmless lightning flash (no damage, no fire) where a storm Pokémon appears. |
+| `lightningCooldownSeconds` | `30` | Shortest time between two of those flashes in the whole Safari, so several players do not set off a barrage. 0 to 600. |
 
 ### `points`: Safari points
 

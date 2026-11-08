@@ -45,6 +45,9 @@ public final class FeaturedBoard {
         if (Downpour.isActive()) {
             lines.add(Downpour.startMessage(SafariConfigManager.get().events.downpour));
         }
+        if (Storm.isActive()) {
+            lines.add(Storm.startMessage(SafariConfigManager.get().events.storm));
+        }
         lines.add(Component.translatable(key("board.next_rotation"), untilNextRotation())
                 .withStyle(ChatFormatting.DARK_GRAY));
         return lines;

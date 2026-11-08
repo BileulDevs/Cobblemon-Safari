@@ -5,6 +5,7 @@ Output, in common/src/main/resources/assets/cobblemon_safari/textures/gui/mark/:
   mark_safari_swarm.png    the swarm: a cluster of white dots on orange
   mark_safari_moon.png     the full moon: a pale moon with craters on night blue
   mark_safari_downpour.png the downpour: slanted white rain streaks on storm blue
+  mark_safari_storm.png    the storm: a white lightning bolt on thundercloud purple
   mark_safari_angler.png   the fished Pokemon: a white hook on water blue
 
 Same frame as the Safari Mark (tools/safari_mark_icon.py) and Cobblemon's own
@@ -45,6 +46,8 @@ NIGHT = (59, 74, 140, 255)        # 3B4A8C
 WATER = (42, 122, 184, 255)       # 2A7AB8
 # Darker and greyer than the angler's water blue, so the two marks differ at a glance.
 STORM = (47, 94, 134, 255)        # 2F5E86
+# Purple, apart from every blue above: the storm's mark must not pass for the downpour's.
+THUNDERCLOUD = (74, 61, 122, 255) # 4A3D7A
 
 MOON = (240, 232, 190, 255)
 CRATER = (196, 188, 150, 255)
@@ -117,6 +120,14 @@ def downpour(x: int, y: int):
     return STORM
 
 
+# A lightning bolt, point down: upper stroke leaning right, a jog, lower stroke to the point.
+BOLT = [(17.5, 6.5), (11.5, 16.0), (15.5, 16.0), (12.5, 25.5), (20.5, 13.5), (16.5, 13.5), (19.5, 6.5)]
+
+
+def bolt(x: int, y: int):
+    return WHITE if in_polygon(x + 0.5, y + 0.5, BOLT) else THUNDERCLOUD
+
+
 def hook(x: int, y: int):
     """A fish hook: an eye on top, a shank, a curved bend and a barb."""
     # Eye: a small ring at the top of the shank.
@@ -136,6 +147,7 @@ ICONS = {
     "mark_safari_swarm": swarm,
     "mark_safari_moon": moon,
     "mark_safari_downpour": downpour,
+    "mark_safari_storm": bolt,
     "mark_safari_angler": hook,
 }
 

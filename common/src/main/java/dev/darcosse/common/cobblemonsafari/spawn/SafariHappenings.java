@@ -30,7 +30,9 @@ import java.util.UUID;
  * Keeps the Safari's rare happenings ({@code events}) up to date for the
  * spawn threads and tells the players about them: the swarm of the rotation
  * ({@link Swarm}) once per rotation to each player in the Safari, the full
- * moon once per night, the downpour ({@link Downpour}) when it starts and ends.
+ * moon once per night, the downpour ({@link Downpour}) and the storm
+ * ({@link Storm}) when they start and end; the storm also brings its
+ * Pokémon from here.
  *
  * <p>The effect on the spawns themselves is {@link SafariHappeningsInfluence}'s.
  * Server side. Cost: once a second, a few comparisons, and the swarm's draw
@@ -71,6 +73,7 @@ public final class SafariHappenings {
         tickCounter = 0;
         Swarm.reset();
         Downpour.reset();
+        Storm.reset();
     }
 
     /** Whether a full moon night is on, for the spawn threads. */
@@ -108,6 +111,7 @@ public final class SafariHappenings {
             MOON_TOLD.clear();
         }
         Downpour.tick(safari);
+        Storm.tick(server, safari);
         Swarm.Active swarm = Swarm.current(server);
         if (safari == null) {
             return;
