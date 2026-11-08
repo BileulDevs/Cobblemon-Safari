@@ -348,7 +348,7 @@ Rare happenings that change Cobblemon's natural spawns in the Safari for a while
 | `maxDurationMinutes` | `6` | Longest aurora, in real minutes, at least `minDurationMinutes`. 1 to 120. A night lasts about 7 minutes. |
 | `frozenTypes` | `["ice"]` | Cobblemon type names of the Pokémon the aurora brings on the frozen lands. |
 | `otherTypes` | `["psychic", "fairy"]` | Cobblemon type names of the Pokémon the aurora brings everywhere else. |
-| `shinyChanceMultiplier` | `4` | How many times more likely every Pokémon appearing in the Safari is to be shiny during an aurora: 4 turns Cobblemon's 1 in 8192 into 1 in 2048. Stacks with the Shiny Charm. 1 for no effect, up to 100. |
+| `shinyChanceMultiplier` | `4` | How many times more likely every Pokémon appearing in the Safari is to be shiny during an aurora: 4 turns Cobblemon's 1 in 8192 into 1 in 2048. Stacks with the Shiny Charm. 1 for no effect; no upper bound, 8192 or more makes every Pokémon shiny during an aurora. |
 | `excludeList` | `[]` | Pokémon the aurora never brings, as Cobblemon properties: `"lapras"`, or one form, `"vulpix alolan"`. |
 | `frozenHabitats` | `["cobblemon_safari:glacier", "cobblemon_safari:snowfield", "cobblemon_safari:taiga"]` | Biomes counted as frozen lands, by biome id, on top of any spot where snow falls: only useful for biomes where it rains (the taiga). It does not limit where the aurora acts. |
 | `glowSeconds` | `20` | Seconds the Pokémon glows when it appears, so it can be found. 0 to 60. |

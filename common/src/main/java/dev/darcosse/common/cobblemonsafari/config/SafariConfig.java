@@ -372,7 +372,8 @@ public class SafariConfig {
          * many times more likely to be shiny: natural spawns, specials,
          * swarms, the events' own Pokémon, fished ones. 4 turns Cobblemon's
          * 1 in 8192 into 1 in 2048. It stacks with the Shiny Charm and the
-         * other boosts (it divides Cobblemon's "1 in N"). 1 for no effect, up to 100.
+         * other boosts (it divides Cobblemon's "1 in N"). 1 for no effect, no
+         * upper bound: 8192 or more makes every Pokémon of an aurora shiny.
          */
         public double shinyChanceMultiplier = 4.0;
 

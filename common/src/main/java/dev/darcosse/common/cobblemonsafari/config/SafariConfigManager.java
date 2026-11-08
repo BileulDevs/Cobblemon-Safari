@@ -1300,11 +1300,6 @@ public final class SafariConfigManager {
      * longer than most storms, so more would mean one flash per storm.
      */
     private static final int MAX_LIGHTNING_COOLDOWN_SECONDS = 600;
-    /**
-     * Upper bound of events.aurora.shinyChanceMultiplier. 100 already makes
-     * one Pokémon in 82 shiny; beyond, shinies stop being a find.
-     */
-    private static final double MAX_AURORA_SHINY_MULTIPLIER = 100.0D;
     /** Upper bound of events.aurora.glowSeconds: longer and the glow gives away every hiding spot. */
     private static final int MAX_AURORA_GLOW_SECONDS = 60;
 
@@ -1479,9 +1474,11 @@ public final class SafariConfigManager {
             aurora.otherTypes = new ArrayList<>();
             corrected = true;
         }
-        if (!(aurora.shinyChanceMultiplier >= 1.0D && aurora.shinyChanceMultiplier <= MAX_AURORA_SHINY_MULTIPLIER)) {
-            double fixed = Double.isNaN(aurora.shinyChanceMultiplier) ? 1.0D
-                    : Math.max(1.0D, Math.min(MAX_AURORA_SHINY_MULTIPLIER, aurora.shinyChanceMultiplier));
+        // No upper bound on purpose: the server owner may make every aurora
+        // Pokémon shiny. Aurora.boostShinyRate keeps the rate at "1 in 1" at
+        // worst, so a huge or infinite value only means "always shiny".
+        if (!(aurora.shinyChanceMultiplier >= 1.0D)) {
+            double fixed = 1.0D;
             warn("events.aurora.shinyChanceMultiplier", aurora.shinyChanceMultiplier, fixed);
             aurora.shinyChanceMultiplier = fixed;
             corrected = true;

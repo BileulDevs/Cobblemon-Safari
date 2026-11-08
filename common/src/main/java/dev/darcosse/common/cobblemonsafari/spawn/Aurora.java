@@ -169,6 +169,9 @@ public final class Aurora {
         CobblemonEvents.SHINY_CHANCE_CALCULATION.subscribe(Priority.NORMAL, Aurora::onShinyChance);
     }
 
+    /** "1 in 1": the best shiny rate there is; a boosted rate is never set below it. */
+    private static final float MIN_SHINY_RATE = 1.0F;
+
     /** Adds the aurora's boost to one shiny roll; it only acts during an aurora, see {@link #boostShinyRate}. */
     private static void onShinyChance(ShinyChanceCalculationEvent event) {
         event.addModificationFunction((rate, player, pokemon) -> boostShinyRate(rate, player, pokemon));
@@ -178,14 +181,16 @@ public final class Aurora {
      * The shiny rate ("1 in N") of a Pokémon rolled for a player, divided by
      * the aurora's multiplier when that player stands in the Safari during
      * one. A Pokémon rolled with no player (a few of Cobblemon's own paths)
-     * cannot be placed and keeps its odds.
+     * cannot be placed and keeps its odds. Never below 1 ("1 in 1", always
+     * shiny): the multiplier has no upper bound, and a rate under 1 is not a
+     * chance any more, so Cobblemon's roll would be left to how it reads one.
      */
     private static float boostShinyRate(float rate, @Nullable ServerPlayer player, Pokemon pokemon) {
         float boost = shinyBoost;
         if (boost <= 1.0F || player == null || !SafariDimensions.isSafari(player.level())) {
             return rate;
         }
-        return rate / boost;
+        return Math.max(MIN_SHINY_RATE, rate / boost);
     }
 
     /**
