@@ -2,6 +2,7 @@ package dev.darcosse.common.cobblemonsafari.spawn;
 
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
+import dev.darcosse.common.cobblemonsafari.util.HabitatNames;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -63,8 +64,8 @@ public final class FeaturedBoard {
                 habitatName.append(Component.translatable(key("board.habitat_separator")));
             }
             ResourceKey<Biome> habitat = habitats.get(i);
-            habitatName.append(Component.translatable(
-                    "biome." + habitat.location().getNamespace() + "." + habitat.location().getPath()));
+            // Short name: the reader is in the Safari, "Safari Dunes, Safari Marsh" only repeats it.
+            habitatName.append(HabitatNames.name(habitat.location()));
         }
         return Component.translatable(key("board.line"), species, entry.rarity().displayName(),
                 habitatName.copy().withStyle(ChatFormatting.GRAY));

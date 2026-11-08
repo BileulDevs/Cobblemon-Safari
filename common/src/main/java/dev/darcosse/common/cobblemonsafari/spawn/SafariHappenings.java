@@ -8,6 +8,7 @@ import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
+import dev.darcosse.common.cobblemonsafari.util.HabitatNames;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -124,8 +125,8 @@ public final class SafariHappenings {
     /** The swarm's line, also shown by {@code /safari today}. */
     public static Component swarmMessage(Swarm.Active swarm) {
         Component species = swarm.species().getTranslatedName().copy().withStyle(swarm.rarity().color);
-        Component habitat = Component.translatable("biome." + swarm.biome().location().getNamespace() + "."
-                + swarm.biome().location().getPath()).withStyle(ChatFormatting.WHITE);
+        // Short name, as on the specials list this line is part of.
+        Component habitat = HabitatNames.name(swarm.biome().location()).copy().withStyle(ChatFormatting.WHITE);
         return Component.translatable(key("events.swarm.announce"), species, habitat)
                 .withStyle(ChatFormatting.GOLD);
     }

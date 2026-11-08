@@ -13,6 +13,8 @@ New network protocol (`1.6.0`): clients and servers must both update (the specia
 - **The specials board showed one habitat only**: a Pokémon living in Snowfield and Glacier (`#is_freezing`) was shown in Snowfield alone. The wall screens and `/safari today` now list every habitat, the main one first; a long list scrolls.
 - **Missions no longer ask for Pokémon met only through Poké Snacks**: species missions are drawn among spawns a player can meet walking around.
 - **The Safari Pokédex no longer lists Pokémon met only through Poké Snacks**, and a species wild in one habitat but snack-only in another is listed under the habitat where it is wild. The Pokédex may count fewer species than in 1.4.0; what was caught stays caught.
+- **Habitats are named without "Safari"** in the guide's specials list and travel menu, the swarm line and on the screens ("Dunes" rather than "Safari Dunes"); the biomes keep their full name elsewhere (F3, other mods).
+- **Pokémon in the shop no longer move too fast**: their animation followed the frame rate (the higher the FPS, the faster they moved); it now plays in real time, at the speed it has in the world and on the specials board.
 - **`/safari rotate` restarts the rotation timer**: the new rotation lasts a whole `specials.rotationMinutes` from the command, instead of ending at the next scheduled change (a rotation forced with 1:20:30 left used to keep 1:20:30). The following rotations keep that pace from that moment, so they are no longer aligned on midnight UTC once a rotation has been forced.
 
 ### New
@@ -20,6 +22,16 @@ New network protocol (`1.6.0`): clients and servers must both update (the specia
 - **`events.swarm.buckets`**, **`events.swarm.weights`** and **`events.swarm.rarities`**: the spawn buckets a swarm may be drawn from (`["uncommon", "rare", "ultra-rare"]` by default: ultra-rare species such as the starters can now swarm), the chance of each bucket (`common` 0, `uncommon` 10, `rare` 4, `ultraRare` 1: the bucket is drawn first, then a species in it, so a bucket's share does not depend on how many species it holds), and the legendary-class categories in swarms (`legendary`, `mythical`, `ultraBeast`, `paradox`), each with `allowSpawn` (`false` by default, `true` for `paradox` as in `spawns`) and `maxSpawnPerPokemon`, the most a swarm brings per rotation (`0` by default: no cap but `maxNearby`). They replace the categories of `spawns` for the swarm. A legendary-class species counts as ultra-rare. A species' bucket is now its bucket in the habitat drawn.
 - **Pokémon take no damage in the Safari** (`protection.invulnerablePokemon`, on by default): wild Pokémon can no longer be killed with a sword or a bow, and sent-out ones are spared falls, lava and mobs. Battles are not affected. `/kill` and the void still apply.
 - **`events.swarm.excludeList`**: Pokémon that never swarm, form by form. `"vulpix alolan"` leaves out Alolan Vulpix only, Vulpix can still swarm; `"arceus"` leaves out the species and all its forms. An excluded form caught in the swarm's habitat does not get the "of the Swarm" mark.
+
+### Shop
+
+- **`shop.json` is laid out by tab** (version 4): each tab holds its fixed offers (`fixed`) and what it draws each rotation (`rotatingPokemon`, `rotatingItems`, `rotatingSnacks`), and may be split into `sections`, shown one after the other. A version 3 file is converted on load and keeps everything it sold.
+- **One `limit` for every offer**: `max` purchases per player and per rotation, or for life with `"lifetime": true`, and `cooldownHours`. It replaces `limitPerRotation` and `cooldownHours`. The default Tauros can now be bought once per player.
+- **Drawn Pokémon by rarity and category**: each rarity has its price and a weight (most slots go to common Pokémon, now and then a rare one), and legendary, mythical, ultra beast and paradox Pokémon have their own switch, price, number per rotation and limit, listed on top of the ordinary ones (only paradox on by default; legendary and mythical 20000 points). A level range, a 1 % shiny chance with its price multiplier and an `excludeList` by form complete it.
+- **Cooking tab**: more ingredients (Big Root, Revival Herb, Moomoo Milk, eggs, wheat), berries drawn each rotation, and a dozen ready-made Poké Snacks (plain, themed on a type or an egg group, one for hidden abilities, one for shinies) and a Poké Cake already seasoned, as the Poké Pot makes them, plus two seasoned snacks drawn each rotation, shown first in the tab.
+- **Shiny Pokémon in the shop show Cobblemon's shiny sparkle** in the top right corner of their card, as in the PC.
+- **Dish tooltips in the shop**: hovering a Poké Snack or a Poké Cake shows its tooltip, with its seasonings and what it attracts, before it is bought. Dishes come first in their tab.
+- **The free Safari Balls of the shop are 32 a day** (half a stack) instead of 30, in new `shop.json` files.
 
 ### Changed
 

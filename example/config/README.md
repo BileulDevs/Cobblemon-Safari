@@ -31,17 +31,13 @@ JSON has no comments, so this page says what the example files change. They are 
 
 | Key | Example | Effect |
 |---|---|---|
-| `tabs` | adds `{"id": "rewards", "name": "Ranger rewards", "icon": "minecraft:emerald"}` | A sixth tab with its own name. A built-in tab takes its name from the translation key `cobblemon_safari.shop.tab.<id>` instead. |
-| `entries` | `eevee level=10` with `"price": "auto"` | A fixed Pokémon priced like the random ones: its rarity in the Safari times its evolution stage. |
-| `entries` | `dratini level=15 shiny=yes`, 3000 points, `"limitPerRotation": 1`, tab `rewards` | A shiny Dratini, once per player and per rotation. |
-| `entries` | `cobblemon:master_ball`, 500 points plus a `cost` of 4 items of `#cobblemon:evolution_stones` and 2 diamonds, `"limitPerRotation": 1`, `"cooldownHours": 168` | A trade: points and items together, at most once a week per player. A cost takes an item id or a `#tag`. |
-| `rotatingPokemon.count`, `rotatingPokemon.excludedSpecies` | `12`, `["cobblemon:ditto"]` | 12 random Pokémon per rotation, never Ditto. |
-| `rotatingItems.always` | `["cobblemon:full_restore"]` | Full Restores are sold every rotation, at the price of their rule in `rotatingItems.prices`. |
-
-The default entries, kept in the file, show the other kinds:
-- the free daily Safari Balls: `"price": 0`, `"cooldownHours": 24`;
-- plain item and Pokémon purchases;
-- the tickets traded for apricorns, berries, an evolution stone or a fossil: `cost` with `limitPerRotation`.
+| `tabs` | adds `{"id": "rewards", "name": "Ranger rewards", "icon": "minecraft:emerald", "fixed": [...]}` | A sixth tab with its own name and offers. A built-in tab takes its name from the translation key `cobblemon_safari.shop.tab.<id>` instead. |
+| `tabs[pokemon].fixed` | `tauros level=45` with `"limit": {"max": 1, "lifetime": true}` | A welcome Pokémon, once per player for good. |
+| `tabs[pokemon].fixed` | `eevee level=10` with `"price": "auto"` | A fixed Pokémon priced like the drawn ones: its rarity in the Safari times its evolution stage. |
+| `tabs[rewards].fixed` | `dratini level=15 shiny=yes`, 3000 points, `"limit": {"max": 1}` | A shiny Dratini, once per player and per rotation. |
+| `tabs[rewards].fixed` | `cobblemon:master_ball`, 500 points plus a `cost` of 4 items of `#cobblemon:evolution_stones` and 2 diamonds, `"limit": {"max": 1, "cooldownHours": 168}` | A trade: points and items together, at most once a week per player. A cost takes an item id or a `#tag`. |
+| `rotatingPokemon.count`, `rotatingPokemon.excludeList` | `12`, `["cobblemon:ditto"]` | 12 drawn Pokémon per rotation, never Ditto. |
+| `tabs[cooking].sections` | `prepared` and `ingredients` | The cooking tab: a dozen ready-made Poké Snacks (each themed on types or egg groups, plus a hidden ability and a shiny one) and a Poké Cake first, then what the Poké Pot needs, one after the other. |
 
 ### `client.json`
 

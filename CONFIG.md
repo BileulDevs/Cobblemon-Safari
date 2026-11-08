@@ -18,7 +18,7 @@ How the files behave:
 - **An invalid value** (a negative price, an hour of 25, a colour that is not a colour...) is replaced by its default or clamped into range, a warning names it in the log, and the file is rewritten with the fixed value.
 - **A file that cannot be read at all** (a missing comma, a stray quote) is never overwritten: the mod runs on the defaults, logs the error, and reads the file again once you fix it.
 - **Unknown keys** are ignored and dropped when the file is rewritten.
-- **`configVersion`** is the format version of the file (`8` for `server.json`, `3` for `shop.json`, `2` for `client.json`). It is not a setting: the mod writes it. A file written by an older version of the mod is converted on load, whatever its version, and every key it moves is named in the log: see [Older files](#older-files) at the end.
+- **`configVersion`** is the format version of the file (`8` for `server.json`, `4` for `shop.json`, `2` for `client.json`). It is not a setting: the mod writes it. A file written by an older version of the mod is converted on load, whatever its version, and every key it moves is named in the log: see [Older files](#older-files) at the end.
 
 Formats used below:
 
@@ -96,7 +96,7 @@ How often gates generate is set by the datapack (`data/cobblemon_safari/worldgen
 
 #### `balls.loan`
 
-The original games' loan of Safari Balls, off by default: players bring their own allowed balls, and the shop gives 30 free Safari Balls a day.
+The original games' loan of Safari Balls, off by default: players bring their own allowed balls, and the shop gives 32 free Safari Balls a day.
 
 | Key | Default | What it does |
 |---|---|---|
@@ -214,7 +214,7 @@ Each category (`legendary`, `mythical`, `ultraBeast`, `paradox`) has two keys:
 
 The two ways count apart: with a cap of `1` in both sections, one Rayquaza may come from the natural spawns and another from the specials in the same rotation.
 
-These rules only cover the Safari: they never change what spawns in the rest of the world. The missions follow `spawns` (they are met with natural Pokémon); the shop has its own rules (`rotatingPokemon` in `shop.json`).
+These rules only cover the Safari: they never change what spawns in the rest of the world. The missions follow `spawns` (they are met with natural Pokémon); the shop has its own rules (`rotatingPokemon` in `shop.json`, with its own `categories`).
 
 A species refused by `spawns` is taken out of Cobblemon's spawn draw itself, so it no longer shows in `/checkspawn` there, and one with a huge weight (a datapack spawning Mew as common, say) cannot starve the other species. Species at their `maxSpawnPerPokemon`, or already `maxSameSpeciesNearby` times around the player, leave the draw the same way, until a slot frees up.
 
@@ -411,16 +411,13 @@ Write every key of an entry you change: a key left out of an entry present in th
 
 ## `shop.json`: the shop
 
-The Safari Warden (at every gate) and the Safari Clerk (in every rest house) open the shop. It sells, in this order: the fixed `entries` of this file, then the random Pokémon (`rotatingPokemon`), items (`rotatingItems`) and Poké Balls (`rotatingBalls`) of the current rotation. Every player sees the same random goods; they change with the specials.
+The Safari Warden (at every gate) and the Safari Clerk (in every rest house) open the shop. The file is laid out by tab: each tab holds its fixed offers (`fixed`) and the offers it draws each rotation (`rotatingPokemon`, `rotatingItems`, `rotatingSnacks`), and may split them into `sections`, shown one after the other with no gap. Every player sees the same drawn offers; they change with the specials.
 
 | Key | Default | What it does |
 |---|---|---|
 | `enabled` | `true` | `false` closes the shop: the NPCs say so. |
-| `tabs` | Pokémon, Items, Poké Balls, Cooking, Tickets | Tabs of the shop screen, in display order. See below. |
-| `entries` | 22 entries, see below | The fixed list of what is for sale. |
-| `rotatingPokemon` | see below | The random Pokémon. |
-| `rotatingItems` | see below | The random items. |
-| `rotatingBalls` | see below | The random Poké Balls. |
+| `defaults.limit` | none | Limit of an offer that sets none (see `limit` below). |
+| `tabs` | Pokémon, Items, Poké Balls, Cooking, Tickets | The tabs of the screen, in display order, with what they sell. |
 
 ### `tabs`
 
@@ -428,76 +425,79 @@ A tab with nothing in it is hidden.
 
 | Key | What it does |
 |---|---|
-| `id` | What entries refer to. The built-in ids `pokemon`, `items`, `balls`, `cooking` and `tickets` have translated names. Ids must be unique. |
+| `id` | The built-in ids `pokemon`, `items`, `balls`, `cooking` and `tickets` have translated names. Ids must be unique. |
 | `name` | Name shown as is, instead of the translated one. Empty: the translation, or the id. |
 | `icon` | Item drawn on the tab, e.g. `"cobblemon:poke_ball"`. Empty for none. |
+| `fixed` | Offers always listed, in file order, 8 per page. See below. |
+| `rotatingPokemon`, `rotatingItems`, `rotatingSnacks` | What the tab draws each rotation, each optional. See below. |
+| `sections` | Optional parts of the tab: each has a `name` and the same `fixed` and `rotating…` keys. The tab's own offers come first, then each section in the order of the file, with no gap or title between them: sections only group offers in the file (and name them in the log). |
 
-### `entries`
+### Offers (`fixed`)
 
-Each entry is an item or a Pokémon. Entries appear in the order of the file within their tab, 8 per page.
-
-| Key | Applies to | What it does |
-|---|---|---|
-| `type` | both | `"item"` or `"pokemon"`. |
-| `item` | items | Item id, e.g. `"cobblemon:rare_candy"`. An id that names no item (a mod removed) shows the entry as unavailable. |
-| `count` | items | Stack given per purchase, 1 to 64. |
-| `pokemon` | Pokémon | Cobblemon properties, e.g. `"dratini level=15"`. The Pokémon goes to the party, or the PC when the party is full. |
-| `price` | both | Cost in Safari points (0 for free). For a Pokémon, `"auto"` prices it like the random ones: the base price of its rarity in the Safari times its evolution stage. |
-| `cost` | both | Items taken in exchange, on top of `price`: a list of `{"item": ..., "count": ...}`, each `item` an id or a `#tag` (any mix of the tag's items counts; a player carrying several kinds picks which one is given first). Leave it out for a plain purchase. |
-| `limitPerRotation` | both | How many times each player may buy it per rotation. Leave it out for no limit. |
-| `cooldownHours` | both | Hours each player waits after buying it before buying it again, in real time (the wait goes on while the player or the server is offline). Leave it out for no wait. Up to a year. |
-| `tab` | both | Id of the tab showing it. Empty or unknown: `pokemon` for Pokémon, `balls` for items whose id ends in `_ball`, `tickets` for Safari Tickets, `items` otherwise. The mod writes the chosen tab back. |
-
-The default entries show every kind:
-
-- **Pokémon**: a level 45 Tauros for 200 points.
-- **Items**: Rare Candy, Exp. Candy M, Ability Capsule, Poké Balls, Great Balls and Ultra Balls.
-- **Free daily Safari Balls**: 30 `cobblemon:safari_ball` for 0 points with `"cooldownHours": 24`. The card shows "Free" and a "Take" button.
-- **Cooking**: what the rest houses' Poké Pot needs (Hearty Grains, Vivichoke, Medicinal Leek, Tasty Tail, Galarica Nuts, Pep-Up Flower, Energy Root, honey, sugar, milk).
-- **Ticket trades**: one Safari Ticket for 16 `#cobblemon:apricorns`, 24 `#cobblemon:berries`, 1 `#cobblemon:evolution_stones` or 1 `#cobblemon:fossils`, each `"limitPerRotation": 1`. A `shop.json` from before the fossil trade (version 1) gets it added once on load, unless it already trades fossils.
-
-### `rotatingPokemon`: random Pokémon
-
-Drawn among the species that spawn naturally in the Safari, at the lowest level they spawn at there.
-
-| Key | Default | What it does |
-|---|---|---|
-| `enabled` | `true` | `false`: the shop only sells its fixed entries. |
-| `count` | `15` | Pokémon drawn per rotation, 0 to 32. |
-| `tab` | `"pokemon"` | Tab showing them. |
-| `rarities` | `["common", "uncommon", "rare"]` | Rarities they are drawn from, as Cobblemon spawn buckets: `common`, `uncommon`, `rare`, `ultra-rare`. |
-| `commonPrice` | `250` | Price of a first-stage common Pokémon. A second stage costs twice as much, a third stage three times; a species that does not evolve counts as a second stage. Prices are rounded to 50. |
-| `uncommonPrice` | `500` | Same, uncommon. |
-| `rarePrice` | `500` | Same, rare. |
-| `ultraRarePrice` | `2500` | Same, ultra-rare. |
-| `excludeSpecials` | `true` | Leaves out today's specials, so the shop never sells what players are hunting. |
-| `allowSpecialSpecies` | `false` | Allows legendary, mythical, ultra beast and paradox species. |
-| `excludedSpecies` | `[]` | Species never drawn, e.g. `["cobblemon:ditto"]`. |
-
-A Pokémon the fixed entries already sell (same species and form) is never drawn.
-
-### `rotatingItems` and `rotatingBalls`: random goods
-
-Both sections have the same keys. Only items matched by a `prices` rule can be drawn: the rules are the catalogue and the price list at once.
-
-| Key | Default (items / balls) | What it does |
-|---|---|---|
-| `enabled` | `true` / `true` | Master switch. |
-| `count` | `8` / `6` | Items drawn per rotation, on top of `always`. 0 to 32. |
-| `tab` | `"items"` / `"balls"` | Tab showing them. |
-| `always` | `[]` / `["cobblemon:safari_ball"]` | Items sold every rotation whatever the draw. Each still needs a `prices` rule. |
-| `excluded` | Ability Patch, teapots and teacups, bone, snowball / tier 5 balls, Cherish Ball | Items never drawn: ids or `#tags`. Items the fixed entries sell are left out too. |
-| `prices` | 29 rules / 5 rules | See below. |
-
-Each rule of `prices`:
+Each offer sells exactly one of: an item, a Pokémon, or a ready-made dish.
 
 | Key | What it does |
 |---|---|
-| `item` | An item id, or a `#tag` for every item of the tag. |
-| `count` | Stack sold per purchase, 1 to 64. |
-| `price` | Price of the stack, in Safari points. |
+| `item` | Item id, e.g. `"cobblemon:rare_candy"`. An id that names no item (a mod removed) shows the offer as unavailable. |
+| `pokemon` | Cobblemon properties, e.g. `"dratini level=15"`. The Pokémon goes to the party, or the PC when the party is full. |
+| `snack` | A dish already cooked: `{"base": "cobblemon:poke_snack", "seasonings": ["cobblemon:passho_berry", ...]}`, up to 3 seasonings, as the Poké Pot would make it (colour, ingredients, bait effects). `processors` (optional) lists the Cobblemon seasoning processors to run; absent, those of the dish's own Poké Pot recipe. A seasoning's bait effect comes from Cobblemon's data: type berries (Passho, Occa...) and egg-group berries (Aspear, Rawst...) bring those Pokémon, Starf rerolls for a shiny, Enigma gives a chance of a hidden ability; Oran, Sitrus and other fishing berries do nothing on a snack. |
+| `count` | Stack given, for an item or a dish, 1 to 64. Absent: 1. |
+| `price` | Cost in Safari points (0 for free). For a Pokémon, `"auto"` prices it like the drawn ones. |
+| `cost` | Items taken in exchange, on top of `price`: a list of `{"item": ..., "count": ...}`, each `item` an id or a `#tag` (any mix of the tag's items counts; a player carrying several kinds picks which one is given first). |
+| `limit` | How often a player may buy it, see below. Absent: `defaults.limit`. |
 
-The first rule matching an item wins, so specific items go before the tags that hold them (a Max Potion before `#cobblemon:potions`). The default rules price Cobblemon's medicine, candies, mints, battle items, gems, evolution items and held items, and its balls by tier.
+`limit`, for every offer, fixed or drawn; all its keys are optional and each set one applies:
+
+| Key | What it does |
+|---|---|
+| `max` | Purchases per player. Per rotation, unless `lifetime` is `true`. |
+| `lifetime` | `true`: `max` counts over the player's whole life in this world. Absent or `false`: per rotation. |
+| `cooldownHours` | Hours to wait after each purchase, in real time (the wait goes on while the player or the server is offline). Up to a year. |
+
+The default offers show every kind: a level 45 Tauros once per player for life, Rare Candy and other items, 32 free Safari Balls every 24 h, Poké Balls, a dozen ready-made dishes (a plain Poké Snack, nine snacks each themed on a type or an egg group, a hidden ability one, a shiny one and a Poké Cake) and the Poké Pot's ingredients, and one Safari Ticket per rotation for 16 apricorns, 24 berries, an evolution stone or a fossil.
+
+### `rotatingPokemon`: drawn Pokémon
+
+Drawn among the species that spawn naturally in the Safari: `count` ordinary ones, then the legendary-class ones each allowed category adds on top.
+
+| Key | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | Master switch. |
+| `count` | `15` | Ordinary Pokémon per rotation, 0 to 32. |
+| `rarities` | see below | `common`, `uncommon`, `rare`, `ultra-rare`, each with `allowed`, `price` and `weight`. A slot goes to a Pokémon with a chance proportional to its rarity's `weight`. The price is `price` times the evolution stage (a second stage costs twice as much, a third three times; a species that does not evolve counts as a second stage), rounded to 50. Defaults: 250 / 500 / 1000 / 2500 points, weights 10 / 6 / 3 / 1, ultra-rare off. |
+| `categories` | see below | `legendary`, `mythical`, `ultraBeast`, `paradox`, each with `allowed`, `price` (whatever the stage), `maxPerRotation` (how many are listed, on top of `count`, 0 to 8) and `limit` (absent: the draw's `limit`). Defaults: 20000 / 20000 / 8000 / 5000 points, 1 / 1 / 1 / 2 per rotation, one each per player and rotation; only `paradox` on. A species in several categories needs them all allowed. A `limit` with `"lifetime": true` counts per offer content (species, form, level, shininess, price): a player who bought a legendary cannot buy it again when it comes back identical, but can when it comes back shiny or at another price or level. |
+| `level` | `{"mode": "spawn"}` | `"spawn"`: the lowest level it spawns at in the Safari. `"range"`: a level drawn between `min` and `max`. |
+| `modifiers` | `{"shinyChance": 0.01, "shinyPriceMultiplier": 3}` | Chance (0 to 1) that a drawn Pokémon is shiny (1 % by default), and its price multiplier. |
+| `excludeFeatured` | `true` | Leaves out today's specials, so the shop never sells what players are hunting. |
+| `excludeList` | `[]` | Pokémon never drawn, as Cobblemon properties: `"arceus"` for a species and all its forms, `"vulpix alolan"` for one form. |
+| `limit` | none | Limit of each drawn Pokémon. |
+
+A Pokémon the fixed offers already sell (same species and form) is never drawn.
+
+### `rotatingItems`: drawn goods
+
+Only items matched by a `prices` rule can be drawn: the rules are the catalogue and the price list at once.
+
+| Key | Default (items / balls / ingredients) | What it does |
+|---|---|---|
+| `enabled` | `true` | Master switch. |
+| `count` | `8` / `6` / `6` | Items drawn per rotation, on top of `always`. 0 to 32. |
+| `always` | `[]` / `["cobblemon:safari_ball"]` / `[]` | Items listed every rotation whatever the draw. Each still needs a `prices` rule. |
+| `excluded` | Ability Patch, teapots and teacups, bone, snowball / tier 5 balls, Cherish Ball / none | Items never drawn: ids or `#tags`. Items the fixed offers sell are left out too. |
+| `prices` | 29 rules / 5 rules / 4 berries for 30 | Each rule: `item` (an id, or a `#tag` for every item of it), `count` (stack, 1 to 64) and `price`. The first rule matching an item wins, so specific items go before the tags that hold them. |
+| `limit` | none | Limit of each drawn item. |
+
+### `rotatingSnacks`: drawn dishes
+
+| Key | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | Master switch. |
+| `count` | `2` | Dishes drawn per rotation, 0 to 32. |
+| `base` | `"cobblemon:poke_snack"` | The dish. |
+| `seasonings` | `{"pool": ["#cobblemon:berries"], "min": 1, "max": 3}` | Where its seasonings come from (ids or `#tags`; only items Cobblemon knows as seasonings are used) and how many, 0 to 3. |
+| `price` | `{"base": 150, "perSeasoning": 75}` | Price: the base plus a part per seasoning. |
+| `processors` | absent | As for a fixed dish. |
+| `limit` | `{"max": 1}` | Limit of each drawn dish: one per player and rotation. |
 
 ---
 
@@ -625,7 +625,7 @@ Older conversions still apply on the way:
 
 `client.json` before version 2: `hudEnabled`, `hudAnchor`, `hudOffsetX`, `hudOffsetY`, `lowTimeSeconds` and `criticalTimeSeconds` go to `hud.enabled`, `hud.anchor`, `hud.offsetX`, `hud.offsetY`, `hud.lowTimeSeconds` and `hud.criticalTimeSeconds`; `board.featuredFooter`, `statsFooter`, `bountiesFooter` and `dexFooter` go to `board.footers.specials`, `stats`, `missions` and `dex`.
 
-`shop.json` before version 3: `rotating` becomes `rotatingPokemon`. A `shop.json` at version 1 also gets the fossil ticket trade added once.
+`shop.json` before version 3: `rotating` becomes `rotatingPokemon`. A `shop.json` at version 1 also gets the fossil ticket trade added once. `shop.json` before version 4 is laid out by tab: each entry moves into the `fixed` list of its `tab` (`type` and `tab` dropped, `limitPerRotation` and `cooldownHours` into `limit`), `rotatingPokemon`, `rotatingItems` and `rotatingBalls` move into their tab (`rotatingBalls` as that tab's `rotatingItems`), the Pokémon draw's `xxxPrice` and `rarities` into `rarities.xxx`, `allowSpecialSpecies` into `categories.xxx.allowed` for legendary, mythical and ultra beast (paradox stays on), `excludeSpecials` into `excludeFeatured`, `excludedSpecies` into `excludeList`; the cooking tab's items become its `ingredients` section, after a `prepared` section with the default dishes.
 
 ---
 

@@ -14,7 +14,7 @@ import dev.darcosse.common.cobblemonsafari.structure.RestHouses;
 import dev.darcosse.common.cobblemonsafari.util.LoadedChunks;
 import dev.darcosse.common.cobblemonsafari.util.SafariCaves;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
-import net.minecraft.Util;
+import dev.darcosse.common.cobblemonsafari.util.HabitatNames;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
@@ -1021,7 +1021,8 @@ public final class RestHouseTravel {
             return new Label(key("rest_house.cave." + site.caveId()), "");
         }
         Optional<ResourceKey<Biome>> biome = biomeAt(level, site.x(), site.z());
-        String biomeKey = biome.map(key -> Util.makeDescriptionId("biome", key.location()))
+        // Short name: the guide's menu only lists Safari places, "Safari" before each is noise.
+        String biomeKey = biome.map(key -> HabitatNames.key(key.location()))
                 .orElse(key("travel.unknown_biome"));
         boolean shared = false;
         for (RestHouses.HouseSite other : RestHouses.sites()) {

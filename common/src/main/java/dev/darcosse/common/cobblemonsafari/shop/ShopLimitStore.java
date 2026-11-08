@@ -49,6 +49,19 @@ final class ShopLimitStore extends SavedData {
      */
     private final Map<UUID, Map<String, Long>> lastPurchases = new HashMap<>();
 
+    /**
+     * Per player, purchases of each offer with a lifetime limit. Never reset
+     * nor pruned: that is the point; a few dozen bytes per player and offer.
+     */
+    private final Map<UUID, Map<String, Integer>> lifetime = new HashMap<>();
+
+    /**
+     * Save format version. 1 (no key) had the per-rotation counts and the
+     * purchase times; 2 adds the lifetime counts ({@code lifetime}). A
+     * version 1 file loads with no lifetime purchase.
+     */
+    private static final int SAVE_VERSION = 2;
+
     /** The store of the given server, created on first access. */
     static ShopLimitStore get(MinecraftServer server) {
         return server.overworld().getDataStorage().computeIfAbsent(FACTORY, DATA_NAME);
@@ -71,6 +84,18 @@ final class ShopLimitStore extends SavedData {
         setDirty();
     }
 
+    /** How many times a player ever bought an offer with a lifetime limit. */
+    int boughtEver(UUID playerId, String key) {
+        Map<String, Integer> counts = lifetime.get(playerId);
+        return counts == null ? 0 : counts.getOrDefault(key, 0);
+    }
+
+    /** Counts one more purchase of an offer with a lifetime limit. */
+    void recordLifetime(UUID playerId, String key) {
+        lifetime.computeIfAbsent(playerId, id -> new HashMap<>()).merge(key, 1, Integer::sum);
+        setDirty();
+    }
+
     /** Real time (epoch milliseconds) of a player's last purchase of an entry, or 0 if never. */
     long lastPurchase(UUID playerId, String key) {
         Map<String, Long> times = lastPurchases.get(playerId);
@@ -83,7 +108,7 @@ final class ShopLimitStore extends SavedData {
         setDirty();
     }
 
-    /** Writes every player's counts and purchase times, keyed by UUID string. */
+    /** Writes every player's counts, purchase times and lifetime counts, keyed by UUID string. */
     @Override
     public CompoundTag save(CompoundTag nbt, HolderLookup.Provider registries) {
         CompoundTag all = new CompoundTag();
@@ -103,10 +128,21 @@ final class ShopLimitStore extends SavedData {
             times.put(id.toString(), tag);
         });
         nbt.put("last_purchases", times);
+        CompoundTag ever = new CompoundTag();
+        lifetime.forEach((id, entries) -> {
+            CompoundTag tag = new CompoundTag();
+            entries.forEach(tag::putInt);
+            ever.put(id.toString(), tag);
+        });
+        nbt.put("lifetime", ever);
+        nbt.putInt("version", SAVE_VERSION);
         return nbt;
     }
 
-    /** Reads what {@link #save} wrote, skipping keys that are not UUIDs. A file without purchase times has none. */
+    /**
+     * Reads what {@link #save} wrote, versions 1 and 2, skipping keys that
+     * are not UUIDs. A file without purchase times or lifetime counts has none.
+     */
     private static ShopLimitStore load(CompoundTag nbt, HolderLookup.Provider registries) {
         ShopLimitStore store = new ShopLimitStore();
         CompoundTag all = nbt.getCompound("players");
@@ -135,6 +171,21 @@ final class ShopLimitStore extends SavedData {
                 store.lastPurchases.put(id, entries);
             } catch (IllegalArgumentException e) {
                 CobblemonSafari.LOGGER.warn("Skipping Safari shop purchase times with an invalid player id '{}'", key);
+            }
+        }
+        // Absent before version 2: an empty compound, no lifetime purchase.
+        CompoundTag ever = nbt.getCompound("lifetime");
+        for (String key : ever.getAllKeys()) {
+            try {
+                UUID id = UUID.fromString(key);
+                CompoundTag tag = ever.getCompound(key);
+                Map<String, Integer> entries = new HashMap<>();
+                for (String entry : tag.getAllKeys()) {
+                    entries.put(entry, tag.getInt(entry));
+                }
+                store.lifetime.put(id, entries);
+            } catch (IllegalArgumentException e) {
+                CobblemonSafari.LOGGER.warn("Skipping Safari shop lifetime purchases with an invalid player id '{}'", key);
             }
         }
         return store;
