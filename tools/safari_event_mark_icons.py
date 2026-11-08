@@ -4,6 +4,7 @@ Output, in common/src/main/resources/assets/cobblemon_safari/textures/gui/mark/:
   mark_safari_star.png     the special of the day: a white star on gold
   mark_safari_swarm.png    the swarm: a cluster of white dots on orange
   mark_safari_moon.png     the full moon: a pale moon with craters on night blue
+  mark_safari_downpour.png the downpour: slanted white rain streaks on storm blue
   mark_safari_angler.png   the fished Pokemon: a white hook on water blue
 
 Same frame as the Safari Mark (tools/safari_mark_icon.py) and Cobblemon's own
@@ -42,6 +43,8 @@ GOLD = (201, 154, 26, 255)        # C99A1A
 ORANGE = (200, 100, 42, 255)      # C8642A
 NIGHT = (59, 74, 140, 255)        # 3B4A8C
 WATER = (42, 122, 184, 255)       # 2A7AB8
+# Darker and greyer than the angler's water blue, so the two marks differ at a glance.
+STORM = (47, 94, 134, 255)        # 2F5E86
 
 MOON = (240, 232, 190, 255)
 CRATER = (196, 188, 150, 255)
@@ -98,6 +101,22 @@ def moon(x: int, y: int):
     return MOON
 
 
+# Rain streaks: short segments slanting down to the left, in staggered rows,
+# as (start x, start y, length in pixels). Longer streaks read as wind-driven
+# rain; more of them blur into a solid patch at 32 pixels.
+RAIN_STREAKS = [(12, 8, 4), (17, 8, 4), (22, 10, 4), (9, 13, 4), (14, 13, 4),
+                (19, 14, 4), (11, 19, 4), (16, 19, 4), (21, 19, 3)]
+
+
+def downpour(x: int, y: int):
+    for sx, sy, length in RAIN_STREAKS:
+        for step in range(length):
+            # One pixel left every two down: a steep slant.
+            if (x, y) == (sx - step // 2, sy + step):
+                return WHITE
+    return STORM
+
+
 def hook(x: int, y: int):
     """A fish hook: an eye on top, a shank, a curved bend and a barb."""
     # Eye: a small ring at the top of the shank.
@@ -116,6 +135,7 @@ ICONS = {
     "mark_safari_star": star,
     "mark_safari_swarm": swarm,
     "mark_safari_moon": moon,
+    "mark_safari_downpour": downpour,
     "mark_safari_angler": hook,
 }
 

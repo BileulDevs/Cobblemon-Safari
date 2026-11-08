@@ -1,6 +1,7 @@
 package dev.darcosse.common.cobblemonsafari.spawn;
 
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
+import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
 import dev.darcosse.common.cobblemonsafari.util.HabitatNames;
 import net.minecraft.ChatFormatting;
@@ -40,6 +41,9 @@ public final class FeaturedBoard {
         Swarm.Active swarm = Swarm.current(server);
         if (swarm != null) {
             lines.add(SafariHappenings.swarmMessage(swarm));
+        }
+        if (Downpour.isActive()) {
+            lines.add(Downpour.startMessage(SafariConfigManager.get().events.downpour));
         }
         lines.add(Component.translatable(key("board.next_rotation"), untilNextRotation())
                 .withStyle(ChatFormatting.DARK_GRAY));

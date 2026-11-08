@@ -89,8 +89,10 @@ public final class SafariConfigManager {
      * minNearby and checkEverySeconds, and protection.invulnerablePokemon:
      * nothing to convert, raised only so that existing files are rewritten
      * once and show the new keys.
+     * 9 added events.downpour and capture.marks.downpour: nothing to
+     * convert either, raised for the same reason.
      */
-    public static final int CURRENT_CONFIG_VERSION = 8;
+    public static final int CURRENT_CONFIG_VERSION = 9;
 
     /** First version that knows the fishing missions. */
     private static final int FISHING_MISSION_VERSION = 6;
@@ -1263,6 +1265,15 @@ public final class SafariConfigManager {
     private static final int MAX_SWARM_CHECK_SECONDS = 300;
     /** Upper bound of events.fullMoon.weightMultiplier. */
     private static final double MAX_FULL_MOON_MULTIPLIER = 20.0D;
+    /** Upper bound of events.downpour.weightMultiplier, as the full moon's. */
+    private static final double MAX_DOWNPOUR_MULTIPLIER = 20.0D;
+    /**
+     * Bounds of events.downpour's durations, in minutes. Under a minute the
+     * announcement and its end would nearly cross; beyond two hours it
+     * outlasts any rain, so the rain's end is what ends it anyway.
+     */
+    private static final int MIN_DOWNPOUR_MINUTES = 1;
+    private static final int MAX_DOWNPOUR_MINUTES = 120;
 
     /** Fixes the events section; returns true if anything changed. */
     private static boolean validateEvents(SafariConfig c) {
@@ -1279,6 +1290,11 @@ public final class SafariConfigManager {
             c.events.fullMoon = new SafariConfig.FullMoon();
             corrected = true;
         }
+        if (c.events.downpour == null) {
+            c.events.downpour = new SafariConfig.Downpour();
+            corrected = true;
+        }
+        corrected |= validateDownpour(c.events.downpour);
         SafariConfig.Swarm swarm = c.events.swarm;
         if (!(swarm.chance >= 0.0D && swarm.chance <= 1.0D)) {
             double fixed = Double.isNaN(swarm.chance) ? 0.0D : Math.max(0.0D, Math.min(1.0D, swarm.chance));
@@ -1343,6 +1359,43 @@ public final class SafariConfigManager {
                     : Math.max(1.0D, Math.min(MAX_FULL_MOON_MULTIPLIER, moon.weightMultiplier));
             warn("events.fullMoon.weightMultiplier", moon.weightMultiplier, fixed);
             moon.weightMultiplier = fixed;
+            corrected = true;
+        }
+        return corrected;
+    }
+
+    /** Fixes events.downpour; returns true if anything changed. */
+    private static boolean validateDownpour(SafariConfig.Downpour downpour) {
+        boolean corrected = false;
+        if (!(downpour.chance >= 0.0D && downpour.chance <= 1.0D)) {
+            double fixed = Double.isNaN(downpour.chance) ? 0.0D : Math.max(0.0D, Math.min(1.0D, downpour.chance));
+            warn("events.downpour.chance", downpour.chance, fixed);
+            downpour.chance = fixed;
+            corrected = true;
+        }
+        if (downpour.minDurationMinutes < MIN_DOWNPOUR_MINUTES || downpour.minDurationMinutes > MAX_DOWNPOUR_MINUTES) {
+            int fixed = Math.max(MIN_DOWNPOUR_MINUTES, Math.min(MAX_DOWNPOUR_MINUTES, downpour.minDurationMinutes));
+            warn("events.downpour.minDurationMinutes", downpour.minDurationMinutes, fixed);
+            downpour.minDurationMinutes = fixed;
+            corrected = true;
+        }
+        // At least the minimum: the draw takes a duration between the two.
+        if (downpour.maxDurationMinutes < downpour.minDurationMinutes
+                || downpour.maxDurationMinutes > MAX_DOWNPOUR_MINUTES) {
+            int fixed = Math.max(downpour.minDurationMinutes, Math.min(MAX_DOWNPOUR_MINUTES, downpour.maxDurationMinutes));
+            warn("events.downpour.maxDurationMinutes", downpour.maxDurationMinutes, fixed);
+            downpour.maxDurationMinutes = fixed;
+            corrected = true;
+        }
+        if (downpour.types == null) {
+            downpour.types = new ArrayList<>();
+            corrected = true;
+        }
+        if (!(downpour.weightMultiplier >= 1.0D && downpour.weightMultiplier <= MAX_DOWNPOUR_MULTIPLIER)) {
+            double fixed = Double.isNaN(downpour.weightMultiplier) ? 1.0D
+                    : Math.max(1.0D, Math.min(MAX_DOWNPOUR_MULTIPLIER, downpour.weightMultiplier));
+            warn("events.downpour.weightMultiplier", downpour.weightMultiplier, fixed);
+            downpour.weightMultiplier = fixed;
             corrected = true;
         }
         return corrected;

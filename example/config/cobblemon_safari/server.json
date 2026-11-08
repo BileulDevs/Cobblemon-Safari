@@ -1,5 +1,5 @@
 {
-  "configVersion": 8,
+  "configVersion": 9,
   "hunt": {
     "maxDurationSeconds": 3600,
     "pauseWhileOffline": true,
@@ -84,6 +84,7 @@
       "special": true,
       "swarm": true,
       "fullMoon": true,
+      "downpour": true,
       "angler": true
     },
     "flee": {
@@ -223,6 +224,14 @@
       "enabled": true,
       "types": ["fairy", "ghost"],
       "weightMultiplier": 3.0
+    },
+    "downpour": {
+      "enabled": true,
+      "chance": 0.15,
+      "minDurationMinutes": 5,
+      "maxDurationMinutes": 10,
+      "types": ["water", "electric"],
+      "weightMultiplier": 2.0
     }
   },
   "points": {

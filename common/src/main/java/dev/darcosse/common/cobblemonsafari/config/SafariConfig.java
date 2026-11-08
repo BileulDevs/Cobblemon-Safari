@@ -156,6 +156,8 @@ public class SafariConfig {
         public Swarm swarm = new Swarm();
         /** Some types coming out more on full moon nights. */
         public FullMoon fullMoon = new FullMoon();
+        /** Some rains turning into a downpour, with some types coming out more. */
+        public Downpour downpour = new Downpour();
     }
 
     /**
@@ -281,6 +283,39 @@ public class SafariConfig {
 
         /** How much more often those Pokémon are picked, within their rarity. 1 to 20. */
         public double weightMultiplier = 3.0;
+    }
+
+    /**
+     * The downpour: each time it starts raining in the Safari, maybe, the
+     * rain is a downpour for a while. Pokémon of the configured types come
+     * out more where the rain falls (not in snow, nor in the dunes and the
+     * volcano, which get no rain, nor under a roof), and catches made there
+     * get the Downpour Mark. Announced to the players in the Safari. The
+     * rain is the Safari's ordinary weather: nothing here makes it rain.
+     */
+    public static class Downpour {
+        /** Master switch. */
+        public boolean enabled = true;
+
+        /**
+         * Chance, from 0 to 1, that a rain starting in the Safari is a
+         * downpour. Low on purpose: it rains often, an event must stay rare.
+         */
+        public double chance = 0.15;
+
+        /**
+         * Shortest and longest downpour, in real minutes, drawn for each one.
+         * It ends sooner when the rain stops (a rain lasts about 10 to 20
+         * minutes). 1 to 120, max at least min.
+         */
+        public int minDurationMinutes = 5;
+        public int maxDurationMinutes = 10;
+
+        /** Cobblemon type names whose Pokémon come out more. */
+        public List<String> types = new ArrayList<>(List.of("water", "electric"));
+
+        /** How much more often those Pokémon are picked, within their rarity. 1 to 20. */
+        public double weightMultiplier = 2.0;
     }
 
     /**
@@ -662,6 +697,8 @@ public class SafariConfig {
         public boolean swarm = true;
         /** "of the Full Moon": caught on a full moon night. */
         public boolean fullMoon = true;
+        /** "of the Downpour": caught where a downpour falls. */
+        public boolean downpour = true;
         /** "the Safari Catch": fished with a rod in the Safari, then caught. */
         public boolean angler = true;
     }

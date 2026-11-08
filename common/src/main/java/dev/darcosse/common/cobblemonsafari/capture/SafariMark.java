@@ -11,6 +11,7 @@ import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
+import dev.darcosse.common.cobblemonsafari.spawn.Downpour;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedRotation;
 import dev.darcosse.common.cobblemonsafari.spawn.HabitatEntry;
 import dev.darcosse.common.cobblemonsafari.spawn.SafariHappenings;
@@ -31,8 +32,9 @@ import java.util.Set;
  *   <li>the Safari Mark, to every Pokémon caught there ("Tauros the Safari Find");</li>
  *   <li>event marks, for a catch made at a remarkable moment: one of the
  *       specials of the day (the star), a Pokémon of the swarm in its
- *       habitat (the swarm), a catch on a full moon night (the moon), and a
- *       Pokémon fished in the Safari (the angler).</li>
+ *       habitat (the swarm), a catch where a downpour falls (the downpour),
+ *       a catch on a full moon night (the moon), and a Pokémon fished in the
+ *       Safari (the angler).</li>
  * </ul>
  *
  * <p>The marks themselves are data, like Cobblemon's own
@@ -43,7 +45,7 @@ import java.util.Set;
  * them. Server side.
  *
  * <p>Title: an event mark's title replaces the Safari Mark's as the active
- * one, the rarest moment first (star, swarm, moon, angler); a title the
+ * one, the rarest moment first (star, swarm, downpour, moon, angler); a title the
  * Pokémon already has from Cobblemon (weather, personality) stays.
  */
 public final class SafariMark {
@@ -54,6 +56,8 @@ public final class SafariMark {
     public static final ResourceLocation STAR = CobblemonSafari.id("mark_safari_star");
     /** A Pokémon of the swarm, caught in the swarm's habitat. */
     public static final ResourceLocation SWARM = CobblemonSafari.id("mark_safari_swarm");
+    /** Caught where a downpour falls. */
+    public static final ResourceLocation DOWNPOUR = CobblemonSafari.id("mark_safari_downpour");
     /** Caught on a full moon night. */
     public static final ResourceLocation MOON = CobblemonSafari.id("mark_safari_moon");
     /** Fished, then caught, in the Safari. */
@@ -92,6 +96,10 @@ public final class SafariMark {
         Entity where = ball != null ? ball : player;
         if (marks.swarm && Swarm.isSwarming(pokemon, where.level().getBiome(where.blockPosition()))) {
             addIfLoaded(events, give(pokemon, SWARM));
+        }
+        // Where the rain falls, as for the downpour's spawns: not in snow, a dry biome or under a roof.
+        if (marks.downpour && Downpour.fallsAt(where.level(), where.blockPosition())) {
+            addIfLoaded(events, give(pokemon, DOWNPOUR));
         }
         if (marks.fullMoon && SafariHappenings.isFullMoon()) {
             addIfLoaded(events, give(pokemon, MOON));

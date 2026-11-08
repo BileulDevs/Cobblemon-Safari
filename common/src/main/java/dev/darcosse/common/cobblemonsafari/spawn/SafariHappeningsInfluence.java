@@ -33,7 +33,9 @@ import java.util.concurrent.ConcurrentHashMap;
  *       swarm Pokémon around players on top of it;</li>
  *   <li>the full moon ({@link SafariHappenings}): at night under a full
  *       moon, Pokémon of the configured types weigh more, within their
- *       rarity.</li>
+ *       rarity;</li>
+ *   <li>the downpour ({@link Downpour}): during one, Pokémon of its types
+ *       weigh more, within their rarity, on spots the rain falls on.</li>
  * </ul>
  *
  * <p>One shared instance on each player's spawner, put there by
@@ -84,8 +86,9 @@ public final class SafariHappeningsInfluence implements SpawningInfluence {
     }
 
     /**
-     * Multiplies the weight of the swarm's details in its habitat, and of
-     * the full moon's types on a full moon night. Called for every candidate
+     * Multiplies the weight of the swarm's details in its habitat, of the
+     * full moon's types on a full moon night, and of the downpour's types
+     * where it falls. Called for every candidate
      * of every spawn attempt: a few field reads, set lookups and an identity
      * scan of the swarm's details (a handful).
      */
@@ -107,8 +110,14 @@ public final class SafariHappeningsInfluence implements SpawningInfluence {
                 && position.getBiomeHolder().is(swarm.biome())) {
             result *= (float) SafariConfigManager.get().events.swarm.weightMultiplier;
         }
-        if (SafariHappenings.fullMoon() && favouredByMoon(speciesId)) {
+        if (SafariHappenings.fullMoon() && hasType(speciesId, SafariHappenings.fullMoonTypes())) {
             result *= (float) SafariConfigManager.get().events.fullMoon.weightMultiplier;
+        }
+        // The type test first: it is a cached set lookup, the spot test a biome temperature read.
+        if (Downpour.isActive() && hasType(speciesId, Downpour.types())
+                && Downpour.fallsOnSpot(position.getCanSeeSky(), position.getBiomeHolder().value(),
+                position.getPosition())) {
+            result *= (float) SafariConfigManager.get().events.downpour.weightMultiplier;
         }
         return result;
     }
@@ -118,9 +127,8 @@ public final class SafariHappeningsInfluence implements SpawningInfluence {
         return position.getSpawner() instanceof PlayerSpawner && SafariDimensions.isSafari(position.getWorld());
     }
 
-    /** Whether one of the species' types is favoured by the full moon. */
-    private static boolean favouredByMoon(String speciesId) {
-        Set<String> favoured = SafariHappenings.fullMoonTypes();
+    /** Whether one of the species' types is in a happening's favoured types. */
+    private static boolean hasType(String speciesId, Set<String> favoured) {
         if (favoured.isEmpty()) {
             return false;
         }

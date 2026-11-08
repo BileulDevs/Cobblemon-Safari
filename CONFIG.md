@@ -129,6 +129,7 @@ Every Pokémon caught in the Safari gets the Safari Mark ("the Safari Find"); on
 | `special` | `true` | "the Star of the Day": one of the specials of the rotation. |
 | `swarm` | `true` | "of the Swarm": the swarming species, caught in the swarm's habitat (see `events.swarm`). |
 | `fullMoon` | `true` | "of the Full Moon": caught on a full moon night. |
+| `downpour` | `true` | "of the Downpour": caught where a downpour falls (see `events.downpour`). |
 | `angler` | `true` | "the Safari Catch": fished with a rod in the Safari, then caught. |
 
 #### `capture.flee`: Pokémon running away
@@ -267,7 +268,7 @@ After `/safari reload`, the specials are redrawn with the new rules right away.
 
 `/safari rotate` starts a new rotation now, which lasts a whole `rotationMinutes` from then (the following rotations keep that pace, no longer aligned on midnight UTC); `/safari today` lists the current specials.
 
-### `events`: swarms and full moon nights
+### `events`: swarms, full moon nights and downpours
 
 Rare happenings that change Cobblemon's natural spawns in the Safari for a while, announced in the chat (with a chime) to the players in the Safari.
 
@@ -293,6 +294,17 @@ Rare happenings that change Cobblemon's natural spawns in the Safari for a while
 | `enabled` | `true` | `false`: no full moon effect. |
 | `types` | `["fairy", "ghost"]` | Cobblemon type names favoured. |
 | `weightMultiplier` | `3.0` | How much more often those Pokémon are picked, within their rarity. 1 to 20. |
+
+**`events.downpour`**: some rains of the Safari turn into a downpour, during which Pokémon of some types come out more where the rain falls (not in snow, nor in the dunes and the volcano, which get no rain, nor under a roof), and catches made there get the Downpour Mark. The rain is the Safari's ordinary weather (the overworld's): the mod never makes it rain. Each time a rain starts, a draw decides whether it is a downpour; it then lasts a drawn time, or less if the rain stops first. Players in the Safari are told when it starts (or when they come in during one) and when it ends, and it shows in `/safari today` while it lasts. A server restart ends it, and a rain already falling when the server starts is never drawn.
+
+| Key | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | `false`: no downpour. |
+| `chance` | `0.15` | Chance (0 to 1) that a rain starting in the Safari is a downpour. |
+| `minDurationMinutes` | `5` | Shortest downpour, in real minutes. 1 to 120. |
+| `maxDurationMinutes` | `10` | Longest downpour, in real minutes, at least `minDurationMinutes`. 1 to 120. A rain lasts about 10 to 20 minutes. |
+| `types` | `["water", "electric"]` | Cobblemon type names favoured. |
+| `weightMultiplier` | `2.0` | How much more often those Pokémon are picked, within their rarity. 1 to 20. |
 
 ### `points`: Safari points
 

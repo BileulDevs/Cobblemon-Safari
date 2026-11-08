@@ -30,7 +30,7 @@ import java.util.UUID;
  * Keeps the Safari's rare happenings ({@code events}) up to date for the
  * spawn threads and tells the players about them: the swarm of the rotation
  * ({@link Swarm}) once per rotation to each player in the Safari, the full
- * moon once per night.
+ * moon once per night, the downpour ({@link Downpour}) when it starts and ends.
  *
  * <p>The effect on the spawns themselves is {@link SafariHappeningsInfluence}'s.
  * Server side. Cost: once a second, a few comparisons, and the swarm's draw
@@ -70,6 +70,7 @@ public final class SafariHappenings {
         MOON_TOLD.clear();
         tickCounter = 0;
         Swarm.reset();
+        Downpour.reset();
     }
 
     /** Whether a full moon night is on, for the spawn threads. */
@@ -106,6 +107,7 @@ public final class SafariHappenings {
         if (!moonNow) {
             MOON_TOLD.clear();
         }
+        Downpour.tick(safari);
         Swarm.Active swarm = Swarm.current(server);
         if (safari == null) {
             return;
@@ -133,6 +135,15 @@ public final class SafariHappenings {
 
     /** The full moon's line, naming the favoured types. */
     private static Component moonMessage(List<String> typeNames) {
+        return Component.translatable(key("events.full_moon.announce"), typeNames(typeNames))
+                .withStyle(ChatFormatting.AQUA);
+    }
+
+    /**
+     * Cobblemon type names as their translated names, comma separated; a
+     * name Cobblemon does not know is shown as written.
+     */
+    static Component typeNames(List<String> typeNames) {
         MutableComponent types = Component.empty();
         boolean first = true;
         for (String name : typeNames) {
@@ -143,11 +154,11 @@ public final class SafariHappenings {
             types.append(type != null ? type.getDisplayName() : Component.literal(name));
             first = false;
         }
-        return Component.translatable(key("events.full_moon.announce"), types).withStyle(ChatFormatting.AQUA);
+        return types;
     }
 
     /** Sends a notice with a short chime. */
-    private static void tell(ServerPlayer player, Component message) {
+    static void tell(ServerPlayer player, Component message) {
         player.sendSystemMessage(message);
         player.playNotifySound(SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.PLAYERS, NOTICE_VOLUME, NOTICE_PITCH);
     }
