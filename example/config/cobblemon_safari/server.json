@@ -1,5 +1,5 @@
 {
-  "configVersion": 14,
+  "configVersion": 15,
   "hunt": {
     "maxDurationSeconds": 3600,
     "pauseWhileOffline": true,
@@ -87,7 +87,8 @@
       "downpour": true,
       "storm": true,
       "aurora": true,
-      "angler": true
+      "angler": true,
+      "nest": true
     },
     "flee": {
       "enabled": true,
@@ -270,6 +271,22 @@
       "excludeList": [],
       "frozenHabitats": ["cobblemon_safari:glacier", "cobblemon_safari:snowfield", "cobblemon_safari:taiga"],
       "glowSeconds": 20
+    },
+    "eggNests": {
+      "enabled": true,
+      "checkEverySeconds": 30,
+      "spawnChance": 0.05,
+      "minDistance": 24,
+      "maxDistance": 48,
+      "exclusionRadius": 128,
+      "lifetimeMinutes": 20,
+      "firstComeFirstServed": true,
+      "excludedEggGroups": ["undiscovered"],
+      "rarities": { "legendary": false, "mythical": false, "ultraBeast": false, "paradox": false },
+      "excludeList": [],
+      "hatchMinutes": 10,
+      "hatchSpeedAbilities": ["flamebody"],
+      "hatchSpeedMultiplier": 2.0
     }
   },
   "points": {

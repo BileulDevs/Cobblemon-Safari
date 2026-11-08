@@ -97,9 +97,10 @@ public final class SafariConfigManager {
      * its shinyChanceMultiplier: the development builds' types become
      * frozenTypes (see migrateTree). 14 renamed events.aurora.habitats to
      * frozenHabitats, since it never limited where the aurora acts (see
-     * migrateTree).
+     * migrateTree). 15 added events.eggNests and capture.marks.nest:
+     * nothing to convert, raised so that existing files show the new keys.
      */
-    public static final int CURRENT_CONFIG_VERSION = 14;
+    public static final int CURRENT_CONFIG_VERSION = 15;
 
     /** First version that knows the fishing missions. */
     private static final int FISHING_MISSION_VERSION = 6;
@@ -1300,6 +1301,32 @@ public final class SafariConfigManager {
      * longer than most storms, so more would mean one flash per storm.
      */
     private static final int MAX_LIGHTNING_COOLDOWN_SECONDS = 600;
+    /**
+     * Bounds of events.eggNests.checkEverySeconds. Under 5 s the draws come
+     * so often that spawnChance stops meaning anything readable; beyond an
+     * hour a player may never see a nest in a hunt.
+     */
+    private static final int MIN_NEST_CHECK_SECONDS = 5;
+    private static final int MAX_NEST_CHECK_SECONDS = 3600;
+    /**
+     * Bounds of events.eggNests.minDistance and maxDistance. Under 8 blocks
+     * a nest pops up in plain sight; beyond 96 it lands in chunks a client
+     * with a short view distance does not show, and is never found.
+     */
+    private static final int MIN_NEST_DISTANCE = 8;
+    private static final int MAX_NEST_DISTANCE = 96;
+    /**
+     * Bounds of events.eggNests.exclusionRadius. Under 16 nests could sit
+     * side by side; beyond 512 the entity query of each draw covers a
+     * million blocks for little gain.
+     */
+    private static final int MIN_NEST_EXCLUSION_RADIUS = 16;
+    private static final int MAX_NEST_EXCLUSION_RADIUS = 512;
+    /** Bounds of events.eggNests.lifetimeMinutes and hatchMinutes: a minute to a day. */
+    private static final int MIN_NEST_MINUTES = 1;
+    private static final int MAX_NEST_MINUTES = 1440;
+    /** Upper bound of events.eggNests.hatchSpeedMultiplier: beyond, the hatch time means nothing. */
+    private static final double MAX_HATCH_SPEED_MULTIPLIER = 10.0D;
     /** Upper bound of events.aurora.glowSeconds: longer and the glow gives away every hiding spot. */
     private static final int MAX_AURORA_GLOW_SECONDS = 60;
 
@@ -1338,6 +1365,11 @@ public final class SafariConfigManager {
             corrected = true;
         }
         corrected |= validateAurora(c.events.aurora);
+        if (c.events.eggNests == null) {
+            c.events.eggNests = new SafariConfig.EggNests();
+            corrected = true;
+        }
+        corrected |= validateEggNests(c.events.eggNests);
         SafariConfig.Swarm swarm = c.events.swarm;
         if (!(swarm.chance >= 0.0D && swarm.chance <= 1.0D)) {
             double fixed = Double.isNaN(swarm.chance) ? 0.0D : Math.max(0.0D, Math.min(1.0D, swarm.chance));
@@ -1439,6 +1471,78 @@ public final class SafariConfigManager {
                     : Math.max(1.0D, Math.min(MAX_DOWNPOUR_MULTIPLIER, downpour.weightMultiplier));
             warn("events.downpour.weightMultiplier", downpour.weightMultiplier, fixed);
             downpour.weightMultiplier = fixed;
+            corrected = true;
+        }
+        return corrected;
+    }
+
+    /** Fixes events.eggNests; returns true if anything changed. */
+    private static boolean validateEggNests(SafariConfig.EggNests nests) {
+        boolean corrected = false;
+        if (nests.checkEverySeconds < MIN_NEST_CHECK_SECONDS || nests.checkEverySeconds > MAX_NEST_CHECK_SECONDS) {
+            int fixed = Math.max(MIN_NEST_CHECK_SECONDS, Math.min(MAX_NEST_CHECK_SECONDS, nests.checkEverySeconds));
+            warn("events.eggNests.checkEverySeconds", nests.checkEverySeconds, fixed);
+            nests.checkEverySeconds = fixed;
+            corrected = true;
+        }
+        if (!(nests.spawnChance >= 0.0D && nests.spawnChance <= 1.0D)) {
+            double fixed = Double.isNaN(nests.spawnChance) ? 0.0D : Math.max(0.0D, Math.min(1.0D, nests.spawnChance));
+            warn("events.eggNests.spawnChance", nests.spawnChance, fixed);
+            nests.spawnChance = fixed;
+            corrected = true;
+        }
+        if (nests.minDistance < MIN_NEST_DISTANCE || nests.minDistance > MAX_NEST_DISTANCE) {
+            int fixed = Math.max(MIN_NEST_DISTANCE, Math.min(MAX_NEST_DISTANCE, nests.minDistance));
+            warn("events.eggNests.minDistance", nests.minDistance, fixed);
+            nests.minDistance = fixed;
+            corrected = true;
+        }
+        // After min: max is bounded by it.
+        if (nests.maxDistance < nests.minDistance || nests.maxDistance > MAX_NEST_DISTANCE) {
+            int fixed = Math.max(nests.minDistance, Math.min(MAX_NEST_DISTANCE, nests.maxDistance));
+            warn("events.eggNests.maxDistance", nests.maxDistance, fixed);
+            nests.maxDistance = fixed;
+            corrected = true;
+        }
+        if (nests.exclusionRadius < MIN_NEST_EXCLUSION_RADIUS || nests.exclusionRadius > MAX_NEST_EXCLUSION_RADIUS) {
+            int fixed = Math.max(MIN_NEST_EXCLUSION_RADIUS, Math.min(MAX_NEST_EXCLUSION_RADIUS, nests.exclusionRadius));
+            warn("events.eggNests.exclusionRadius", nests.exclusionRadius, fixed);
+            nests.exclusionRadius = fixed;
+            corrected = true;
+        }
+        if (nests.lifetimeMinutes < MIN_NEST_MINUTES || nests.lifetimeMinutes > MAX_NEST_MINUTES) {
+            int fixed = Math.max(MIN_NEST_MINUTES, Math.min(MAX_NEST_MINUTES, nests.lifetimeMinutes));
+            warn("events.eggNests.lifetimeMinutes", nests.lifetimeMinutes, fixed);
+            nests.lifetimeMinutes = fixed;
+            corrected = true;
+        }
+        if (nests.hatchMinutes < MIN_NEST_MINUTES || nests.hatchMinutes > MAX_NEST_MINUTES) {
+            int fixed = Math.max(MIN_NEST_MINUTES, Math.min(MAX_NEST_MINUTES, nests.hatchMinutes));
+            warn("events.eggNests.hatchMinutes", nests.hatchMinutes, fixed);
+            nests.hatchMinutes = fixed;
+            corrected = true;
+        }
+        if (!(nests.hatchSpeedMultiplier >= 1.0D && nests.hatchSpeedMultiplier <= MAX_HATCH_SPEED_MULTIPLIER)) {
+            double fixed = Double.isNaN(nests.hatchSpeedMultiplier) ? 1.0D
+                    : Math.max(1.0D, Math.min(MAX_HATCH_SPEED_MULTIPLIER, nests.hatchSpeedMultiplier));
+            warn("events.eggNests.hatchSpeedMultiplier", nests.hatchSpeedMultiplier, fixed);
+            nests.hatchSpeedMultiplier = fixed;
+            corrected = true;
+        }
+        if (nests.excludedEggGroups == null) {
+            nests.excludedEggGroups = new ArrayList<>();
+            corrected = true;
+        }
+        if (nests.rarities == null) {
+            nests.rarities = new SafariConfig.EggCategories();
+            corrected = true;
+        }
+        if (nests.excludeList == null) {
+            nests.excludeList = new ArrayList<>();
+            corrected = true;
+        }
+        if (nests.hatchSpeedAbilities == null) {
+            nests.hatchSpeedAbilities = new ArrayList<>();
             corrected = true;
         }
         return corrected;

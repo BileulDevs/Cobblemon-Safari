@@ -8,6 +8,7 @@ Output, in common/src/main/resources/assets/cobblemon_safari/textures/gui/mark/:
   mark_safari_storm.png    the storm: a white lightning bolt on thundercloud purple
   mark_safari_aurora.png   the aurora: three wavy white curtains on polar green
   mark_safari_angler.png   the fished Pokemon: a white hook on water blue
+  mark_safari_nest.png     the hatched Pokemon: a white egg with green spots on straw brown
 
 Same frame as the Safari Mark (tools/safari_mark_icon.py) and Cobblemon's own
 icons: 32x32, a disc of the mark's colour inside a white band and a dark
@@ -52,6 +53,10 @@ THUNDERCLOUD = (74, 61, 122, 255) # 4A3D7A
 # Green, the aurora's own colour, darker than any other disc so the white curtains stand out.
 POLAR = (31, 110, 90, 255)        # 1F6E5A
 
+# Straw brown, the nest's own colour.
+STRAW = (166, 102, 46, 255)        # A6662E
+# The Safari Egg's spots, darker than its texture's so they read at 32 pixels.
+EGG_SPOT = (86, 150, 72, 255)
 MOON = (240, 232, 190, 255)
 CRATER = (196, 188, 150, 255)
 
@@ -160,6 +165,27 @@ def hook(x: int, y: int):
     return WHITE if eye or shank or bend or point or barb else WATER
 
 
+EGG_CENTRE_Y = 16.0
+EGG_HALF_WIDTH = 5.5
+EGG_HALF_HEIGHT = 7.0
+# How much narrower the egg is at its top than at its bottom, as a share of its width.
+EGG_TAPER = 0.18
+EGG_SPOTS = [(13.5, 14.0, 1.3), (18.0, 17.5, 1.5), (14.0, 19.5, 1.0)]
+
+
+def egg(x: int, y: int):
+    """An upright egg, narrower at the top, with a few spots."""
+    dy = (y - EGG_CENTRE_Y) / EGG_HALF_HEIGHT
+    half_width = EGG_HALF_WIDTH * (1.0 + EGG_TAPER * dy)
+    dx = (x - CENTRE) / half_width
+    if dx * dx + dy * dy > 1.0:
+        return STRAW
+    for sx, sy, r in EGG_SPOTS:
+        if inside(x, y, sx, sy, r):
+            return EGG_SPOT
+    return WHITE
+
+
 ICONS = {
     "mark_safari_star": star,
     "mark_safari_swarm": swarm,
@@ -168,6 +194,7 @@ ICONS = {
     "mark_safari_storm": bolt,
     "mark_safari_aurora": aurora,
     "mark_safari_angler": hook,
+    "mark_safari_nest": egg,
 }
 
 

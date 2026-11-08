@@ -52,13 +52,15 @@ public final class SafariCreativeTab {
     }
 
     /**
-     * Every item of the mod, in tab order: the hunt (ticket, Escape Rope),
+     * Every item of the mod, in tab order: the hunt (ticket, Escape Rope, egg),
      * the gate and the wall screen for building, then the decor.
      */
     public static List<Item> items() {
         List<Item> items = new ArrayList<>();
         items.add(SafariItems.safariTicket());
         items.add(SafariItems.escapeRope());
+        // For operators testing the hatch: an egg from the tab draws its species when it hatches.
+        items.add(SafariItems.safariEgg());
         items.add(SafariItems.safariGate());
         items.add(SafariItems.safariWallScreen());
         items.addAll(SafariDecor.items());

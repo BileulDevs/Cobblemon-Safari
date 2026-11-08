@@ -18,7 +18,7 @@ How the files behave:
 - **An invalid value** (a negative price, an hour of 25, a colour that is not a colour...) is replaced by its default or clamped into range, a warning names it in the log, and the file is rewritten with the fixed value.
 - **A file that cannot be read at all** (a missing comma, a stray quote) is never overwritten: the mod runs on the defaults, logs the error, and reads the file again once you fix it.
 - **Unknown keys** are ignored and dropped when the file is rewritten.
-- **`configVersion`** is the format version of the file (`14` for `server.json`, `4` for `shop.json`, `2` for `client.json`). It is not a setting: the mod writes it. A file written by an older version of the mod is converted on load, whatever its version, and every key it moves is named in the log: see [Older files](#older-files) at the end.
+- **`configVersion`** is the format version of the file (`15` for `server.json`, `4` for `shop.json`, `2` for `client.json`). It is not a setting: the mod writes it. A file written by an older version of the mod is converted on load, whatever its version, and every key it moves is named in the log: see [Older files](#older-files) at the end.
 
 Formats used below:
 
@@ -133,6 +133,7 @@ Every Pokémon caught in the Safari gets the Safari Mark ("the Safari Find"); on
 | `storm` | `true` | "of the Storm": a Pokémon a storm brought (see `events.storm`). |
 | `aurora` | `true` | "of the Aurora": a Pokémon an aurora brought (see `events.aurora`); not the natural ones caught during it. |
 | `angler` | `true` | "the Safari Catch": fished with a rod in the Safari, then caught. |
+| `nest` | `true` | "of the Nest": hatched from an egg found in a Safari nest (see `events.eggNests`). Given at the hatch, wherever it happens; such a Pokémon gets no Safari Mark, never having been caught. |
 
 #### `capture.flee`: Pokémon running away
 
@@ -270,7 +271,7 @@ After `/safari reload`, the specials are redrawn with the new rules right away.
 
 `/safari rotate` starts a new rotation now, which lasts a whole `rotationMinutes` from then (the following rotations keep that pace, no longer aligned on midnight UTC); `/safari today` lists the current specials.
 
-### `events`: swarms, full moon nights, downpours, storms, heatwaves and auroras
+### `events`: swarms, full moon nights, downpours, storms, heatwaves, auroras and egg nests
 
 Rare happenings that change Cobblemon's natural spawns in the Safari for a while, announced in the chat (with a chime) to the players in the Safari.
 
@@ -352,6 +353,27 @@ Rare happenings that change Cobblemon's natural spawns in the Safari for a while
 | `excludeList` | `[]` | Pokémon the aurora never brings, as Cobblemon properties: `"lapras"`, or one form, `"vulpix alolan"`. |
 | `frozenHabitats` | `["cobblemon_safari:glacier", "cobblemon_safari:snowfield", "cobblemon_safari:taiga"]` | Biomes counted as frozen lands, by biome id, on top of any spot where snow falls: only useful for biomes where it rains (the taiga). It does not limit where the aurora acts. |
 | `glowSeconds` | `20` | Seconds the Pokémon glows when it appears, so it can be found. 0 to 60. |
+
+**`events.eggNests`**: a permanent event, never announced. Every `checkEverySeconds`, each hunting player gets a draw (`spawnChance`); on a success a straw nest holding a Pokémon egg appears on open, dry ground `minDistance` to `maxDistance` blocks away, unless another nest is already within `exclusionRadius` (only nests in loaded chunks are seen). A right click on the nest takes the egg: with `firstComeFirstServed` the nest is then gone, otherwise each player may take one egg from it. A nest disappears after `lifetimeMinutes`, taken or not, even across a restart. With the defaults, a player alone finds about one nest every 10 minutes.
+
+The egg can be of any Pokémon of Cobblemon, from the Safari or not: every evolution line is as likely, and the egg hatches into the line's first stage (a Pikachu line egg hatches a Pichu), standard form, at level 1, with the Nest Mark. A line is drawn when one of its species has egg groups and none of them is in `excludedEggGroups`, when none of its species is of a legendary-class category left off in `rarities`, and when its first stage is neither in `excludeList` nor in `spawns.excludedSpecies`. The egg hatches after `hatchMinutes` in the inventory of a connected player, anywhere (Safari or not; not in a chest); its tooltip shows the time left, never the species. A party with one of `hatchSpeedAbilities` hatches it `hatchSpeedMultiplier` times faster. The Pokémon is rolled at the hatch, with the player's shiny boosts of the moment (an aurora in the Safari, a Shiny Charm); it goes to the party, or the PC when the party is full; with no room anywhere, the egg waits and tries again a minute later.
+
+| Key | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | `false`: no new nest. The nests already out stay until their time is up. |
+| `checkEverySeconds` | `30` | Seconds between two draws for each hunting player. 5 to 3600. |
+| `spawnChance` | `0.05` | Chance (0 to 1) that a draw puts a nest near the player. |
+| `minDistance` | `24` | Closest a new nest is to the player, in blocks. 8 to 96. |
+| `maxDistance` | `48` | Farthest a new nest is from the player, in blocks, at least `minDistance`. 8 to 96. |
+| `exclusionRadius` | `128` | No new nest within this many blocks of a nest already out. 16 to 512. |
+| `lifetimeMinutes` | `20` | Minutes a nest stays out. 1 to 1440. |
+| `firstComeFirstServed` | `true` | `true`: the first player to take the egg empties the nest. `false`: each player may take one egg per nest. |
+| `excludedEggGroups` | `["undiscovered"]` | Egg groups never drawn: `monster`, `water_1`, `bug`, `flying`, `field`, `fairy`, `grass`, `human_like`, `water_3`, `mineral`, `amorphous`, `water_2`, `ditto`, `dragon`, `undiscovered`. |
+| `rarities` | all `false` | `legendary`, `mythical`, `ultraBeast`, `paradox`: whether lines of that category may be drawn. Most are also Undiscovered, so they only come once `undiscovered` is out of `excludedEggGroups` too. |
+| `excludeList` | `[]` | Species never drawn, by the species that hatches (the first stage): `"pichu"`. |
+| `hatchMinutes` | `10` | Minutes an egg takes to hatch. Written on the egg when it is found: a change only affects eggs found afterwards. 1 to 1440. |
+| `hatchSpeedAbilities` | `["flamebody"]` | Abilities, as Cobblemon names them, that warm the eggs carried by a player whose party has one (`"magmaarmor"`, `"steamengine"`...). |
+| `hatchSpeedMultiplier` | `2` | How many times faster such a party hatches the eggs. 1 to 10. |
 
 ### `points`: Safari points
 

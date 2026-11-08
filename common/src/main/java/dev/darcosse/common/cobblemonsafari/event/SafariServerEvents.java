@@ -19,6 +19,7 @@ import dev.darcosse.common.cobblemonsafari.protection.SafariProtection;
 import dev.darcosse.common.cobblemonsafari.reset.SafariMapReset;
 import dev.darcosse.common.cobblemonsafari.world.SafariWorldState;
 import dev.darcosse.common.cobblemonsafari.session.SafariSessionManager;
+import dev.darcosse.common.cobblemonsafari.spawn.EggSpecies;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedRotation;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedSpawner;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedSync;
@@ -110,6 +111,8 @@ public final class SafariServerEvents {
         SafariHappeningsInfluence.clear();
         // Which details a swarm can use comes from the same spawn files and tags.
         Swarm.invalidateSpawnData();
+        // The eggs' evolution lines come from the species data.
+        EggSpecies.invalidate();
     }
 
     /** End of every server tick. */

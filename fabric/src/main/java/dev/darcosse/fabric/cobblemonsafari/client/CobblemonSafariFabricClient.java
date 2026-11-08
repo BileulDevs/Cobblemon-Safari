@@ -36,6 +36,9 @@ import net.fabricmc.fabric.api.client.rendering.v1.DimensionRenderingRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
+import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
+import dev.darcosse.common.cobblemonsafari.client.egg.SafariNestRenderer;
+import dev.darcosse.common.cobblemonsafari.entity.SafariEntities;
 
 /**
  * Fabric client entry point: payload receivers, HUD, wall screens, banners, sky
@@ -78,6 +81,7 @@ public class CobblemonSafariFabricClient implements ClientModInitializer {
         // Vanilla registry, made public by Fabric's transitive access widener.
         BlockEntityRenderers.register(SafariBlockEntities.safariWallScreen(), SafariWallScreenRenderer::new);
         BlockEntityRenderers.register(SafariBlockEntities.safariBanner(), SafariBannerRenderer::new);
+        EntityRendererRegistry.register(SafariEntities.safariNest(), SafariNestRenderer::new);
 
         DimensionRenderingRegistry.registerDimensionEffects(SafariDimensions.EFFECTS_ID, new SafariSkyEffects());
 

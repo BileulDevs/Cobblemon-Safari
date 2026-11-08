@@ -164,6 +164,8 @@ public class SafariConfig {
         public Heatwave heatwave = new Heatwave();
         /** Some clear nights bringing each player one rare Pokémon of some types on the frozen lands. */
         public Aurora aurora = new Aurora();
+        /** Straw nests holding a Pokémon egg, found here and there around the hunting players. */
+        public EggNests eggNests = new EggNests();
     }
 
     /**
@@ -395,6 +397,97 @@ public class SafariConfig {
          * found 16 to 32 blocks away, in the snow, at night. 0 for none, up to 60.
          */
         public int glowSeconds = 20;
+    }
+
+    /**
+     * Egg nests: a permanent event, never announced. Now and then a straw nest
+     * holding a Pokémon egg appears near a hunting player, anywhere in the
+     * Safari, never closer than {@code exclusionRadius} to another nest. The
+     * egg can be of any Pokémon of Cobblemon, the Safari's or not, every line
+     * as likely; it hatches into the first stage of the line, after a while
+     * in the inventory of a connected player, anywhere, Safari or not.
+     */
+    public static class EggNests {
+        /** Master switch. False: no new nest; the nests already out stay until their time is up. */
+        public boolean enabled = true;
+
+        /** Seconds between two draws for each hunting player. 5 to 3600. */
+        public int checkEverySeconds = 30;
+
+        /**
+         * Chance, from 0 to 1, that a draw puts a nest near the player. With
+         * 30 s and 0.05, a player alone sees about one nest every 10 minutes.
+         */
+        public double spawnChance = 0.05;
+
+        /** Distance, in blocks, between the player and a new nest. 8 to 96, max at least min. */
+        public int minDistance = 24;
+        public int maxDistance = 48;
+
+        /**
+         * No new nest within this many blocks of a nest already out (loaded
+         * ones: a nest in a chunk nobody is near is not seen). Large on
+         * purpose, so the eggs stay a find. 16 to 512.
+         */
+        public int exclusionRadius = 128;
+
+        /** Minutes a nest stays out before it is gone, taken or not. 1 to 1440. */
+        public int lifetimeMinutes = 20;
+
+        /**
+         * True: the first player to take the egg empties the nest. False: each
+         * player may take one egg from each nest, which stays until its time is up.
+         */
+        public boolean firstComeFirstServed = true;
+
+        /**
+         * Egg groups never drawn, by name ("undiscovered", "ditto", "water_1",
+         * "human_like"...). A line is drawn when one of its species has egg
+         * groups and none of them is listed: Pichu (Undiscovered) still comes
+         * from Pikachu's line, a legendary never.
+         */
+        public List<String> excludedEggGroups = new ArrayList<>(List.of("undiscovered"));
+
+        /**
+         * Legendary-class lines in the eggs: true lets them be drawn. Most of
+         * them are also in the Undiscovered egg group, so they only come once
+         * it is out of {@link #excludedEggGroups} too.
+         */
+        public EggCategories rarities = new EggCategories();
+
+        /**
+         * Species never drawn, by the species that hatches (the first stage):
+         * "pichu" or "cobblemon:pichu". spawns.excludedSpecies applies too.
+         */
+        public List<String> excludeList = new ArrayList<>();
+
+        /** Minutes an egg takes to hatch in a connected player's inventory. 1 to 1440. */
+        public int hatchMinutes = 10;
+
+        /**
+         * Abilities that warm the eggs, as Cobblemon names them ("flamebody",
+         * "magmaarmor"): with one of them in the player's party, the eggs they
+         * carry hatch {@link #hatchSpeedMultiplier} times faster.
+         */
+        public List<String> hatchSpeedAbilities = new ArrayList<>(List.of("flamebody"));
+
+        /** How many times faster such a party hatches the eggs. 1 for no effect, up to 10. */
+        public double hatchSpeedMultiplier = 2.0;
+    }
+
+    /**
+     * The legendary-class categories an egg may be of. Plain switches: an egg
+     * is never a spawn, so no per-rotation cap applies.
+     */
+    public static class EggCategories {
+        /** Lines with a Pokémon labelled {@code legendary}. */
+        public boolean legendary = false;
+        /** Lines with a Pokémon labelled {@code mythical}. */
+        public boolean mythical = false;
+        /** Lines with a Pokémon labelled {@code ultra_beast}. */
+        public boolean ultraBeast = false;
+        /** Lines with a Pokémon labelled {@code paradox}. */
+        public boolean paradox = false;
     }
 
     /**
@@ -882,6 +975,8 @@ public class SafariConfig {
         public boolean aurora = true;
         /** "the Safari Catch": fished with a rod in the Safari, then caught. */
         public boolean angler = true;
+        /** "of the Nest": hatched from an egg found in a Safari nest. */
+        public boolean nest = true;
     }
 
     /**

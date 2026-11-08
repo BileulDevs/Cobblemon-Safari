@@ -28,6 +28,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.level.block.entity.BlockEntityType;
+import dev.darcosse.common.cobblemonsafari.entity.SafariEntities;
 import net.minecraft.world.item.ItemStack;
 
 /**
@@ -57,6 +58,7 @@ public class CobblemonSafariFabric implements ModInitializer {
                 (constructor, block) -> BlockEntityType.Builder.of(constructor::apply, block).build(null),
                 (id, type) -> Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id, type));
         SafariItems.register((id, item) -> Registry.register(BuiltInRegistries.ITEM, id, item));
+        SafariEntities.register((id, type) -> Registry.register(BuiltInRegistries.ENTITY_TYPE, id, type));
         // The mod's own tab, after the items it lists.
         Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, SafariCreativeTab.ID,
                 SafariCreativeTab.build(FabricItemGroup.builder()));

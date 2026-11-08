@@ -38,7 +38,9 @@ import java.util.Set;
  *       Pokémon an aurora brought (the aurora), a catch
  *       where a downpour falls (the downpour),
  *       a catch on a full moon night (the moon), and a Pokémon fished in the
- *       Safari (the angler).</li>
+ *       Safari (the angler);</li>
+ *   <li>the Nest Mark, to a Pokémon hatched from an egg of a Safari nest,
+ *       given at the hatch rather than on capture ({@link #markHatched}).</li>
  * </ul>
  *
  * <p>The marks themselves are data, like Cobblemon's own
@@ -70,6 +72,8 @@ public final class SafariMark {
     public static final ResourceLocation MOON = CobblemonSafari.id("mark_safari_moon");
     /** Fished, then caught, in the Safari. */
     public static final ResourceLocation ANGLER = CobblemonSafari.id("mark_safari_angler");
+    /** Hatched from an egg found in a Safari nest. */
+    public static final ResourceLocation NEST = CobblemonSafari.id("mark_safari_nest");
 
     /** Marks found missing, each warned about once rather than on every catch. */
     private static final Set<ResourceLocation> WARNED = new HashSet<>();
@@ -128,6 +132,21 @@ public final class SafariMark {
             pokemon.setActiveMark(events.get(0));
         } else if (active == null && safari != null) {
             pokemon.setActiveMark(safari);
+        }
+    }
+
+    /**
+     * Gives the Nest Mark to a Pokémon just hatched from a Safari egg, and
+     * makes it its title when it has none. Never caught, such a Pokémon gets
+     * no Safari Mark. Call once it is stored, so the mark reaches its owner.
+     */
+    public static void markHatched(Pokemon pokemon) {
+        if (!SafariConfigManager.get().capture.marks.nest) {
+            return;
+        }
+        Mark nest = give(pokemon, NEST);
+        if (nest != null && pokemon.getActiveMark() == null) {
+            pokemon.setActiveMark(nest);
         }
     }
 

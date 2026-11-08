@@ -77,6 +77,7 @@ public final class SafariHappenings {
         Storm.reset();
         Heatwave.reset();
         Aurora.reset();
+        EggNests.reset();
     }
 
     /** Whether a full moon night is on, for the spawn threads. */
@@ -117,6 +118,7 @@ public final class SafariHappenings {
         Storm.tick(server, safari);
         Heatwave.tick(safari);
         Aurora.tick(server, safari);
+        EggNests.tick(safari);
         Swarm.Active swarm = Swarm.current(server);
         if (safari == null) {
             return;

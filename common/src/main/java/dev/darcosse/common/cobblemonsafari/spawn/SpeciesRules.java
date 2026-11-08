@@ -76,7 +76,7 @@ public final class SpeciesRules {
     }
 
     /** First stage of the species' evolution line, following pre-evolutions. */
-    private static Species lineRoot(Species species) {
+    public static Species lineRoot(Species species) {
         Species root = species;
         for (int i = 0; i < MAX_EVOLUTION_DEPTH; i++) {
             PreEvolution pre = root.getPreEvolution();
