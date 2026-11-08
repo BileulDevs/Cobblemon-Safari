@@ -159,12 +159,13 @@ public class SafariConfig {
     }
 
     /**
-     * A swarm: with each rotation of the specials, maybe, one uncommon or
-     * rare species of the Safari comes out in numbers in one of its
-     * habitats. It is announced to the players in the Safari and on the
-     * specials board. Only Cobblemon's natural spawns change: in that
-     * habitat, the species is offered with the common Pokémon and its weight
-     * is multiplied.
+     * A swarm: with each rotation of the specials, maybe, one species of the
+     * Safari comes out in numbers in one of its habitats. It is announced to
+     * the players in the Safari and on the specials board. Only species a
+     * player's spawner can really bring there are drawn (no Poké Snack-only
+     * or fishing-only spawns). In that habitat, the species is offered with
+     * the common Pokémon in Cobblemon's natural spawns, with its weight
+     * multiplied, and the swarm's own spawner keeps a few around each player.
      */
     public static class Swarm {
         /** Master switch. */
@@ -174,9 +175,48 @@ public class SafariConfig {
         public double chance = 0.5;
 
         /**
-         * How much more often the swarming species is picked in its habitat,
-         * among the common Pokémon. 10 makes it most of what spawns there;
-         * 1 leaves only the move into the common pick. 1 to 100.
+         * Spawn buckets a swarm may be drawn from: "common", "uncommon",
+         * "rare", "ultra-rare". A species' bucket is its most common one in the
+         * habitat considered. Legendary-class species are always "ultra-rare"
+         * and also need their category on in {@link #rarities}. Empty: no swarm.
+         */
+        public List<String> buckets = new ArrayList<>(List.of("uncommon", "rare", "ultra-rare"));
+
+        /**
+         * Legendary-class categories in swarms (named "rarities" in the file:
+         * they are rarities above ultra-rare), each with allowSpawn and
+         * maxSpawnPerPokemon. These replace the categories of spawns for the
+         * swarming species in its habitat: a legendary swarm is neither
+         * stopped by spawns.legendary nor uses up its slots. allowSpawn off,
+         * no species of that category swarms; on, it may, as an "ultra-rare"
+         * swarm. maxSpawnPerPokemon: most Pokémon of the swarming species a
+         * swarm brings in a rotation, counting those caught plus those still
+         * roaming (one that leaves uncaught gives its place back); 0, no cap
+         * other than maxNearby.
+         */
+        public SwarmCategories rarities = new SwarmCategories();
+
+        /**
+         * Chance of each bucket being the swarm's, relative to the others:
+         * with 10, 4 and 1 for uncommon, rare and ultra-rare, two swarms in
+         * three are uncommon. Per bucket, not per species, so a bucket's share
+         * does not grow with the number of species in it. A bucket at 0, or
+         * missing from {@link #buckets}, is never drawn; a bucket with no
+         * candidate passes its turn to the others.
+         */
+        public SpawnWeights weights = new SpawnWeights();
+
+        /**
+         * Pokémon that never swarm, written as Cobblemon properties:
+         * "arceus" leaves out every form of the species, "vulpix alolan"
+         * only Alolan Vulpix. Unknown species or forms are logged and ignored.
+         */
+        public List<String> excludeList = new ArrayList<>();
+
+        /**
+         * How much more often the swarm is picked in its habitat, among the
+         * common Pokémon of Cobblemon's natural spawns. 1 leaves only the move
+         * into the common pick. 1 to 100.
          */
         public double weightMultiplier = 10.0;
 
@@ -186,6 +226,45 @@ public class SafariConfig {
          * less keeps the usual cap.
          */
         public int maxNearby = 10;
+
+        /**
+         * Swarm Pokémon the swarm's own spawner keeps within 48 blocks of a
+         * player standing in its habitat, whatever else lives there. Capped by
+         * maxNearby. 0 turns that spawner off, leaving only Cobblemon's
+         * natural spawns (the 1.4.0 behaviour).
+         */
+        public int minNearby = 4;
+
+        /**
+         * Seconds between two top-ups of the swarm's own spawner, at most one
+         * Pokémon per player each time. Lower fills the habitat faster after
+         * catches. 1 to 300.
+         */
+        public int checkEverySeconds = 5;
+    }
+
+    /**
+     * The legendary-class categories in swarms ({@code events.swarm.rarities}):
+     * the same switch and cap as in {@code spawns}, for the swarm alone.
+     */
+    public static class SwarmCategories {
+        /**
+         * Default cap of a swarm category: none but {@code maxNearby}. A swarm
+         * is meant to bring many; 1, the natural default, would end it at once.
+         */
+        public static final int DEFAULT_CAP = 0;
+
+        /** Pokémon labelled {@code legendary} (Rayquaza, Mewtwo...). */
+        public SpecialCategory legendary = SpecialCategory.of(false, DEFAULT_CAP);
+        /** Pokémon labelled {@code mythical} (Mew, Celebi...). */
+        public SpecialCategory mythical = SpecialCategory.of(false, DEFAULT_CAP);
+        /** Pokémon labelled {@code ultra_beast} (Nihilego, Buzzwole...). */
+        public SpecialCategory ultraBeast = SpecialCategory.of(false, DEFAULT_CAP);
+        /**
+         * Pokémon labelled {@code paradox} (Great Tusk, Iron Treads...). On by
+         * default, as in spawns: paradox Pokémon are regular finds, not legends.
+         */
+        public SpecialCategory paradox = SpecialCategory.of(true, DEFAULT_CAP);
     }
 
     /**
@@ -741,9 +820,16 @@ public class SafariConfig {
         public SpawnWeights weights = new SpawnWeights();
     }
 
-    /** Relative weights of the specials' rarities in their spawner ({@code specials.spawn.weights}). */
+    /**
+     * Relative weights of the four rarities: of the specials in their spawner
+     * ({@code specials.spawn.weights}), and of the buckets in the swarm's draw
+     * ({@code events.swarm.weights}). Same defaults for both.
+     */
     public static class SpawnWeights {
-        /** Weight of a common special; only matters when {@code specials.slots.common} draws some. */
+        /**
+         * Weight of common: of a common special, which only matters when
+         * {@code specials.slots.common} draws some; of a common swarm.
+         */
         public int common = 0;
         public int uncommon = 10;
         public int rare = 4;
@@ -892,6 +978,14 @@ public class SafariConfig {
          * in the void would fall forever.
          */
         public boolean invulnerablePlayers = true;
+
+        /**
+         * Pokémon inside take no damage: wild ones cannot be killed with a
+         * sword or a bow, and sent-out ones are spared falls, lava and mobs.
+         * Battles are not affected (their damage is not the entity's). Damage
+         * that bypasses invulnerability (/kill, the void) still applies.
+         */
+        public boolean invulnerablePokemon = true;
 
         /**
          * Whether hunger is frozen for players inside. On, the food bar and

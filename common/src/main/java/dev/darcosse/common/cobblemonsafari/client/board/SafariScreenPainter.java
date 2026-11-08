@@ -844,7 +844,7 @@ public class SafariScreenPainter {
         String rarity = swarm ? tr("screen.swarm") : entry.rarity().displayName().getString();
         drawMarquee(p, rarity, lineLeft, lineRight, textTop + line, subScale, rarityColor, now);
         if (showHabitat) {
-            drawMarquee(p, habitatName(entry.habitat()), lineLeft, lineRight, textTop + line + subLine, subScale,
+            drawMarquee(p, habitatNames(entry.habitats()), lineLeft, lineRight, textTop + line + subLine, subScale,
                     pal.muted(), now);
         }
     }
@@ -1097,6 +1097,25 @@ public class SafariScreenPainter {
             return tr("board.habitat_unknown");
         }
         return Component.translatable("biome." + habitat.getNamespace() + "." + habitat.getPath()).getString();
+    }
+
+    /**
+     * Every habitat of an entry on one line, the main one first; the
+     * marquee scrolls it when it is longer than the cell.
+     */
+    private static String habitatNames(List<ResourceLocation> habitats) {
+        if (habitats.isEmpty()) {
+            return tr("board.habitat_unknown");
+        }
+        String separator = tr("board.habitat_separator");
+        StringBuilder names = new StringBuilder();
+        for (ResourceLocation habitat : habitats) {
+            if (!names.isEmpty()) {
+                names.append(separator);
+            }
+            names.append(habitatName(habitat));
+        }
+        return names.toString();
     }
 
     /** Resolves a translation key of the mod in the player's language. */

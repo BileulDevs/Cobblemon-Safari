@@ -90,7 +90,7 @@ public final class SafariMark {
         // Where the Pokémon was: the ball lies on it. The player when there is no ball.
         EmptyPokeBallEntity ball = event.getPokeBallEntity();
         Entity where = ball != null ? ball : player;
-        if (marks.swarm && Swarm.isSwarming(pokemon.getSpecies(), where.level().getBiome(where.blockPosition()))) {
+        if (marks.swarm && Swarm.isSwarming(pokemon, where.level().getBiome(where.blockPosition()))) {
             addIfLoaded(events, give(pokemon, SWARM));
         }
         if (marks.fullMoon && SafariHappenings.isFullMoon()) {

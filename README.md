@@ -19,7 +19,7 @@ The Safari is its own dimension: a single island in a turquoise sea, with its ow
 - **Caves everywhere**, a giant pillared cavern under the summit and a lush cavern in the south, each reached by its own winding passage.
 - **A new map every day.** At the first server start of a new day, the island is regenerated with a new layout, flat, gentle (the default), rolling or mountainous as you choose. Sessions, stats, banked time and points are kept.
 - **Its own soundtrack**: six original tracks, one per zone, and the cries of the Pokémon that actually live in each biome.
-- **Nothing to break.** Inside, players take no damage and cannot change the terrain. Poké Cakes and Poké Snacks can still be placed as bait, and berries, apricorns and Galarica nuts picked; each Cobblemon plant has its own switch. Hunger can be frozen too, so a timed hunt is not spent eating.
+- **Nothing to break.** Inside, players and Pokémon take no damage and players cannot change the terrain. Poké Cakes and Poké Snacks can still be placed as bait, and berries, apricorns and Galarica nuts picked; each Cobblemon plant has its own switch. Hunger can be frozen too, so a timed hunt is not spent eating.
 
 ### Safari Gates
 

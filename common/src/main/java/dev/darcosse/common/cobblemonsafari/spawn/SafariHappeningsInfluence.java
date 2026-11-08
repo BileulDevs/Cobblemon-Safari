@@ -24,10 +24,13 @@ import java.util.concurrent.ConcurrentHashMap;
  * Applies the Safari's rare happenings to Cobblemon's natural spawns around
  * players in the Safari:
  * <ul>
- *   <li>the swarm ({@link Swarm}): in its habitat, the swarming species is
- *       also offered among the common Pokémon (its own spawn details, which
- *       still check the spot), and its weight is multiplied there, so it
- *       makes up much of what spawns;</li>
+ *   <li>the swarm ({@link Swarm}): in its habitat, the swarm's spawn details
+ *       are also offered among the common Pokémon (each still checks the
+ *       spot), and their weight is multiplied there. Only the swarm's own
+ *       details: a form left out by {@code events.swarm.excludeList} keeps
+ *       its usual weight. How much of the habitat's spawns this makes depends
+ *       on what else lives there, so {@link SwarmSpawner} keeps a floor of
+ *       swarm Pokémon around players on top of it;</li>
  *   <li>the full moon ({@link SafariHappenings}): at night under a full
  *       moon, Pokémon of the configured types weigh more, within their
  *       rarity.</li>
@@ -65,12 +68,12 @@ public final class SafariHappeningsInfluence implements SpawningInfluence {
     @Override
     public List<SpawnDetail> injectSpawns(String bucket, SpawnablePosition position) {
         Swarm.Active swarm = Swarm.active();
-        if (swarm == null || swarm.details().isEmpty() || !Swarm.COMMON_BUCKET.equals(bucket)
+        if (swarm == null || swarm.offered().isEmpty() || !Swarm.COMMON_BUCKET.equals(bucket)
                 || !applies(position) || !position.getBiomeHolder().is(swarm.biome())) {
             return null;
         }
-        List<SpawnDetail> offered = new ArrayList<>(swarm.details().size());
-        for (SpawnDetail detail : swarm.details()) {
+        List<SpawnDetail> offered = new ArrayList<>(swarm.offered().size());
+        for (SpawnDetail detail : swarm.offered()) {
             // Cobblemon does not check injected details itself: the detail's own
             // conditions (kind of spot, light, time) must accept the spot.
             if (detail.isSatisfiedBy(position)) {
@@ -81,9 +84,10 @@ public final class SafariHappeningsInfluence implements SpawningInfluence {
     }
 
     /**
-     * Multiplies the weight of the swarming species in its habitat, and of
+     * Multiplies the weight of the swarm's details in its habitat, and of
      * the full moon's types on a full moon night. Called for every candidate
-     * of every spawn attempt: a few field reads and set lookups.
+     * of every spawn attempt: a few field reads, set lookups and an identity
+     * scan of the swarm's details (a handful).
      */
     @Override
     public float affectWeight(SpawnDetail detail, SpawnablePosition position, float weight) {
@@ -97,7 +101,10 @@ public final class SafariHappeningsInfluence implements SpawningInfluence {
         String speciesId = SpeciesRules.normalizeId(raw);
         float result = weight;
         Swarm.Active swarm = Swarm.active();
-        if (swarm != null && swarm.speciesId().equals(speciesId) && position.getBiomeHolder().is(swarm.biome())) {
+        // By detail, not by species: the swarm is made of chosen details, and an
+        // excluded form of the same species must not ride on its boost.
+        if (swarm != null && swarm.speciesId().equals(speciesId) && swarm.details().contains(detail)
+                && position.getBiomeHolder().is(swarm.biome())) {
             result *= (float) SafariConfigManager.get().events.swarm.weightMultiplier;
         }
         if (SafariHappenings.fullMoon() && favouredByMoon(speciesId)) {

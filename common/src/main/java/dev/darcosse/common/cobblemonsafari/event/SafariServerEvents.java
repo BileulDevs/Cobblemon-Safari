@@ -27,6 +27,8 @@ import dev.darcosse.common.cobblemonsafari.spawn.SafariHappenings;
 import dev.darcosse.common.cobblemonsafari.spawn.SafariHappeningsInfluence;
 import dev.darcosse.common.cobblemonsafari.spawn.SafariSpawnFilter;
 import dev.darcosse.common.cobblemonsafari.spawn.SpecialSpawnCounter;
+import dev.darcosse.common.cobblemonsafari.spawn.Swarm;
+import dev.darcosse.common.cobblemonsafari.spawn.SwarmSpawner;
 import dev.darcosse.common.cobblemonsafari.structure.RestHousePrebuilder;
 import dev.darcosse.common.cobblemonsafari.structure.RestHouses;
 import dev.darcosse.common.cobblemonsafari.teleport.RestHouseTravel;
@@ -84,6 +86,7 @@ public final class SafariServerEvents {
         SafariFlee.reset();
         SafariHappenings.reset();
         SafariHappeningsInfluence.clear();
+        SwarmSpawner.reset();
         SafariSpawnBoost.reset();
         SpecialSpawnCounter.reset();
         RestHouseTravel.reset();
@@ -105,6 +108,8 @@ public final class SafariServerEvents {
         SafariSpawnFilter.invalidate();
         // Types may have changed with the species data.
         SafariHappeningsInfluence.clear();
+        // Which details a swarm can use comes from the same spawn files and tags.
+        Swarm.invalidateSpawnData();
     }
 
     /** End of every server tick. */
@@ -117,6 +122,7 @@ public final class SafariServerEvents {
         SafariDex.tick(server);
         SafariFlee.tick(server);
         SafariHappenings.tick(server);
+        SwarmSpawner.tick(server);
         SafariBounties.tick(server);
         SafariSpawnBoost.tick(server);
         RestHouses.tick(server);

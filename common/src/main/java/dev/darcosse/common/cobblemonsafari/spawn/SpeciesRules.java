@@ -117,7 +117,7 @@ public final class SpeciesRules {
         if (config.excludedSpecies.contains(species.getResourceIdentifier().toString())) {
             return false;
         }
-        for (SafariConfig.SpecialCategory category : categoriesOf(species, config)) {
+        for (SafariConfig.SpecialCategory category : categoriesOf(species, source)) {
             if (!category.allowSpawn) {
                 return false;
             }
@@ -132,7 +132,7 @@ public final class SpeciesRules {
      */
     public static int spawnCap(Species species, SpawnSource source) {
         int cap = 0;
-        for (SafariConfig.SpecialCategory category : categoriesOf(species, source.rules(SafariConfigManager.get()))) {
+        for (SafariConfig.SpecialCategory category : categoriesOf(species, source)) {
             if (category.maxSpawnPerPokemon > 0) {
                 cap = cap == 0 ? category.maxSpawnPerPokemon : Math.min(cap, category.maxSpawnPerPokemon);
             }
@@ -140,22 +140,39 @@ public final class SpeciesRules {
         return cap;
     }
 
-    /** The config sections of the special categories the species belongs to; empty for an ordinary species. */
+    /**
+     * The config sections of the special categories the species belongs to,
+     * for this way; empty for an ordinary species.
+     */
+    private static List<SafariConfig.SpecialCategory> categoriesOf(Species species, SpawnSource source) {
+        SafariConfig config = SafariConfigManager.get();
+        if (source == SpawnSource.SWARM) {
+            SafariConfig.SwarmCategories swarm = config.events.swarm.rarities;
+            return categoriesOf(species, swarm.legendary, swarm.mythical, swarm.ultraBeast, swarm.paradox);
+        }
+        SafariConfig.SpeciesRulesSection section = source.rules(config);
+        return categoriesOf(species, section.legendary, section.mythical, section.ultraBeast, section.paradox);
+    }
+
+    /** Those of the four categories whose label the species carries. */
     private static List<SafariConfig.SpecialCategory> categoriesOf(Species species,
-                                                                  SafariConfig.SpeciesRulesSection config) {
+                                                                  SafariConfig.SpecialCategory legendary,
+                                                                  SafariConfig.SpecialCategory mythical,
+                                                                  SafariConfig.SpecialCategory ultraBeast,
+                                                                  SafariConfig.SpecialCategory paradox) {
         Set<String> labels = species.getLabels();
         List<SafariConfig.SpecialCategory> categories = new ArrayList<>(SPECIAL_LABELS.size());
         if (labels.contains(CobblemonPokemonLabels.LEGENDARY)) {
-            categories.add(config.legendary);
+            categories.add(legendary);
         }
         if (labels.contains(CobblemonPokemonLabels.MYTHICAL)) {
-            categories.add(config.mythical);
+            categories.add(mythical);
         }
         if (labels.contains(CobblemonPokemonLabels.ULTRA_BEAST)) {
-            categories.add(config.ultraBeast);
+            categories.add(ultraBeast);
         }
         if (labels.contains(CobblemonPokemonLabels.PARADOX)) {
-            categories.add(config.paradox);
+            categories.add(paradox);
         }
         return categories;
     }

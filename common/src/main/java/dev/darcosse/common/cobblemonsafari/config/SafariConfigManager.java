@@ -1,5 +1,6 @@
 package dev.darcosse.common.cobblemonsafari.config;
 
+import dev.darcosse.common.cobblemonsafari.spawn.SwarmRules;
 import dev.darcosse.common.cobblemonsafari.worldgen.IslandRelief;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.bounty.BountyKind;
@@ -84,8 +85,12 @@ public final class SafariConfigManager {
      * {@code bounties.allowedKinds}, once, in files written before they existed.
      * 7 grouped the settings by subject and renamed several (see
      * {@link #migrateToSections}); older files are converted on load.
+     * 8 added events.swarm.buckets, rarities, weights, excludeList,
+     * minNearby and checkEverySeconds, and protection.invulnerablePokemon:
+     * nothing to convert, raised only so that existing files are rewritten
+     * once and show the new keys.
      */
-    public static final int CURRENT_CONFIG_VERSION = 7;
+    public static final int CURRENT_CONFIG_VERSION = 8;
 
     /** First version that knows the fishing missions. */
     private static final int FISHING_MISSION_VERSION = 6;
@@ -238,6 +243,23 @@ public final class SafariConfigManager {
         int version = tree.version(CURRENT_CONFIG_VERSION);
         migrateLegacyKeys(tree, version);
         migrateToSections(tree);
+        // The 1.4.1 development builds wrote the swarm's bucket list under
+        // "rarities", which now holds the legendary-class switches: an array
+        // there would fail to bind and the whole file would be refused.
+        if (tree.get("events.swarm.rarities") instanceof JsonArray) {
+            tree.move("events.swarm.rarities", "events.swarm.buckets");
+        }
+        // Later ones wrote each category as a bare switch; it is now an object
+        // with a cap, and a boolean there would fail to bind just the same.
+        for (String category : List.of("legendary", "mythical", "ultraBeast", "paradox")) {
+            String path = "events.swarm.rarities." + category;
+            if (tree.get(path) instanceof JsonPrimitive flag && flag.isBoolean()) {
+                JsonObject converted = new JsonObject();
+                converted.addProperty("allowSpawn", flag.getAsBoolean());
+                converted.addProperty("maxSpawnPerPokemon", SafariConfig.SwarmCategories.DEFAULT_CAP);
+                tree.set(path, converted, "a swarm category now has a cap");
+            }
+        }
     }
 
     /**
@@ -1232,6 +1254,13 @@ public final class SafariConfigManager {
 
     /** Bounds of events.swarm.weightMultiplier: 1 is no boost; beyond 100 the swarm is all that spawns. */
     private static final double MAX_SWARM_MULTIPLIER = 100.0D;
+    /**
+     * Bounds of events.swarm.checkEverySeconds. Below 1 s the swarm spawner
+     * would scan a zone per player every tick; beyond 5 minutes a caught swarm
+     * Pokémon would take that long to be replaced, and the swarm looks empty.
+     */
+    private static final int MIN_SWARM_CHECK_SECONDS = 1;
+    private static final int MAX_SWARM_CHECK_SECONDS = 300;
     /** Upper bound of events.fullMoon.weightMultiplier. */
     private static final double MAX_FULL_MOON_MULTIPLIER = 20.0D;
 
@@ -1264,6 +1293,46 @@ public final class SafariConfigManager {
             swarm.weightMultiplier = fixed;
             corrected = true;
         }
+        corrected |= validateSwarmBuckets(swarm);
+        if (swarm.rarities == null) {
+            swarm.rarities = new SafariConfig.SwarmCategories();
+            corrected = true;
+        }
+        corrected |= ensureSwarmCategories(swarm.rarities);
+        corrected |= validateCategory("events.swarm.rarities.legendary", swarm.rarities.legendary);
+        corrected |= validateCategory("events.swarm.rarities.mythical", swarm.rarities.mythical);
+        corrected |= validateCategory("events.swarm.rarities.ultraBeast", swarm.rarities.ultraBeast);
+        corrected |= validateCategory("events.swarm.rarities.paradox", swarm.rarities.paradox);
+        if (swarm.weights == null) {
+            swarm.weights = new SafariConfig.SpawnWeights();
+            corrected = true;
+        }
+        SafariConfig.SpawnWeights swarmWeights = swarm.weights;
+        if (swarmWeights.common < 0 || swarmWeights.uncommon < 0 || swarmWeights.rare < 0 || swarmWeights.ultraRare < 0) {
+            CobblemonSafari.LOGGER.warn("Negative events.swarm.weights in {}, using 0 for those", FILE_NAME);
+            swarmWeights.common = Math.max(0, swarmWeights.common);
+            swarmWeights.uncommon = Math.max(0, swarmWeights.uncommon);
+            swarmWeights.rare = Math.max(0, swarmWeights.rare);
+            swarmWeights.ultraRare = Math.max(0, swarmWeights.ultraRare);
+            corrected = true;
+        }
+        if (swarm.excludeList == null) {
+            swarm.excludeList = new ArrayList<>();
+            corrected = true;
+        }
+        // The entries themselves are checked at the draw: reading them needs
+        // Cobblemon's species, which are not loaded yet when the config is.
+        if (swarm.minNearby < 0) {
+            warn("events.swarm.minNearby", swarm.minNearby, 0);
+            swarm.minNearby = 0;
+            corrected = true;
+        }
+        if (swarm.checkEverySeconds < MIN_SWARM_CHECK_SECONDS || swarm.checkEverySeconds > MAX_SWARM_CHECK_SECONDS) {
+            int fixed = Math.max(MIN_SWARM_CHECK_SECONDS, Math.min(MAX_SWARM_CHECK_SECONDS, swarm.checkEverySeconds));
+            warn("events.swarm.checkEverySeconds", swarm.checkEverySeconds, fixed);
+            swarm.checkEverySeconds = fixed;
+            corrected = true;
+        }
         SafariConfig.FullMoon moon = c.events.fullMoon;
         if (moon.types == null) {
             moon.types = new ArrayList<>();
@@ -1277,6 +1346,60 @@ public final class SafariConfigManager {
             corrected = true;
         }
         return corrected;
+    }
+
+    /** Gives back a missing swarm category its default; returns true if any was missing. */
+    private static boolean ensureSwarmCategories(SafariConfig.SwarmCategories categories) {
+        SafariConfig.SwarmCategories defaults = new SafariConfig.SwarmCategories();
+        boolean corrected = false;
+        if (categories.legendary == null) {
+            categories.legendary = defaults.legendary;
+            corrected = true;
+        }
+        if (categories.mythical == null) {
+            categories.mythical = defaults.mythical;
+            corrected = true;
+        }
+        if (categories.ultraBeast == null) {
+            categories.ultraBeast = defaults.ultraBeast;
+            corrected = true;
+        }
+        if (categories.paradox == null) {
+            categories.paradox = defaults.paradox;
+            corrected = true;
+        }
+        return corrected;
+    }
+
+    /**
+     * Fixes events.swarm.buckets: a missing list gets the default back,
+     * values are written in their config spelling ("ultra-rare"), unknown ones
+     * and repeats are dropped. Returns true if anything changed.
+     */
+    private static boolean validateSwarmBuckets(SafariConfig.Swarm swarm) {
+        if (swarm.buckets == null) {
+            swarm.buckets = new SafariConfig.Swarm().buckets;
+            return true;
+        }
+        List<String> fixed = new ArrayList<>();
+        for (String value : swarm.buckets) {
+            String canonical = SwarmRules.canonicalRarity(value);
+            if (canonical == null) {
+                CobblemonSafari.LOGGER.warn("Invalid events.swarm.buckets entry \"{}\" in {}, dropped"
+                        + " (expected common, uncommon, rare or ultra-rare)", value, FILE_NAME);
+            } else if (!fixed.contains(canonical)) {
+                fixed.add(canonical);
+            }
+        }
+        if (fixed.isEmpty()) {
+            // Allowed, but worth saying: it silently means no swarm ever.
+            CobblemonSafari.LOGGER.warn("events.swarm.buckets in {} allows no bucket: no swarm will be drawn", FILE_NAME);
+        }
+        if (fixed.equals(swarm.buckets)) {
+            return false;
+        }
+        swarm.buckets = fixed;
+        return true;
     }
 
     /** Logs a corrected config value with the replacement used. */

@@ -6,9 +6,9 @@ import dev.darcosse.common.cobblemonsafari.network.SafariFeaturedPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariNetwork;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.biome.Biome;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -96,7 +96,7 @@ public final class FeaturedSync {
         Swarm.Active active = Swarm.current(server);
         SafariFeaturedPayload.Entry swarm = active == null ? null
                 : new SafariFeaturedPayload.Entry(active.species().getResourceIdentifier(), active.aspects(),
-                active.rarity(), active.biome().location(), false, 0, 0);
+                active.rarity(), List.of(active.biome().location()), false, 0, 0);
         return new SafariFeaturedPayload(SafariConfigManager.get().specials.enabled,
                 FeaturedRotation.millisUntilNextRotation(), FeaturedRotation.rotationLengthMillis(), entries, swarm);
     }
@@ -109,9 +109,11 @@ public final class FeaturedSync {
             // Aspects come from the parsed spawn template (regional forms are
             // flags there), sorted so the payload is identical for identical data.
             List<String> aspects = template == null ? List.of() : List.copyOf(new TreeSet<>(template.getAspects()));
-            ResourceKey<Biome> habitat = entry.mainHabitat();
+            // Every habitat, not only the main one: a species living in Snowfield
+            // and Glacier must not send players to Snowfield alone.
+            List<ResourceLocation> habitats = entry.allHabitats().stream().map(ResourceKey::location).toList();
             converted.add(new SafariFeaturedPayload.Entry(entry.species().getResourceIdentifier(), aspects,
-                    entry.rarity(), habitat == null ? null : habitat.location(),
+                    entry.rarity(), habitats,
                     SpeciesRules.isSpecial(entry.species()), entry.minLevel(), entry.maxLevel()));
         }
         return List.copyOf(converted);

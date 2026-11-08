@@ -75,12 +75,17 @@ public final class NativeSpawnRules {
         }
         SafariConfig.Spawns config = SafariConfigManager.get().spawns;
         Species species = pokemonEntity.getPokemon().getSpecies();
+        // A swarm member follows the swarm's categories and caps
+        // (events.swarm.rarities), not the natural ones: with
+        // maxSpawnPerPokemon at 1, a legendary swarm would stop after one.
+        SpawnSource source = Swarm.isSwarming(pokemonEntity.getPokemon(),
+                level.getBiome(event.getSpawnablePosition().getPosition())) ? SpawnSource.SWARM : SpawnSource.NATURAL;
         // The gamerule check repeats Cobblemon's own on purpose: spawns started
         // by other means (spawner blocks, other mods' spawners going through
         // Cobblemon's event) are refused in the Safari too.
         if (!config.nativeSpawns || !PokemonSpawningRule.allowed(level.getServer())
-                || !SpeciesRules.isAllowed(species, SpawnSource.NATURAL)
-                || !SpecialSpawnCounter.canSpawn(level.getServer(), species, SpawnSource.NATURAL)) {
+                || !SpeciesRules.isAllowed(species, source)
+                || !SpecialSpawnCounter.canSpawn(level.getServer(), species, source)) {
             event.cancel();
             return;
         }
@@ -96,10 +101,11 @@ public final class NativeSpawnRules {
                 return;
             }
         }
-        // Counted when this filter lets the spawn through. If a listener running
+        // Counted when this filter lets the spawn through, in its own way's count:
+        // a swarm member never uses up a natural slot. If a listener running
         // after this one cancels it, the counter's sweep never finds the entity
         // and gives the slot back a few seconds later.
-        SpecialSpawnCounter.recordSpawn(level.getServer(), species, SpawnSource.NATURAL, pokemonEntity.getUUID(),
+        SpecialSpawnCounter.recordSpawn(level.getServer(), species, source, pokemonEntity.getUUID(),
                 pokemonEntity.getPokemon().getUuid(), event.getSpawnablePosition().getPosition());
     }
 }

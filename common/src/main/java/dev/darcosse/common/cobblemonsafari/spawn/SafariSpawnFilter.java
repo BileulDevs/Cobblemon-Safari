@@ -43,7 +43,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * config (natural spawns only; the board has its own checks):
  * <ul>
  *   <li>its category is not allowed, or it is in {@code excludedSpecies};</li>
- *   <li>it used up its natural cap for the rotation ({@link SpecialSpawnCounter});</li>
+ *   <li>it used up its natural cap for the rotation ({@link SpecialSpawnCounter});
+ *       a swarm detail in its habitat is judged on the swarm's cap instead;</li>
  *   <li>{@code maxSameSpeciesNearby} of it already roam around the player.</li>
  * </ul>
  * The last two are snapshots refreshed once a second, so {@link NativeSpawnRules}
@@ -70,6 +71,9 @@ public final class SafariSpawnFilter implements SpawningInfluence {
 
     /** Species ids that used up their natural cap for the current rotation. */
     private static volatile Set<String> atCap = Set.of();
+
+    /** Species ids that used up their swarm cap ({@code events.swarm.rarities}) for the current rotation. */
+    private static volatile Set<String> swarmAtCap = Set.of();
 
     /** Per player, the species ids already at {@code maxSameSpeciesNearby} around them. */
     private static final Map<UUID, Set<String>> CROWDED = new ConcurrentHashMap<>();
@@ -113,6 +117,7 @@ public final class SafariSpawnFilter implements SpawningInfluence {
             dirty = false;
         }
         atCap = Set.copyOf(SpecialSpawnCounter.speciesAtCap(server, SpawnSource.NATURAL));
+        swarmAtCap = Set.copyOf(SpecialSpawnCounter.speciesAtCap(server, SpawnSource.SWARM));
     }
 
     /**
@@ -175,6 +180,7 @@ public final class SafariSpawnFilter implements SpawningInfluence {
     static void clear() {
         forbidden = Set.of();
         atCap = Set.of();
+        swarmAtCap = Set.of();
         CROWDED.clear();
         builtFor = null;
         builtSpeciesCount = -1;
@@ -213,7 +219,15 @@ public final class SafariSpawnFilter implements SpawningInfluence {
             return true;
         }
         String id = SpeciesRules.normalizeId(raw);
-        if (forbidden.contains(id) || atCap.contains(id)) {
+        // A swarm detail follows the swarm's own rules (events.swarm.rarities):
+        // the natural ones (category switches, maxSpawnPerPokemon) would stop
+        // a legendary swarm after its first Pokémon. Whether its category may
+        // swarm was settled at the draw, redone on every config reload.
+        if (Swarm.isSwarmDetail(detail, position.getBiomeHolder())) {
+            if (swarmAtCap.contains(id)) {
+                return false;
+            }
+        } else if (forbidden.contains(id) || atCap.contains(id)) {
             return false;
         }
         Set<String> crowded = CROWDED.get(playerSpawner.getUuid());

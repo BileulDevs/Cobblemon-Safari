@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.4.1
+
+New network protocol (`1.6.0`): clients and servers must both update (the specials board now sends every habitat of each Pokémon).
+
+### Fixed
+
+- **Some swarms never spawned** (Gallade, for one): the swarm was announced, but its species never appeared and was not even listed by `/checkspawn`. The swarm was drawn among the species whose spawn files name a Safari biome, without looking at the rest of their conditions. Since Cobblemon 1.8, many species (most fully evolved ones, Gallade among them) only have spawns that require a Poké Snack, which a player's natural spawner never satisfies; such a swarm was drawn, its spawns refused at every spot, and nothing came. Spawns tied to a structure (villages...) and fishing-only spawns had the same problem: those are no longer drawn. Poké Snack-only species can still swarm, and now really do: the swarm's own spawner (below) lifts the snack requirement for them, and for them only, every other condition of their spawn still applies.
+- **Swarms are now dependable once drawn**: in Cobblemon's natural spawns the swarm only weighed more among the Pokémon of its habitat, so a light species in a crowded habitat could swarm and barely show. A swarm spawner of its own now keeps a few of the swarming species (`events.swarm.minNearby`, 4 by default) around each hunting player standing in the habitat, topped up every `events.swarm.checkEverySeconds` (5 s). It spawns through Cobblemon's own machinery: every condition of the species' spawn (hour, light, kind of spot), the Safari's caps and exclusions and Cobblemon's spawning gamerule still apply. `minNearby: 0` brings back the 1.4.0 behaviour (and then a Poké Snack-only swarm shows nothing).
+- **Legendary swarms stopped after one Pokémon**: the natural per-rotation cap of a category (`spawns.legendary.maxSpawnPerPokemon`, 1 by default) applied to the swarm too. The swarming species in its habitat now follows `events.swarm.rarities` alone, with a cap of its own, and its spawns and catches never use up natural slots.
+- **A special caught could take a natural slot**: a special uncapped in `specials` but capped in `spawns` was not noted when it spawned, so its catch was charged to the natural spawns. Specials and swarm Pokémon are now always noted, and charged to the way they came in.
+- **The specials board showed one habitat only**: a Pokémon living in Snowfield and Glacier (`#is_freezing`) was shown in Snowfield alone. The wall screens and `/safari today` now list every habitat, the main one first; a long list scrolls.
+- **Missions no longer ask for Pokémon met only through Poké Snacks**: species missions are drawn among spawns a player can meet walking around.
+- **The Safari Pokédex no longer lists Pokémon met only through Poké Snacks**, and a species wild in one habitat but snack-only in another is listed under the habitat where it is wild. The Pokédex may count fewer species than in 1.4.0; what was caught stays caught.
+- **`/safari rotate` restarts the rotation timer**: the new rotation lasts a whole `specials.rotationMinutes` from the command, instead of ending at the next scheduled change (a rotation forced with 1:20:30 left used to keep 1:20:30). The following rotations keep that pace from that moment, so they are no longer aligned on midnight UTC once a rotation has been forced.
+
+### New
+
+- **`events.swarm.buckets`**, **`events.swarm.weights`** and **`events.swarm.rarities`**: the spawn buckets a swarm may be drawn from (`["uncommon", "rare", "ultra-rare"]` by default: ultra-rare species such as the starters can now swarm), the chance of each bucket (`common` 0, `uncommon` 10, `rare` 4, `ultraRare` 1: the bucket is drawn first, then a species in it, so a bucket's share does not depend on how many species it holds), and the legendary-class categories in swarms (`legendary`, `mythical`, `ultraBeast`, `paradox`), each with `allowSpawn` (`false` by default, `true` for `paradox` as in `spawns`) and `maxSpawnPerPokemon`, the most a swarm brings per rotation (`0` by default: no cap but `maxNearby`). They replace the categories of `spawns` for the swarm. A legendary-class species counts as ultra-rare. A species' bucket is now its bucket in the habitat drawn.
+- **Pokémon take no damage in the Safari** (`protection.invulnerablePokemon`, on by default): wild Pokémon can no longer be killed with a sword or a bow, and sent-out ones are spared falls, lava and mobs. Battles are not affected. `/kill` and the void still apply.
+- **`events.swarm.excludeList`**: Pokémon that never swarm, form by form. `"vulpix alolan"` leaves out Alolan Vulpix only, Vulpix can still swarm; `"arceus"` leaves out the species and all its forms. An excluded form caught in the swarm's habitat does not get the "of the Swarm" mark.
+
+### Changed
+
+- The swarm's weight boost in Cobblemon's spawns applies to the swarm's own spawns only, so an excluded form of the same species keeps its usual weight.
+- `server.json` goes to version 8 so that existing files show the new keys; nothing is converted.
+
 ## 1.4.0
 
 New network protocol (`1.5.0`): clients and servers must both update.

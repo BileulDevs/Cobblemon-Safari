@@ -18,7 +18,7 @@ How the files behave:
 - **An invalid value** (a negative price, an hour of 25, a colour that is not a colour...) is replaced by its default or clamped into range, a warning names it in the log, and the file is rewritten with the fixed value.
 - **A file that cannot be read at all** (a missing comma, a stray quote) is never overwritten: the mod runs on the defaults, logs the error, and reads the file again once you fix it.
 - **Unknown keys** are ignored and dropped when the file is rewritten.
-- **`configVersion`** is the format version of the file (`7` for `server.json`, `3` for `shop.json`, `2` for `client.json`). It is not a setting: the mod writes it. A file written by an older version of the mod is converted on load, whatever its version, and every key it moves is named in the log: see [Older files](#older-files) at the end.
+- **`configVersion`** is the format version of the file (`8` for `server.json`, `3` for `shop.json`, `2` for `client.json`). It is not a setting: the mod writes it. A file written by an older version of the mod is converted on load, whatever its version, and every key it moves is named in the log: see [Older files](#older-files) at the end.
 
 Formats used below:
 
@@ -165,6 +165,7 @@ A key left out of an entry takes that entry's default.
 | Key | Default | What it does |
 |---|---|---|
 | `invulnerablePlayers` | `true` | Players inside take no damage. `/kill` and falling out of the world still apply, so a player in the void does not fall forever. |
+| `invulnerablePokemon` | `true` | Pokémon inside, wild or sent out, take no damage: they cannot be killed with a sword or a bow, and are spared falls, lava and mobs. Battles are not affected. `/kill` and falling out of the world still apply. |
 | `hunger` | `false` | Whether hunger is frozen inside. `true`: the food bar and its saturation stay where they were on entering (eating still fills them). `false`: the bar goes down as everywhere else. |
 | `protectBlocks` | `true` | Players cannot break or place blocks, fill or empty buckets, or use tools that change blocks (hoe, shovel, axe stripping, flint and steel, bone meal). Fire does not spread or burn blocks, and explosions break nothing. |
 | `placeableBlocks` | `["cobblemon:poke_cake", "cobblemon:poke_snack"]` | Blocks players may still place and break while `protectBlocks` is on. By default Cobblemon's baits. Anything placed disappears with the daily map. |
@@ -209,7 +210,7 @@ Each category (`legendary`, `mythical`, `ultraBeast`, `paradox`) has two keys:
 | Key | What it does |
 |---|---|
 | `allowSpawn` | Whether Pokémon of this category may come in this way at all. A species in two categories needs both allowed. |
-| `maxSpawnPerPokemon` | Most Pokémon of each species of this category coming in this way per rotation, counting those caught in the Safari plus those still roaming: with 2, once two Rayquaza are caught, no third comes in this way before the next rotation. One that leaves uncaught (despawned, fled, knocked out) gives its place back within about ten seconds. 0 lifts the cap. |
+| `maxSpawnPerPokemon` | Most Pokémon of each species of this category coming in this way per rotation, counting those caught in the Safari plus those still roaming: with 2, once two Rayquaza are caught, no third comes in this way before the next rotation. One that leaves uncaught (despawned, fled, knocked out) gives its place back within about ten seconds. 0 lifts the cap. The swarm is not held by this cap: see `events.swarm.rarities`. |
 
 The two ways count apart: with a cap of `1` in both sections, one Rayquaza may come from the natural spawns and another from the specials in the same rotation.
 
@@ -264,20 +265,26 @@ A few species, uncommon, rare and ultra-rare by default, drawn from what is inst
 
 After `/safari reload`, the specials are redrawn with the new rules right away.
 
-`/safari rotate` starts a new rotation now; `/safari today` lists the current specials.
+`/safari rotate` starts a new rotation now, which lasts a whole `rotationMinutes` from then (the following rotations keep that pace, no longer aligned on midnight UTC); `/safari today` lists the current specials.
 
 ### `events`: swarms and full moon nights
 
 Rare happenings that change Cobblemon's natural spawns in the Safari for a while, announced in the chat (with a chime) to the players in the Safari.
 
-**`events.swarm`**: with each rotation of the specials, maybe, one uncommon or rare species of the Safari comes out in numbers in one of its habitats until the next rotation. It also shows on the specials board (wall screens and `/safari today`). Legendary-class species never swarm, nor species `spawns` keeps out.
+**`events.swarm`**: with each rotation of the specials, maybe, one species of the Safari comes out in numbers in one of its habitats until the next rotation. It also shows on the specials board (wall screens and `/safari today`). Only species a player's spawner can bring there are drawn: spawns that need a structure or a fishing rod do not count. A species met there only through Poké Snacks may swarm too: the swarm's own spawner (`minNearby`) lifts that one requirement for it, so with `minNearby` at 0 such a swarm shows nothing. Species in `spawns.excludedSpecies` never swarm. Legendary-class species count as `ultra-rare` and follow `events.swarm.rarities` instead of the categories of `spawns`: a swarm is neither stopped by `spawns.legendary` nor uses up its slots.
 
 | Key | Default | What it does |
 |---|---|---|
 | `enabled` | `true` | `false`: no swarm. |
 | `chance` | `0.5` | Chance (0 to 1) that a rotation has a swarm. |
-| `weightMultiplier` | `10.0` | In its habitat, the swarming species is also offered among the common Pokémon, and its weight is multiplied by this: at 10 it makes up most of what spawns there. 1 to 100. |
+| `buckets` | `["uncommon", "rare", "ultra-rare"]` | Spawn buckets a swarm may be drawn from: `common`, `uncommon`, `rare`, `ultra-rare`. A species' bucket is its most common one in the habitat considered. Empty: no swarm. |
+| `rarities` | `allowSpawn`: `false` (`paradox`: `true`), `maxSpawnPerPokemon`: `0` | Legendary-class categories in swarms: `legendary`, `mythical`, `ultraBeast`, `paradox`, with the same two keys as in `spawns`, for the swarm alone (the swarming species in its habitat, whichever spawner brings it). `allowSpawn`: the category may swarm, as an `ultra-rare` swarm (`ultra-rare` must be in `buckets`). `maxSpawnPerPokemon`: most Pokémon of the swarming species a swarm brings in a rotation, counting those caught plus those still roaming; one that leaves uncaught gives its place back within about ten seconds. 0: no cap but `maxNearby`. Swarm spawns and catches never use up the natural slots of `spawns`. |
+| `weights` | `0` / `10` / `4` / `1` | Chance of each bucket (`common`, `uncommon`, `rare`, `ultraRare`) being the swarm's, against the others: by default two swarms in three are uncommon. Per bucket, not per species: the bucket is drawn first, then a species in it. 0 never draws that bucket; a bucket with no candidate leaves its turn to the others. |
+| `excludeList` | `[]` | Pokémon that never swarm, as Cobblemon properties. `"arceus"` leaves out the species and all its forms; `"vulpix alolan"` only Alolan Vulpix, Vulpix can still swarm. Unknown species or forms are named in the log and ignored. A form only given when the Pokémon is created (`region_bias=...` in the spawn files) can only be left out with its species. |
+| `weightMultiplier` | `10.0` | In its habitat, the swarm is also offered among the common Pokémon of Cobblemon's natural spawns, and its weight is multiplied by this. How much of the habitat it makes up depends on what else lives there; `minNearby` gives the floor. 1 to 100. |
 | `maxNearby` | `10` | Same-species cap around a player for the swarming species, instead of `spawns.maxSameSpeciesNearby`, so a swarm can look like one. 0 keeps the usual cap. |
+| `minNearby` | `4` | Swarm Pokémon the swarm's own spawner keeps within 48 blocks of each hunting player standing in its habitat, whatever else lives there, through Cobblemon's spawn rules (hour, light, kind of spot) and the Safari's caps. Never above `maxNearby`. 0 turns it off (Cobblemon's natural spawns only, as in 1.4.0). |
+| `checkEverySeconds` | `5` | Seconds between two top-ups of the swarm's spawner, one Pokémon per player at most each time. 1 to 300. |
 
 **`events.fullMoon`**: on full moon nights in the Safari, Pokémon of some types come out more.
 

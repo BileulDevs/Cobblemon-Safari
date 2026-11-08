@@ -33,8 +33,10 @@ import java.util.Set;
  * datapacks, through the habitat index), allowed in by the config through
  * one of the two ways a Pokémon comes in. Species the index only guesses
  * from their types (most legendaries) are left out, so the Pokédex can be
- * completed. Each species counts once, in its main habitat
- * ({@link HabitatEntry#mainHabitat}), the one the special board shows.
+ * completed, and so are those met only through Poké Snacks (Gallade since
+ * Cobblemon 1.8): the Pokédex lists what can be found in the wild. Each
+ * species counts once, in its main habitat among those where it spawns
+ * without a snack ({@link HabitatEntry#wildMainHabitat}).
  *
  * <p>Server side. The grouping is rebuilt when the index changes
  * ({@link FeaturedRotation#revision}), checked once a second.
@@ -145,7 +147,8 @@ public final class SafariDex {
     }
 
     /**
-     * Groups the index's natural, allowed species by main habitat, in the
+     * Groups the index's natural, allowed species found in the wild (not
+     * only through Poké Snacks) by main habitat, in the
      * Safari's canonical habitat order, each habitat sorted by national
      * Pokédex number (then id, for datapack species without one).
      */
@@ -163,7 +166,9 @@ public final class SafariDex {
                     && !SpeciesRules.isAllowed(species, SpawnSource.FEATURED)) {
                 continue;
             }
-            ResourceKey<Biome> main = entry.mainHabitat();
+            // Not mainHabitat(): a species wild in one habitat and snack-only in
+            // another must be listed where players can actually find it.
+            ResourceKey<Biome> main = entry.wildMainHabitat();
             if (main != null) {
                 byHabitat.get(main).add(species);
             }

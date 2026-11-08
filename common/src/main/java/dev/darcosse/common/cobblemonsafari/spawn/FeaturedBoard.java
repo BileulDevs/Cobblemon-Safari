@@ -45,7 +45,7 @@ public final class FeaturedBoard {
         return lines;
     }
 
-    /** One board line: species, rarity and main habitat. */
+    /** One board line: species, rarity and every habitat, the main one first. */
     private static Component line(HabitatEntry entry) {
         MutableComponent species = Component.translatable(entry.species().getTranslationKey())
                 .withStyle(ChatFormatting.WHITE);
@@ -53,10 +53,19 @@ public final class FeaturedBoard {
         if (SpeciesRules.isSpecial(entry.species())) {
             species = Component.literal("★ ").withStyle(ChatFormatting.GOLD).append(species);
         }
-        ResourceKey<Biome> habitat = entry.mainHabitat();
-        Component habitatName = habitat != null
-                ? Component.translatable("biome." + habitat.location().getNamespace() + "." + habitat.location().getPath())
-                : Component.translatable(key("board.habitat_unknown"));
+        List<ResourceKey<Biome>> habitats = entry.allHabitats();
+        MutableComponent habitatName = Component.empty();
+        if (habitats.isEmpty()) {
+            habitatName.append(Component.translatable(key("board.habitat_unknown")));
+        }
+        for (int i = 0; i < habitats.size(); i++) {
+            if (i > 0) {
+                habitatName.append(Component.translatable(key("board.habitat_separator")));
+            }
+            ResourceKey<Biome> habitat = habitats.get(i);
+            habitatName.append(Component.translatable(
+                    "biome." + habitat.location().getNamespace() + "." + habitat.location().getPath()));
+        }
         return Component.translatable(key("board.line"), species, entry.rarity().displayName(),
                 habitatName.copy().withStyle(ChatFormatting.GRAY));
     }

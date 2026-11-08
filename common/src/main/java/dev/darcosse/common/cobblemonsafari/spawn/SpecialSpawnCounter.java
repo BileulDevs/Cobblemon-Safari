@@ -66,14 +66,17 @@ public final class SpecialSpawnCounter extends SavedData {
 
     /**
      * Save format version. 1 (no key) had one count for both ways; 2 counts
-     * each way apart and keeps each roaming Pokémon's way and Pokémon UUID.
-     * A version 1 save loads with everything charged to the natural spawns.
+     * each way apart and keeps each roaming Pokémon's way and Pokémon UUID;
+     * 3 adds the swarm's catches ({@link #CAUGHT_SWARM_KEY}).
+     * A version 1 save loads with everything charged to the natural spawns;
+     * a version 2 save loads with no swarm catch.
      */
-    private static final int SAVE_VERSION = 2;
+    private static final int SAVE_VERSION = 3;
 
     /** Key of the catches charged to each way; the natural one keeps version 1's key, so old saves read into it. */
     private static final String CAUGHT_NATURAL_KEY = "caught";
     private static final String CAUGHT_FEATURED_KEY = "caught_featured";
+    private static final String CAUGHT_SWARM_KEY = "caught_swarm";
 
     private static final SavedData.Factory<SpecialSpawnCounter> FACTORY =
             new SavedData.Factory<>(SpecialSpawnCounter::new, SpecialSpawnCounter::load, null);
@@ -168,9 +171,19 @@ public final class SpecialSpawnCounter extends SavedData {
     }
 
     /**
-     * Takes one slot of this way for a Pokémon of a capped species entering
-     * the Safari. Call it once the spawn is decided; the slot comes back by
-     * itself if the Pokémon is never found in the park (see the class comment).
+     * Notes a Pokémon entering the Safari through this way, taking one slot
+     * if its species is capped for it. Call it once the spawn is decided; the
+     * slot comes back by itself if the Pokémon is never found in the park
+     * (see the class comment).
+     *
+     * <p>The specials and the swarm are noted even when uncapped: a catch is
+     * charged to the way its Pokémon is noted under, and an unnoted one
+     * falls back to the natural spawns. A special or swarm Pokémon uncapped
+     * in its own way but capped in {@code spawns} took a natural slot when
+     * caught. Natural spawns stay noted only when capped: there are far too
+     * many, and the fallback is right for them. Cost: one more roaming entry,
+     * thus one small entity query per sweep, per special or swarm Pokémon
+     * around, a few dozen at most.
      *
      * @param entityId  UUID of the Pokémon's entity, followed by the sweeps
      * @param pokemonId UUID of the Pokémon itself, to charge its capture to this way
@@ -178,7 +191,7 @@ public final class SpecialSpawnCounter extends SavedData {
      */
     public static void recordSpawn(MinecraftServer server, Species species, SpawnSource source,
                                    UUID entityId, UUID pokemonId, BlockPos pos) {
-        if (SpeciesRules.spawnCap(species, source) <= 0) {
+        if (source == SpawnSource.NATURAL && SpeciesRules.spawnCap(species, source) <= 0) {
             return;
         }
         SpecialSpawnCounter counter = get(server);
@@ -259,6 +272,11 @@ public final class SpecialSpawnCounter extends SavedData {
         SpecialSpawnCounter counter = get(server);
         counter.refresh();
         SpawnSource source = counter.sourceOf(event.getPokemon().getUuid());
+        if (source == null) {
+            // Never noted: an uncapped natural spawn, a Poké Snack, a version 1
+            // save. The specials and the swarm are always noted (recordSpawn).
+            source = SpawnSource.NATURAL;
+        }
         if (SpeciesRules.spawnCap(species, source) <= 0) {
             return;
         }
@@ -269,17 +287,18 @@ public final class SpecialSpawnCounter extends SavedData {
     }
 
     /**
-     * The way a Pokémon came in, by its Pokémon UUID. Natural when unknown:
-     * spawns the counter never recorded (an uncapped species, a Poké Snack,
-     * a version 1 save) all come from Cobblemon's spawner.
+     * The way a Pokémon came in, by its Pokémon UUID; null when the counter
+     * never noted it (an uncapped natural spawn, a Poké Snack, a version 1
+     * save), which the caller resolves.
      */
+    @Nullable
     private SpawnSource sourceOf(UUID pokemonId) {
         for (Roaming entry : roaming.values()) {
             if (pokemonId.equals(entry.pokemonId)) {
                 return entry.source;
             }
         }
-        return SpawnSource.NATURAL;
+        return null;
     }
 
     /** Slots of the species in use for this way: caught this rotation plus still roaming. */
@@ -354,6 +373,7 @@ public final class SpecialSpawnCounter extends SavedData {
         nbt.putLong("map_salt", mapSalt);
         nbt.put(CAUGHT_NATURAL_KEY, caughtTag(SpawnSource.NATURAL));
         nbt.put(CAUGHT_FEATURED_KEY, caughtTag(SpawnSource.FEATURED));
+        nbt.put(CAUGHT_SWARM_KEY, caughtTag(SpawnSource.SWARM));
         ListTag roamingTag = new ListTag();
         roaming.forEach((id, pokemon) -> {
             CompoundTag entry = new CompoundTag();
@@ -380,7 +400,7 @@ public final class SpecialSpawnCounter extends SavedData {
     }
 
     /**
-     * Reads what {@link #save} wrote, versions 1 and 2. Missing keys read as
+     * Reads what {@link #save} wrote, versions 1 to 3. Missing keys read as
      * an empty, stale counter; a version 1 save has no featured catches and
      * no way on its roaming entries, which all become natural.
      */
@@ -390,6 +410,8 @@ public final class SpecialSpawnCounter extends SavedData {
         counter.mapSalt = nbt.contains("map_salt") ? nbt.getLong("map_salt") : Long.MIN_VALUE;
         readCaught(nbt.getCompound(CAUGHT_NATURAL_KEY), counter.caught.get(SpawnSource.NATURAL));
         readCaught(nbt.getCompound(CAUGHT_FEATURED_KEY), counter.caught.get(SpawnSource.FEATURED));
+        // Absent before version 3: getCompound gives an empty tag, so no swarm catch.
+        readCaught(nbt.getCompound(CAUGHT_SWARM_KEY), counter.caught.get(SpawnSource.SWARM));
         for (Tag element : nbt.getList("roaming", Tag.TAG_COMPOUND)) {
             CompoundTag entry = (CompoundTag) element;
             UUID pokemonId = entry.hasUUID("pokemon_id") ? entry.getUUID("pokemon_id") : null;

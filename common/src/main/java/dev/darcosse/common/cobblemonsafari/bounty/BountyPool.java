@@ -211,8 +211,9 @@ final class BountyPool {
     }
 
     /**
-     * The Safari habitats where one condition of this spawn applies and
-     * passes the filter's cave, hour and weather switches. Each condition
+     * The Safari habitats where one condition of this spawn applies, does
+     * not require a Poké Snack, and passes the filter's cave, hour and
+     * weather switches. Each condition
      * of a spawn is an alternative (Gastly: in the dark underground, or in a
      * spooky forest at night), so each is judged on its own.
      */
@@ -223,6 +224,11 @@ final class BountyPool {
         for (SpawningCondition<?> condition : detail.getConditions()) {
             if (condition.getBiomes() == null || condition.getBiomes().isEmpty()) {
                 // Says nothing about the habitat, as in SafariHabitatIndex: "anywhere at night".
+                continue;
+            }
+            // A Poké Snack-only spawn (Gallade since Cobblemon 1.8) never comes
+            // to a player walking around: a mission on it could not be done in the wild.
+            if (Boolean.TRUE.equals(condition.isPokeSnack())) {
                 continue;
             }
             boolean underground = Boolean.FALSE.equals(condition.getCanSeeSky())

@@ -1,5 +1,6 @@
 package dev.darcosse.common.cobblemonsafari.protection;
 
+import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.client.SafariClientState;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
@@ -79,15 +80,25 @@ public final class SafariProtection {
     }
 
     /**
-     * Whether a hit must be cancelled. Server side only.
+     * Whether a hit must be cancelled: on a player while
+     * {@code protection.invulnerablePlayers} is on, on a Pokémon (wild or
+     * sent out) while {@code protection.invulnerablePokemon} is on, inside
+     * the Safari. Server side only. Battles are not concerned: their damage
+     * is Showdown's, never the entity's.
      *
      * <p>Damage tagged {@code bypasses_invulnerability} (/kill, the void) goes
-     * through: blocking it would leave a player falling forever below the world.
+     * through: blocking it would leave a player falling forever below the
+     * world, and a Pokémon stuck there with no way to remove it.
+     *
+     * <p>Cost: called for every hit on every living entity of the server; two
+     * type checks before anything else.
      */
     public static boolean shouldCancelDamage(LivingEntity entity, DamageSource source) {
-        return entity instanceof ServerPlayer player
-                && SafariConfigManager.get().protection.invulnerablePlayers
-                && SafariDimensions.isSafari(player.level())
+        SafariConfig.Protection config = SafariConfigManager.get().protection;
+        boolean protectedHere = (entity instanceof ServerPlayer && config.invulnerablePlayers)
+                || (entity instanceof PokemonEntity && config.invulnerablePokemon);
+        return protectedHere
+                && SafariDimensions.isSafari(entity.level())
                 && !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY);
     }
 

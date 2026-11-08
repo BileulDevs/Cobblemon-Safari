@@ -82,11 +82,23 @@ public final class FeaturedRotation {
     private static boolean emptyBuildPending;
     private static long revision;
     /**
-     * The world's count of rotations started by hand (SafariWorldState),
-     * mirrored here because the rotation index is read without a server at
-     * hand. Set by {@link #attach} on server start and by {@link #forceNext}.
+     * The rotation schedule: index {@code base} began at {@code anchorMillis},
+     * and the index moves on by one every rotation length after it.
+     *
+     * <p>One object so the two values are always read together: two separate
+     * volatile fields could be seen half updated by another thread right after
+     * {@link #forceNext}, giving a rotation index that never existed.
      */
-    private static volatile long rotationOffset;
+    private record Schedule(long base, long anchorMillis) {
+    }
+
+    /**
+     * The world's schedule (SafariWorldState), mirrored here because the
+     * rotation index is read without a server at hand. Set by {@link #attach}
+     * on server start and by {@link #forceNext}. The default is the clock's
+     * schedule, aligned on midnight UTC.
+     */
+    private static volatile Schedule schedule = new Schedule(0L, 0L);
 
     private FeaturedRotation() {
     }
@@ -112,25 +124,28 @@ public final class FeaturedRotation {
     }
 
     /**
-     * Loads the world's forced rotations. Call on server start, before the
+     * Loads the world's rotation schedule. Call on server start, before the
      * first use of {@link #period()}: single player keeps this class loaded
      * from one world to the next.
      */
     public static void attach(MinecraftServer server) {
-        rotationOffset = SafariWorldState.get(server).rotationOffset();
+        SafariWorldState state = SafariWorldState.get(server);
+        schedule = new Schedule(state.rotationOffset(), state.rotationAnchorMillis());
     }
 
     /**
      * Starts a new rotation now: new specials, and with them new bounties and
      * shop Pokémon, all keyed on the rotation index, which this moves on by
-     * one. The schedule is kept: the forced rotation ends at the next
-     * scheduled change, so the rotations stay aligned on midnight UTC.
-     * Players are updated by the usual revision checks within a few seconds.
+     * one. The schedule restarts with it: the forced rotation lasts a whole
+     * {@code specials.rotationMinutes} from now, and the next ones follow at
+     * that pace from this moment, no longer on midnight UTC. Players are
+     * updated by the usual revision checks within a few seconds.
      */
     public static void forceNext(MinecraftServer server) {
-        SafariWorldState state = SafariWorldState.get(server);
-        state.advanceRotation();
-        rotationOffset = state.rotationOffset();
+        long now = System.currentTimeMillis();
+        long next = currentPeriod() + 1;
+        SafariWorldState.get(server).restartRotation(next, now);
+        schedule = new Schedule(next, now);
         current = null;
         revision++;
     }
@@ -193,15 +208,17 @@ public final class FeaturedRotation {
     /** Milliseconds until the list changes. */
     public static long millisUntilNextRotation() {
         long length = rotationLengthMillis();
-        return length - Math.floorMod(System.currentTimeMillis(), length);
+        return length - Math.floorMod(System.currentTimeMillis() - schedule.anchorMillis(), length);
     }
 
     /**
-     * Index of the rotation running now: rotations since the Unix epoch,
-     * plus those started by hand.
+     * Index of the rotation running now: the schedule's base plus the whole
+     * rotations elapsed since its anchor. With the default schedule (anchor
+     * 0), rotations since the Unix epoch, as before 1.4.1.
      */
     private static long currentPeriod() {
-        return Math.floorDiv(System.currentTimeMillis(), rotationLengthMillis()) + rotationOffset;
+        Schedule running = schedule;
+        return running.base() + Math.floorDiv(System.currentTimeMillis() - running.anchorMillis(), rotationLengthMillis());
     }
 
     /** Length of one rotation in milliseconds, from the config. */
