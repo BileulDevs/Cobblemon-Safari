@@ -134,7 +134,7 @@
   "cobblemon_safari.events.storm.end": "雷雨が 過ぎ去りました。",
   "cobblemon_safari.events.heatwave.announce": "熱波が サファリの 暑い土地を 焼きつける：そこでは %sタイプのポケモンが よく現れます。",
   "cobblemon_safari.events.heatwave.end": "熱波が おさまりました。",
-  "cobblemon_safari.events.aurora.announce": "オーロラが サファリの 凍てつく土地を 照らす：そこにいる ハンターは めずらしい %sタイプのポケモンに 出会えます。",
+  "cobblemon_safari.events.aurora.announce": "オーロラが サファリを 照らす：凍てつく土地では めずらしい %1$sタイプ、それ以外では めずらしい %2$sタイプの ポケモンに 出会えます。消えるまで 色違いが %3$s倍 出やすくなります。",
   "cobblemon_safari.events.aurora.end": "オーロラが 消えていきました。",
   "cobblemon_safari.events.aurora.appeared": "オーロラの下に %sが 現れた！ すぐ近くだ！",
   "cobblemon_safari.screen.title": "サファリ · いまの特別なポケモン",

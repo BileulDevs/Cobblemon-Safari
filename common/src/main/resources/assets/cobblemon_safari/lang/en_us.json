@@ -134,7 +134,7 @@
   "cobblemon_safari.events.storm.end": "The thunderstorm has passed.",
   "cobblemon_safari.events.heatwave.announce": "A heatwave bakes the Safari's hot lands: %s Pokémon come out more there.",
   "cobblemon_safari.events.heatwave.end": "The heatwave is over.",
-  "cobblemon_safari.events.aurora.announce": "An aurora lights up the Safari's frozen lands: each hunter there will meet a rare %s Pokémon.",
+  "cobblemon_safari.events.aurora.announce": "An aurora lights up the Safari: each hunter will meet a rare %1$s Pokémon on the frozen lands and a rare %2$s Pokémon anywhere else. Shinies are %3$s times as likely until it fades.",
   "cobblemon_safari.events.aurora.end": "The aurora has faded.",
   "cobblemon_safari.events.aurora.appeared": "A %s appeared under the aurora, not far from you!",
   "cobblemon_safari.screen.title": "Safari · Current special Pokémon",

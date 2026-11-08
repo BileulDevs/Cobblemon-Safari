@@ -134,7 +134,7 @@
   "cobblemon_safari.events.storm.end": "Гроза прошла.",
   "cobblemon_safari.events.heatwave.announce": "Жара палит знойные земли Сафари: там чаще появляются покемоны типа %s.",
   "cobblemon_safari.events.heatwave.end": "Жара спала.",
-  "cobblemon_safari.events.aurora.announce": "Полярное сияние озаряет ледяные земли Сафари: каждый охотник там встретит редкого покемона типа %s.",
+  "cobblemon_safari.events.aurora.announce": "Полярное сияние озаряет Сафари: каждый охотник встретит редкого покемона типа %1$s на ледяных землях и редкого покемона типа %2$s в любом другом месте. Пока оно не угаснет, сияющие покемоны встречаются в %3$s раза чаще.",
   "cobblemon_safari.events.aurora.end": "Полярное сияние угасло.",
   "cobblemon_safari.events.aurora.appeared": "Под сиянием недалеко от вас появился %s!",
   "cobblemon_safari.screen.title": "Сафари · Особые покемоны сейчас",

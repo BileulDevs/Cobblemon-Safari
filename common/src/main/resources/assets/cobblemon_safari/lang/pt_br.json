@@ -134,7 +134,7 @@
   "cobblemon_safari.events.storm.end": "A tempestade passou.",
   "cobblemon_safari.events.heatwave.announce": "Uma onda de calor castiga as terras quentes do Safári: Pokémon do tipo %s aparecem mais por lá.",
   "cobblemon_safari.events.heatwave.end": "A onda de calor acabou.",
-  "cobblemon_safari.events.aurora.announce": "Uma aurora boreal ilumina as terras geladas do Safári: cada caçador que estiver lá vai encontrar um Pokémon raro do tipo %s.",
+  "cobblemon_safari.events.aurora.announce": "Uma aurora boreal ilumina o Safári: cada caçador vai encontrar um Pokémon raro do tipo %1$s nas terras geladas e um Pokémon raro do tipo %2$s em qualquer outro lugar. Os brilhantes ficam %3$s vezes mais frequentes até ela se apagar.",
   "cobblemon_safari.events.aurora.end": "A aurora boreal se apagou.",
   "cobblemon_safari.events.aurora.appeared": "Um %s apareceu sob a aurora, perto de você!",
   "cobblemon_safari.screen.title": "Safári · Pokémon especiais do momento",

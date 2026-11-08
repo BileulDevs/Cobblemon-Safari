@@ -1,5 +1,5 @@
 {
-  "configVersion": 12,
+  "configVersion": 14,
   "hunt": {
     "maxDurationSeconds": 3600,
     "pauseWhileOffline": true,
@@ -224,7 +224,7 @@
     },
     "fullMoon": {
       "enabled": true,
-      "types": ["fairy", "ghost"],
+      "types": ["fairy", "ghost", "dark", "psychic"],
       "weightMultiplier": 3.0
     },
     "downpour": {
@@ -264,9 +264,11 @@
       "chance": 0.1,
       "minDurationMinutes": 3,
       "maxDurationMinutes": 6,
-      "types": ["ice"],
+      "frozenTypes": ["ice"],
+      "otherTypes": ["psychic", "fairy"],
+      "shinyChanceMultiplier": 4.0,
       "excludeList": [],
-      "habitats": ["cobblemon_safari:glacier", "cobblemon_safari:snowfield", "cobblemon_safari:taiga"],
+      "frozenHabitats": ["cobblemon_safari:glacier", "cobblemon_safari:snowfield", "cobblemon_safari:taiga"],
       "glowSeconds": 20
     }
   },

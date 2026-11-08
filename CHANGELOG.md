@@ -20,7 +20,7 @@ New network protocol (`1.6.0`): clients and servers must both update (the specia
 
 ### New
 
-- **Aurora** (`events.aurora`): on one clear night in ten, an aurora lights the frozen lands (glacier, snowfield, taiga, and anywhere snow falls) for 3 to 6 minutes, and each hunting player is promised one Ice Pokémon of the Safari (uncommon to ultra-rare, never the one of their previous aurora, rarely one they already caught), which appears near them, glowing for 20 s, as soon as they reach those lands. It earns the new **Aurora Mark**, "of the Aurora" (`capture.marks.aurora`).
+- **Aurora** (`events.aurora`): on one clear night in ten, an aurora lights the Safari for 3 to 6 minutes. Each hunting player is promised two Pokémon: an Ice one on the frozen lands (glacier, snowfield, taiga, and anywhere snow falls; uncommon to ultra-rare) and a rare Psychic or Fairy one anywhere else, never the species of their previous aurora and rarely one they already caught. Each appears near them, glowing for 20 s. Meanwhile every Pokémon appearing in the Safari is four times as likely to be shiny (`shinyChanceMultiplier`). A Pokémon the aurora brought earns the new **Aurora Mark**, "of the Aurora" (`capture.marks.aurora`).
 - **Heatwave** (`events.heatwave`): some dry days (15 % of dawns without rain), Fire and Ground Pokémon come out twice as often in the dunes, the volcano, the badlands and the savanna, for 4 to 8 minutes or until rain or night. Announced and shown by `/safari today`; no mark.
 - **Storm** (`events.storm`): one thunderstorm in two brings rare and ultra-rare Electric and Dragon Pokémon of the Safari to the high ground (peaks, rocky hills, volcano, and any spot high enough for the map's relief) near the players standing there, each with a harmless lightning flash (at most one every 30 s). A Pokémon the storm brought earns the new **Storm Mark**, "of the Storm" (`capture.marks.storm`). It follows the natural spawns' rules (excluded species, legendary-class switches and caps) and adds up with a downpour.
 - **Downpour** (`events.downpour`): some rains of the Safari (15 % by default) turn into a downpour for 5 to 10 minutes, during which Water and Electric Pokémon come out twice as often where the rain falls. Announced to the players in the Safari and shown by `/safari today`. A catch made in it earns the new **Downpour Mark**, "of the Downpour" (`capture.marks.downpour`).
@@ -44,7 +44,8 @@ New network protocol (`1.6.0`): clients and servers must both update (the specia
 - **The jungle is more open**: patches of thick jungle and of bamboo jungle in a sparse jungle, so Pokémon can be seen and the biome crossed. Still one biome. New maps only.
 - **The giant cavern looks like the Caves & Cliffs caves**: smooth rock walls instead of small lumps everywhere, ledges and floors, and stone pillars. New maps only; the lush cavern is unchanged.
 - The swarm's weight boost in Cobblemon's spawns applies to the swarm's own spawns only, so an excluded form of the same species keeps its usual weight.
-- `server.json` goes to version 8 so that existing files show the new keys; nothing is converted.
+- **Full moon nights bring out Dark and Psychic Pokémon too** (`events.fullMoon.types`: Fairy, Ghost, Dark and Psychic), in new `server.json` files; existing ones keep their list.
+- `server.json` goes to version 14 so that existing files show the new keys; nothing of a 1.4.0 file is converted.
 
 ## 1.4.0
 

@@ -134,7 +134,7 @@
   "cobblemon_safari.events.storm.end": "La tormenta ha pasado.",
   "cobblemon_safari.events.heatwave.announce": "Una ola de calor abrasa las tierras cálidas del Safari: los Pokémon de tipo %s aparecen más allí.",
   "cobblemon_safari.events.heatwave.end": "La ola de calor ha terminado.",
-  "cobblemon_safari.events.aurora.announce": "Una aurora boreal ilumina las tierras heladas del Safari: cada cazador que esté allí se topará con un Pokémon raro de tipo %s.",
+  "cobblemon_safari.events.aurora.announce": "Una aurora boreal ilumina el Safari: cada cazador se topará con un Pokémon raro de tipo %1$s en las tierras heladas y con un Pokémon raro de tipo %2$s en cualquier otro lugar. Los variocolor son %3$s veces más frecuentes hasta que se desvanezca.",
   "cobblemon_safari.events.aurora.end": "La aurora boreal se ha desvanecido.",
   "cobblemon_safari.events.aurora.appeared": "¡Un %s ha aparecido bajo la aurora, no muy lejos de ti!",
   "cobblemon_safari.screen.title": "Safari · Pokémon especiales actuales",

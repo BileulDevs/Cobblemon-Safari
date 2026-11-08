@@ -285,7 +285,7 @@ public class SafariConfig {
         public boolean enabled = true;
 
         /** Cobblemon type names whose Pokémon come out more. */
-        public List<String> types = new ArrayList<>(List.of("fairy", "ghost"));
+        public List<String> types = new ArrayList<>(List.of("fairy", "ghost", "dark", "psychic"));
 
         /** How much more often those Pokémon are picked, within their rarity. 1 to 20. */
         public double weightMultiplier = 3.0;
@@ -326,13 +326,15 @@ public class SafariConfig {
 
     /**
      * The aurora: at each nightfall without rain in the Safari, maybe, an
-     * aurora lights the frozen lands for a while, and each hunting player is
-     * owed one rare Pokémon of the configured types: it appears near them as
-     * soon as they stand in one of {@code habitats} or where snow falls,
-     * retried until it does or the aurora ends. Its species are the Safari's
-     * own uncommon, rare and ultra-rare species of those types, under the
-     * natural spawns' rules; not the one the player got at their previous
-     * aurora, and those they caught less often. It glows for a moment so it can be found, and gets the
+     * aurora lights the Safari for a while. Each hunting player is owed two
+     * Pokémon, one per group: one of {@code frozenTypes} on the frozen lands
+     * ({@code habitats}, or where snow falls) and one of {@code otherTypes}
+     * anywhere else. Each appears near them as soon as they stand where its
+     * group lives, retried until it does or the aurora ends. Its species are
+     * the Safari's own species of those types, under the natural spawns'
+     * rules; not the one the player got at their previous aurora, and those
+     * they caught less often. Meanwhile, every Pokémon appearing in the
+     * Safari is more often shiny ({@code shinyChanceMultiplier}). It glows for a moment so it can be found, and gets the
      * Aurora Mark when caught. It ends when its time is up, at dawn or when
      * rain comes.
      */
@@ -351,14 +353,40 @@ public class SafariConfig {
         public int minDurationMinutes = 3;
         public int maxDurationMinutes = 6;
 
-        /** Cobblemon type names of the Pokémon the aurora brings. */
-        public List<String> types = new ArrayList<>(List.of("ice"));
+        /**
+         * Cobblemon type names of the Pokémon the aurora brings on the frozen
+         * lands (frozenHabitats below, and anywhere snow falls). Uncommon,
+         * rare and ultra-rare species: Cobblemon has almost no rare Ice one.
+         */
+        public List<String> frozenTypes = new ArrayList<>(List.of("ice"));
+
+        /**
+         * Cobblemon type names of the Pokémon the aurora brings everywhere
+         * else in the Safari. Rare and ultra-rare species only. Each player
+         * is owed one Pokémon of each group per aurora.
+         */
+        public List<String> otherTypes = new ArrayList<>(List.of("psychic", "fairy"));
+
+        /**
+         * During an aurora, every Pokémon that appears in the Safari is this
+         * many times more likely to be shiny: natural spawns, specials,
+         * swarms, the events' own Pokémon, fished ones. 4 turns Cobblemon's
+         * 1 in 8192 into 1 in 2048. It stacks with the Shiny Charm and the
+         * other boosts (it divides Cobblemon's "1 in N"). 1 for no effect, up to 100.
+         */
+        public double shinyChanceMultiplier = 4.0;
 
         /** Pokémon the aurora never brings, as Cobblemon properties: "lapras", or one form, "vulpix alolan". */
         public List<String> excludeList = new ArrayList<>();
 
-        /** Habitats where the aurora's Pokémon come, by biome id; any spot where snow falls counts too. */
-        public List<String> habitats = new ArrayList<>(List.of(
+        /**
+         * Biomes that count as frozen lands although it rains there, by biome
+         * id: a player standing there gets the frozen group's Pokémon. Any spot
+         * where snow falls counts already, so only rainy biomes need listing
+         * (the taiga, by default). This does not limit where the aurora brings
+         * its Pokémon: the other group comes everywhere else.
+         */
+        public List<String> frozenHabitats = new ArrayList<>(List.of(
                 "cobblemon_safari:glacier", "cobblemon_safari:snowfield", "cobblemon_safari:taiga"));
 
         /**

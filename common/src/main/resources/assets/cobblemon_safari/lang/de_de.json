@@ -134,7 +134,7 @@
   "cobblemon_safari.events.storm.end": "Das Gewitter ist vorübergezogen.",
   "cobblemon_safari.events.heatwave.announce": "Eine Hitzewelle dörrt die heißen Gebiete der Safari: Pokémon vom Typ %s zeigen sich dort häufiger.",
   "cobblemon_safari.events.heatwave.end": "Die Hitzewelle ist vorbei.",
-  "cobblemon_safari.events.aurora.announce": "Ein Polarlicht erhellt die gefrorenen Gebiete der Safari: Jeder Jäger dort wird einem seltenen Pokémon vom Typ %s begegnen.",
+  "cobblemon_safari.events.aurora.announce": "Ein Polarlicht erhellt die Safari: Jeder Jäger begegnet einem seltenen Pokémon vom Typ %1$s in den gefrorenen Gebieten und einem seltenen Pokémon vom Typ %2$s überall sonst. Schillernde Pokémon sind %3$s-mal so häufig, bis es verblasst.",
   "cobblemon_safari.events.aurora.end": "Das Polarlicht ist verblasst.",
   "cobblemon_safari.events.aurora.appeared": "Ein %s ist unter dem Polarlicht erschienen, nicht weit von dir!",
   "cobblemon_safari.screen.title": "Safari · Aktuelle besondere Pokémon",

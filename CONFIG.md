@@ -18,7 +18,7 @@ How the files behave:
 - **An invalid value** (a negative price, an hour of 25, a colour that is not a colour...) is replaced by its default or clamped into range, a warning names it in the log, and the file is rewritten with the fixed value.
 - **A file that cannot be read at all** (a missing comma, a stray quote) is never overwritten: the mod runs on the defaults, logs the error, and reads the file again once you fix it.
 - **Unknown keys** are ignored and dropped when the file is rewritten.
-- **`configVersion`** is the format version of the file (`8` for `server.json`, `4` for `shop.json`, `2` for `client.json`). It is not a setting: the mod writes it. A file written by an older version of the mod is converted on load, whatever its version, and every key it moves is named in the log: see [Older files](#older-files) at the end.
+- **`configVersion`** is the format version of the file (`14` for `server.json`, `4` for `shop.json`, `2` for `client.json`). It is not a setting: the mod writes it. A file written by an older version of the mod is converted on load, whatever its version, and every key it moves is named in the log: see [Older files](#older-files) at the end.
 
 Formats used below:
 
@@ -294,7 +294,7 @@ Rare happenings that change Cobblemon's natural spawns in the Safari for a while
 | Key | Default | What it does |
 |---|---|---|
 | `enabled` | `true` | `false`: no full moon effect. |
-| `types` | `["fairy", "ghost"]` | Cobblemon type names favoured. |
+| `types` | `["fairy", "ghost", "dark", "psychic"]` | Cobblemon type names favoured. |
 | `weightMultiplier` | `3.0` | How much more often those Pokémon are picked, within their rarity. 1 to 20. |
 
 **`events.downpour`**: some rains of the Safari turn into a downpour, during which Pokémon of some types come out more where the rain falls (not in snow, nor in the dunes and the volcano, which get no rain, nor under a roof), and catches made there get the Downpour Mark. The rain is the Safari's ordinary weather (the overworld's): the mod never makes it rain. Each time a rain starts, a draw decides whether it is a downpour; it then lasts a drawn time, or less if the rain stops first. Players in the Safari are told when it starts (or when they come in during one) and when it ends, and it shows in `/safari today` while it lasts. A server restart ends it, and a rain already falling when the server starts is never drawn.
@@ -338,7 +338,7 @@ Rare happenings that change Cobblemon's natural spawns in the Safari for a while
 | `habitats` | `["cobblemon_safari:dunes", "cobblemon_safari:volcanic", "cobblemon_safari:badlands", "cobblemon_safari:savanna"]` | Habitats the heatwave bakes, by biome id. |
 | `weightMultiplier` | `2.0` | How much more often those Pokémon are picked there, within their rarity. 1 to 20. |
 
-**`events.aurora`**: at each nightfall without rain, a draw may light an aurora on the frozen lands. Each hunting player is then owed one rare Pokémon of some types: it appears 16 to 32 blocks away as soon as they stand in one of `habitats` or anywhere snow falls (cold biomes, and high ground cold enough for snow), retried every 3 seconds until it does or the aurora ends. One per player and aurora, kept by player for the whole aurora (leaving and coming back neither loses nor renews it). Its species are the Safari's own uncommon, rare and ultra-rare natural species of those types (five uncommon for three rare and one ultra-rare: Cobblemon has almost no rare Ice species, so rare-only would always bring Glaceon), under the natural spawns' rules (`spawns.excludedSpecies`, legendary-class switches and caps, counted apart from the natural ones). The pick is the player's own: never the species they got at their previous aurora (unless nothing else is left), and the species they already caught in the Safari weigh `spawns.caughtSpeciesWeight`, as in the natural spawns. It glows for a while, the player is told, and it gets the Aurora Mark when caught. The aurora lasts a drawn time and ends sooner at dawn or when rain comes. Announced and shown in `/safari today`.
+**`events.aurora`**: at each nightfall without rain, a draw may light an aurora over the Safari. Each hunting player is then owed two Pokémon, one per group: one of `frozenTypes` on the frozen lands (one of `frozenHabitats`, or anywhere snow falls: cold biomes, and high ground cold enough for snow) and one of `otherTypes` anywhere else. Each appears 16 to 32 blocks away, on ground of its own group, as soon as the player stands where that group lives, retried every 3 seconds until it does or the aurora ends. One per player, group and aurora, kept by player for the whole aurora (leaving and coming back neither loses nor renews it). The frozen group draws the Safari's own uncommon, rare and ultra-rare natural species of its types (five uncommon for three rare and one ultra-rare: Cobblemon has almost no rare Ice species, so rare-only would always bring Glaceon); the other group rare and ultra-rare only (three to one), Psychic and Fairy having many. Both follow the natural spawns' rules (`spawns.excludedSpecies`, legendary-class switches and caps, counted apart from the natural ones). The pick is the player's own: never the species they got of that group at their previous aurora (unless nothing else is left), and the species they already caught in the Safari weigh `spawns.caughtSpeciesWeight`, as in the natural spawns. It glows for a while, the player is told, and it gets the Aurora Mark when caught. **While the aurora lasts, every Pokémon appearing in the Safari is `shinyChanceMultiplier` times more likely to be shiny**: natural spawns, specials, swarms, the events' own Pokémon, fished ones (any Pokémon Cobblemon rolls for a player standing in the Safari). The aurora lasts a drawn time and ends sooner at dawn or when rain comes. Announced and shown in `/safari today`.
 
 | Key | Default | What it does |
 |---|---|---|
@@ -346,9 +346,11 @@ Rare happenings that change Cobblemon's natural spawns in the Safari for a while
 | `chance` | `0.1` | Chance (0 to 1) that a nightfall without rain brings an aurora. |
 | `minDurationMinutes` | `3` | Shortest aurora, in real minutes. 1 to 120. |
 | `maxDurationMinutes` | `6` | Longest aurora, in real minutes, at least `minDurationMinutes`. 1 to 120. A night lasts about 7 minutes. |
-| `types` | `["ice"]` | Cobblemon type names of the Pokémon the aurora brings. |
+| `frozenTypes` | `["ice"]` | Cobblemon type names of the Pokémon the aurora brings on the frozen lands. |
+| `otherTypes` | `["psychic", "fairy"]` | Cobblemon type names of the Pokémon the aurora brings everywhere else. |
+| `shinyChanceMultiplier` | `4` | How many times more likely every Pokémon appearing in the Safari is to be shiny during an aurora: 4 turns Cobblemon's 1 in 8192 into 1 in 2048. Stacks with the Shiny Charm. 1 for no effect, up to 100. |
 | `excludeList` | `[]` | Pokémon the aurora never brings, as Cobblemon properties: `"lapras"`, or one form, `"vulpix alolan"`. |
-| `habitats` | `["cobblemon_safari:glacier", "cobblemon_safari:snowfield", "cobblemon_safari:taiga"]` | Habitats where the aurora's Pokémon come, by biome id; any spot where snow falls counts too. |
+| `frozenHabitats` | `["cobblemon_safari:glacier", "cobblemon_safari:snowfield", "cobblemon_safari:taiga"]` | Biomes counted as frozen lands, by biome id, on top of any spot where snow falls: only useful for biomes where it rains (the taiga). It does not limit where the aurora acts. |
 | `glowSeconds` | `20` | Seconds the Pokémon glows when it appears, so it can be found. 0 to 60. |
 
 ### `points`: Safari points

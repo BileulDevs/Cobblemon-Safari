@@ -134,7 +134,7 @@
   "cobblemon_safari.events.storm.end": "L'orage est passé.",
   "cobblemon_safari.events.heatwave.announce": "Une canicule écrase les terres chaudes du Safari : les Pokémon de type %s y sortent davantage.",
   "cobblemon_safari.events.heatwave.end": "La canicule est terminée.",
-  "cobblemon_safari.events.aurora.announce": "Une aurore boréale illumine les terres glacées du Safari : chaque chasseur qui s'y trouve croisera un Pokémon de type %s rare.",
+  "cobblemon_safari.events.aurora.announce": "Une aurore boréale illumine le Safari : chaque chasseur croisera un Pokémon de type %1$s rare sur les terres glacées et un Pokémon de type %2$s rare partout ailleurs. Les chromatiques sont %3$s fois plus fréquents jusqu'à ce qu'elle s'éteigne.",
   "cobblemon_safari.events.aurora.end": "L'aurore boréale s'est éteinte.",
   "cobblemon_safari.events.aurora.appeared": "Un %s est apparu sous l'aurore, non loin de vous !",
   "cobblemon_safari.screen.title": "Safari · Pokémon spéciaux du moment",

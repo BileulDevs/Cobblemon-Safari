@@ -134,7 +134,7 @@
   "cobblemon_safari.events.storm.end": "雷暴已经过去了。",
   "cobblemon_safari.events.heatwave.announce": "热浪炙烤着狩猎地带的炎热之地：那里%s属性的宝可梦会更常出现。",
   "cobblemon_safari.events.heatwave.end": "热浪结束了。",
-  "cobblemon_safari.events.aurora.announce": "极光照亮了狩猎地带的冰封之地：在那里的每位猎手都会遇见一只稀有的%s属性宝可梦。",
+  "cobblemon_safari.events.aurora.announce": "极光照亮了狩猎地带：每位猎手都会在冰封之地遇见一只稀有的%1$s属性宝可梦，在其他地方遇见一只稀有的%2$s属性宝可梦。极光消散之前，异色宝可梦出现的几率提高为%3$s倍。",
   "cobblemon_safari.events.aurora.end": "极光消散了。",
   "cobblemon_safari.events.aurora.appeared": "%s出现在极光之下，就在你附近！",
   "cobblemon_safari.screen.title": "狩猎地带 · 当前特殊宝可梦",

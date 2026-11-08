@@ -134,7 +134,7 @@
   "cobblemon_safari.events.storm.end": "Burza minęła.",
   "cobblemon_safari.events.heatwave.announce": "Upał praży gorące tereny Safari: częściej pojawiają się tam Pokémony typu %s.",
   "cobblemon_safari.events.heatwave.end": "Upał minął.",
-  "cobblemon_safari.events.aurora.announce": "Zorza polarna rozświetla lodowe tereny Safari: każdy łowca, który tam jest, spotka rzadkiego Pokémona typu %s.",
+  "cobblemon_safari.events.aurora.announce": "Zorza polarna rozświetla Safari: każdy łowca spotka rzadkiego Pokémona typu %1$s na lodowych terenach i rzadkiego Pokémona typu %2$s gdzie indziej. Do jej zgaśnięcia lśniące Pokémony są %3$s razy częstsze.",
   "cobblemon_safari.events.aurora.end": "Zorza polarna zgasła.",
   "cobblemon_safari.events.aurora.appeared": "Pod zorzą pojawił się %s, niedaleko ciebie!",
   "cobblemon_safari.screen.title": "Safari · Obecne specjalne Pokémony",

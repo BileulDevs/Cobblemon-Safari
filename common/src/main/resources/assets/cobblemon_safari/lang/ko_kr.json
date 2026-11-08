@@ -134,7 +134,7 @@
   "cobblemon_safari.events.storm.end": "뇌우가 지나갔습니다.",
   "cobblemon_safari.events.heatwave.announce": "폭염이 사파리의 더운 땅을 달굽니다: 그곳에서 %s 타입 포켓몬이 더 자주 나타납니다.",
   "cobblemon_safari.events.heatwave.end": "폭염이 끝났습니다.",
-  "cobblemon_safari.events.aurora.announce": "오로라가 사파리의 얼어붙은 땅을 밝힙니다: 그곳의 사냥꾼은 모두 희귀한 %s 타입 포켓몬을 만나게 됩니다.",
+  "cobblemon_safari.events.aurora.announce": "오로라가 사파리를 밝힙니다: 얼어붙은 땅에서는 희귀한 %1$s 타입, 그 밖의 곳에서는 희귀한 %2$s 타입 포켓몬을 만나게 됩니다. 오로라가 사라질 때까지 색이 다른 포켓몬이 %3$s배 더 자주 나타납니다.",
   "cobblemon_safari.events.aurora.end": "오로라가 사라졌습니다.",
   "cobblemon_safari.events.aurora.appeared": "오로라 아래에 %s(이)가 나타났습니다! 가까운 곳이에요!",
   "cobblemon_safari.screen.title": "사파리 · 지금의 특별한 포켓몬",

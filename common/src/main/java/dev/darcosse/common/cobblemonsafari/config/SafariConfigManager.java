@@ -92,9 +92,14 @@ public final class SafariConfigManager {
      * 9 added events.downpour and capture.marks.downpour, 10 events.storm
      * and capture.marks.storm, 11 events.heatwave, 12 events.aurora and
      * capture.marks.aurora and dropped events.storm.weights (ignored when
-     * read): nothing to convert either, raised for the same reason.
+     * read): nothing to convert either, raised for the same reason. 13
+     * split events.aurora.types into frozenTypes and otherTypes and added
+     * its shinyChanceMultiplier: the development builds' types become
+     * frozenTypes (see migrateTree). 14 renamed events.aurora.habitats to
+     * frozenHabitats, since it never limited where the aurora acts (see
+     * migrateTree).
      */
-    public static final int CURRENT_CONFIG_VERSION = 12;
+    public static final int CURRENT_CONFIG_VERSION = 14;
 
     /** First version that knows the fishing missions. */
     private static final int FISHING_MISSION_VERSION = 6;
@@ -264,6 +269,11 @@ public final class SafariConfigManager {
                 tree.set(path, converted, "a swarm category now has a cap");
             }
         }
+        // The aurora's single type list of the development builds is now its frozen group's.
+        tree.move("events.aurora.types", "events.aurora.frozenTypes");
+        // Its habitats only ever chose the group, so the name now says so.
+        tree.move("events.aurora.habitats", "events.aurora.frozenHabitats");
+        tree.remove("events.storm.weights", "the storm's rarities are fixed");
     }
 
     /**
@@ -1290,6 +1300,11 @@ public final class SafariConfigManager {
      * longer than most storms, so more would mean one flash per storm.
      */
     private static final int MAX_LIGHTNING_COOLDOWN_SECONDS = 600;
+    /**
+     * Upper bound of events.aurora.shinyChanceMultiplier. 100 already makes
+     * one Pokémon in 82 shiny; beyond, shinies stop being a find.
+     */
+    private static final double MAX_AURORA_SHINY_MULTIPLIER = 100.0D;
     /** Upper bound of events.aurora.glowSeconds: longer and the glow gives away every hiding spot. */
     private static final int MAX_AURORA_GLOW_SECONDS = 60;
 
@@ -1456,16 +1471,27 @@ public final class SafariConfigManager {
             aurora.maxDurationMinutes = fixed;
             corrected = true;
         }
-        if (aurora.types == null) {
-            aurora.types = new ArrayList<>();
+        if (aurora.frozenTypes == null) {
+            aurora.frozenTypes = new ArrayList<>();
+            corrected = true;
+        }
+        if (aurora.otherTypes == null) {
+            aurora.otherTypes = new ArrayList<>();
+            corrected = true;
+        }
+        if (!(aurora.shinyChanceMultiplier >= 1.0D && aurora.shinyChanceMultiplier <= MAX_AURORA_SHINY_MULTIPLIER)) {
+            double fixed = Double.isNaN(aurora.shinyChanceMultiplier) ? 1.0D
+                    : Math.max(1.0D, Math.min(MAX_AURORA_SHINY_MULTIPLIER, aurora.shinyChanceMultiplier));
+            warn("events.aurora.shinyChanceMultiplier", aurora.shinyChanceMultiplier, fixed);
+            aurora.shinyChanceMultiplier = fixed;
             corrected = true;
         }
         if (aurora.excludeList == null) {
             aurora.excludeList = new ArrayList<>();
             corrected = true;
         }
-        if (aurora.habitats == null) {
-            aurora.habitats = new ArrayList<>();
+        if (aurora.frozenHabitats == null) {
+            aurora.frozenHabitats = new ArrayList<>();
             corrected = true;
         }
         if (aurora.glowSeconds < 0 || aurora.glowSeconds > MAX_AURORA_GLOW_SECONDS) {
