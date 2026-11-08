@@ -777,6 +777,18 @@ def build_biome(name, spec, orders):
 # on some. The finer octaves, which give the walls their shape, are kept.
 CAVERN_NOISE = "cavern"
 CAVERN_NOISE_DATA = {"firstOctave": -6, "amplitudes": [2.0, 1.0, 2.0, 1.0, 0.0, 2.0, 0.0]}
+# The giant cavern's own noise: the same widest octave (64 blocks), but the
+# finer ones much weaker. With CAVERN_NOISE the 16-block octave carried about
+# a sixth of the noise (as much as the 32-block one, twice vanilla's share)
+# and, at the cavern's lowered threshold, it shaped every wall: lumps of a
+# few blocks all over, like porridge, rather than the smooth rock of vanilla's
+# cheese caves. Here 32 blocks weigh a quarter of 64, 16 an eighth, 8 a
+# thirty-second, about vanilla's ratios: large rounded chambers whose walls
+# keep some relief. Raising the later amplitudes brings the lumps back;
+# adding an octave in front (firstOctave -7) makes chambers twice as wide,
+# but some seeds then get a cavern almost all rock or all hollow.
+GIANT_CAVERN_NOISE = "giant_cavern"
+GIANT_CAVERN_NOISE_DATA = {"firstOctave": -6, "amplitudes": [2.0, 1.0, 1.0, 0.5]}
 
 # The giant cavern, under the summit: the Safari's Deep Dark (deep_cavern
 # biome there). "radius" is the zone's horizontal radius, "center_y" and
@@ -785,7 +797,13 @@ CAVERN_NOISE_DATA = {"firstOctave": -6, "amplitudes": [2.0, 1.0, 2.0, 1.0, 0.0, 
 # than vanilla the cave threshold is inside it (0 = vanilla's caves; 0.3 =
 # about half of the rock hollowed out, in large chambers between pillars;
 # more than about 0.6 merges them into one bare hole).
-GIANT_CAVERN = {"x": 0, "z": 0, "radius": 120, "center_y": 24, "half_height": 60, "boost": 0.3}
+#
+# Unlike the lush cavern, it has its own noise (GIANT_CAVERN_NOISE), keeps
+# half of vanilla's layering ("layer_cut") and has vanilla's pillars
+# ("pillars"): ledges, floors and tall stone columns, as in the cheese caves
+# of the Caves & Cliffs update. The lush cavern keeps the shared defaults.
+GIANT_CAVERN = {"x": 0, "z": 0, "radius": 120, "center_y": 24, "half_height": 60, "boost": 0.3,
+                "noise": GIANT_CAVERN_NOISE, "layer_cut": 0.5, "pillars": True}
 # Its passage starts on the far (east) side of the cavern and runs through
 # its centre, so it crosses several of its caves whatever the seed, then
 # climbs west and opens on the western slopes of the summit. It climbs
@@ -817,8 +835,17 @@ LUSH_CAVERN_TUNNEL = {"name": "lush_cavern_passage", "x": -90, "z": LUSH_CAVERN_
                       "half_width": 4.0, "half_height": 3.5}
 # How much of vanilla's cave layering (cave_layer, which flattens cheese
 # caves into horizontal sheets) is removed at a cavern's centre: 0 keeps
-# vanilla's flat caves, 1 lets the caverns grow as tall as the zone.
+# vanilla's flat caves, 1 lets the caverns grow as tall as the zone. Default
+# of a cavern without its own "layer_cut". At 0.85 the caves lose the ledges
+# and floors that make vanilla's look like rock strata; at 0.5 (the giant
+# cavern) chambers stay tall but keep some.
 CAVERN_LAYER_CUT = 0.85
+# Vanilla's cave pillars (density function overworld/caves/pillars) and the
+# value above which they are rock, as in vanilla's final density. A cavern
+# with "pillars" gets them back: vanilla adds them only inside its own caves,
+# and a cavern's caves, min'ed over vanilla's terrain, would carve them away.
+VANILLA_PILLARS_DF = "minecraft:overworld/caves/pillars"
+VANILLA_PILLAR_THRESHOLD = 0.03
 # Rock added at the edge of a cavern zone, fading to none inside it.
 # High enough that the caves close before the zone ends (above 1.23,
 # what clamped noise can cancel), so its edge needs no cut;
@@ -1090,16 +1117,24 @@ def cavern_df(c):
     # 1 over the inner part of the zone, falling to 0 on its edge and outside.
     weight = df_clamp(df_mul(1.0 / CAVERN_EDGE, df_add(1.0, df_mul(-1.0, zone_distance(c)))), 0.0, 1.0)
     layer = df_mul(4.0, df_square(noise3("minecraft:cave_layer", 1.0, 8.0)))
-    layer = df_mul(layer, df_add(1.0, df_mul(-CAVERN_LAYER_CUT, weight)))
+    layer = df_mul(layer, df_add(1.0, df_mul(-c.get("layer_cut", CAVERN_LAYER_CUT), weight)))
     cheese = df_clamp(df_add(VANILLA_CHEESE_OFFSET - c["boost"],
-                             noise3(f"{MOD_ID}:{CAVERN_NOISE}", 1.0, 0.6666666666666666)), -1.0, 1.0)
+                             noise3(f"{MOD_ID}:{c.get('noise', CAVERN_NOISE)}", 1.0, 0.6666666666666666)), -1.0, 1.0)
     # Vanilla's guard keeping cheese caves under the surface, made strong
     # enough for the cavern's lower threshold (CAVERN_ROOF_STRENGTH), so the
     # caverns never open into the sky by themselves.
     guard = df_mul(CAVERN_ROOF_STRENGTH,
                    df_clamp(df_add(1.5, df_mul(-0.64, f"{MOD_ID}:safari/sloped_cheese")), 0.0, 0.5))
     fade = df_mul(CAVERN_FADE, df_add(1.0, df_mul(-1.0, weight)))
-    return df_add(df_add(layer, cheese), df_add(guard, fade))
+    caves = df_add(df_add(layer, cheese), df_add(guard, fade))
+    if not c.get("pillars"):
+        return caves
+    # Vanilla's own pillar term (rock where it is above the threshold,
+    # nothing elsewhere), so pillars stand where they would in vanilla caves.
+    pillars = {"type": "minecraft:range_choice", "input": VANILLA_PILLARS_DF,
+               "min_inclusive": -1000000.0, "max_exclusive": VANILLA_PILLAR_THRESHOLD,
+               "when_in_range": -1000000.0, "when_out_of_range": VANILLA_PILLARS_DF}
+    return df_max(caves, pillars)
 
 
 def tunnel_along(t):
@@ -1680,6 +1715,7 @@ def main():
 
     settings = rename_refs(vanilla("worldgen/noise_settings/overworld"))
     write(f"worldgen/noise/{CAVERN_NOISE}.json", CAVERN_NOISE_DATA, written)
+    write(f"worldgen/noise/{GIANT_CAVERN_NOISE}.json", GIANT_CAVERN_NOISE_DATA, written)
     for passage in (GIANT_CAVERN_TUNNEL, LUSH_CAVERN_TUNNEL):
         write(f"worldgen/density_function/safari/{passage['name']}_along.json", tunnel_along(passage), written)
     write("worldgen/density_function/safari/carved_caves.json", carved_caves_df(), written)
