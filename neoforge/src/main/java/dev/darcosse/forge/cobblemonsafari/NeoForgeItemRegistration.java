@@ -3,6 +3,7 @@ package dev.darcosse.forge.cobblemonsafari;
 import dev.darcosse.common.cobblemonsafari.advancement.SafariAdvancements;
 import dev.darcosse.common.cobblemonsafari.block.SafariBlockEntities;
 import dev.darcosse.common.cobblemonsafari.block.SafariBlocks;
+import dev.darcosse.common.cobblemonsafari.entity.SafariEntities;
 import dev.darcosse.common.cobblemonsafari.item.SafariCreativeTab;
 import dev.darcosse.common.cobblemonsafari.item.SafariItems;
 import dev.darcosse.common.cobblemonsafari.stats.SafariStatistics;
@@ -12,7 +13,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.neoforge.registries.RegisterEvent;
 
 /**
- * Registers the Safari blocks, block entity types, items, creative tab,
+ * Registers the Safari blocks, block entity types, items, entity types, creative tab,
  * statistics and advancement trigger on NeoForge.
  */
 public final class NeoForgeItemRegistration {
@@ -30,6 +31,7 @@ public final class NeoForgeItemRegistration {
         // the order the block items need.
         event.register(Registries.BLOCK, helper -> SafariBlocks.register(helper::register));
         event.register(Registries.ITEM, helper -> SafariItems.register(helper::register));
+        event.register(Registries.ENTITY_TYPE, helper -> SafariEntities.register(helper::register));
         // Vanilla's registration order puts block entity types after blocks.
         // Built here, not in common: BlockEntitySupplier is only public through
         // NeoForge's access transformer (see SafariBlockEntities.TypeFactory).

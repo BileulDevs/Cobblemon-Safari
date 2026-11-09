@@ -15,7 +15,9 @@ import org.joml.Vector3f
  *
  * Uses Cobblemon's own GUI helper (`drawProfilePokemon`, what the PC and the
  * summary use) with the transform of a PC slot, scaled to the card. Each
- * entry keeps its [FloatingState] across frames so the idle animation plays.
+ * entry keeps its [FloatingState] across frames so the idle animation plays,
+ * advanced by the real time elapsed, as the wall screens and Just Enough
+ * Cobblemon do, so it runs at the speed it has in the world.
  *
  * CLIENT ONLY. Render thread only.
  */
@@ -52,7 +54,24 @@ object ShopPokemonModels {
      */
     private const val SWAY_PHASE_STEP = 1.3
 
-    private val states = HashMap<String, FloatingState>()
+    /**
+     * Length of one game tick in nanoseconds: Cobblemon animations are
+     * written in ticks, 20 per second.
+     */
+    private const val NANOS_PER_TICK = 50_000_000.0
+
+    /**
+     * Longest animation step applied at once, in ticks. A card that was not
+     * drawn for a while (another tab or page shown) resumes where it was
+     * instead of jumping ahead; raising it lets such jumps through, and
+     * one-shot effects would then fire in a burst.
+     */
+    private const val MAX_ANIMATION_STEP_TICKS = 2F
+
+    /** One card's animation state and when it was last advanced. */
+    private class Slot(val state: FloatingState, var lastNanos: Long)
+
+    private val slots = HashMap<String, Slot>()
 
     /** Species whose model threw once; drawn as nothing afterwards so the log is not flooded every frame. */
     private val failed = HashSet<ResourceLocation>()
@@ -60,7 +79,7 @@ object ShopPokemonModels {
     /** Forgets every animation state; called when the screen closes. */
     @JvmStatic
     fun clear() {
-        states.clear()
+        slots.clear()
     }
 
     /** Name of a species in the player's language, or its id path when the client does not know it. */
@@ -77,11 +96,12 @@ object ShopPokemonModels {
      */
     @JvmStatic
     fun draw(graphics: GuiGraphics, key: String, species: ResourceLocation, aspects: Collection<String>,
-             x: Int, y: Int, size: Int, partialTicks: Float) {
+             x: Int, y: Int, size: Int) {
         if (species in failed || PokemonSpecies.getByIdentifier(species) == null) {
             return
         }
-        val state = states.getOrPut(key) { FloatingState() }
+        val slot = slots.getOrPut(key) { Slot(FloatingState(), System.nanoTime()) }
+        val state = slot.state
         state.currentAspects = aspects.toSet()
         val phase = System.currentTimeMillis() % SWAY_PERIOD_MILLIS.toLong() / SWAY_PERIOD_MILLIS * 2 * Math.PI
         val yaw = FRONT_YAW_DEGREES + SWAY_DEGREES * Math.sin(phase + key.hashCode() * SWAY_PHASE_STEP).toFloat()
@@ -97,7 +117,12 @@ object ShopPokemonModels {
                 matrixStack = pose,
                 rotation = Quaternionf().fromEulerXYZDegrees(Vector3f(PITCH_DEGREES, yaw, 0F)),
                 state = state,
-                partialTicks = partialTicks,
+                // drawProfilePokemon adds this to the state's clock
+                // (FloatingState.updatePartialTicks accumulates): it must be the
+                // time since this card's previous frame. The frame's partial
+                // tick, passed here before, added up to a value tied to the
+                // frame rate, so models played faster the higher the FPS.
+                partialTicks = elapsedTicks(slot),
                 scale = PC_MODEL_SCALE,
             )
         } catch (e: RuntimeException) {
@@ -106,5 +131,13 @@ object ShopPokemonModels {
         } finally {
             pose.popPose()
         }
+    }
+
+    /** Real time elapsed since this card was last drawn, in ticks, capped at [MAX_ANIMATION_STEP_TICKS]. */
+    private fun elapsedTicks(slot: Slot): Float {
+        val now = System.nanoTime()
+        val ticks = ((now - slot.lastNanos) / NANOS_PER_TICK).toFloat()
+        slot.lastNanos = now
+        return ticks.coerceIn(0F, MAX_ANIMATION_STEP_TICKS)
     }
 }

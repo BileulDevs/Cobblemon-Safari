@@ -97,7 +97,13 @@ object SafariHabitatIndex {
             val positionType = runCatching { detail.spawnablePositionType.name }.getOrNull()
             val water = positionType in WATER_POSITION_TYPES
             val windows = windowsOf(detail, habitats, water)
-            builders.getOrPut(species.resourceIdentifier) { EntryBuilder(species) }.add(detail, matched, water, windows)
+            // Habitats reached without a Poké Snack: Cobblemon 1.8 duplicates many
+            // spawns as snack-only ones, and makes some species (Gallade) snack-only.
+            val wild = habitats.filter { (_, holder) ->
+                detail.conditions.any { it.isPokeSnack != true && fitsBiome(it, holder) } &&
+                    detail.anticonditions.none { fitsBiome(it, holder) }
+            }.map { it.first }
+            builders.getOrPut(species.resourceIdentifier) { EntryBuilder(species) }.add(detail, matched, water, windows, wild)
         }
 
         val index = TreeMap<ResourceLocation, HabitatEntry>()
@@ -142,12 +148,12 @@ object SafariHabitatIndex {
                 condition.minLight, condition.maxLight, condition.minSkyLight, condition.maxSkyLight, condition.canSeeSky)
         }
 
-    /** Whether a spawn condition accepts the given biome. */
-    private fun fitsBiome(condition: SpawningCondition<*>, holder: Holder<Biome>): Boolean =
+    /** Whether a spawn condition accepts the given biome. Shared with [SwarmSpawnData]. */
+    internal fun fitsBiome(condition: SpawningCondition<*>, holder: Holder<Biome>): Boolean =
         condition.biomes?.any { it.fits(holder) } == true
 
-    /** The species a spawn file names, with or without namespace; null when unknown. */
-    private fun resolveSpecies(raw: String?): Species? {
+    /** The species a spawn file names, with or without namespace; null when unknown. Shared with [SwarmSpawnData]. */
+    internal fun resolveSpecies(raw: String?): Species? {
         if (raw.isNullOrBlank()) return null
         val id = if (raw.contains(':')) ResourceLocation.tryParse(raw)
         else ResourceLocation.tryParse("$DEFAULT_SPECIES_NAMESPACE:$raw")
@@ -167,7 +173,7 @@ object SafariHabitatIndex {
         // No natural spawn usually means a legendary, a starter-like species or
         // a datapack addition: rare is the honest default, special labels go higher.
         val rarity = if (SpeciesRules.isSpecial(species)) Rarity.ULTRA_RARE else Rarity.RARE
-        return HabitatEntry(species, land, water, rarity, null, 0, 0, false, emptyList())
+        return HabitatEntry(species, land, water, rarity, null, 0, 0, false, emptyList(), emptySet())
     }
 
     /** Accumulates every natural spawn detail of one species. */
@@ -177,11 +183,17 @@ object SafariHabitatIndex {
         private var rarity: Rarity? = null
         private var best: PokemonSpawnDetail? = null
         private val windows = ArrayList<SpawnWindow>()
+        private val wild = LinkedHashSet<ResourceKey<Biome>>()
 
-        /** Adds one natural spawn detail: its habitats, its time windows, and its rarity if it is the most common so far. */
+        /**
+         * Adds one natural spawn detail: its habitats (and those of them reached
+         * without a Poké Snack), its time windows, and its rarity if it is the
+         * most common so far.
+         */
         fun add(detail: PokemonSpawnDetail, biomes: List<ResourceKey<Biome>>, inWater: Boolean,
-                detailWindows: List<SpawnWindow>) {
+                detailWindows: List<SpawnWindow>, wildBiomes: List<ResourceKey<Biome>>) {
             if (inWater) water.addAll(biomes) else land.addAll(biomes)
+            wild.addAll(wildBiomes)
             windows.addAll(detailWindows)
             // In Cobblemon 1.8.0 the bucket is a plain String (`var bucket = ""`
             // in SpawnDetail); later Cobblemon versions make it a SpawnBucket
@@ -201,7 +213,7 @@ object SafariHabitatIndex {
             val finalRarity = if (special) Rarity.ULTRA_RARE else rarity ?: Rarity.RARE
             val range = best?.levelRange
             return HabitatEntry(species, land, water, finalRarity, best?.pokemon?.copy(),
-                range?.first ?: 0, range?.last ?: 0, true, windows.toList())
+                range?.first ?: 0, range?.last ?: 0, true, windows.toList(), wild)
         }
     }
 }

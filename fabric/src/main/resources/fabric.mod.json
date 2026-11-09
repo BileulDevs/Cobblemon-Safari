@@ -25,6 +25,6 @@
     "fabricloader": ">=0.17.2",
     "fabric-api": "*",
     "fabric-language-kotlin": "*",
-    "cobblemon": ">=1.8.0"
+    "cobblemon": "~1.8.0"
   }
 }

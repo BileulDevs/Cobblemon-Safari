@@ -1,5 +1,5 @@
 {
-  "configVersion": 7,
+  "configVersion": 16,
   "hunt": {
     "maxDurationSeconds": 3600,
     "pauseWhileOffline": true,
@@ -84,7 +84,11 @@
       "special": true,
       "swarm": true,
       "fullMoon": true,
-      "angler": true
+      "downpour": true,
+      "storm": true,
+      "aurora": true,
+      "angler": true,
+      "nest": true
     },
     "flee": {
       "enabled": true,
@@ -105,6 +109,7 @@
   },
   "protection": {
     "invulnerablePlayers": true,
+    "invulnerablePokemon": true,
     "hunger": false,
     "protectBlocks": true,
     "placeableBlocks": [
@@ -130,7 +135,7 @@
     "maxSameSpeciesNearby": 4,
     "spawnRateMultiplier": 2.0,
     "pokemonPerChunkMultiplier": 2.0,
-    "caughtSpeciesWeight": 0.4,
+    "caughtSpeciesWeight": 0.3,
     "snackClearRadius": 16,
     "snackDensityMultiplier": 1.5,
     "legendary": {
@@ -187,13 +192,101 @@
     "swarm": {
       "enabled": true,
       "chance": 0.5,
+      "buckets": ["uncommon", "rare", "ultra-rare"],
+      "rarities": {
+        "legendary": {
+          "allowSpawn": false,
+          "maxSpawnPerPokemon": 0
+        },
+        "mythical": {
+          "allowSpawn": false,
+          "maxSpawnPerPokemon": 0
+        },
+        "ultraBeast": {
+          "allowSpawn": false,
+          "maxSpawnPerPokemon": 0
+        },
+        "paradox": {
+          "allowSpawn": true,
+          "maxSpawnPerPokemon": 0
+        }
+      },
+      "weights": {
+        "common": 0,
+        "uncommon": 10,
+        "rare": 4,
+        "ultraRare": 1
+      },
+      "excludeList": [],
       "weightMultiplier": 10.0,
-      "maxNearby": 10
+      "maxNearby": 10,
+      "minNearby": 4,
+      "checkEverySeconds": 5
     },
     "fullMoon": {
       "enabled": true,
-      "types": ["fairy", "ghost"],
+      "types": ["fairy", "ghost", "dark", "psychic"],
       "weightMultiplier": 3.0
+    },
+    "downpour": {
+      "enabled": true,
+      "chance": 0.15,
+      "minDurationMinutes": 5,
+      "maxDurationMinutes": 10,
+      "types": ["water", "electric"],
+      "weightMultiplier": 2.0
+    },
+    "storm": {
+      "enabled": true,
+      "chance": 0.5,
+      "minDurationMinutes": 3,
+      "maxDurationMinutes": 8,
+      "types": ["electric", "dragon"],
+      "excludeList": [],
+      "habitats": ["cobblemon_safari:peaks", "cobblemon_safari:rocky_hills", "cobblemon_safari:volcanic"],
+      "minAltitudeAboveSea": 45,
+      "checkEverySeconds": 15,
+      "spawnChance": 0.25,
+      "maxNearby": 2,
+      "lightning": true,
+      "lightningCooldownSeconds": 30
+    },
+    "heatwave": {
+      "enabled": true,
+      "chance": 0.15,
+      "minDurationMinutes": 4,
+      "maxDurationMinutes": 8,
+      "types": ["fire", "ground"],
+      "habitats": ["cobblemon_safari:dunes", "cobblemon_safari:volcanic", "cobblemon_safari:badlands", "cobblemon_safari:savanna"],
+      "weightMultiplier": 2.0
+    },
+    "aurora": {
+      "enabled": true,
+      "chance": 0.1,
+      "minDurationMinutes": 3,
+      "maxDurationMinutes": 6,
+      "frozenTypes": ["ice"],
+      "otherTypes": ["psychic", "fairy"],
+      "shinyChanceMultiplier": 4.0,
+      "excludeList": [],
+      "frozenHabitats": ["cobblemon_safari:glacier", "cobblemon_safari:snowfield", "cobblemon_safari:taiga"],
+      "glowSeconds": 20
+    },
+    "eggNests": {
+      "enabled": true,
+      "checkEverySeconds": 30,
+      "spawnChance": 0.05,
+      "minDistance": 24,
+      "maxDistance": 48,
+      "exclusionRadius": 128,
+      "lifetimeMinutes": 20,
+      "firstComeFirstServed": true,
+      "excludedEggGroups": ["undiscovered"],
+      "rarities": { "legendary": false, "mythical": false, "ultraBeast": false, "paradox": false },
+      "excludeList": [],
+      "hatchMinutes": 10,
+      "hatchSpeedAbilities": ["flamebody"],
+      "hatchSpeedMultiplier": 2.0
     }
   },
   "points": {
@@ -253,6 +346,9 @@
     "enabled": true,
     "hour": 4,
     "timeZone": "Europe/Paris",
-    "relief": "GENTLE"
+    "relief": "GENTLE",
+    "mode": "LIVE",
+    "maxWaitMinutes": 60,
+    "countdownSeconds": 300
   }
 }

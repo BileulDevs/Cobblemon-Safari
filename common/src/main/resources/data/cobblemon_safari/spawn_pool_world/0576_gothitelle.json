@@ -1,0 +1,31 @@
+{
+  "enabled": true,
+  "neededInstalledMods": [],
+  "neededUninstalledMods": [],
+  "spawns": [
+    {
+      "id": "cobblemon_safari-gothitelle-1",
+      "pokemon": "gothitelle",
+      "presets": [
+        "natural",
+        "wild"
+      ],
+      "type": "pokemon",
+      "spawnablePositionType": "grounded",
+      "bucket": "common",
+      "level": "41-49",
+      "weight": 0.3,
+      "condition": {
+        "dimensions": [
+          "cobblemon_safari:safari"
+        ],
+        "canSeeSky": true,
+        "biomes": [
+          "#cobblemon:is_floral",
+          "#cobblemon:is_magical"
+        ],
+        "timeRange": "night"
+      }
+    }
+  ]
+}

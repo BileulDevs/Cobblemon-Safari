@@ -10,6 +10,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.biome.Biome;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -28,11 +29,16 @@ import java.util.Set;
  * @param natural       whether the habitats come from real spawn data rather than from its types
  * @param windows       its natural spawns' time and light conditions per habitat; empty when it has
  *                      no natural spawn (habitats from its types), in which case it may appear at any time
+ * @param wildHabitats  those of its habitats where it spawns without a Poké Snack (land or water);
+ *                      empty for a species met only through Poké Snacks, or with no natural spawn.
+ *                      Since Cobblemon 1.8 many species have Poké Snack-only spawns: the habitats
+ *                      above list them too, which is right for the board, whose spawner ignores
+ *                      that condition, but not for what players must find in the wild.
  */
 public record HabitatEntry(Species species, Set<ResourceKey<Biome>> landHabitats,
                            Set<ResourceKey<Biome>> waterHabitats, Rarity rarity,
                            @Nullable PokemonProperties template, int minLevel, int maxLevel, boolean natural,
-                           List<SpawnWindow> windows) {
+                           List<SpawnWindow> windows, Set<ResourceKey<Biome>> wildHabitats) {
 
     /**
      * Whether a special of this species may appear at this spot now: one of
@@ -52,6 +58,45 @@ public record HabitatEntry(Species species, Set<ResourceKey<Biome>> landHabitats
             }
         }
         return false;
+    }
+
+    /**
+     * Every habitat of the species, land and water, for display: the main one
+     * ({@link #mainHabitat}) first, then the others in the Safari's canonical
+     * order. Empty when it has none.
+     */
+    public List<ResourceKey<Biome>> allHabitats() {
+        List<ResourceKey<Biome>> all = new ArrayList<>();
+        ResourceKey<Biome> main = mainHabitat();
+        if (main != null) {
+            all.add(main);
+        }
+        for (ResourceKey<Biome> biome : SafariBiomes.SURFACE_HABITATS) {
+            if (!biome.equals(main) && (landHabitats.contains(biome) || waterHabitats.contains(biome))) {
+                all.add(biome);
+            }
+        }
+        return List.copyOf(all);
+    }
+
+    /**
+     * The main habitat among those where the species spawns without a Poké
+     * Snack, by the same rule as {@link #mainHabitat}; null when there is
+     * none. For what a player must find in the wild (the Safari Pokédex).
+     */
+    @Nullable
+    public ResourceKey<Biome> wildMainHabitat() {
+        for (ResourceKey<Biome> biome : SafariBiomes.SURFACE_HABITATS) {
+            if (landHabitats.contains(biome) && wildHabitats.contains(biome)) {
+                return biome;
+            }
+        }
+        for (ResourceKey<Biome> biome : SafariBiomes.SURFACE_HABITATS) {
+            if (waterHabitats.contains(biome) && wildHabitats.contains(biome)) {
+                return biome;
+            }
+        }
+        return null;
     }
 
     /**

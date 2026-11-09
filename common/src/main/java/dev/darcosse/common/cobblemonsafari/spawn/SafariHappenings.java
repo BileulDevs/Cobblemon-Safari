@@ -8,6 +8,7 @@ import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
+import dev.darcosse.common.cobblemonsafari.util.HabitatNames;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -29,7 +30,10 @@ import java.util.UUID;
  * Keeps the Safari's rare happenings ({@code events}) up to date for the
  * spawn threads and tells the players about them: the swarm of the rotation
  * ({@link Swarm}) once per rotation to each player in the Safari, the full
- * moon once per night.
+ * moon once per night, the downpour ({@link Downpour}), the storm
+ * ({@link Storm}), the heatwave ({@link Heatwave}) and the aurora
+ * ({@link Aurora}) when they start and end; the storm also brings its
+ * Pokémon from here, the aurora its promised ones.
  *
  * <p>The effect on the spawns themselves is {@link SafariHappeningsInfluence}'s.
  * Server side. Cost: once a second, a few comparisons, and the swarm's draw
@@ -69,6 +73,11 @@ public final class SafariHappenings {
         MOON_TOLD.clear();
         tickCounter = 0;
         Swarm.reset();
+        Downpour.reset();
+        Storm.reset();
+        Heatwave.reset();
+        Aurora.reset();
+        EggNests.reset();
     }
 
     /** Whether a full moon night is on, for the spawn threads. */
@@ -105,6 +114,11 @@ public final class SafariHappenings {
         if (!moonNow) {
             MOON_TOLD.clear();
         }
+        Downpour.tick(safari);
+        Storm.tick(server, safari);
+        Heatwave.tick(safari);
+        Aurora.tick(server, safari);
+        EggNests.tick(safari);
         Swarm.Active swarm = Swarm.current(server);
         if (safari == null) {
             return;
@@ -124,14 +138,23 @@ public final class SafariHappenings {
     /** The swarm's line, also shown by {@code /safari today}. */
     public static Component swarmMessage(Swarm.Active swarm) {
         Component species = swarm.species().getTranslatedName().copy().withStyle(swarm.rarity().color);
-        Component habitat = Component.translatable("biome." + swarm.biome().location().getNamespace() + "."
-                + swarm.biome().location().getPath()).withStyle(ChatFormatting.WHITE);
+        // Short name, as on the specials list this line is part of.
+        Component habitat = HabitatNames.name(swarm.biome().location()).copy().withStyle(ChatFormatting.WHITE);
         return Component.translatable(key("events.swarm.announce"), species, habitat)
                 .withStyle(ChatFormatting.GOLD);
     }
 
     /** The full moon's line, naming the favoured types. */
     private static Component moonMessage(List<String> typeNames) {
+        return Component.translatable(key("events.full_moon.announce"), typeNames(typeNames))
+                .withStyle(ChatFormatting.AQUA);
+    }
+
+    /**
+     * Cobblemon type names as their translated names, comma separated; a
+     * name Cobblemon does not know is shown as written.
+     */
+    static Component typeNames(List<String> typeNames) {
         MutableComponent types = Component.empty();
         boolean first = true;
         for (String name : typeNames) {
@@ -142,11 +165,11 @@ public final class SafariHappenings {
             types.append(type != null ? type.getDisplayName() : Component.literal(name));
             first = false;
         }
-        return Component.translatable(key("events.full_moon.announce"), types).withStyle(ChatFormatting.AQUA);
+        return types;
     }
 
     /** Sends a notice with a short chime. */
-    private static void tell(ServerPlayer player, Component message) {
+    static void tell(ServerPlayer player, Component message) {
         player.sendSystemMessage(message);
         player.playNotifySound(SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.PLAYERS, NOTICE_VOLUME, NOTICE_PITCH);
     }

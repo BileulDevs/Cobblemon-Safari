@@ -14,7 +14,7 @@ import dev.darcosse.common.cobblemonsafari.structure.RestHouses;
 import dev.darcosse.common.cobblemonsafari.util.LoadedChunks;
 import dev.darcosse.common.cobblemonsafari.util.SafariCaves;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
-import net.minecraft.Util;
+import dev.darcosse.common.cobblemonsafari.util.HabitatNames;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
@@ -102,6 +102,16 @@ public final class RestHouseTravel {
      * (a missing template, an unloadable area).
      */
     private static final int MAX_WAIT_SECONDS = 45;
+
+    /**
+     * How many blocks further out than a house's arrival the bird takes off
+     * and lands, away from the house. On the arrival itself, against the
+     * steps, the bird's wings and its rider went through the edge of the
+     * roof. More moves the flight away from the door; past the plaza
+     * (about 5 blocks) it may land on rough ground and fall back to the
+     * arrival.
+     */
+    private static final int FLIGHT_SPOT_OFFSET = 2;
 
     /** Radius of the destination's chunk ticket; see {@link RestHouses#AREA_TICKET_RADIUS}. */
     private static final int TICKET_RADIUS = RestHouses.AREA_TICKET_RADIUS;
@@ -667,6 +677,11 @@ public final class RestHouseTravel {
         if (source == Source.GUIDE) {
             RestHouses.HouseSite here = houseHere(player);
             feet = here == null ? null : SafariTeleporter.arrivalFeet(level, RestHouses.arrivalOf(here));
+            BlockPos clear = here == null ? null : flightFeet(level, here);
+            // The spot clear of the roof when the bird can leave from it, else the steps as before.
+            if (clear != null && TravelFlight.canTakeOff(level, clear, heading)) {
+                feet = clear;
+            }
         } else if (player.onGround() && level.canSeeSky(BlockPos.containing(player.getEyePosition()))) {
             feet = player.blockPosition();
         } else {
@@ -686,6 +701,12 @@ public final class RestHouseTravel {
             return new TakeOff(other, !other.equals(player.blockPosition()));
         }
         return null;
+    }
+
+    /** Where the bird takes off from or lands at a house, clear of its roof; null to use the arrival. */
+    @Nullable
+    private static BlockPos flightFeet(ServerLevel level, RestHouses.HouseSite site) {
+        return SafariTeleporter.flightFeet(level, RestHouses.arrivalOf(site), site.facing(), FLIGHT_SPOT_OFFSET);
     }
 
     /** Horizontal unit vector from the player toward the destination; south when they stand on it. */
@@ -900,7 +921,13 @@ public final class RestHouseTravel {
         SafariStatistics.increment(player, SafariStatistics.REST_HOUSE_TRIPS);
         trip.arrived.accept(player);
         if (trip.flying) {
-            // Invisible where the double will land: the swap at the end shows nothing.
+            // The double lands clear of the roof (flightFeet); the player waits
+            // there, invisible, so the swap at the end shows nothing.
+            BlockPos clear = flightFeet(safari, site);
+            if (clear != null) {
+                SafariTeleporter.sendToFeet(player, safari, clear);
+                feet = clear;
+            }
             trip.landingFeet = feet;
             trip.landingYaw = arrival.yaw();
             trip.enter(Phase.SETTLING, now);
@@ -1021,7 +1048,8 @@ public final class RestHouseTravel {
             return new Label(key("rest_house.cave." + site.caveId()), "");
         }
         Optional<ResourceKey<Biome>> biome = biomeAt(level, site.x(), site.z());
-        String biomeKey = biome.map(key -> Util.makeDescriptionId("biome", key.location()))
+        // Short name: the guide's menu only lists Safari places, "Safari" before each is noise.
+        String biomeKey = biome.map(key -> HabitatNames.key(key.location()))
                 .orElse(key("travel.unknown_biome"));
         boolean shared = false;
         for (RestHouses.HouseSite other : RestHouses.sites()) {

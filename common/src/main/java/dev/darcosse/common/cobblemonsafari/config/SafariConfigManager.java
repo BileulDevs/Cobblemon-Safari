@@ -1,5 +1,8 @@
 package dev.darcosse.common.cobblemonsafari.config;
 
+import dev.darcosse.common.cobblemonsafari.network.SafariFeaturedPayload;
+import dev.darcosse.common.cobblemonsafari.spawn.SwarmRules;
+import dev.darcosse.common.cobblemonsafari.reset.ResetMode;
 import dev.darcosse.common.cobblemonsafari.worldgen.IslandRelief;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.bounty.BountyKind;
@@ -65,6 +68,8 @@ public final class SafariConfigManager {
      * clerk's swap functions, one per mission (SafariBounties.MAX_MISSIONS).
      */
     private static final int MAX_BOUNTIES = SafariBounties.MAX_MISSIONS;
+    /** Rarities with specials slots (common, uncommon, rare, ultra-rare), to share the board's limit between them. */
+    private static final int SPECIAL_RARITIES = 4;
 
     /**
      * Format version written to the file. Raise it when a field changes
@@ -84,8 +89,24 @@ public final class SafariConfigManager {
      * {@code bounties.allowedKinds}, once, in files written before they existed.
      * 7 grouped the settings by subject and renamed several (see
      * {@link #migrateToSections}); older files are converted on load.
+     * 8 added events.swarm.buckets, rarities, weights, excludeList,
+     * minNearby and checkEverySeconds, and protection.invulnerablePokemon:
+     * nothing to convert, raised only so that existing files are rewritten
+     * once and show the new keys.
+     * 9 added events.downpour and capture.marks.downpour, 10 events.storm
+     * and capture.marks.storm, 11 events.heatwave, 12 events.aurora and
+     * capture.marks.aurora and dropped events.storm.weights (ignored when
+     * read): nothing to convert either, raised for the same reason. 13
+     * split events.aurora.types into frozenTypes and otherTypes and added
+     * its shinyChanceMultiplier: the development builds' types become
+     * frozenTypes (see migrateTree). 14 renamed events.aurora.habitats to
+     * frozenHabitats, since it never limited where the aurora acts (see
+     * migrateTree). 15 added events.eggNests and capture.marks.nest:
+     * nothing to convert, raised so that existing files show the new keys.
+     * 16 added reset.mode, reset.maxWaitMinutes and reset.countdownSeconds:
+     * nothing to convert either.
      */
-    public static final int CURRENT_CONFIG_VERSION = 7;
+    public static final int CURRENT_CONFIG_VERSION = 16;
 
     /** First version that knows the fishing missions. */
     private static final int FISHING_MISSION_VERSION = 6;
@@ -128,7 +149,7 @@ public final class SafariConfigManager {
      * enough to feel gone from the Safari; higher, the novelty push is
      * barely noticeable.
      */
-    public static final double DEFAULT_CAUGHT_SPECIES_WEIGHT = 0.4;
+    public static final double DEFAULT_CAUGHT_SPECIES_WEIGHT = 0.3;
 
     /** Default spawns.snackClearRadius, in blocks: twice a Poké Snack's own spawn radius (8). */
     public static final int DEFAULT_SNACK_CLEAR_RADIUS = 16;
@@ -238,6 +259,28 @@ public final class SafariConfigManager {
         int version = tree.version(CURRENT_CONFIG_VERSION);
         migrateLegacyKeys(tree, version);
         migrateToSections(tree);
+        // The 1.5.0 development builds wrote the swarm's bucket list under
+        // "rarities", which now holds the legendary-class switches: an array
+        // there would fail to bind and the whole file would be refused.
+        if (tree.get("events.swarm.rarities") instanceof JsonArray) {
+            tree.move("events.swarm.rarities", "events.swarm.buckets");
+        }
+        // Later ones wrote each category as a bare switch; it is now an object
+        // with a cap, and a boolean there would fail to bind just the same.
+        for (String category : List.of("legendary", "mythical", "ultraBeast", "paradox")) {
+            String path = "events.swarm.rarities." + category;
+            if (tree.get(path) instanceof JsonPrimitive flag && flag.isBoolean()) {
+                JsonObject converted = new JsonObject();
+                converted.addProperty("allowSpawn", flag.getAsBoolean());
+                converted.addProperty("maxSpawnPerPokemon", SafariConfig.SwarmCategories.DEFAULT_CAP);
+                tree.set(path, converted, "a swarm category now has a cap");
+            }
+        }
+        // The aurora's single type list of the development builds is now its frozen group's.
+        tree.move("events.aurora.types", "events.aurora.frozenTypes");
+        // Its habitats only ever chose the group, so the name now says so.
+        tree.move("events.aurora.habitats", "events.aurora.frozenHabitats");
+        tree.remove("events.storm.weights", "the storm's rarities are fixed");
     }
 
     /**
@@ -711,6 +754,24 @@ public final class SafariConfigManager {
             c.reset.timeZone = "";
             corrected = true;
         }
+        if (c.reset.mode == null) {
+            // Gson reads a name that is no mode as null.
+            warn("reset.mode", "an unknown mode", ResetMode.LIVE);
+            c.reset.mode = ResetMode.LIVE;
+            corrected = true;
+        }
+        if (c.reset.maxWaitMinutes < 1 || c.reset.maxWaitMinutes > MAX_RESET_WAIT_MINUTES) {
+            int fixed = Math.max(1, Math.min(MAX_RESET_WAIT_MINUTES, c.reset.maxWaitMinutes));
+            warn("reset.maxWaitMinutes", c.reset.maxWaitMinutes, fixed);
+            c.reset.maxWaitMinutes = fixed;
+            corrected = true;
+        }
+        if (c.reset.countdownSeconds < 0 || c.reset.countdownSeconds > MAX_RESET_COUNTDOWN_SECONDS) {
+            int fixed = Math.max(0, Math.min(MAX_RESET_COUNTDOWN_SECONDS, c.reset.countdownSeconds));
+            warn("reset.countdownSeconds", c.reset.countdownSeconds, fixed);
+            c.reset.countdownSeconds = fixed;
+            corrected = true;
+        }
         if (c.capture == null) {
             c.capture = new SafariConfig.Capture();
             corrected = true;
@@ -1099,6 +1160,16 @@ public final class SafariConfigManager {
             warn("specials.slots", "negative", 0);
             corrected = true;
         }
+        // The board sends every special: more than the client reads would disconnect every player.
+        int perRarity = SafariFeaturedPayload.MAX_ENTRIES / SPECIAL_RARITIES;
+        if (slots.common + slots.uncommon + slots.rare + slots.ultraRare > SafariFeaturedPayload.MAX_ENTRIES) {
+            slots.common = Math.min(perRarity, slots.common);
+            slots.uncommon = Math.min(perRarity, slots.uncommon);
+            slots.rare = Math.min(perRarity, slots.rare);
+            slots.ultraRare = Math.min(perRarity, slots.ultraRare);
+            warn("specials.slots", "more than " + SafariFeaturedPayload.MAX_ENTRIES + " in all", perRarity + " each at most");
+            corrected = true;
+        }
         if (f.spawn == null) {
             f.spawn = new SafariConfig.SpecialSpawn();
             corrected = true;
@@ -1232,8 +1303,70 @@ public final class SafariConfigManager {
 
     /** Bounds of events.swarm.weightMultiplier: 1 is no boost; beyond 100 the swarm is all that spawns. */
     private static final double MAX_SWARM_MULTIPLIER = 100.0D;
+    /**
+     * Bounds of events.swarm.checkEverySeconds. Below 1 s the swarm spawner
+     * would scan a zone per player every tick; beyond 5 minutes a caught swarm
+     * Pokémon would take that long to be replaced, and the swarm looks empty.
+     */
+    private static final int MIN_SWARM_CHECK_SECONDS = 1;
+    private static final int MAX_SWARM_CHECK_SECONDS = 300;
     /** Upper bound of events.fullMoon.weightMultiplier. */
     private static final double MAX_FULL_MOON_MULTIPLIER = 20.0D;
+    /** Upper bound of events.downpour.weightMultiplier and events.heatwave's, as the full moon's. */
+    private static final double MAX_DOWNPOUR_MULTIPLIER = 20.0D;
+    /**
+     * Bounds of the durations of events.downpour, events.storm,
+     * events.heatwave and events.aurora, in minutes. Under a minute the
+     * announcement and its end would nearly cross; beyond two hours it
+     * outlasts any rain, so the rain's end is what ends it anyway.
+     */
+    private static final int MIN_DOWNPOUR_MINUTES = 1;
+    private static final int MAX_DOWNPOUR_MINUTES = 120;
+    /**
+     * Upper bound of events.storm.minAltitudeAboveSea: the island's land
+     * never rises that far above the sea, so beyond it only the habitats count.
+     */
+    private static final int MAX_STORM_ALTITUDE = 256;
+    /** Bounds of events.storm.checkEverySeconds, as the swarm's spawner. */
+    private static final int MIN_STORM_CHECK_SECONDS = 1;
+    private static final int MAX_STORM_CHECK_SECONDS = 300;
+    /**
+     * Upper bound of events.storm.lightningCooldownSeconds: ten minutes is
+     * longer than most storms, so more would mean one flash per storm.
+     */
+    private static final int MAX_LIGHTNING_COOLDOWN_SECONDS = 600;
+    /**
+     * Bounds of events.eggNests.checkEverySeconds. Under 5 s the draws come
+     * so often that spawnChance stops meaning anything readable; beyond an
+     * hour a player may never see a nest in a hunt.
+     */
+    private static final int MIN_NEST_CHECK_SECONDS = 5;
+    private static final int MAX_NEST_CHECK_SECONDS = 3600;
+    /**
+     * Bounds of events.eggNests.minDistance and maxDistance. Under 8 blocks
+     * a nest pops up in plain sight; beyond 96 it lands in chunks a client
+     * with a short view distance does not show, and is never found.
+     */
+    private static final int MIN_NEST_DISTANCE = 8;
+    private static final int MAX_NEST_DISTANCE = 96;
+    /**
+     * Bounds of events.eggNests.exclusionRadius. Under 16 nests could sit
+     * side by side; beyond 512 the entity query of each draw covers a
+     * million blocks for little gain.
+     */
+    private static final int MIN_NEST_EXCLUSION_RADIUS = 16;
+    private static final int MAX_NEST_EXCLUSION_RADIUS = 512;
+    /** Bounds of events.eggNests.lifetimeMinutes and hatchMinutes: a minute to a day. */
+    private static final int MIN_NEST_MINUTES = 1;
+    private static final int MAX_NEST_MINUTES = 1440;
+    /** Upper bound of reset.maxWaitMinutes: a day, after which the next reset is due anyway. */
+    private static final int MAX_RESET_WAIT_MINUTES = 1440;
+    /** Upper bound of reset.countdownSeconds: half an hour of warnings is already long. */
+    private static final int MAX_RESET_COUNTDOWN_SECONDS = 1800;
+    /** Upper bound of events.eggNests.hatchSpeedMultiplier: beyond, the hatch time means nothing. */
+    private static final double MAX_HATCH_SPEED_MULTIPLIER = 10.0D;
+    /** Upper bound of events.aurora.glowSeconds: longer and the glow gives away every hiding spot. */
+    private static final int MAX_AURORA_GLOW_SECONDS = 60;
 
     /** Fixes the events section; returns true if anything changed. */
     private static boolean validateEvents(SafariConfig c) {
@@ -1250,6 +1383,31 @@ public final class SafariConfigManager {
             c.events.fullMoon = new SafariConfig.FullMoon();
             corrected = true;
         }
+        if (c.events.downpour == null) {
+            c.events.downpour = new SafariConfig.Downpour();
+            corrected = true;
+        }
+        corrected |= validateDownpour(c.events.downpour);
+        if (c.events.storm == null) {
+            c.events.storm = new SafariConfig.Storm();
+            corrected = true;
+        }
+        corrected |= validateStorm(c.events.storm);
+        if (c.events.heatwave == null) {
+            c.events.heatwave = new SafariConfig.Heatwave();
+            corrected = true;
+        }
+        corrected |= validateHeatwave(c.events.heatwave);
+        if (c.events.aurora == null) {
+            c.events.aurora = new SafariConfig.Aurora();
+            corrected = true;
+        }
+        corrected |= validateAurora(c.events.aurora);
+        if (c.events.eggNests == null) {
+            c.events.eggNests = new SafariConfig.EggNests();
+            corrected = true;
+        }
+        corrected |= validateEggNests(c.events.eggNests);
         SafariConfig.Swarm swarm = c.events.swarm;
         if (!(swarm.chance >= 0.0D && swarm.chance <= 1.0D)) {
             double fixed = Double.isNaN(swarm.chance) ? 0.0D : Math.max(0.0D, Math.min(1.0D, swarm.chance));
@@ -1262,6 +1420,46 @@ public final class SafariConfigManager {
                     : Math.max(1.0D, Math.min(MAX_SWARM_MULTIPLIER, swarm.weightMultiplier));
             warn("events.swarm.weightMultiplier", swarm.weightMultiplier, fixed);
             swarm.weightMultiplier = fixed;
+            corrected = true;
+        }
+        corrected |= validateSwarmBuckets(swarm);
+        if (swarm.rarities == null) {
+            swarm.rarities = new SafariConfig.SwarmCategories();
+            corrected = true;
+        }
+        corrected |= ensureSwarmCategories(swarm.rarities);
+        corrected |= validateCategory("events.swarm.rarities.legendary", swarm.rarities.legendary);
+        corrected |= validateCategory("events.swarm.rarities.mythical", swarm.rarities.mythical);
+        corrected |= validateCategory("events.swarm.rarities.ultraBeast", swarm.rarities.ultraBeast);
+        corrected |= validateCategory("events.swarm.rarities.paradox", swarm.rarities.paradox);
+        if (swarm.weights == null) {
+            swarm.weights = new SafariConfig.SpawnWeights();
+            corrected = true;
+        }
+        SafariConfig.SpawnWeights swarmWeights = swarm.weights;
+        if (swarmWeights.common < 0 || swarmWeights.uncommon < 0 || swarmWeights.rare < 0 || swarmWeights.ultraRare < 0) {
+            CobblemonSafari.LOGGER.warn("Negative events.swarm.weights in {}, using 0 for those", FILE_NAME);
+            swarmWeights.common = Math.max(0, swarmWeights.common);
+            swarmWeights.uncommon = Math.max(0, swarmWeights.uncommon);
+            swarmWeights.rare = Math.max(0, swarmWeights.rare);
+            swarmWeights.ultraRare = Math.max(0, swarmWeights.ultraRare);
+            corrected = true;
+        }
+        if (swarm.excludeList == null) {
+            swarm.excludeList = new ArrayList<>();
+            corrected = true;
+        }
+        // The entries themselves are checked at the draw: reading them needs
+        // Cobblemon's species, which are not loaded yet when the config is.
+        if (swarm.minNearby < 0) {
+            warn("events.swarm.minNearby", swarm.minNearby, 0);
+            swarm.minNearby = 0;
+            corrected = true;
+        }
+        if (swarm.checkEverySeconds < MIN_SWARM_CHECK_SECONDS || swarm.checkEverySeconds > MAX_SWARM_CHECK_SECONDS) {
+            int fixed = Math.max(MIN_SWARM_CHECK_SECONDS, Math.min(MAX_SWARM_CHECK_SECONDS, swarm.checkEverySeconds));
+            warn("events.swarm.checkEverySeconds", swarm.checkEverySeconds, fixed);
+            swarm.checkEverySeconds = fixed;
             corrected = true;
         }
         SafariConfig.FullMoon moon = c.events.fullMoon;
@@ -1277,6 +1475,332 @@ public final class SafariConfigManager {
             corrected = true;
         }
         return corrected;
+    }
+
+    /** Fixes events.downpour; returns true if anything changed. */
+    private static boolean validateDownpour(SafariConfig.Downpour downpour) {
+        boolean corrected = false;
+        if (!(downpour.chance >= 0.0D && downpour.chance <= 1.0D)) {
+            double fixed = Double.isNaN(downpour.chance) ? 0.0D : Math.max(0.0D, Math.min(1.0D, downpour.chance));
+            warn("events.downpour.chance", downpour.chance, fixed);
+            downpour.chance = fixed;
+            corrected = true;
+        }
+        if (downpour.minDurationMinutes < MIN_DOWNPOUR_MINUTES || downpour.minDurationMinutes > MAX_DOWNPOUR_MINUTES) {
+            int fixed = Math.max(MIN_DOWNPOUR_MINUTES, Math.min(MAX_DOWNPOUR_MINUTES, downpour.minDurationMinutes));
+            warn("events.downpour.minDurationMinutes", downpour.minDurationMinutes, fixed);
+            downpour.minDurationMinutes = fixed;
+            corrected = true;
+        }
+        // At least the minimum: the draw takes a duration between the two.
+        if (downpour.maxDurationMinutes < downpour.minDurationMinutes
+                || downpour.maxDurationMinutes > MAX_DOWNPOUR_MINUTES) {
+            int fixed = Math.max(downpour.minDurationMinutes, Math.min(MAX_DOWNPOUR_MINUTES, downpour.maxDurationMinutes));
+            warn("events.downpour.maxDurationMinutes", downpour.maxDurationMinutes, fixed);
+            downpour.maxDurationMinutes = fixed;
+            corrected = true;
+        }
+        if (downpour.types == null) {
+            downpour.types = new ArrayList<>();
+            corrected = true;
+        }
+        if (!(downpour.weightMultiplier >= 1.0D && downpour.weightMultiplier <= MAX_DOWNPOUR_MULTIPLIER)) {
+            double fixed = Double.isNaN(downpour.weightMultiplier) ? 1.0D
+                    : Math.max(1.0D, Math.min(MAX_DOWNPOUR_MULTIPLIER, downpour.weightMultiplier));
+            warn("events.downpour.weightMultiplier", downpour.weightMultiplier, fixed);
+            downpour.weightMultiplier = fixed;
+            corrected = true;
+        }
+        return corrected;
+    }
+
+    /** Fixes events.eggNests; returns true if anything changed. */
+    private static boolean validateEggNests(SafariConfig.EggNests nests) {
+        boolean corrected = false;
+        if (nests.checkEverySeconds < MIN_NEST_CHECK_SECONDS || nests.checkEverySeconds > MAX_NEST_CHECK_SECONDS) {
+            int fixed = Math.max(MIN_NEST_CHECK_SECONDS, Math.min(MAX_NEST_CHECK_SECONDS, nests.checkEverySeconds));
+            warn("events.eggNests.checkEverySeconds", nests.checkEverySeconds, fixed);
+            nests.checkEverySeconds = fixed;
+            corrected = true;
+        }
+        if (!(nests.spawnChance >= 0.0D && nests.spawnChance <= 1.0D)) {
+            double fixed = Double.isNaN(nests.spawnChance) ? 0.0D : Math.max(0.0D, Math.min(1.0D, nests.spawnChance));
+            warn("events.eggNests.spawnChance", nests.spawnChance, fixed);
+            nests.spawnChance = fixed;
+            corrected = true;
+        }
+        if (nests.minDistance < MIN_NEST_DISTANCE || nests.minDistance > MAX_NEST_DISTANCE) {
+            int fixed = Math.max(MIN_NEST_DISTANCE, Math.min(MAX_NEST_DISTANCE, nests.minDistance));
+            warn("events.eggNests.minDistance", nests.minDistance, fixed);
+            nests.minDistance = fixed;
+            corrected = true;
+        }
+        // After min: max is bounded by it.
+        if (nests.maxDistance < nests.minDistance || nests.maxDistance > MAX_NEST_DISTANCE) {
+            int fixed = Math.max(nests.minDistance, Math.min(MAX_NEST_DISTANCE, nests.maxDistance));
+            warn("events.eggNests.maxDistance", nests.maxDistance, fixed);
+            nests.maxDistance = fixed;
+            corrected = true;
+        }
+        if (nests.exclusionRadius < MIN_NEST_EXCLUSION_RADIUS || nests.exclusionRadius > MAX_NEST_EXCLUSION_RADIUS) {
+            int fixed = Math.max(MIN_NEST_EXCLUSION_RADIUS, Math.min(MAX_NEST_EXCLUSION_RADIUS, nests.exclusionRadius));
+            warn("events.eggNests.exclusionRadius", nests.exclusionRadius, fixed);
+            nests.exclusionRadius = fixed;
+            corrected = true;
+        }
+        if (nests.lifetimeMinutes < MIN_NEST_MINUTES || nests.lifetimeMinutes > MAX_NEST_MINUTES) {
+            int fixed = Math.max(MIN_NEST_MINUTES, Math.min(MAX_NEST_MINUTES, nests.lifetimeMinutes));
+            warn("events.eggNests.lifetimeMinutes", nests.lifetimeMinutes, fixed);
+            nests.lifetimeMinutes = fixed;
+            corrected = true;
+        }
+        if (nests.hatchMinutes < MIN_NEST_MINUTES || nests.hatchMinutes > MAX_NEST_MINUTES) {
+            int fixed = Math.max(MIN_NEST_MINUTES, Math.min(MAX_NEST_MINUTES, nests.hatchMinutes));
+            warn("events.eggNests.hatchMinutes", nests.hatchMinutes, fixed);
+            nests.hatchMinutes = fixed;
+            corrected = true;
+        }
+        if (!(nests.hatchSpeedMultiplier >= 1.0D && nests.hatchSpeedMultiplier <= MAX_HATCH_SPEED_MULTIPLIER)) {
+            double fixed = Double.isNaN(nests.hatchSpeedMultiplier) ? 1.0D
+                    : Math.max(1.0D, Math.min(MAX_HATCH_SPEED_MULTIPLIER, nests.hatchSpeedMultiplier));
+            warn("events.eggNests.hatchSpeedMultiplier", nests.hatchSpeedMultiplier, fixed);
+            nests.hatchSpeedMultiplier = fixed;
+            corrected = true;
+        }
+        if (nests.excludedEggGroups == null) {
+            nests.excludedEggGroups = new ArrayList<>();
+            corrected = true;
+        }
+        if (nests.rarities == null) {
+            nests.rarities = new SafariConfig.EggCategories();
+            corrected = true;
+        }
+        if (nests.excludeList == null) {
+            nests.excludeList = new ArrayList<>();
+            corrected = true;
+        }
+        if (nests.hatchSpeedAbilities == null) {
+            nests.hatchSpeedAbilities = new ArrayList<>();
+            corrected = true;
+        }
+        return corrected;
+    }
+
+    /** Fixes events.aurora; returns true if anything changed. */
+    private static boolean validateAurora(SafariConfig.Aurora aurora) {
+        boolean corrected = false;
+        if (!(aurora.chance >= 0.0D && aurora.chance <= 1.0D)) {
+            double fixed = Double.isNaN(aurora.chance) ? 0.0D : Math.max(0.0D, Math.min(1.0D, aurora.chance));
+            warn("events.aurora.chance", aurora.chance, fixed);
+            aurora.chance = fixed;
+            corrected = true;
+        }
+        if (aurora.minDurationMinutes < MIN_DOWNPOUR_MINUTES || aurora.minDurationMinutes > MAX_DOWNPOUR_MINUTES) {
+            int fixed = Math.max(MIN_DOWNPOUR_MINUTES, Math.min(MAX_DOWNPOUR_MINUTES, aurora.minDurationMinutes));
+            warn("events.aurora.minDurationMinutes", aurora.minDurationMinutes, fixed);
+            aurora.minDurationMinutes = fixed;
+            corrected = true;
+        }
+        // At least the minimum: the draw takes a duration between the two.
+        if (aurora.maxDurationMinutes < aurora.minDurationMinutes || aurora.maxDurationMinutes > MAX_DOWNPOUR_MINUTES) {
+            int fixed = Math.max(aurora.minDurationMinutes, Math.min(MAX_DOWNPOUR_MINUTES, aurora.maxDurationMinutes));
+            warn("events.aurora.maxDurationMinutes", aurora.maxDurationMinutes, fixed);
+            aurora.maxDurationMinutes = fixed;
+            corrected = true;
+        }
+        if (aurora.frozenTypes == null) {
+            aurora.frozenTypes = new ArrayList<>();
+            corrected = true;
+        }
+        if (aurora.otherTypes == null) {
+            aurora.otherTypes = new ArrayList<>();
+            corrected = true;
+        }
+        // No upper bound on purpose: the server owner may make every aurora
+        // Pokémon shiny. Aurora.boostShinyRate keeps the rate at "1 in 1" at
+        // worst, so a huge or infinite value only means "always shiny".
+        if (!(aurora.shinyChanceMultiplier >= 1.0D)) {
+            double fixed = 1.0D;
+            warn("events.aurora.shinyChanceMultiplier", aurora.shinyChanceMultiplier, fixed);
+            aurora.shinyChanceMultiplier = fixed;
+            corrected = true;
+        }
+        if (aurora.excludeList == null) {
+            aurora.excludeList = new ArrayList<>();
+            corrected = true;
+        }
+        if (aurora.frozenHabitats == null) {
+            aurora.frozenHabitats = new ArrayList<>();
+            corrected = true;
+        }
+        if (aurora.glowSeconds < 0 || aurora.glowSeconds > MAX_AURORA_GLOW_SECONDS) {
+            int fixed = Math.max(0, Math.min(MAX_AURORA_GLOW_SECONDS, aurora.glowSeconds));
+            warn("events.aurora.glowSeconds", aurora.glowSeconds, fixed);
+            aurora.glowSeconds = fixed;
+            corrected = true;
+        }
+        return corrected;
+    }
+
+    /** Fixes events.heatwave; returns true if anything changed. */
+    private static boolean validateHeatwave(SafariConfig.Heatwave heatwave) {
+        boolean corrected = false;
+        if (!(heatwave.chance >= 0.0D && heatwave.chance <= 1.0D)) {
+            double fixed = Double.isNaN(heatwave.chance) ? 0.0D : Math.max(0.0D, Math.min(1.0D, heatwave.chance));
+            warn("events.heatwave.chance", heatwave.chance, fixed);
+            heatwave.chance = fixed;
+            corrected = true;
+        }
+        if (heatwave.minDurationMinutes < MIN_DOWNPOUR_MINUTES || heatwave.minDurationMinutes > MAX_DOWNPOUR_MINUTES) {
+            int fixed = Math.max(MIN_DOWNPOUR_MINUTES, Math.min(MAX_DOWNPOUR_MINUTES, heatwave.minDurationMinutes));
+            warn("events.heatwave.minDurationMinutes", heatwave.minDurationMinutes, fixed);
+            heatwave.minDurationMinutes = fixed;
+            corrected = true;
+        }
+        // At least the minimum: the draw takes a duration between the two.
+        if (heatwave.maxDurationMinutes < heatwave.minDurationMinutes
+                || heatwave.maxDurationMinutes > MAX_DOWNPOUR_MINUTES) {
+            int fixed = Math.max(heatwave.minDurationMinutes, Math.min(MAX_DOWNPOUR_MINUTES, heatwave.maxDurationMinutes));
+            warn("events.heatwave.maxDurationMinutes", heatwave.maxDurationMinutes, fixed);
+            heatwave.maxDurationMinutes = fixed;
+            corrected = true;
+        }
+        if (heatwave.types == null) {
+            heatwave.types = new ArrayList<>();
+            corrected = true;
+        }
+        if (heatwave.habitats == null) {
+            heatwave.habitats = new ArrayList<>();
+            corrected = true;
+        }
+        if (!(heatwave.weightMultiplier >= 1.0D && heatwave.weightMultiplier <= MAX_DOWNPOUR_MULTIPLIER)) {
+            double fixed = Double.isNaN(heatwave.weightMultiplier) ? 1.0D
+                    : Math.max(1.0D, Math.min(MAX_DOWNPOUR_MULTIPLIER, heatwave.weightMultiplier));
+            warn("events.heatwave.weightMultiplier", heatwave.weightMultiplier, fixed);
+            heatwave.weightMultiplier = fixed;
+            corrected = true;
+        }
+        return corrected;
+    }
+
+    /** Fixes events.storm; returns true if anything changed. */
+    private static boolean validateStorm(SafariConfig.Storm storm) {
+        boolean corrected = false;
+        if (!(storm.chance >= 0.0D && storm.chance <= 1.0D)) {
+            double fixed = Double.isNaN(storm.chance) ? 0.0D : Math.max(0.0D, Math.min(1.0D, storm.chance));
+            warn("events.storm.chance", storm.chance, fixed);
+            storm.chance = fixed;
+            corrected = true;
+        }
+        if (storm.minDurationMinutes < MIN_DOWNPOUR_MINUTES || storm.minDurationMinutes > MAX_DOWNPOUR_MINUTES) {
+            int fixed = Math.max(MIN_DOWNPOUR_MINUTES, Math.min(MAX_DOWNPOUR_MINUTES, storm.minDurationMinutes));
+            warn("events.storm.minDurationMinutes", storm.minDurationMinutes, fixed);
+            storm.minDurationMinutes = fixed;
+            corrected = true;
+        }
+        // At least the minimum: the draw takes a duration between the two.
+        if (storm.maxDurationMinutes < storm.minDurationMinutes || storm.maxDurationMinutes > MAX_DOWNPOUR_MINUTES) {
+            int fixed = Math.max(storm.minDurationMinutes, Math.min(MAX_DOWNPOUR_MINUTES, storm.maxDurationMinutes));
+            warn("events.storm.maxDurationMinutes", storm.maxDurationMinutes, fixed);
+            storm.maxDurationMinutes = fixed;
+            corrected = true;
+        }
+        if (storm.types == null) {
+            storm.types = new ArrayList<>();
+            corrected = true;
+        }
+        if (storm.excludeList == null) {
+            storm.excludeList = new ArrayList<>();
+            corrected = true;
+        }
+        if (storm.habitats == null) {
+            storm.habitats = new ArrayList<>();
+            corrected = true;
+        }
+        if (storm.minAltitudeAboveSea < 0 || storm.minAltitudeAboveSea > MAX_STORM_ALTITUDE) {
+            int fixed = Math.max(0, Math.min(MAX_STORM_ALTITUDE, storm.minAltitudeAboveSea));
+            warn("events.storm.minAltitudeAboveSea", storm.minAltitudeAboveSea, fixed);
+            storm.minAltitudeAboveSea = fixed;
+            corrected = true;
+        }
+        if (storm.checkEverySeconds < MIN_STORM_CHECK_SECONDS || storm.checkEverySeconds > MAX_STORM_CHECK_SECONDS) {
+            int fixed = Math.max(MIN_STORM_CHECK_SECONDS, Math.min(MAX_STORM_CHECK_SECONDS, storm.checkEverySeconds));
+            warn("events.storm.checkEverySeconds", storm.checkEverySeconds, fixed);
+            storm.checkEverySeconds = fixed;
+            corrected = true;
+        }
+        if (!(storm.spawnChance >= 0.0D && storm.spawnChance <= 1.0D)) {
+            double fixed = Double.isNaN(storm.spawnChance) ? 0.0D : Math.max(0.0D, Math.min(1.0D, storm.spawnChance));
+            warn("events.storm.spawnChance", storm.spawnChance, fixed);
+            storm.spawnChance = fixed;
+            corrected = true;
+        }
+        if (storm.maxNearby < 0) {
+            warn("events.storm.maxNearby", storm.maxNearby, 0);
+            storm.maxNearby = 0;
+            corrected = true;
+        }
+        if (storm.lightningCooldownSeconds < 0 || storm.lightningCooldownSeconds > MAX_LIGHTNING_COOLDOWN_SECONDS) {
+            int fixed = Math.max(0, Math.min(MAX_LIGHTNING_COOLDOWN_SECONDS, storm.lightningCooldownSeconds));
+            warn("events.storm.lightningCooldownSeconds", storm.lightningCooldownSeconds, fixed);
+            storm.lightningCooldownSeconds = fixed;
+            corrected = true;
+        }
+        return corrected;
+    }
+
+    /** Gives back a missing swarm category its default; returns true if any was missing. */
+    private static boolean ensureSwarmCategories(SafariConfig.SwarmCategories categories) {
+        SafariConfig.SwarmCategories defaults = new SafariConfig.SwarmCategories();
+        boolean corrected = false;
+        if (categories.legendary == null) {
+            categories.legendary = defaults.legendary;
+            corrected = true;
+        }
+        if (categories.mythical == null) {
+            categories.mythical = defaults.mythical;
+            corrected = true;
+        }
+        if (categories.ultraBeast == null) {
+            categories.ultraBeast = defaults.ultraBeast;
+            corrected = true;
+        }
+        if (categories.paradox == null) {
+            categories.paradox = defaults.paradox;
+            corrected = true;
+        }
+        return corrected;
+    }
+
+    /**
+     * Fixes events.swarm.buckets: a missing list gets the default back,
+     * values are written in their config spelling ("ultra-rare"), unknown ones
+     * and repeats are dropped. Returns true if anything changed.
+     */
+    private static boolean validateSwarmBuckets(SafariConfig.Swarm swarm) {
+        if (swarm.buckets == null) {
+            swarm.buckets = new SafariConfig.Swarm().buckets;
+            return true;
+        }
+        List<String> fixed = new ArrayList<>();
+        for (String value : swarm.buckets) {
+            String canonical = SwarmRules.canonicalRarity(value);
+            if (canonical == null) {
+                CobblemonSafari.LOGGER.warn("Invalid events.swarm.buckets entry \"{}\" in {}, dropped"
+                        + " (expected common, uncommon, rare or ultra-rare)", value, FILE_NAME);
+            } else if (!fixed.contains(canonical)) {
+                fixed.add(canonical);
+            }
+        }
+        if (fixed.isEmpty()) {
+            // Allowed, but worth saying: it silently means no swarm ever.
+            CobblemonSafari.LOGGER.warn("events.swarm.buckets in {} allows no bucket: no swarm will be drawn", FILE_NAME);
+        }
+        if (fixed.equals(swarm.buckets)) {
+            return false;
+        }
+        swarm.buckets = fixed;
+        return true;
     }
 
     /** Logs a corrected config value with the replacement used. */

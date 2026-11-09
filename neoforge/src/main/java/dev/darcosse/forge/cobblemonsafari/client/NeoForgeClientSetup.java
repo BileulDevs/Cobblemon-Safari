@@ -2,6 +2,8 @@ package dev.darcosse.forge.cobblemonsafari.client;
 
 import dev.darcosse.common.cobblemonsafari.block.SafariBlockEntities;
 import dev.darcosse.common.cobblemonsafari.client.SafariClient;
+import dev.darcosse.common.cobblemonsafari.client.egg.SafariNestRenderer;
+import dev.darcosse.common.cobblemonsafari.entity.SafariEntities;
 import dev.darcosse.common.cobblemonsafari.client.hud.SafariTimerHud;
 import dev.darcosse.common.cobblemonsafari.client.sky.SafariSkyEffects;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
@@ -43,11 +45,12 @@ public final class NeoForgeClientSetup {
         event.register(SafariDimensions.EFFECTS_ID, new SafariSkyEffects());
     }
 
-    /** Mod-bus handler: the wall screen and banner renderers, with NeoForge's culling box. */
+    /** Mod-bus handler: the wall screen and banner renderers, with NeoForge's culling box, and the nest's. */
     private static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(SafariBlockEntities.safariWallScreen(),
                 NeoForgeSafariWallScreenRenderer::new);
         event.registerBlockEntityRenderer(SafariBlockEntities.safariBanner(), NeoForgeSafariBannerRenderer::new);
+        event.registerEntityRenderer(SafariEntities.safariNest(), SafariNestRenderer::new);
     }
 
     /** Game-bus handler: forgets server state when leaving a world or server. */

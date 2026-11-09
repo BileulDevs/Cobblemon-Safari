@@ -42,6 +42,15 @@ public final class SafariCredit {
              */
             @Override
             public void onEnd(ServerPlayer player, SafariSession session, SessionEndReason reason) {
+                // A map reset is nobody's choice: the whole time comes back, whatever the refund setting and the cap.
+                if (reason == SessionEndReason.MAP_RESET) {
+                    if (SOURCE.equals(session.source()) && session.remainingTicks() > 0) {
+                        int restored = restore(player, session.remainingTicks());
+                        player.sendSystemMessage(Component.translatable(key("message.credit_refunded"),
+                                Ticks.format(restored), Ticks.format(balance(player))));
+                    }
+                    return;
+                }
                 if (refunds(reason)
                         && SOURCE.equals(session.source())
                         && SafariConfigManager.get().tickets.refundUnusedTimeOnLeave
@@ -68,6 +77,21 @@ public final class SafariCredit {
     private static boolean refunds(SessionEndReason reason) {
         return reason == SessionEndReason.VOLUNTARY || reason == SessionEndReason.DEATH
                 || reason == SessionEndReason.LEFT;
+    }
+
+    /**
+     * Banks time beyond the cap: what a live map reset gives back was banked
+     * before the hunt, so the cap must not eat it.
+     *
+     * @return the ticks added
+     */
+    private static int restore(ServerPlayer player, int deltaTicks) {
+        SafariCreditStore store = SafariCreditStore.get(player.getServer());
+        int before = store.get(player.getUUID());
+        // long: a full bank plus a long hunt must not wrap around.
+        int after = (int) Math.min(Integer.MAX_VALUE, (long) before + Math.max(0, deltaTicks));
+        store.set(player.getUUID(), after);
+        return after - before;
     }
 
     /** A player's banked time, in ticks. */

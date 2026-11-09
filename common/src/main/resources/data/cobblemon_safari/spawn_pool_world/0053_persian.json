@@ -1,0 +1,55 @@
+{
+  "enabled": true,
+  "neededInstalledMods": [],
+  "neededUninstalledMods": [],
+  "spawns": [
+    {
+      "id": "cobblemon_safari-persian-1",
+      "pokemon": "persian",
+      "presets": [
+        "natural",
+        "wild"
+      ],
+      "type": "pokemon",
+      "spawnablePositionType": "grounded",
+      "bucket": "common",
+      "level": "28-44",
+      "weight": 8.0,
+      "condition": {
+        "dimensions": [
+          "cobblemon_safari:safari"
+        ],
+        "canSeeSky": true,
+        "biomes": [
+          "#cobblemon:is_grassland",
+          "#cobblemon:is_savanna"
+        ],
+        "timeRange": "night"
+      }
+    },
+    {
+      "id": "cobblemon_safari-persian-2",
+      "pokemon": "persian alolan",
+      "presets": [
+        "natural",
+        "wild"
+      ],
+      "type": "pokemon",
+      "spawnablePositionType": "grounded",
+      "bucket": "common",
+      "level": "28-44",
+      "weight": 8.0,
+      "condition": {
+        "dimensions": [
+          "cobblemon_safari:safari"
+        ],
+        "canSeeSky": true,
+        "biomes": [
+          "#cobblemon:is_jungle",
+          "#cobblemon:is_beach"
+        ],
+        "timeRange": "night"
+      }
+    }
+  ]
+}

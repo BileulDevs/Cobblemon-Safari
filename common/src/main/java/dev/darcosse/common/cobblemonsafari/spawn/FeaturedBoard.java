@@ -1,7 +1,9 @@
 package dev.darcosse.common.cobblemonsafari.spawn;
 
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
+import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
+import dev.darcosse.common.cobblemonsafari.util.HabitatNames;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -40,12 +42,24 @@ public final class FeaturedBoard {
         if (swarm != null) {
             lines.add(SafariHappenings.swarmMessage(swarm));
         }
+        if (Downpour.isActive()) {
+            lines.add(Downpour.startMessage(SafariConfigManager.get().events.downpour));
+        }
+        if (Storm.isActive()) {
+            lines.add(Storm.startMessage(SafariConfigManager.get().events.storm));
+        }
+        if (Heatwave.isActive()) {
+            lines.add(Heatwave.startMessage(SafariConfigManager.get().events.heatwave));
+        }
+        if (Aurora.isActive()) {
+            lines.add(Aurora.startMessage(SafariConfigManager.get().events.aurora));
+        }
         lines.add(Component.translatable(key("board.next_rotation"), untilNextRotation())
                 .withStyle(ChatFormatting.DARK_GRAY));
         return lines;
     }
 
-    /** One board line: species, rarity and main habitat. */
+    /** One board line: species, rarity and every habitat, the main one first. */
     private static Component line(HabitatEntry entry) {
         MutableComponent species = Component.translatable(entry.species().getTranslationKey())
                 .withStyle(ChatFormatting.WHITE);
@@ -53,10 +67,19 @@ public final class FeaturedBoard {
         if (SpeciesRules.isSpecial(entry.species())) {
             species = Component.literal("★ ").withStyle(ChatFormatting.GOLD).append(species);
         }
-        ResourceKey<Biome> habitat = entry.mainHabitat();
-        Component habitatName = habitat != null
-                ? Component.translatable("biome." + habitat.location().getNamespace() + "." + habitat.location().getPath())
-                : Component.translatable(key("board.habitat_unknown"));
+        List<ResourceKey<Biome>> habitats = entry.allHabitats();
+        MutableComponent habitatName = Component.empty();
+        if (habitats.isEmpty()) {
+            habitatName.append(Component.translatable(key("board.habitat_unknown")));
+        }
+        for (int i = 0; i < habitats.size(); i++) {
+            if (i > 0) {
+                habitatName.append(Component.translatable(key("board.habitat_separator")));
+            }
+            ResourceKey<Biome> habitat = habitats.get(i);
+            // Short name: the reader is in the Safari, "Safari Dunes, Safari Marsh" only repeats it.
+            habitatName.append(HabitatNames.name(habitat.location()));
+        }
         return Component.translatable(key("board.line"), species, entry.rarity().displayName(),
                 habitatName.copy().withStyle(ChatFormatting.GRAY));
     }

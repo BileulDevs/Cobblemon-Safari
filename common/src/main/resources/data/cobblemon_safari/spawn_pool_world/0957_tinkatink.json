@@ -1,0 +1,52 @@
+{
+  "enabled": true,
+  "neededInstalledMods": [],
+  "neededUninstalledMods": [],
+  "spawns": [
+    {
+      "id": "cobblemon_safari-tinkatink-1",
+      "pokemon": "tinkatink",
+      "presets": [
+        "natural",
+        "wild"
+      ],
+      "type": "pokemon",
+      "spawnablePositionType": "grounded",
+      "bucket": "common",
+      "level": "5-30",
+      "weight": 27.0,
+      "condition": {
+        "dimensions": [
+          "cobblemon_safari:safari"
+        ],
+        "canSeeSky": true,
+        "biomes": [
+          "#cobblemon:is_mountain",
+          "#cobblemon:is_hills"
+        ]
+      }
+    },
+    {
+      "id": "cobblemon_safari-tinkatink-2",
+      "pokemon": "tinkatink",
+      "presets": [
+        "natural",
+        "wild"
+      ],
+      "type": "pokemon",
+      "spawnablePositionType": "grounded",
+      "bucket": "common",
+      "level": "5-30",
+      "weight": 13.5,
+      "condition": {
+        "dimensions": [
+          "cobblemon_safari:safari"
+        ],
+        "canSeeSky": false,
+        "biomes": [
+          "#cobblemon:is_cave"
+        ]
+      }
+    }
+  ]
+}

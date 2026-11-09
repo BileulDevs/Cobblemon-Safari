@@ -16,7 +16,9 @@ import dev.darcosse.common.cobblemonsafari.capture.SafariMark;
 import dev.darcosse.common.cobblemonsafari.command.SafariDialogueFunctions;
 import dev.darcosse.common.cobblemonsafari.teleport.RestHouseNameText;
 import dev.darcosse.common.cobblemonsafari.bounty.BountyDialogueTexts;
+import dev.darcosse.common.cobblemonsafari.spawn.EventDialogueTexts;
 import dev.darcosse.common.cobblemonsafari.session.SafariSessionManager;
+import dev.darcosse.common.cobblemonsafari.spawn.Aurora;
 import dev.darcosse.common.cobblemonsafari.spawn.NativeSpawnRules;
 import dev.darcosse.common.cobblemonsafari.spawn.SpecialSpawnCounter;
 import dev.darcosse.common.cobblemonsafari.stats.SafariStatsListener;
@@ -63,6 +65,7 @@ public final class CobblemonSafari {
         FishingBattleGuard.register();
         NativeSpawnRules.register();
         SpecialSpawnCounter.register();
+        Aurora.register();
         SafariBallBonus.register();
         SafariCredit.register();
         SafariGate.register();
@@ -72,6 +75,7 @@ public final class CobblemonSafari {
         SafariDialogueFunctions.register();
         RestHouseNameText.register();
         BountyDialogueTexts.register();
+        EventDialogueTexts.register();
         SafariSessionManager.addListener(new SafariStatsListener());
         SafariAdvancements.register();
         LOGGER.info("Cobblemon Safari initialised");

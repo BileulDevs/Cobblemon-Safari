@@ -38,12 +38,21 @@ public final class SafariWorldState extends SavedData {
      */
     private long rotationSalt;
     /**
-     * Rotations started by hand (/safari rotate), added to the rotation
-     * index computed from the clock. Only ever grows, so a forced rotation
-     * never reuses the number, and thus the draw, bounty progress and shop
-     * limits, of an earlier one.
+     * Rotation index at {@link #rotationAnchorMillis}: the index running now is
+     * this plus the whole rotations elapsed since the anchor. With the anchor
+     * at 0 (never rotated by hand, or a world from before 1.5.0, where this
+     * counted the forced rotations), the schedule is the clock's, aligned on
+     * midnight UTC. Each /safari rotate sets it to the next index, so it only
+     * ever grows and a forced rotation never reuses the number, and thus the
+     * draw, bounty progress and shop limits, of an earlier one.
      */
     private long rotationOffset;
+    /**
+     * Wall-clock time (epoch millis) the schedule counts from: 0 until the
+     * first /safari rotate, then the moment of the last one, so a forced
+     * rotation lasts a whole rotation from when it was started.
+     */
+    private long rotationAnchorMillis;
     /**
      * The last rotation whose specials were drawn, those specials, and the
      * ones that draw had to leave out (the specials of the rotation before).
@@ -94,9 +103,14 @@ public final class SafariWorldState extends SavedData {
         return rotationSalt;
     }
 
-    /** Rotations started by hand so far; see {@link #rotationOffset}. */
+    /** Rotation index at the schedule's anchor; see {@link #rotationOffset}. */
     public long rotationOffset() {
         return rotationOffset;
+    }
+
+    /** Time the schedule counts from, epoch millis; see {@link #rotationAnchorMillis}. */
+    public long rotationAnchorMillis() {
+        return rotationAnchorMillis;
     }
 
     /**
@@ -126,9 +140,14 @@ public final class SafariWorldState extends SavedData {
         setDirty();
     }
 
-    /** Counts one more rotation started by hand and asks to be saved. */
-    public void advanceRotation() {
-        rotationOffset++;
+    /**
+     * Restarts the schedule: rotation {@code period} begins at
+     * {@code anchorMillis} and the following ones every rotation length
+     * after it. Asks to be saved.
+     */
+    public void restartRotation(long period, long anchorMillis) {
+        rotationOffset = period;
+        rotationAnchorMillis = anchorMillis;
         setDirty();
     }
 
@@ -239,6 +258,7 @@ public final class SafariWorldState extends SavedData {
     public CompoundTag save(CompoundTag nbt, HolderLookup.Provider registries) {
         nbt.putLong("rotation_salt", rotationSalt);
         nbt.putLong("rotation_offset", rotationOffset);
+        nbt.putLong("rotation_anchor_millis", rotationAnchorMillis);
         nbt.putLong("specials_period", specialsPeriod);
         nbt.put("specials", strings(specials));
         nbt.put("specials_excluded", strings(specialsExcluded));
@@ -266,6 +286,9 @@ public final class SafariWorldState extends SavedData {
         state.rotationSalt = nbt.getLong("rotation_salt");
         // Absent: 0, no rotation forced yet.
         state.rotationOffset = nbt.getLong("rotation_offset");
+        // Absent (before 1.5.0): 0, the clock's schedule, on which the old offset
+        // was counted, so a saved world keeps its current rotation number.
+        state.rotationAnchorMillis = nbt.getLong("rotation_anchor_millis");
         // Absent: no rotation recorded, so nothing is excluded.
         state.specialsPeriod = nbt.contains("specials_period") ? nbt.getLong("specials_period") : Long.MIN_VALUE;
         for (Tag species : nbt.getList("specials", Tag.TAG_STRING)) {

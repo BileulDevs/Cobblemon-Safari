@@ -7,6 +7,7 @@ import dev.darcosse.common.cobblemonsafari.network.SafariClientNetwork;
 import dev.darcosse.common.cobblemonsafari.network.SafariShopBuyPayload;
 import dev.darcosse.common.cobblemonsafari.network.SafariShopPayload;
 import dev.darcosse.common.cobblemonsafari.points.SafariPointsIcon;
+import dev.darcosse.common.cobblemonsafari.shop.Dishes;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.client.gui.GuiGraphics;
@@ -15,12 +16,15 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * The Safari shop, in the style of a Game Corner prize counter: tabs (Pokémon,
@@ -144,6 +148,22 @@ public class SafariShopScreen extends Screen {
     private static final int NAME_MARGIN = 3;
     /** The level badge on Pokémon cards is drawn at this text scale. */
     private static final float BADGE_SCALE = 0.75F;
+
+    /** Cobblemon's shiny sparkle, the one its PC and summary show next to a shiny. */
+    private static final ResourceLocation SHINY_ICON =
+            ResourceLocation.fromNamespaceAndPath("cobblemon", "textures/gui/summary/icon_shiny.png");
+    /** Size of the shiny icon's texture, in pixels. */
+    private static final int SHINY_ICON_TEXTURE_SIZE = 16;
+    /** Scale of the shiny icon: half size, as in Cobblemon's PC, so 8 pixels on the card. */
+    private static final float SHINY_ICON_SCALE = 0.5F;
+    /**
+     * Space between the shiny icon and the card's right edge. The PC puts
+     * its icon almost against the edge, where it reads as stuck to the frame;
+     * raise it to move the icon further left.
+     */
+    private static final int SHINY_ICON_RIGHT_MARGIN = 6;
+    /** Space between the shiny icon and the card's top edge, level with the level badge. */
+    private static final int SHINY_ICON_TOP_MARGIN = 3;
 
     /**
      * Colours, ARGB. Safari greens framed with wood and a gold accent, like
@@ -509,12 +529,23 @@ public class SafariShopScreen extends Screen {
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
-    /** Draws the shop, then the box above everything when it is open. */
+    /** Draws the shop, then the box above everything when it is open, or the tooltip of the item card under the mouse. */
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);
         if (choice != null) {
             drawChoice(graphics, mouseX, mouseY, partialTick);
+            return;
+        }
+        // A dish's own tooltip, where Cobblemon lists its seasonings and bait
+        // effects, so it is not bought blind. Dishes only: other cards already
+        // say what they sell, and a tooltip on every hover hid the cards next to it.
+        int index = cardAt(mouseX, mouseY);
+        if (index >= 0) {
+            SafariShopPayload.Entry entry = data.entries().get(index);
+            if (entry.kind() == SafariShopPayload.KIND_ITEM && Dishes.isDish(entry.item())) {
+                graphics.renderTooltip(font, entry.item(), mouseX, mouseY);
+            }
         }
     }
 
@@ -698,7 +729,7 @@ public class SafariShopScreen extends Screen {
             }
             int index = visible.get(position);
             boolean hovered = mouseX >= x && mouseX < x + CARD_WIDTH && mouseY >= y && mouseY < y + CARD_HEIGHT;
-            drawCard(graphics, entries.get(index), index, x, y, hovered, partialTick);
+            drawCard(graphics, entries.get(index), index, x, y, hovered);
         }
 
         Component pageLabel = Component.literal((page + 1) + " / " + Math.max(1, pageCount()));
@@ -891,7 +922,7 @@ public class SafariShopScreen extends Screen {
      * name and the price.
      */
     private void drawCard(GuiGraphics graphics, SafariShopPayload.Entry entry, int index, int x, int y,
-                          boolean hovered, float partialTick) {
+                          boolean hovered) {
         int x1 = x + CARD_WIDTH;
         int y1 = y + CARD_HEIGHT;
         int pictureBottom = y + PICTURE_HEIGHT;
@@ -915,7 +946,7 @@ public class SafariShopScreen extends Screen {
                 graphics.flush();
                 int size = PICTURE_HEIGHT - 4;
                 ShopPokemonModels.draw(graphics, Integer.toString(index), entry.species(), entry.aspects(),
-                        x + (CARD_WIDTH - size) / 2, y + 3, size, partialTick);
+                        x + (CARD_WIDTH - size) / 2, y + 3, size);
             }
             case SafariShopPayload.KIND_ITEM -> drawBigItem(graphics, entry.item(), x, y);
             default -> drawBigItem(graphics, new ItemStack(Items.BARRIER), x, y);
@@ -944,13 +975,37 @@ public class SafariShopScreen extends Screen {
         } else {
             drawCost(graphics, entry, x, priceY);
         }
+        boolean cornerBadge = true;
         if (alreadyCarried(entry)) {
             drawBadge(graphics, tr("shop.carried"), MUTED_COLOR, x1, y);
         } else if (entry.waitSeconds() > 0) {
             drawBadge(graphics, tr("shop.wait_badge", waitText(entry.waitSeconds())), PRICE_TOO_HIGH, x1, y);
         } else if (entry.remaining() != SafariShopPayload.UNLIMITED) {
             drawRemaining(graphics, entry.remaining(), x1, y);
+        } else {
+            cornerBadge = false;
         }
+        if (entry.kind() == SafariShopPayload.KIND_POKEMON && entry.shiny()) {
+            // Under the corner badge when there is one ("1 left"...), so neither hides the other.
+            int iconY = y + SHINY_ICON_TOP_MARGIN
+                    + (cornerBadge ? Math.round(font.lineHeight * BADGE_SCALE) + 1 : 0);
+            drawShinyIcon(graphics, x1 - SHINY_ICON_RIGHT_MARGIN, iconY);
+        }
+    }
+
+    /**
+     * Cobblemon's shiny sparkle with its top right corner at ([right], [top]),
+     * above the model, as the PC marks a shiny.
+     */
+    private void drawShinyIcon(GuiGraphics graphics, int right, int top) {
+        float size = SHINY_ICON_TEXTURE_SIZE * SHINY_ICON_SCALE;
+        graphics.pose().pushPose();
+        // Same depth as the badges: the model is drawn around z 0 and would cover it otherwise.
+        graphics.pose().translate(right - size, top, 200.0F);
+        graphics.pose().scale(SHINY_ICON_SCALE, SHINY_ICON_SCALE, 1.0F);
+        graphics.blit(SHINY_ICON, 0, 0, 0.0F, 0.0F, SHINY_ICON_TEXTURE_SIZE, SHINY_ICON_TEXTURE_SIZE,
+                SHINY_ICON_TEXTURE_SIZE, SHINY_ICON_TEXTURE_SIZE);
+        graphics.pose().popPose();
     }
 
     /**
@@ -1199,28 +1254,46 @@ public class SafariShopScreen extends Screen {
     }
 
     /**
-     * Indices of the entries shown in a tab, in display order. Without any
-     * tab (a server config with none cannot be sent, but a stale client
-     * might see one) every entry shows. The Escape Rope is shown first in
-     * its tab, as the Safari Balls are in theirs: it is the one item every
-     * hunter needs back after losing it.
+     * Indices of the entries shown in a tab, in display order: the tab's own
+     * part first, then each section in the order it first appears, with no
+     * gap between them; the Poké Pot dishes lead the whole tab, whatever
+     * their section or the order of the file. Without any tab (a server config with none cannot be
+     * sent, but a stale client might see one) every entry shows. The Escape
+     * Rope is shown first in its part, as the Safari Balls are in theirs: it
+     * is the one item every hunter needs back after losing it.
      */
     private List<Integer> entriesOf(int tabIndex) {
-        List<Integer> ropes = new ArrayList<>();
-        List<Integer> others = new ArrayList<>();
+        Map<String, List<Integer>> bySection = new LinkedHashMap<>();
+        // The tab's own part leads, even when its entries come after a section's in the list.
+        bySection.put("", new ArrayList<>());
         List<SafariShopPayload.Entry> entries = data.entries();
         for (int i = 0; i < entries.size(); i++) {
             SafariShopPayload.Entry entry = entries.get(i);
             if (data.tabs().isEmpty() || entry.tab() == tabIndex) {
+                List<Integer> part = bySection.computeIfAbsent(entry.section(), key -> new ArrayList<>());
                 // Display order only: the server keeps the rope last in its
                 // catalogue so the purchase indices of every other entry do
                 // not depend on where the shop stands. Indices stay global
                 // here, so selection and purchase are unaffected.
-                (isEscapeRope(entry) ? ropes : others).add(i);
+                if (isEscapeRope(entry)) {
+                    part.add(0, i);
+                } else {
+                    part.add(i);
+                }
             }
         }
-        ropes.addAll(others);
-        return ropes;
+        List<Integer> shown = new ArrayList<>();
+        bySection.values().forEach(shown::addAll);
+        // Ready-made dishes first: they are what most hunters open the
+        // cooking tab for. A stable split, so they keep their order between them.
+        List<Integer> dishes = new ArrayList<>();
+        List<Integer> others = new ArrayList<>();
+        for (int i : shown) {
+            SafariShopPayload.Entry entry = entries.get(i);
+            (entry.kind() == SafariShopPayload.KIND_ITEM && Dishes.isDish(entry.item()) ? dishes : others).add(i);
+        }
+        dishes.addAll(others);
+        return dishes;
     }
 
     /** Whether an entry gives the Escape Rope. */

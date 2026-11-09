@@ -206,6 +206,73 @@ EXCLUDED_FEATURES = {
 }
 
 # ---------------------------------------------------------------------------
+# Jungle vegetation
+# ---------------------------------------------------------------------------
+# The Safari jungle mixes vanilla's jungle, sparse jungle and bamboo jungle
+# in one biome. Each look is a placed feature counted by vanilla's
+# noise_threshold_count, which reads one noise for every feature (the
+# biome-info noise, at x/200 and z/200): above JUNGLE_DENSE_NOISE the dense
+# trees grow, below JUNGLE_BAMBOO_NOISE the bamboo and its trees, and the
+# sparse trees grow everywhere, so the middle of the range (most of the
+# biome) is an open jungle with clearings between the thick patches. Patches
+# are about a hundred blocks across.
+#
+# That noise has a fixed seed in vanilla: the patches are at the same place
+# on every map. Getting them to move with the seed needs a placement
+# modifier of our own, in Java.
+#
+# Raising JUNGLE_DENSE_NOISE (or lowering JUNGLE_BAMBOO_NOISE) shrinks those
+# patches, at 1 they vanish; at 0 both looks share the biome with no open
+# part. Counts are attempts per chunk.
+JUNGLE_DENSE_NOISE = 0.35
+JUNGLE_BAMBOO_NOISE = -0.35
+# Vanilla's jungle tries 50 trees a chunk; 35 keeps the thick canopy of a
+# real jungle in its patches while leaving room to walk under it.
+JUNGLE_DENSE_TREES = 35
+# Vanilla's sparse jungle: 2 trees a chunk, 3 one time in ten.
+JUNGLE_SPARSE_TREES = {"type": "minecraft:weighted_list",
+                       "distribution": [{"data": 2, "weight": 9}, {"data": 3, "weight": 1}]}
+# Bamboo stalks per chunk in a bamboo patch. Vanilla's bamboo jungle goes far
+# higher (up to ~200, from its own noise); bamboo walls block the view as
+# much as leaves.
+JUNGLE_BAMBOO_STALKS = 40
+# Trees of a bamboo patch (vanilla's bamboo_vegetation, mostly giant jungle
+# trees): vanilla tries 30, a third of it keeps the patch walkable.
+JUNGLE_BAMBOO_TREES = 10
+
+
+def jungle_placed(feature, count, heightmap, water_filter=True):
+    """A jungle placed feature: `count` attempts a chunk, then vanilla's usual placement for that feature."""
+    placement = [count, {"type": "minecraft:in_square"}]
+    if water_filter:
+        placement.append({"type": "minecraft:surface_water_depth_filter", "max_water_depth": 0})
+    placement += [{"type": "minecraft:heightmap", "heightmap": heightmap}, {"type": "minecraft:biome"}]
+    return {"feature": feature, "placement": placement}
+
+
+def noise_count(level, below, above):
+    """Vanilla's noise_threshold_count: `below` attempts where the biome-info noise is under `level`, else `above`."""
+    return {"type": "minecraft:noise_threshold_count", "noise_level": level, "below_noise": below,
+            "above_noise": above}
+
+
+def jungle_placed_features():
+    """The jungle's four vegetation features, by file name (see JUNGLE_DENSE_NOISE)."""
+    return {
+        # Bamboo first, as in vanilla's bamboo jungle, so trees grow around it.
+        "jungle_bamboo": jungle_placed("minecraft:bamboo_some_podzol",
+                                       noise_count(JUNGLE_BAMBOO_NOISE, JUNGLE_BAMBOO_STALKS, 0),
+                                       "WORLD_SURFACE_WG", water_filter=False),
+        "jungle_bamboo_trees": jungle_placed("minecraft:bamboo_vegetation",
+                                             noise_count(JUNGLE_BAMBOO_NOISE, JUNGLE_BAMBOO_TREES, 0), "OCEAN_FLOOR"),
+        "jungle_dense_trees": jungle_placed("minecraft:trees_jungle",
+                                            noise_count(JUNGLE_DENSE_NOISE, 0, JUNGLE_DENSE_TREES), "OCEAN_FLOOR"),
+        "jungle_sparse_trees": jungle_placed("minecraft:trees_sparse_jungle",
+                                             {"type": "minecraft:count", "count": JUNGLE_SPARSE_TREES}, "OCEAN_FLOOR"),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Biomes
 # ---------------------------------------------------------------------------
 # Each Safari biome borrows features, colours and climate from one or more
@@ -218,7 +285,14 @@ BIOMES = {
     "savanna":        {"models": ["savanna"], "base": "savanna"},
     "dunes":          {"models": ["desert"], "base": "desert"},
     "badlands":       {"models": ["badlands"], "base": "badlands"},
-    "jungle":         {"models": ["jungle"], "base": "jungle"},
+    # One biome, three looks: dense jungle, sparse jungle and bamboo jungle
+    # in patches (see JUNGLE_TREES). Vanilla's jungle alone hid the Pokémon
+    # and was tiring to cross.
+    "jungle":         {"models": ["jungle"], "base": "jungle",
+                       "replace_features": {"minecraft:trees_jungle": [f"{MOD_ID}:safari/{name}"
+                                                                       for name in ("jungle_bamboo", "jungle_bamboo_trees",
+                                                                                    "jungle_dense_trees",
+                                                                                    "jungle_sparse_trees")]}},
     "marsh":          {"models": ["swamp"], "base": "swamp"},
     "flower_meadow":  {"models": ["meadow", "cherry_grove"], "base": "cherry_grove"},
     "woodland":       {"models": ["forest", "birch_forest"], "base": "forest"},
@@ -717,7 +791,13 @@ def build_biome(name, spec, orders):
         for extra in spec.get("extra_features", []):
             if extra in orders[step]:
                 union.add(extra)
-        features.append(sorted(union, key=lambda f: orders[step][f]))
+        ordered = sorted(union, key=lambda f: orders[step][f])
+        # Our own features take the place of the vanilla one they replace:
+        # only this biome lists them, so no order between biomes can conflict.
+        replaced = []
+        for f in ordered:
+            replaced.extend(spec.get("replace_features", {}).get(f, [f]))
+        features.append(replaced)
     placed = {f for step in features for f in step}
     missing = set(spec.get("extra_features", [])) - placed
     if missing:
@@ -777,6 +857,18 @@ def build_biome(name, spec, orders):
 # on some. The finer octaves, which give the walls their shape, are kept.
 CAVERN_NOISE = "cavern"
 CAVERN_NOISE_DATA = {"firstOctave": -6, "amplitudes": [2.0, 1.0, 2.0, 1.0, 0.0, 2.0, 0.0]}
+# The giant cavern's own noise: the same widest octave (64 blocks), but the
+# finer ones much weaker. With CAVERN_NOISE the 16-block octave carried about
+# a sixth of the noise (as much as the 32-block one, twice vanilla's share)
+# and, at the cavern's lowered threshold, it shaped every wall: lumps of a
+# few blocks all over, like porridge, rather than the smooth rock of vanilla's
+# cheese caves. Here 32 blocks weigh a quarter of 64, 16 an eighth, 8 a
+# thirty-second, about vanilla's ratios: large rounded chambers whose walls
+# keep some relief. Raising the later amplitudes brings the lumps back;
+# adding an octave in front (firstOctave -7) makes chambers twice as wide,
+# but some seeds then get a cavern almost all rock or all hollow.
+GIANT_CAVERN_NOISE = "giant_cavern"
+GIANT_CAVERN_NOISE_DATA = {"firstOctave": -6, "amplitudes": [2.0, 1.0, 1.0, 0.5]}
 
 # The giant cavern, under the summit: the Safari's Deep Dark (deep_cavern
 # biome there). "radius" is the zone's horizontal radius, "center_y" and
@@ -785,7 +877,13 @@ CAVERN_NOISE_DATA = {"firstOctave": -6, "amplitudes": [2.0, 1.0, 2.0, 1.0, 0.0, 
 # than vanilla the cave threshold is inside it (0 = vanilla's caves; 0.3 =
 # about half of the rock hollowed out, in large chambers between pillars;
 # more than about 0.6 merges them into one bare hole).
-GIANT_CAVERN = {"x": 0, "z": 0, "radius": 120, "center_y": 24, "half_height": 60, "boost": 0.3}
+#
+# Unlike the lush cavern, it has its own noise (GIANT_CAVERN_NOISE), keeps
+# half of vanilla's layering ("layer_cut") and has vanilla's pillars
+# ("pillars"): ledges, floors and tall stone columns, as in the cheese caves
+# of the Caves & Cliffs update. The lush cavern keeps the shared defaults.
+GIANT_CAVERN = {"x": 0, "z": 0, "radius": 120, "center_y": 24, "half_height": 60, "boost": 0.3,
+                "noise": GIANT_CAVERN_NOISE, "layer_cut": 0.5, "pillars": True}
 # Its passage starts on the far (east) side of the cavern and runs through
 # its centre, so it crosses several of its caves whatever the seed, then
 # climbs west and opens on the western slopes of the summit. It climbs
@@ -817,8 +915,17 @@ LUSH_CAVERN_TUNNEL = {"name": "lush_cavern_passage", "x": -90, "z": LUSH_CAVERN_
                       "half_width": 4.0, "half_height": 3.5}
 # How much of vanilla's cave layering (cave_layer, which flattens cheese
 # caves into horizontal sheets) is removed at a cavern's centre: 0 keeps
-# vanilla's flat caves, 1 lets the caverns grow as tall as the zone.
+# vanilla's flat caves, 1 lets the caverns grow as tall as the zone. Default
+# of a cavern without its own "layer_cut". At 0.85 the caves lose the ledges
+# and floors that make vanilla's look like rock strata; at 0.5 (the giant
+# cavern) chambers stay tall but keep some.
 CAVERN_LAYER_CUT = 0.85
+# Vanilla's cave pillars (density function overworld/caves/pillars) and the
+# value above which they are rock, as in vanilla's final density. A cavern
+# with "pillars" gets them back: vanilla adds them only inside its own caves,
+# and a cavern's caves, min'ed over vanilla's terrain, would carve them away.
+VANILLA_PILLARS_DF = "minecraft:overworld/caves/pillars"
+VANILLA_PILLAR_THRESHOLD = 0.03
 # Rock added at the edge of a cavern zone, fading to none inside it.
 # High enough that the caves close before the zone ends (above 1.23,
 # what clamped noise can cancel), so its edge needs no cut;
@@ -1090,16 +1197,24 @@ def cavern_df(c):
     # 1 over the inner part of the zone, falling to 0 on its edge and outside.
     weight = df_clamp(df_mul(1.0 / CAVERN_EDGE, df_add(1.0, df_mul(-1.0, zone_distance(c)))), 0.0, 1.0)
     layer = df_mul(4.0, df_square(noise3("minecraft:cave_layer", 1.0, 8.0)))
-    layer = df_mul(layer, df_add(1.0, df_mul(-CAVERN_LAYER_CUT, weight)))
+    layer = df_mul(layer, df_add(1.0, df_mul(-c.get("layer_cut", CAVERN_LAYER_CUT), weight)))
     cheese = df_clamp(df_add(VANILLA_CHEESE_OFFSET - c["boost"],
-                             noise3(f"{MOD_ID}:{CAVERN_NOISE}", 1.0, 0.6666666666666666)), -1.0, 1.0)
+                             noise3(f"{MOD_ID}:{c.get('noise', CAVERN_NOISE)}", 1.0, 0.6666666666666666)), -1.0, 1.0)
     # Vanilla's guard keeping cheese caves under the surface, made strong
     # enough for the cavern's lower threshold (CAVERN_ROOF_STRENGTH), so the
     # caverns never open into the sky by themselves.
     guard = df_mul(CAVERN_ROOF_STRENGTH,
                    df_clamp(df_add(1.5, df_mul(-0.64, f"{MOD_ID}:safari/sloped_cheese")), 0.0, 0.5))
     fade = df_mul(CAVERN_FADE, df_add(1.0, df_mul(-1.0, weight)))
-    return df_add(df_add(layer, cheese), df_add(guard, fade))
+    caves = df_add(df_add(layer, cheese), df_add(guard, fade))
+    if not c.get("pillars"):
+        return caves
+    # Vanilla's own pillar term (rock where it is above the threshold,
+    # nothing elsewhere), so pillars stand where they would in vanilla caves.
+    pillars = {"type": "minecraft:range_choice", "input": VANILLA_PILLARS_DF,
+               "min_inclusive": -1000000.0, "max_exclusive": VANILLA_PILLAR_THRESHOLD,
+               "when_in_range": -1000000.0, "when_out_of_range": VANILLA_PILLARS_DF}
+    return df_max(caves, pillars)
 
 
 def tunnel_along(t):
@@ -1580,7 +1695,7 @@ def validate(files):
                 "worldgen/density_function_type", "worldgen/material_rule", "worldgen/material_condition",
                 "worldgen/biome_source", "worldgen/chunk_generator", "worldgen/biome",
                 "int_provider_type", "dimension_type", "worldgen/carver",
-                "worldgen/structure_placement", "worldgen/structure_type"]:
+                "worldgen/structure_placement", "worldgen/structure_type", "worldgen/placement_modifier_type"]:
         known |= {f"minecraft:{x}" for x in registry(reg)}
     for path in files:
         parts = os.path.relpath(path, OUT).split(os.sep)
@@ -1648,7 +1763,8 @@ def main():
     # Only the folders this script owns. worldgen/structure*, worldgen/template_pool
     # and tags/worldgen/biome/has_structure hold the Safari Gate, written by
     # hand and by safari_gate_assets.py: wiping all of worldgen deleted them.
-    for sub in [os.path.join("worldgen", d) for d in ("biome", "density_function", "noise", "noise_settings")] \
+    for sub in [os.path.join("worldgen", d) for d in ("biome", "density_function", "noise", "noise_settings",
+                                                      "placed_feature")] \
             + [os.path.join("worldgen", "structure", SAFARI_STRUCTURE_DIR),
                os.path.join("worldgen", "structure_set", SAFARI_STRUCTURE_DIR),
                os.path.join("tags", "worldgen", "biome", SAFARI_STRUCTURE_TAG_DIR)] \
@@ -1680,6 +1796,7 @@ def main():
 
     settings = rename_refs(vanilla("worldgen/noise_settings/overworld"))
     write(f"worldgen/noise/{CAVERN_NOISE}.json", CAVERN_NOISE_DATA, written)
+    write(f"worldgen/noise/{GIANT_CAVERN_NOISE}.json", GIANT_CAVERN_NOISE_DATA, written)
     for passage in (GIANT_CAVERN_TUNNEL, LUSH_CAVERN_TUNNEL):
         write(f"worldgen/density_function/safari/{passage['name']}_along.json", tunnel_along(passage), written)
     write("worldgen/density_function/safari/carved_caves.json", carved_caves_df(), written)
@@ -1692,6 +1809,8 @@ def main():
     settings["surface_rule"] = surface_rule(vanilla("worldgen/noise_settings/overworld")["surface_rule"])
     write("worldgen/noise_settings/safari.json", settings, written)
 
+    for name, data in jungle_placed_features().items():
+        write(f"worldgen/placed_feature/safari/{name}.json", data, written)
     orders = global_feature_order()
     for name, spec in BIOMES.items():
         write(f"worldgen/biome/{name}.json", build_biome(name, spec, orders), written)

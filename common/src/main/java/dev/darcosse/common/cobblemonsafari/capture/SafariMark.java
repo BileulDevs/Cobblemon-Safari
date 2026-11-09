@@ -11,9 +11,12 @@ import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
+import dev.darcosse.common.cobblemonsafari.spawn.Downpour;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedRotation;
 import dev.darcosse.common.cobblemonsafari.spawn.HabitatEntry;
 import dev.darcosse.common.cobblemonsafari.spawn.SafariHappenings;
+import dev.darcosse.common.cobblemonsafari.spawn.SpawnSource;
+import dev.darcosse.common.cobblemonsafari.spawn.SpecialSpawnCounter;
 import dev.darcosse.common.cobblemonsafari.spawn.Swarm;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -31,8 +34,13 @@ import java.util.Set;
  *   <li>the Safari Mark, to every Pokémon caught there ("Tauros the Safari Find");</li>
  *   <li>event marks, for a catch made at a remarkable moment: one of the
  *       specials of the day (the star), a Pokémon of the swarm in its
- *       habitat (the swarm), a catch on a full moon night (the moon), and a
- *       Pokémon fished in the Safari (the angler).</li>
+ *       habitat (the swarm), a Pokémon a storm brought (the storm), a
+ *       Pokémon an aurora brought (the aurora), a catch
+ *       where a downpour falls (the downpour),
+ *       a catch on a full moon night (the moon), and a Pokémon fished in the
+ *       Safari (the angler);</li>
+ *   <li>the Nest Mark, to a Pokémon hatched from an egg of a Safari nest,
+ *       given at the hatch rather than on capture ({@link #markHatched}).</li>
  * </ul>
  *
  * <p>The marks themselves are data, like Cobblemon's own
@@ -43,7 +51,7 @@ import java.util.Set;
  * them. Server side.
  *
  * <p>Title: an event mark's title replaces the Safari Mark's as the active
- * one, the rarest moment first (star, swarm, moon, angler); a title the
+ * one, the rarest moment first (star, swarm, aurora, storm, downpour, moon, angler); a title the
  * Pokémon already has from Cobblemon (weather, personality) stays.
  */
 public final class SafariMark {
@@ -54,10 +62,18 @@ public final class SafariMark {
     public static final ResourceLocation STAR = CobblemonSafari.id("mark_safari_star");
     /** A Pokémon of the swarm, caught in the swarm's habitat. */
     public static final ResourceLocation SWARM = CobblemonSafari.id("mark_safari_swarm");
+    /** Brought by an aurora. */
+    public static final ResourceLocation AURORA = CobblemonSafari.id("mark_safari_aurora");
+    /** Brought by a storm. */
+    public static final ResourceLocation STORM = CobblemonSafari.id("mark_safari_storm");
+    /** Caught where a downpour falls. */
+    public static final ResourceLocation DOWNPOUR = CobblemonSafari.id("mark_safari_downpour");
     /** Caught on a full moon night. */
     public static final ResourceLocation MOON = CobblemonSafari.id("mark_safari_moon");
     /** Fished, then caught, in the Safari. */
     public static final ResourceLocation ANGLER = CobblemonSafari.id("mark_safari_angler");
+    /** Hatched from an egg found in a Safari nest. */
+    public static final ResourceLocation NEST = CobblemonSafari.id("mark_safari_nest");
 
     /** Marks found missing, each warned about once rather than on every catch. */
     private static final Set<ResourceLocation> WARNED = new HashSet<>();
@@ -90,8 +106,19 @@ public final class SafariMark {
         // Where the Pokémon was: the ball lies on it. The player when there is no ball.
         EmptyPokeBallEntity ball = event.getPokeBallEntity();
         Entity where = ball != null ? ball : player;
-        if (marks.swarm && Swarm.isSwarming(pokemon.getSpecies(), where.level().getBiome(where.blockPosition()))) {
+        if (marks.swarm && Swarm.isSwarming(pokemon, where.level().getBiome(where.blockPosition()))) {
             addIfLoaded(events, give(pokemon, SWARM));
+        }
+        // Noted at its spawn under the event's way in, which survives the capture.
+        if (marks.aurora && SpecialSpawnCounter.cameThrough(server, pokemon.getUuid(), SpawnSource.AURORA)) {
+            addIfLoaded(events, give(pokemon, AURORA));
+        }
+        if (marks.storm && SpecialSpawnCounter.cameThrough(server, pokemon.getUuid(), SpawnSource.STORM)) {
+            addIfLoaded(events, give(pokemon, STORM));
+        }
+        // Where the rain falls, as for the downpour's spawns: not in snow, a dry biome or under a roof.
+        if (marks.downpour && Downpour.fallsAt(where.level(), where.blockPosition())) {
+            addIfLoaded(events, give(pokemon, DOWNPOUR));
         }
         if (marks.fullMoon && SafariHappenings.isFullMoon()) {
             addIfLoaded(events, give(pokemon, MOON));
@@ -105,6 +132,21 @@ public final class SafariMark {
             pokemon.setActiveMark(events.get(0));
         } else if (active == null && safari != null) {
             pokemon.setActiveMark(safari);
+        }
+    }
+
+    /**
+     * Gives the Nest Mark to a Pokémon just hatched from a Safari egg, and
+     * makes it its title when it has none. Never caught, such a Pokémon gets
+     * no Safari Mark. Call once it is stored, so the mark reaches its owner.
+     */
+    public static void markHatched(Pokemon pokemon) {
+        if (!SafariConfigManager.get().capture.marks.nest) {
+            return;
+        }
+        Mark nest = give(pokemon, NEST);
+        if (nest != null && pokemon.getActiveMark() == null) {
+            pokemon.setActiveMark(nest);
         }
     }
 

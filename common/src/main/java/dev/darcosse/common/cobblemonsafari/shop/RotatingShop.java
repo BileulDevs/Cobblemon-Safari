@@ -2,6 +2,7 @@ package dev.darcosse.common.cobblemonsafari.shop;
 
 import com.cobblemon.mod.common.api.pokemon.PokemonProperties;
 import com.cobblemon.mod.common.api.pokemon.evolution.PreEvolution;
+import com.cobblemon.mod.common.api.pokemon.labels.CobblemonPokemonLabels;
 import com.cobblemon.mod.common.pokemon.Species;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.config.SafariShopConfig;
@@ -9,7 +10,7 @@ import dev.darcosse.common.cobblemonsafari.config.SafariShopConfigManager;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedRotation;
 import dev.darcosse.common.cobblemonsafari.spawn.HabitatEntry;
 import dev.darcosse.common.cobblemonsafari.spawn.Rarity;
-import dev.darcosse.common.cobblemonsafari.spawn.SpeciesRules;
+import dev.darcosse.common.cobblemonsafari.spawn.SwarmRules;
 import dev.darcosse.common.cobblemonsafari.world.SafariWorldState;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -17,16 +18,21 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.function.ToIntFunction;
 
 /**
- * The shop's random Pokémon: a few species that live in the Safari, drawn
- * anew with each rotation of the specials and sold after the shop's fixed
- * entries.
+ * The shop's random Pokémon ({@code rotatingPokemon} of a tab or section):
+ * species that live in the Safari, drawn anew with each rotation of the
+ * specials and sold after the shop's fixed offers. {@code count} ordinary
+ * ones, by rarity weight, plus the legendary-class ones each allowed
+ * category adds on top.
  *
  * <p>Deterministic like the specials: same world, same rotation, same data,
  * same Pokémon, for every player and across restarts. Cached until the
@@ -91,14 +97,12 @@ public final class RotatingShop {
     }
 
     /**
-     * The random Pokémon of the current rotation, as shop entries; empty when
-     * switched off or while Cobblemon's data is not loaded yet.
+     * The random Pokémon of the current rotation, as shop offers, shelf by
+     * shelf; empty when no shelf draws any or while Cobblemon's data is not
+     * loaded yet.
      */
     public static List<SafariShopConfig.Entry> entries(MinecraftServer server) {
         SafariShopConfig config = SafariShopConfigManager.get();
-        if (!config.rotatingPokemon.enabled || config.rotatingPokemon.count == 0) {
-            return List.of();
-        }
         long period = period();
         // today() first: it may start a new draw of the specials, which moves the revision.
         List<HabitatEntry> specials = FeaturedRotation.today(server);
@@ -111,15 +115,25 @@ public final class RotatingShop {
             // Not cached: Cobblemon is still loading, the next opening retries.
             return List.of();
         }
-        List<SafariShopConfig.Entry> drawn = draw(index, specials, fixedForms(config), config.rotatingPokemon, period,
-                SafariWorldState.get(server).rotationSalt());
-        cached = drawn;
+        long salt = SafariWorldState.get(server).rotationSalt();
+        Set<String> sold = fixedForms(config);
+        List<SafariShopConfig.Entry> drawn = new ArrayList<>();
+        for (SafariShopConfigManager.ShelfRef ref : SafariShopConfigManager.shelves()) {
+            SafariShopConfig.RotatingPokemon rotating = ref.shelf().rotatingPokemon;
+            if (rotating == null || !rotating.enabled) {
+                continue;
+            }
+            // Each shelf its own seed: two shelves with the same rules still differ.
+            long seed = salt ^ (period * SHOP_SEED_MIX) ^ (ref.tab() + "/" + ref.section()).hashCode();
+            drawn.addAll(draw(index, specials, sold, rotating, ref, new Random(seed)));
+        }
+        cached = List.copyOf(drawn);
         cachedPeriod = period;
         cachedRevision = revision;
         cachedConfig = config;
         CobblemonSafari.LOGGER.info("Safari shop Pokémon for rotation {}: {}", period,
                 drawn.stream().map(entry -> entry.pokemon).toList());
-        return drawn;
+        return cached;
     }
 
     /**
@@ -134,7 +148,7 @@ public final class RotatingShop {
     private static Set<String> fixedForms(SafariShopConfig config) {
         Set<String> sold = new HashSet<>();
         for (SafariShopConfig.Entry entry : config.entries) {
-            if (!entry.isPokemon() || entry.pokemon == null) {
+            if (!entry.isPokemon()) {
                 continue;
             }
             String form = formOf(entry.pokemon);
@@ -185,44 +199,172 @@ public final class RotatingShop {
     }
 
     /**
-     * Picks the species of one rotation and turns them into entries, most
-     * common first, never a species and form of {@code sold} (the shop
-     * file's own Pokémon).
+     * Draws one shelf: {@code count} ordinary Pokémon, each slot going to a
+     * rarity by weight, then up to {@code maxPerRotation} of each allowed
+     * legendary-class category. Never a species and form of {@code sold}
+     * (the shop file's own Pokémon), nor an excluded one.
      */
     private static List<SafariShopConfig.Entry> draw(Map<ResourceLocation, HabitatEntry> index,
                                                      List<HabitatEntry> specials, Set<String> sold,
-                                                     SafariShopConfig.Rotating config, long period, long salt) {
-        Set<Species> excluded = new HashSet<>();
-        if (config.excludeSpecials) {
+                                                     SafariShopConfig.RotatingPokemon config,
+                                                     SafariShopConfigManager.ShelfRef ref, Random random) {
+        Set<Species> featured = new HashSet<>();
+        if (config.excludeFeatured) {
             for (HabitatEntry special : specials) {
-                excluded.add(special.species());
+                featured.add(special.species());
             }
         }
-        // The index is sorted by species id: the pool is built in a stable
-        // order before shuffling, which the draw needs to be reproducible.
-        List<HabitatEntry> pool = new ArrayList<>();
+        List<SwarmRules.Exclusion> exclusions = SwarmRules.parseExclusions(config.excludeList);
+        // The index is sorted by species id: the pools are built in a stable
+        // order before drawing, which the draw needs to be reproducible.
+        List<HabitatEntry> ordinary = new ArrayList<>();
+        Map<String, List<HabitatEntry>> byCategory = new LinkedHashMap<>();
         for (HabitatEntry entry : index.values()) {
             Species species = entry.species();
-            if (!entry.natural()
-                    || !config.rarities.contains(entry.rarity().bucket)
-                    || config.excludedSpecies.contains(species.getResourceIdentifier().toString())
-                    || (!config.allowSpecialSpecies && SpeciesRules.isSpecial(species))
-                    || excluded.contains(species)
+            if (!entry.natural() || featured.contains(species) || excluded(entry, exclusions)
                     || alreadySold(entry, sold)) {
                 continue;
             }
-            pool.add(entry);
+            String category = category(species);
+            if (category == null) {
+                SafariShopConfig.RarityRule rule = rule(entry.rarity(), config.rarities);
+                if (rule.allowed && rule.weight > 0) {
+                    ordinary.add(entry);
+                }
+            } else if (categoriesAllow(species, config.categories)) {
+                byCategory.computeIfAbsent(category, key -> new ArrayList<>()).add(entry);
+            }
         }
-        Collections.shuffle(pool, new Random(salt ^ (period * SHOP_SEED_MIX)));
-        List<HabitatEntry> picked = new ArrayList<>(pool.subList(0, Math.min(config.count, pool.size())));
-        picked.sort((a, b) -> Integer.compare(a.rarity().ordinal(), b.rarity().ordinal()));
 
-        List<SafariShopConfig.Entry> entries = new ArrayList<>(picked.size());
+        List<HabitatEntry> picked = weightedSample(ordinary, config.count,
+                entry -> rule(entry.rarity(), config.rarities).weight, random);
+        picked.sort(Comparator.comparingInt(entry -> entry.rarity().ordinal()));
+        List<SafariShopConfig.Entry> out = new ArrayList<>(picked.size());
         for (HabitatEntry entry : picked) {
-            entries.add(SafariShopConfig.Entry.rotating(properties(entry, level(entry)),
-                    price(entry.rarity(), entry.species(), config), config.tab));
+            int price = price(entry.rarity(), entry.species(), config.rarities);
+            out.add(offer(entry, price, config.limit, config, ref, random));
         }
-        return List.copyOf(entries);
+        // Legendary-class ones on top of count, in category order.
+        for (Map.Entry<String, List<HabitatEntry>> group : byCategory.entrySet()) {
+            SafariShopConfig.CategoryRule rule = categoryRule(group.getKey(), config.categories);
+            List<HabitatEntry> pool = new ArrayList<>(group.getValue());
+            Collections.shuffle(pool, random);
+            for (HabitatEntry entry : pool.subList(0, Math.min(rule.maxPerRotation, pool.size()))) {
+                SafariShopConfig.Limit limit = rule.limit != null ? rule.limit : config.limit;
+                out.add(offer(entry, rule.price, limit, config, ref, random));
+            }
+        }
+        return List.copyOf(out);
+    }
+
+    /**
+     * One drawn Pokémon as an offer: its level by the draw's mode, shiny by
+     * chance (and priced up for it).
+     */
+    private static SafariShopConfig.Entry offer(HabitatEntry entry, int basePrice,
+                                                @Nullable SafariShopConfig.Limit limit,
+                                                SafariShopConfig.RotatingPokemon config,
+                                                SafariShopConfigManager.ShelfRef ref, Random random) {
+        int level = SafariShopConfig.Level.RANGE.equals(config.level.mode)
+                ? config.level.min + random.nextInt(config.level.max - config.level.min + 1)
+                : level(entry);
+        String properties = properties(entry, level);
+        int price = basePrice;
+        // Drawn even when the chance is 0, so a change of chance does not
+        // shift every later draw of the rotation.
+        if (random.nextDouble() < config.modifiers.shinyChance) {
+            properties += " shiny=yes";
+            price = round(basePrice * config.modifiers.shinyPriceMultiplier);
+        }
+        return SafariShopConfig.Entry.drawnPokemon(properties, price, limit, ref.tab(), ref.section());
+    }
+
+    /**
+     * {@code count} entries picked without repeat, each with a chance
+     * proportional to its weight (Efraimidis-Spirakis: the largest
+     * {@code u^(1/w)} keys win). Deterministic for a given random source and
+     * pool order.
+     */
+    private static List<HabitatEntry> weightedSample(List<HabitatEntry> pool, int count,
+                                                     ToIntFunction<HabitatEntry> weight,
+                                                     Random random) {
+        List<Map.Entry<Double, HabitatEntry>> keyed = new ArrayList<>(pool.size());
+        for (HabitatEntry entry : pool) {
+            double key = Math.pow(random.nextDouble(), 1.0 / weight.applyAsInt(entry));
+            keyed.add(Map.entry(key, entry));
+        }
+        keyed.sort(Map.Entry.<Double, HabitatEntry>comparingByKey().reversed());
+        List<HabitatEntry> picked = new ArrayList<>(Math.min(count, keyed.size()));
+        for (int i = 0; i < Math.min(count, keyed.size()); i++) {
+            picked.add(keyed.get(i).getValue());
+        }
+        return picked;
+    }
+
+    /** Whether the excludeList leaves this Pokémon out, form by form (see {@link SwarmRules}). */
+    private static boolean excluded(HabitatEntry entry, List<SwarmRules.Exclusion> exclusions) {
+        if (exclusions.isEmpty()) {
+            return false;
+        }
+        String id = entry.species().getResourceIdentifier().toString();
+        PokemonProperties properties = entry.template() != null ? entry.template()
+                : PokemonProperties.Companion.parse(id);
+        return SwarmRules.isExcluded(exclusions, id, properties);
+    }
+
+    /**
+     * The legendary-class category a species is sold under, by label in the
+     * order legendary, mythical, ultra beast, paradox; null for an ordinary one.
+     */
+    @Nullable
+    static String category(Species species) {
+        Set<String> labels = species.getLabels();
+        if (labels.contains(CobblemonPokemonLabels.LEGENDARY)) {
+            return CobblemonPokemonLabels.LEGENDARY;
+        }
+        if (labels.contains(CobblemonPokemonLabels.MYTHICAL)) {
+            return CobblemonPokemonLabels.MYTHICAL;
+        }
+        if (labels.contains(CobblemonPokemonLabels.ULTRA_BEAST)) {
+            return CobblemonPokemonLabels.ULTRA_BEAST;
+        }
+        if (labels.contains(CobblemonPokemonLabels.PARADOX)) {
+            return CobblemonPokemonLabels.PARADOX;
+        }
+        return null;
+    }
+
+    /** Whether every legendary-class category the species carries is allowed in the draw. */
+    private static boolean categoriesAllow(Species species, SafariShopConfig.Categories categories) {
+        Set<String> labels = species.getLabels();
+        return (!labels.contains(CobblemonPokemonLabels.LEGENDARY) || categories.legendary.allowed)
+                && (!labels.contains(CobblemonPokemonLabels.MYTHICAL) || categories.mythical.allowed)
+                && (!labels.contains(CobblemonPokemonLabels.ULTRA_BEAST) || categories.ultraBeast.allowed)
+                && (!labels.contains(CobblemonPokemonLabels.PARADOX) || categories.paradox.allowed);
+    }
+
+    /** The rule of a category label. */
+    private static SafariShopConfig.CategoryRule categoryRule(String label, SafariShopConfig.Categories categories) {
+        if (CobblemonPokemonLabels.LEGENDARY.equals(label)) {
+            return categories.legendary;
+        }
+        if (CobblemonPokemonLabels.MYTHICAL.equals(label)) {
+            return categories.mythical;
+        }
+        if (CobblemonPokemonLabels.ULTRA_BEAST.equals(label)) {
+            return categories.ultraBeast;
+        }
+        return categories.paradox;
+    }
+
+    /** The rule of a rarity. */
+    private static SafariShopConfig.RarityRule rule(Rarity rarity, SafariShopConfig.Rarities rarities) {
+        return switch (rarity) {
+            case COMMON -> rarities.common;
+            case UNCOMMON -> rarities.uncommon;
+            case RARE -> rarities.rare;
+            case ULTRA_RARE -> rarities.ultraRare;
+        };
     }
 
     /**
@@ -250,28 +392,36 @@ public final class RotatingShop {
     }
 
     /**
-     * The computed price of a species, for a shop entry priced {@code "auto"}:
-     * the same rule as the random Pokémon, with the species' rarity in the
-     * Safari. A species with no Safari spawn data gets the rarity the
-     * habitat index gives such species (rare, ultra-rare when legendary-like),
-     * so it is never sold cheap by default.
+     * The computed price of a species, for a shop offer priced {@code "auto"}:
+     * the same rule as the random Pokémon of the first shelf that draws any
+     * (the defaults when none does). A legendary-class species costs its
+     * category's price; another species without Safari spawn data gets the
+     * rarity the habitat index gives such species, so it is never sold cheap.
      */
     public static int autoPrice(MinecraftServer server, Species species) {
+        SafariShopConfig.RotatingPokemon config = new SafariShopConfig.RotatingPokemon();
+        for (SafariShopConfigManager.ShelfRef ref : SafariShopConfigManager.shelves()) {
+            if (ref.shelf().rotatingPokemon != null) {
+                config = ref.shelf().rotatingPokemon;
+                break;
+            }
+        }
+        String category = category(species);
+        if (category != null) {
+            return categoryRule(category, config.categories).price;
+        }
         HabitatEntry entry = FeaturedRotation.index(server).get(species.getResourceIdentifier());
-        Rarity rarity = entry != null ? entry.rarity()
-                : SpeciesRules.isSpecial(species) ? Rarity.ULTRA_RARE : Rarity.RARE;
-        return price(rarity, species, SafariShopConfigManager.get().rotatingPokemon);
+        Rarity rarity = entry != null ? entry.rarity() : Rarity.RARE;
+        return price(rarity, species, config.rarities);
     }
 
     /** Price of a Pokémon: its rarity's base price times its evolution stage's multiplier, rounded. */
-    private static int price(Rarity rarity, Species species, SafariShopConfig.Rotating config) {
-        int base = switch (rarity) {
-            case COMMON -> config.commonPrice;
-            case UNCOMMON -> config.uncommonPrice;
-            case RARE -> config.rarePrice;
-            case ULTRA_RARE -> config.ultraRarePrice;
-        };
-        double price = base * STAGE_MULTIPLIERS[stage(species)];
+    private static int price(Rarity rarity, Species species, SafariShopConfig.Rarities rarities) {
+        return round(rule(rarity, rarities).price * STAGE_MULTIPLIERS[stage(species)]);
+    }
+
+    /** A price rounded to {@link #PRICE_STEP}. */
+    private static int round(double price) {
         return (int) (Math.round(price / PRICE_STEP) * PRICE_STEP);
     }
 

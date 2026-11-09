@@ -4,7 +4,11 @@ Output, in common/src/main/resources/assets/cobblemon_safari/textures/gui/mark/:
   mark_safari_star.png     the special of the day: a white star on gold
   mark_safari_swarm.png    the swarm: a cluster of white dots on orange
   mark_safari_moon.png     the full moon: a pale moon with craters on night blue
+  mark_safari_downpour.png the downpour: slanted white rain streaks on storm blue
+  mark_safari_storm.png    the storm: a white lightning bolt on thundercloud purple
+  mark_safari_aurora.png   the aurora: three wavy white curtains on polar green
   mark_safari_angler.png   the fished Pokemon: a white hook on water blue
+  mark_safari_nest.png     the hatched Pokemon: a white egg with green spots on straw brown
 
 Same frame as the Safari Mark (tools/safari_mark_icon.py) and Cobblemon's own
 icons: 32x32, a disc of the mark's colour inside a white band and a dark
@@ -42,7 +46,17 @@ GOLD = (201, 154, 26, 255)        # C99A1A
 ORANGE = (200, 100, 42, 255)      # C8642A
 NIGHT = (59, 74, 140, 255)        # 3B4A8C
 WATER = (42, 122, 184, 255)       # 2A7AB8
+# Darker and greyer than the angler's water blue, so the two marks differ at a glance.
+STORM = (47, 94, 134, 255)        # 2F5E86
+# Purple, apart from every blue above: the storm's mark must not pass for the downpour's.
+THUNDERCLOUD = (74, 61, 122, 255) # 4A3D7A
+# Green, the aurora's own colour, darker than any other disc so the white curtains stand out.
+POLAR = (31, 110, 90, 255)        # 1F6E5A
 
+# Straw brown, the nest's own colour.
+STRAW = (166, 102, 46, 255)        # A6662E
+# The Safari Egg's spots, darker than its texture's so they read at 32 pixels.
+EGG_SPOT = (86, 150, 72, 255)
 MOON = (240, 232, 190, 255)
 CRATER = (196, 188, 150, 255)
 
@@ -98,6 +112,45 @@ def moon(x: int, y: int):
     return MOON
 
 
+# Rain streaks: short segments slanting down to the left, in staggered rows,
+# as (start x, start y, length in pixels). Longer streaks read as wind-driven
+# rain; more of them blur into a solid patch at 32 pixels.
+RAIN_STREAKS = [(12, 8, 4), (17, 8, 4), (22, 10, 4), (9, 13, 4), (14, 13, 4),
+                (19, 14, 4), (11, 19, 4), (16, 19, 4), (21, 19, 3)]
+
+
+def downpour(x: int, y: int):
+    for sx, sy, length in RAIN_STREAKS:
+        for step in range(length):
+            # One pixel left every two down: a steep slant.
+            if (x, y) == (sx - step // 2, sy + step):
+                return WHITE
+    return STORM
+
+
+# A lightning bolt, point down: upper stroke leaning right, a jog, lower stroke to the point.
+BOLT = [(17.5, 6.5), (11.5, 16.0), (15.5, 16.0), (12.5, 25.5), (20.5, 13.5), (16.5, 13.5), (19.5, 6.5)]
+
+
+def bolt(x: int, y: int):
+    return WHITE if in_polygon(x + 0.5, y + 0.5, BOLT) else THUNDERCLOUD
+
+
+# Aurora curtains: each a column x that sways with y, from its top row down
+# to row 23, as (base x, top y, sway in pixels). A bigger sway reads as
+# drapery; more curtains blur into stripes at 32 pixels.
+CURTAINS = [(11, 9, 1.5), (16, 7, 1.5), (21, 10, 1.5)]
+
+
+def aurora(x: int, y: int):
+    for base, top, sway in CURTAINS:
+        centre = base + round(sway * math.sin((y - top) / 2.5))
+        # Two pixels wide: one-pixel curtains break up where the sway jumps a column.
+        if top <= y <= 23 and centre <= x <= centre + 1:
+            return WHITE
+    return POLAR
+
+
 def hook(x: int, y: int):
     """A fish hook: an eye on top, a shank, a curved bend and a barb."""
     # Eye: a small ring at the top of the shank.
@@ -112,11 +165,36 @@ def hook(x: int, y: int):
     return WHITE if eye or shank or bend or point or barb else WATER
 
 
+EGG_CENTRE_Y = 16.0
+EGG_HALF_WIDTH = 5.5
+EGG_HALF_HEIGHT = 7.0
+# How much narrower the egg is at its top than at its bottom, as a share of its width.
+EGG_TAPER = 0.18
+EGG_SPOTS = [(13.5, 14.0, 1.3), (18.0, 17.5, 1.5), (14.0, 19.5, 1.0)]
+
+
+def egg(x: int, y: int):
+    """An upright egg, narrower at the top, with a few spots."""
+    dy = (y - EGG_CENTRE_Y) / EGG_HALF_HEIGHT
+    half_width = EGG_HALF_WIDTH * (1.0 + EGG_TAPER * dy)
+    dx = (x - CENTRE) / half_width
+    if dx * dx + dy * dy > 1.0:
+        return STRAW
+    for sx, sy, r in EGG_SPOTS:
+        if inside(x, y, sx, sy, r):
+            return EGG_SPOT
+    return WHITE
+
+
 ICONS = {
     "mark_safari_star": star,
     "mark_safari_swarm": swarm,
     "mark_safari_moon": moon,
+    "mark_safari_downpour": downpour,
+    "mark_safari_storm": bolt,
+    "mark_safari_aurora": aurora,
     "mark_safari_angler": hook,
+    "mark_safari_nest": egg,
 }
 
 

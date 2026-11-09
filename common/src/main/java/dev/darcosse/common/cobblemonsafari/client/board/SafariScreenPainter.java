@@ -20,6 +20,7 @@ import dev.darcosse.common.cobblemonsafari.network.SafariDexPayload;
 import dev.darcosse.common.cobblemonsafari.points.SafariPointsIcon;
 import dev.darcosse.common.cobblemonsafari.spawn.Rarity;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
+import dev.darcosse.common.cobblemonsafari.util.HabitatNames;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -594,8 +595,7 @@ public class SafariScreenPainter {
         rows.add(new DexRow(tr("screen.dex.total"), dex.caught(), dex.total(), true));
         for (SafariDexPayload.Habitat habitat : dex.habitats()) {
             // Built every frame: the biome's name follows the language, a couple of dozen rows at most.
-            String name = Component.translatable("biome." + habitat.biome().getNamespace() + "."
-                    + habitat.biome().getPath()).getString();
+            String name = HabitatNames.name(habitat.biome()).getString();
             rows.add(new DexRow(name, habitat.caught(), habitat.total(), false));
         }
         float width = x1 - x0;
@@ -844,7 +844,7 @@ public class SafariScreenPainter {
         String rarity = swarm ? tr("screen.swarm") : entry.rarity().displayName().getString();
         drawMarquee(p, rarity, lineLeft, lineRight, textTop + line, subScale, rarityColor, now);
         if (showHabitat) {
-            drawMarquee(p, habitatName(entry.habitat()), lineLeft, lineRight, textTop + line + subLine, subScale,
+            drawMarquee(p, habitatNames(entry.habitats()), lineLeft, lineRight, textTop + line + subLine, subScale,
                     pal.muted(), now);
         }
     }
@@ -1091,12 +1091,31 @@ public class SafariScreenPainter {
         return pal.rarity(entry.rarity());
     }
 
-    /** Biome name in the player's language. */
+    /** Short habitat name in the player's language ("Dunes", not "Safari Dunes": the screen is in the Safari). */
     private static String habitatName(ResourceLocation habitat) {
         if (habitat == null) {
             return tr("board.habitat_unknown");
         }
-        return Component.translatable("biome." + habitat.getNamespace() + "." + habitat.getPath()).getString();
+        return HabitatNames.name(habitat).getString();
+    }
+
+    /**
+     * Every habitat of an entry on one line, the main one first; the
+     * marquee scrolls it when it is longer than the cell.
+     */
+    private static String habitatNames(List<ResourceLocation> habitats) {
+        if (habitats.isEmpty()) {
+            return tr("board.habitat_unknown");
+        }
+        String separator = tr("board.habitat_separator");
+        StringBuilder names = new StringBuilder();
+        for (ResourceLocation habitat : habitats) {
+            if (!names.isEmpty()) {
+                names.append(separator);
+            }
+            names.append(habitatName(habitat));
+        }
+        return names.toString();
     }
 
     /** Resolves a translation key of the mod in the player's language. */

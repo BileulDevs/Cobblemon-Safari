@@ -19,6 +19,8 @@ import dev.darcosse.common.cobblemonsafari.protection.SafariProtection;
 import dev.darcosse.common.cobblemonsafari.reset.SafariMapReset;
 import dev.darcosse.common.cobblemonsafari.world.SafariWorldState;
 import dev.darcosse.common.cobblemonsafari.session.SafariSessionManager;
+import dev.darcosse.common.cobblemonsafari.reset.LiveReset;
+import dev.darcosse.common.cobblemonsafari.spawn.EggSpecies;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedRotation;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedSpawner;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedSync;
@@ -27,6 +29,8 @@ import dev.darcosse.common.cobblemonsafari.spawn.SafariHappenings;
 import dev.darcosse.common.cobblemonsafari.spawn.SafariHappeningsInfluence;
 import dev.darcosse.common.cobblemonsafari.spawn.SafariSpawnFilter;
 import dev.darcosse.common.cobblemonsafari.spawn.SpecialSpawnCounter;
+import dev.darcosse.common.cobblemonsafari.spawn.Swarm;
+import dev.darcosse.common.cobblemonsafari.spawn.SwarmSpawner;
 import dev.darcosse.common.cobblemonsafari.structure.RestHousePrebuilder;
 import dev.darcosse.common.cobblemonsafari.structure.RestHouses;
 import dev.darcosse.common.cobblemonsafari.teleport.RestHouseTravel;
@@ -84,6 +88,7 @@ public final class SafariServerEvents {
         SafariFlee.reset();
         SafariHappenings.reset();
         SafariHappeningsInfluence.clear();
+        SwarmSpawner.reset();
         SafariSpawnBoost.reset();
         SpecialSpawnCounter.reset();
         RestHouseTravel.reset();
@@ -93,6 +98,7 @@ public final class SafariServerEvents {
         SafariWorldState.get(server).forgetHousesIfMapChanged(SafariMapReset.salt());
         RestHouses.reset();
         RestHouses.prepare(server);
+        LiveReset.reset();
     }
 
     /**
@@ -103,8 +109,12 @@ public final class SafariServerEvents {
     public static void onDataReload(MinecraftServer server) {
         FeaturedRotation.invalidate();
         SafariSpawnFilter.invalidate();
-        // Types may have changed with the species data.
+        // Types may have changed with the species data, and the cache is keyed by spawn details, rebuilt here.
         SafariHappeningsInfluence.clear();
+        // Which details a swarm can use comes from the same spawn files and tags.
+        Swarm.invalidateSpawnData();
+        // The eggs' evolution lines come from the species data.
+        EggSpecies.invalidate();
     }
 
     /** End of every server tick. */
@@ -117,12 +127,18 @@ public final class SafariServerEvents {
         SafariDex.tick(server);
         SafariFlee.tick(server);
         SafariHappenings.tick(server);
+        SwarmSpawner.tick(server);
         SafariBounties.tick(server);
         SafariSpawnBoost.tick(server);
-        RestHouses.tick(server);
-        RestHouseStaff.tick(server);
+        // Not while a live reset empties the old map: they would load its chunks again, or build in it.
+        if (!LiveReset.isClosing()) {
+            RestHouses.tick(server);
+            RestHouseStaff.tick(server);
+            RestHousePrebuilder.tick(server);
+        }
+        // Even then: it ends the trips of the players sent out, giving them their camera back.
         RestHouseTravel.tick(server);
-        RestHousePrebuilder.tick(server);
+        LiveReset.tick(server);
     }
 
     /**

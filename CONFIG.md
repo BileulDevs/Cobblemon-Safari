@@ -18,7 +18,7 @@ How the files behave:
 - **An invalid value** (a negative price, an hour of 25, a colour that is not a colour...) is replaced by its default or clamped into range, a warning names it in the log, and the file is rewritten with the fixed value.
 - **A file that cannot be read at all** (a missing comma, a stray quote) is never overwritten: the mod runs on the defaults, logs the error, and reads the file again once you fix it.
 - **Unknown keys** are ignored and dropped when the file is rewritten.
-- **`configVersion`** is the format version of the file (`7` for `server.json`, `3` for `shop.json`, `2` for `client.json`). It is not a setting: the mod writes it. A file written by an older version of the mod is converted on load, whatever its version, and every key it moves is named in the log: see [Older files](#older-files) at the end.
+- **`configVersion`** is the format version of the file (`16` for `server.json`, `4` for `shop.json`, `2` for `client.json`). It is not a setting: the mod writes it. A file written by an older version of the mod is converted on load, whatever its version, and every key it moves is named in the log: see [Older files](#older-files) at the end.
 
 Formats used below:
 
@@ -96,7 +96,7 @@ How often gates generate is set by the datapack (`data/cobblemon_safari/worldgen
 
 #### `balls.loan`
 
-The original games' loan of Safari Balls, off by default: players bring their own allowed balls, and the shop gives 30 free Safari Balls a day.
+The original games' loan of Safari Balls, off by default: players bring their own allowed balls, and the shop gives 32 free Safari Balls a day.
 
 | Key | Default | What it does |
 |---|---|---|
@@ -129,7 +129,11 @@ Every Pokémon caught in the Safari gets the Safari Mark ("the Safari Find"); on
 | `special` | `true` | "the Star of the Day": one of the specials of the rotation. |
 | `swarm` | `true` | "of the Swarm": the swarming species, caught in the swarm's habitat (see `events.swarm`). |
 | `fullMoon` | `true` | "of the Full Moon": caught on a full moon night. |
+| `downpour` | `true` | "of the Downpour": caught where a downpour falls (see `events.downpour`). |
+| `storm` | `true` | "of the Storm": a Pokémon a storm brought (see `events.storm`). |
+| `aurora` | `true` | "of the Aurora": a Pokémon an aurora brought (see `events.aurora`); not the natural ones caught during it. |
 | `angler` | `true` | "the Safari Catch": fished with a rod in the Safari, then caught. |
+| `nest` | `true` | "of the Nest": hatched from an egg found in a Safari nest (see `events.eggNests`). Given at the hatch, wherever it happens; such a Pokémon gets no Safari Mark, never having been caught. |
 
 #### `capture.flee`: Pokémon running away
 
@@ -165,6 +169,7 @@ A key left out of an entry takes that entry's default.
 | Key | Default | What it does |
 |---|---|---|
 | `invulnerablePlayers` | `true` | Players inside take no damage. `/kill` and falling out of the world still apply, so a player in the void does not fall forever. |
+| `invulnerablePokemon` | `true` | Pokémon inside, wild or sent out, take no damage: they cannot be killed with a sword or a bow, and are spared falls, lava and mobs. Battles are not affected. `/kill` and falling out of the world still apply. |
 | `hunger` | `false` | Whether hunger is frozen inside. `true`: the food bar and its saturation stay where they were on entering (eating still fills them). `false`: the bar goes down as everywhere else. |
 | `protectBlocks` | `true` | Players cannot break or place blocks, fill or empty buckets, or use tools that change blocks (hoe, shovel, axe stripping, flint and steel, bone meal). Fire does not spread or burn blocks, and explosions break nothing. |
 | `placeableBlocks` | `["cobblemon:poke_cake", "cobblemon:poke_snack"]` | Blocks players may still place and break while `protectBlocks` is on. By default Cobblemon's baits. Anything placed disappears with the daily map. |
@@ -209,11 +214,11 @@ Each category (`legendary`, `mythical`, `ultraBeast`, `paradox`) has two keys:
 | Key | What it does |
 |---|---|
 | `allowSpawn` | Whether Pokémon of this category may come in this way at all. A species in two categories needs both allowed. |
-| `maxSpawnPerPokemon` | Most Pokémon of each species of this category coming in this way per rotation, counting those caught in the Safari plus those still roaming: with 2, once two Rayquaza are caught, no third comes in this way before the next rotation. One that leaves uncaught (despawned, fled, knocked out) gives its place back within about ten seconds. 0 lifts the cap. |
+| `maxSpawnPerPokemon` | Most Pokémon of each species of this category coming in this way per rotation, counting those caught in the Safari plus those still roaming: with 2, once two Rayquaza are caught, no third comes in this way before the next rotation. One that leaves uncaught (despawned, fled, knocked out) gives its place back within about ten seconds. 0 lifts the cap. The swarm is not held by this cap: see `events.swarm.rarities`. |
 
 The two ways count apart: with a cap of `1` in both sections, one Rayquaza may come from the natural spawns and another from the specials in the same rotation.
 
-These rules only cover the Safari: they never change what spawns in the rest of the world. The missions follow `spawns` (they are met with natural Pokémon); the shop has its own rules (`rotatingPokemon` in `shop.json`).
+These rules only cover the Safari: they never change what spawns in the rest of the world. The missions follow `spawns` (they are met with natural Pokémon); the shop has its own rules (`rotatingPokemon` in `shop.json`, with its own `categories`).
 
 A species refused by `spawns` is taken out of Cobblemon's spawn draw itself, so it no longer shows in `/checkspawn` there, and one with a huge weight (a datapack spawning Mew as common, say) cannot starve the other species. Species at their `maxSpawnPerPokemon`, or already `maxSameSpeciesNearby` times around the player, leave the draw the same way, until a slot frees up.
 
@@ -227,7 +232,7 @@ On top of the species rules above:
 | `maxSameSpeciesNearby` | `4` | No natural spawn of a species when this many of it already roam nearby, so one common species cannot flood a habitat. 0 turns the cap off. |
 | `spawnRateMultiplier` | `2.0` | How much faster Cobblemon's spawner works for players in the Safari. 1 is Cobblemon's own pace. Higher costs more server time. 0.1 to 10. |
 | `pokemonPerChunkMultiplier` | `2.0` | Multiplies Cobblemon's Pokémon-per-chunk cap for players in the Safari, so faster spawning is not wasted on a full cap. 0.1 to 10. |
-| `caughtSpeciesWeight` | `0.4` | Weight of the species a player already caught in the Safari, in the natural spawns around them (against 1 for species they have not). At 0.4 a new species is two and a half times as likely as a caught one. 1 turns it off; 0 stops caught species entirely while anything else can spawn. 0 to 1. |
+| `caughtSpeciesWeight` | `0.3` | Weight of the species a player already caught in the Safari, in the natural spawns around them (against 1 for species they have not). At 0.3 a new species is more than three times as likely as a caught one. 1 turns it off; 0 stops caught species entirely while anything else can spawn. 0 to 1. |
 | `snackClearRadius` | `16` | Distance from a Poké Snack, in blocks, within which no natural Pokémon spawns, so the snack has room to bring its own. Larger empties more of the surroundings; smaller lets the natural Pokémon fill the snack's area again. 0 turns the clearing off. 0 to 32. |
 | `snackDensityMultiplier` | `1.5` | Cap of a Poké Snack's spawner, as a multiple of the Safari's density (Cobblemon's Pokémon per chunk times `pokemonPerChunkMultiplier`). Above 1 a snack still brings Pokémon in a full area; higher packs more around it. 1 to 4. |
 
@@ -241,7 +246,7 @@ A few species, uncommon, rare and ultra-rare by default, drawn from what is inst
 |---|---|---|
 | `enabled` | `true` | Master switch for the rotation, the wall screens' specials page and the special spawner. |
 | `rotationMinutes` | `240` (4 h) | Length of a rotation, in real minutes. When it divides a day, rotations are aligned on midnight UTC: 240 changes the specials at 0, 4, 8, 12, 16 and 20 h UTC. Missions, the shop's random goods and the purchase limits follow the same rotation. At least 1. |
-| `slots` | see below | How many specials of each rarity a rotation draws. |
+| `slots` | see below | How many specials of each rarity a rotation draws. 64 in all at most (what the clients read): above, each rarity is cut to 16, with a warning. |
 | `spawn` | see below | How the mod brings the specials into the park. |
 
 `specials.slots`: species drawn per rotation, by rarity in the Safari. 0 or more.
@@ -264,28 +269,111 @@ A few species, uncommon, rare and ultra-rare by default, drawn from what is inst
 
 After `/safari reload`, the specials are redrawn with the new rules right away.
 
-`/safari rotate` starts a new rotation now; `/safari today` lists the current specials.
+`/safari rotate` starts a new rotation now, which lasts a whole `rotationMinutes` from then (the following rotations keep that pace, no longer aligned on midnight UTC); `/safari today` lists the current specials.
 
-### `events`: swarms and full moon nights
+### `events`: swarms, full moon nights, downpours, storms, heatwaves, auroras and egg nests
 
 Rare happenings that change Cobblemon's natural spawns in the Safari for a while, announced in the chat (with a chime) to the players in the Safari.
 
-**`events.swarm`**: with each rotation of the specials, maybe, one uncommon or rare species of the Safari comes out in numbers in one of its habitats until the next rotation. It also shows on the specials board (wall screens and `/safari today`). Legendary-class species never swarm, nor species `spawns` keeps out.
+**`events.swarm`**: with each rotation of the specials, maybe, one species of the Safari comes out in numbers in one of its habitats until the next rotation. It also shows on the specials board (wall screens and `/safari today`). Only species a player's spawner can bring there are drawn: spawns that need a structure or a fishing rod do not count. A species met there only through Poké Snacks may swarm too: the swarm's own spawner (`minNearby`) lifts that one requirement for it, so with `minNearby` at 0 such a swarm shows nothing. Species in `spawns.excludedSpecies` never swarm. Legendary-class species count as `ultra-rare` and follow `events.swarm.rarities` instead of the categories of `spawns`: a swarm is neither stopped by `spawns.legendary` nor uses up its slots.
 
 | Key | Default | What it does |
 |---|---|---|
 | `enabled` | `true` | `false`: no swarm. |
 | `chance` | `0.5` | Chance (0 to 1) that a rotation has a swarm. |
-| `weightMultiplier` | `10.0` | In its habitat, the swarming species is also offered among the common Pokémon, and its weight is multiplied by this: at 10 it makes up most of what spawns there. 1 to 100. |
+| `buckets` | `["uncommon", "rare", "ultra-rare"]` | Spawn buckets a swarm may be drawn from: `common`, `uncommon`, `rare`, `ultra-rare`. A species' bucket is its most common one in the habitat considered. Empty: no swarm. |
+| `rarities` | `allowSpawn`: `false` (`paradox`: `true`), `maxSpawnPerPokemon`: `0` | Legendary-class categories in swarms: `legendary`, `mythical`, `ultraBeast`, `paradox`, with the same two keys as in `spawns`, for the swarm alone (the swarming species in its habitat, whichever spawner brings it). `allowSpawn`: the category may swarm, as an `ultra-rare` swarm (`ultra-rare` must be in `buckets`). `maxSpawnPerPokemon`: most Pokémon of the swarming species a swarm brings in a rotation, counting those caught plus those still roaming; one that leaves uncaught gives its place back within about ten seconds. 0: no cap but `maxNearby`. Swarm spawns and catches never use up the natural slots of `spawns`. |
+| `weights` | `0` / `10` / `4` / `1` | Chance of each bucket (`common`, `uncommon`, `rare`, `ultraRare`) being the swarm's, against the others: by default two swarms in three are uncommon. Per bucket, not per species: the bucket is drawn first, then a species in it. 0 never draws that bucket; a bucket with no candidate leaves its turn to the others. |
+| `excludeList` | `[]` | Pokémon that never swarm, as Cobblemon properties. `"arceus"` leaves out the species and all its forms; `"vulpix alolan"` only Alolan Vulpix, Vulpix can still swarm. Unknown species or forms are named in the log and ignored. A form only given when the Pokémon is created (`region_bias=...` in the spawn files) can only be left out with its species. |
+| `weightMultiplier` | `10.0` | In its habitat, the swarm is also offered among the common Pokémon of Cobblemon's natural spawns, and its weight is multiplied by this. How much of the habitat it makes up depends on what else lives there; `minNearby` gives the floor. 1 to 100. |
 | `maxNearby` | `10` | Same-species cap around a player for the swarming species, instead of `spawns.maxSameSpeciesNearby`, so a swarm can look like one. 0 keeps the usual cap. |
+| `minNearby` | `4` | Swarm Pokémon the swarm's own spawner keeps within 48 blocks of each hunting player standing in its habitat, whatever else lives there, through Cobblemon's spawn rules (hour, light, kind of spot) and the Safari's caps. Never above `maxNearby`. 0 turns it off (Cobblemon's natural spawns only, as in 1.4.0). |
+| `checkEverySeconds` | `5` | Seconds between two top-ups of the swarm's spawner, one Pokémon per player at most each time. 1 to 300. |
 
 **`events.fullMoon`**: on full moon nights in the Safari, Pokémon of some types come out more.
 
 | Key | Default | What it does |
 |---|---|---|
 | `enabled` | `true` | `false`: no full moon effect. |
-| `types` | `["fairy", "ghost"]` | Cobblemon type names favoured. |
+| `types` | `["fairy", "ghost", "dark", "psychic"]` | Cobblemon type names favoured. |
 | `weightMultiplier` | `3.0` | How much more often those Pokémon are picked, within their rarity. 1 to 20. |
+
+**`events.downpour`**: some rains of the Safari turn into a downpour, during which Pokémon of some types come out more where the rain falls (not in snow, nor in the dunes and the volcano, which get no rain, nor under a roof), and catches made there get the Downpour Mark. The rain is the Safari's ordinary weather (the overworld's): the mod never makes it rain. Each time a rain starts, a draw decides whether it is a downpour; it then lasts a drawn time, or less if the rain stops first. Players in the Safari are told when it starts (or when they come in during one) and when it ends, and it shows in `/safari today` while it lasts. A server restart ends it, and a rain already falling when the server starts is never drawn.
+
+| Key | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | `false`: no downpour. |
+| `chance` | `0.15` | Chance (0 to 1) that a rain starting in the Safari is a downpour. |
+| `minDurationMinutes` | `5` | Shortest downpour, in real minutes. 1 to 120. |
+| `maxDurationMinutes` | `10` | Longest downpour, in real minutes, at least `minDurationMinutes`. 1 to 120. A rain lasts about 10 to 20 minutes. |
+| `types` | `["water", "electric"]` | Cobblemon type names favoured. |
+| `weightMultiplier` | `2.0` | How much more often those Pokémon are picked, within their rarity. 1 to 20. |
+
+**`events.storm`**: some thunderstorms bring rare Pokémon of some types to the high ground: the storm's own spawner brings them near the hunting players standing in one of `habitats` or high enough above the sea, each with a harmless lightning flash, and a Pokémon the storm brought gets the Storm Mark when caught. Its species are the Safari's own rare and ultra-rare natural species of those types (three rare for one ultra-rare), whatever their usual habitat, under the natural spawns' rules: `spawns.excludedSpecies` never come, and legendary-class species follow `spawns.legendary`, `mythical`, `ultraBeast` and `paradox` (switch and cap), the storm's catches counted apart from the natural ones. The thunderstorm is the Safari's ordinary weather: as for the downpour, a draw at each thunderstorm start, a drawn duration, ended by the thunder stopping or a restart. It adds up with a downpour, a thunderstorm being a rain too. Its Pokémon never use up the natural slots of `spawns`.
+
+| Key | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | `false`: no storm event. |
+| `chance` | `0.5` | Chance (0 to 1) that a thunderstorm starting in the Safari brings the storm event. |
+| `minDurationMinutes` | `3` | Shortest storm event, in real minutes. 1 to 120. |
+| `maxDurationMinutes` | `8` | Longest storm event, in real minutes, at least `minDurationMinutes`. 1 to 120. A thunderstorm lasts about 3 to 13 minutes. |
+| `types` | `["electric", "dragon"]` | Cobblemon type names of the Pokémon the storm brings. |
+| `excludeList` | `[]` | Pokémon the storm never brings, as Cobblemon properties: `"dragonite"`, or one form, `"vulpix alolan"`. |
+| `habitats` | `["cobblemon_safari:peaks", "cobblemon_safari:rocky_hills", "cobblemon_safari:volcanic"]` | Habitats where the storm brings its Pokémon, by biome id. |
+| `minAltitudeAboveSea` | `45` | Blocks above the sea from which any spot counts as high ground too, for a `ROLLING` map; scaled with `reset.relief` (about 16 on `FLAT`, 29 on `GENTLE`, 72 on `MOUNTAINOUS`). 0: the whole island. 0 to 256. |
+| `checkEverySeconds` | `15` | Seconds between two spawn attempts around each player. 1 to 300. |
+| `spawnChance` | `0.25` | Chance (0 to 1) that an attempt brings a Pokémon. |
+| `maxNearby` | `2` | Most storm Pokémon within 64 blocks of a player; none is brought beyond. |
+| `lightning` | `true` | A harmless lightning flash (no damage, no fire) where a storm Pokémon appears. |
+| `lightningCooldownSeconds` | `30` | Shortest time between two of those flashes in the whole Safari, so several players do not set off a barrage. 0 to 600. |
+
+**`events.heatwave`**: at each dawn without rain, a draw may make the day a heatwave: Pokémon of some types come out more in the hot habitats, within their rarity. It only weighs Cobblemon's own spawns there: no species appears that does not already live there. It lasts a drawn time and ends sooner when rain comes or night falls; rain stopping later the same day does not draw again. Announced to the players in the Safari and shown in `/safari today`; no mark. A server restart ends it, and the first dawn after a start is drawn normally (the day already begun when the server starts is not).
+
+| Key | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | `false`: no heatwave. |
+| `chance` | `0.15` | Chance (0 to 1) that a dawn without rain brings a heatwave. |
+| `minDurationMinutes` | `4` | Shortest heatwave, in real minutes. 1 to 120. |
+| `maxDurationMinutes` | `8` | Longest heatwave, in real minutes, at least `minDurationMinutes`. 1 to 120. A day lasts 10 minutes. |
+| `types` | `["fire", "ground"]` | Cobblemon type names favoured. |
+| `habitats` | `["cobblemon_safari:dunes", "cobblemon_safari:volcanic", "cobblemon_safari:badlands", "cobblemon_safari:savanna"]` | Habitats the heatwave bakes, by biome id. |
+| `weightMultiplier` | `2.0` | How much more often those Pokémon are picked there, within their rarity. 1 to 20. |
+
+**`events.aurora`**: at each nightfall without rain, a draw may light an aurora over the Safari. Each hunting player is then owed two Pokémon, one per group: one of `frozenTypes` on the frozen lands (one of `frozenHabitats`, or anywhere snow falls: cold biomes, and high ground cold enough for snow) and one of `otherTypes` anywhere else. Each appears 16 to 32 blocks away, on ground of its own group, as soon as the player stands where that group lives, retried every 3 seconds until it does or the aurora ends. One per player, group and aurora, kept by player for the whole aurora (leaving and coming back neither loses nor renews it). The frozen group draws the Safari's own uncommon, rare and ultra-rare natural species of its types (five uncommon for three rare and one ultra-rare: Cobblemon has almost no rare Ice species, so rare-only would always bring Glaceon); the other group rare and ultra-rare only (three to one), Psychic and Fairy having many. Both follow the natural spawns' rules (`spawns.excludedSpecies`, legendary-class switches and caps, counted apart from the natural ones). The pick is the player's own: never the species they got of that group at their previous aurora (unless nothing else is left), and the species they already caught in the Safari weigh `spawns.caughtSpeciesWeight`, as in the natural spawns. It glows for a while, the player is told, and it gets the Aurora Mark when caught. **While the aurora lasts, every Pokémon appearing in the Safari is `shinyChanceMultiplier` times more likely to be shiny**: natural spawns, specials, swarms, the events' own Pokémon, fished ones (any Pokémon Cobblemon rolls for a player standing in the Safari). The aurora lasts a drawn time and ends sooner at dawn or when rain comes. Announced and shown in `/safari today`.
+
+| Key | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | `false`: no aurora. |
+| `chance` | `0.1` | Chance (0 to 1) that a nightfall without rain brings an aurora. |
+| `minDurationMinutes` | `3` | Shortest aurora, in real minutes. 1 to 120. |
+| `maxDurationMinutes` | `6` | Longest aurora, in real minutes, at least `minDurationMinutes`. 1 to 120. A night lasts about 7 minutes. |
+| `frozenTypes` | `["ice"]` | Cobblemon type names of the Pokémon the aurora brings on the frozen lands. |
+| `otherTypes` | `["psychic", "fairy"]` | Cobblemon type names of the Pokémon the aurora brings everywhere else. |
+| `shinyChanceMultiplier` | `4` | How many times more likely every Pokémon appearing in the Safari is to be shiny during an aurora: 4 turns Cobblemon's 1 in 8192 into 1 in 2048. Stacks with the Shiny Charm. 1 for no effect; no upper bound, 8192 or more makes every Pokémon shiny during an aurora. |
+| `excludeList` | `[]` | Pokémon the aurora never brings, as Cobblemon properties: `"lapras"`, or one form, `"vulpix alolan"`. |
+| `frozenHabitats` | `["cobblemon_safari:glacier", "cobblemon_safari:snowfield", "cobblemon_safari:taiga"]` | Biomes counted as frozen lands, by biome id, on top of any spot where snow falls: only useful for biomes where it rains (the taiga). It does not limit where the aurora acts. |
+| `glowSeconds` | `20` | Seconds the Pokémon glows when it appears, so it can be found. 0 to 60. |
+
+**`events.eggNests`**: a permanent event, never announced. Every `checkEverySeconds`, each hunting player gets a draw (`spawnChance`); on a success a straw nest holding a Pokémon egg appears on open, dry ground `minDistance` to `maxDistance` blocks away, unless another nest is already within `exclusionRadius` (only nests in loaded chunks are seen). A right click on the nest takes the egg: with `firstComeFirstServed` the nest is then gone, otherwise each player may take one egg from it. A nest disappears after `lifetimeMinutes`, taken or not, even across a restart. With the defaults, a player alone finds about one nest every 10 minutes.
+
+The egg is of a Pokémon living in the habitat where the nest lies, as the specials board lists the habitats: an evolution line counts there as soon as one of its stages lives there (on land or in the water), every such line is as likely, and when none of them is allowed in that habitat no nest appears. The egg hatches into the line's first stage (a Pikachu line egg hatches a Pichu), standard form, at level 1, with the Nest Mark. A line is drawn when one of its species has egg groups and none of them is in `excludedEggGroups`, when none of its species is of a legendary-class category left off in `rarities`, and when its first stage is neither in `excludeList` nor in `spawns.excludedSpecies`. The egg hatches after `hatchMinutes` in the inventory of a connected player, anywhere (Safari or not; not in a chest); its tooltip shows the time left, never the species. A party with one of `hatchSpeedAbilities` hatches it `hatchSpeedMultiplier` times faster. The Pokémon is rolled at the hatch, with the player's shiny boosts of the moment (an aurora in the Safari, a Shiny Charm); it goes to the party, or the PC when the party is full; with no room anywhere, the egg waits and tries again a minute later.
+
+| Key | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | `false`: no new nest. The nests already out stay until their time is up. |
+| `checkEverySeconds` | `30` | Seconds between two draws for each hunting player. 5 to 3600. |
+| `spawnChance` | `0.05` | Chance (0 to 1) that a draw puts a nest near the player. |
+| `minDistance` | `24` | Closest a new nest is to the player, in blocks. 8 to 96. |
+| `maxDistance` | `48` | Farthest a new nest is from the player, in blocks, at least `minDistance`. 8 to 96. |
+| `exclusionRadius` | `128` | No new nest within this many blocks of a nest already out. 16 to 512. |
+| `lifetimeMinutes` | `20` | Minutes a nest stays out. 1 to 1440. |
+| `firstComeFirstServed` | `true` | `true`: the first player to take the egg empties the nest. `false`: each player may take one egg per nest. |
+| `excludedEggGroups` | `["undiscovered"]` | Egg groups never drawn: `monster`, `water_1`, `bug`, `flying`, `field`, `fairy`, `grass`, `human_like`, `water_3`, `mineral`, `amorphous`, `water_2`, `ditto`, `dragon`, `undiscovered`. |
+| `rarities` | all `false` | `legendary`, `mythical`, `ultraBeast`, `paradox`: whether lines of that category may be drawn. Most are also Undiscovered, so they only come once `undiscovered` is out of `excludedEggGroups` too. |
+| `excludeList` | `[]` | Species never drawn, by the species that hatches (the first stage): `"pichu"`. |
+| `hatchMinutes` | `10` | Minutes an egg takes to hatch. Written on the egg when it is found: a change only affects eggs found afterwards. 1 to 1440. |
+| `hatchSpeedAbilities` | `["flamebody"]` | Abilities, as Cobblemon names them, that warm the eggs carried by a player whose party has one (`"magmaarmor"`, `"steamengine"`...). |
+| `hatchSpeedMultiplier` | `2` | How many times faster such a party hatches the eggs. 1 to 10. |
 
 ### `points`: Safari points
 
@@ -309,7 +397,7 @@ With the default missions, the defaults give about 600 points per hour of active
 
 #### `restHouses.travel`: trips between the rest houses
 
-The Safari Guide of every rest house takes players to any other house of the island, named by its biome (with its direction, "Jungle Safari (north)", when two houses share a biome). The Escape Rope can take them to the nearest one. Every trip is filmed while the destination loads, and a house nobody went near yet is built during it: a double of the player, wearing their skin, takes off on the first Pokémon of their party that can be ridden in the air (a copy of it: the party is not touched), or on a Staraptor when none can, and lands in front of the destination, filmed by the game camera; players around see it too. The guide's trips take off from the house's steps; the Escape Rope's from where it was used, and from a cave the player is first brought to the nearest safe open-air spot, within 12 blocks around, under a black screen. A trip into or out of a cave burrows, and the rope in the water swims, the same way. When the trip cannot be filmed (no open sky to take off, no open-air spot within 12 blocks of a cave, no flyer and no Staraptor), it shows a painted landscape for the guide and a pixel-art scene for the rope. How the trips are shown is not a setting.
+The Safari Guide of every rest house takes players to any other house of the island, named by its biome (with its direction, "Jungle (north)", when two houses share a biome). The Escape Rope can take them to the nearest one. Every trip is filmed while the destination loads, and a house nobody went near yet is built during it: a double of the player, wearing their skin, takes off on the first Pokémon of their party that can be ridden in the air (a copy of it: the party is not touched), or on a Staraptor when none can, and lands in front of the destination, filmed by the game camera; players around see it too. The guide's trips take off from the house's steps; the Escape Rope's from where it was used, and from a cave the player is first brought to the nearest safe open-air spot, within 12 blocks around, under a black screen. A trip into or out of a cave burrows, and the rope in the water swims, the same way. When the trip cannot be filmed (no open sky to take off, no open-air spot within 12 blocks of a cave, no flyer and no Staraptor), it shows a painted landscape for the guide and a pixel-art scene for the rope. How the trips are shown is not a setting.
 
 | Key | Default | What it does |
 |---|---|---|
@@ -326,16 +414,19 @@ The Safari Guide of every rest house takes players to any other house of the isl
 
 ### `reset`: the daily new map
 
-At the first server start of a new day, the Safari dimension is deleted and regenerated with another layout. Everything built or dropped inside is lost; sessions, statistics, banked time and points are kept.
+Each new day (from `hour`), the Safari gets a brand new map with another layout. With `mode` `"LIVE"` (the default) it happens while the server runs, as soon as nobody is inside; if players stay, they get `maxWaitMinutes`, then a countdown of `countdownSeconds`, then they are sent out with their unused banked time given back (whatever `tickets.refundUnusedTimeOnLeave` and the bank's cap say) and can come back in a moment. With `"START"` it happens at the first server start of the new day, as before 1.5.0. A server that was down when the day changed resets at its start in both modes. Everything built or dropped inside is lost; statistics, banked time and points are kept.
 
 | Key | Default | What it does |
 |---|---|---|
 | `enabled` | `true` | `false` keeps the same map forever. |
 | `hour` | `4` | Hour (0 to 23) at which a new map day starts. With 4, a server restarted at 3:00 still belongs to the previous day and keeps its map. |
 | `timeZone` | `""` | Time zone of `hour`, e.g. `"Europe/Paris"`. Empty uses the server's own. |
-| `relief` | `"GENTLE"` | How hilly each new map is. `"FLAT"`: low, gentle land, a few blocks above the sea, no peaks (height ×0.35). `"GENTLE"`: rolling but softer, the default since 1.4.0 (height ×0.65, peaks ×0.5): the plateaus' walls over the rivers lose a third of their height. `"ROLLING"`: the island as in earlier versions, with plateaus up to some forty blocks above the rivers. `"MOUNTAINOUS"`: higher land and sharper peaks (height ×1.6, peaks ×1.8). The coast and the sea floor do not move. Only a new map takes it: the map on disk keeps the relief it was generated with (new chunks would rise as cliffs against the old ones), and the log says so at start. To see a new relief now, `/safari reset` then restart. |
+| `mode` | `"LIVE"` | `"LIVE"`: the reset happens while the server runs (see above). `"START"`: only at a server start. |
+| `maxWaitMinutes` | `60` | LIVE: minutes a due reset waits for the Safari to empty before forcing it. 1 to 1440. |
+| `countdownSeconds` | `300` | Seconds of warnings for the players inside before a forced reset (the wait over, or `/safari reset force`). 0 sends them out at once. 0 to 1800. |
+| `relief` | `"GENTLE"` | How hilly each new map is. `"FLAT"`: low, gentle land, a few blocks above the sea, no peaks (height ×0.35). `"GENTLE"`: rolling but softer, the default since 1.4.0 (height ×0.65, peaks ×0.5): the plateaus' walls over the rivers lose a third of their height. `"ROLLING"`: the island as in earlier versions, with plateaus up to some forty blocks above the rivers. `"MOUNTAINOUS"`: higher land and sharper peaks (height ×1.6, peaks ×1.8). The coast and the sea floor do not move. Only a new map takes it: the map on disk keeps the relief it was generated with (new chunks would rise as cliffs against the old ones), and the log says so at start. To see a new relief now: `/safari reset force`. |
 
-`/safari reset` forces a new map at the next start, whatever this section says.
+`/safari reset` makes a new map due now: at the next start in START mode, as soon as the Safari is empty in LIVE mode (with `enabled` on). `/safari reset force` renews the map right away, while the server runs, whatever the mode: at once if nobody is inside, else after the countdown.
 
 ---
 
@@ -404,16 +495,13 @@ Write every key of an entry you change: a key left out of an entry present in th
 
 ## `shop.json`: the shop
 
-The Safari Warden (at every gate) and the Safari Clerk (in every rest house) open the shop. It sells, in this order: the fixed `entries` of this file, then the random Pokémon (`rotatingPokemon`), items (`rotatingItems`) and Poké Balls (`rotatingBalls`) of the current rotation. Every player sees the same random goods; they change with the specials.
+The Safari Warden (at every gate) and the Safari Clerk (in every rest house) open the shop. The file is laid out by tab: each tab holds its fixed offers (`fixed`) and the offers it draws each rotation (`rotatingPokemon`, `rotatingItems`, `rotatingSnacks`), and may split them into `sections`, shown one after the other with no gap. Every player sees the same drawn offers; they change with the specials.
 
 | Key | Default | What it does |
 |---|---|---|
 | `enabled` | `true` | `false` closes the shop: the NPCs say so. |
-| `tabs` | Pokémon, Items, Poké Balls, Cooking, Tickets | Tabs of the shop screen, in display order. See below. |
-| `entries` | 22 entries, see below | The fixed list of what is for sale. |
-| `rotatingPokemon` | see below | The random Pokémon. |
-| `rotatingItems` | see below | The random items. |
-| `rotatingBalls` | see below | The random Poké Balls. |
+| `defaults.limit` | none | Limit of an offer that sets none (see `limit` below). |
+| `tabs` | Pokémon, Items, Poké Balls, Cooking, Tickets | The tabs of the screen, in display order, with what they sell. 64 at most: the ones after are dropped, with a warning. |
 
 ### `tabs`
 
@@ -421,76 +509,79 @@ A tab with nothing in it is hidden.
 
 | Key | What it does |
 |---|---|
-| `id` | What entries refer to. The built-in ids `pokemon`, `items`, `balls`, `cooking` and `tickets` have translated names. Ids must be unique. |
+| `id` | The built-in ids `pokemon`, `items`, `balls`, `cooking` and `tickets` have translated names. Ids must be unique. |
 | `name` | Name shown as is, instead of the translated one. Empty: the translation, or the id. |
 | `icon` | Item drawn on the tab, e.g. `"cobblemon:poke_ball"`. Empty for none. |
+| `fixed` | Offers always listed, in file order, 8 per page. See below. |
+| `rotatingPokemon`, `rotatingItems`, `rotatingSnacks` | What the tab draws each rotation, each optional. See below. |
+| `sections` | Optional parts of the tab: each has a `name` and the same `fixed` and `rotating…` keys. The tab's own offers come first, then each section in the order of the file, with no gap or title between them: sections only group offers in the file (and name them in the log). |
 
-### `entries`
+### Offers (`fixed`)
 
-Each entry is an item or a Pokémon. Entries appear in the order of the file within their tab, 8 per page.
-
-| Key | Applies to | What it does |
-|---|---|---|
-| `type` | both | `"item"` or `"pokemon"`. |
-| `item` | items | Item id, e.g. `"cobblemon:rare_candy"`. An id that names no item (a mod removed) shows the entry as unavailable. |
-| `count` | items | Stack given per purchase, 1 to 64. |
-| `pokemon` | Pokémon | Cobblemon properties, e.g. `"dratini level=15"`. The Pokémon goes to the party, or the PC when the party is full. |
-| `price` | both | Cost in Safari points (0 for free). For a Pokémon, `"auto"` prices it like the random ones: the base price of its rarity in the Safari times its evolution stage. |
-| `cost` | both | Items taken in exchange, on top of `price`: a list of `{"item": ..., "count": ...}`, each `item` an id or a `#tag` (any mix of the tag's items counts; a player carrying several kinds picks which one is given first). Leave it out for a plain purchase. |
-| `limitPerRotation` | both | How many times each player may buy it per rotation. Leave it out for no limit. |
-| `cooldownHours` | both | Hours each player waits after buying it before buying it again, in real time (the wait goes on while the player or the server is offline). Leave it out for no wait. Up to a year. |
-| `tab` | both | Id of the tab showing it. Empty or unknown: `pokemon` for Pokémon, `balls` for items whose id ends in `_ball`, `tickets` for Safari Tickets, `items` otherwise. The mod writes the chosen tab back. |
-
-The default entries show every kind:
-
-- **Pokémon**: a level 45 Tauros for 200 points.
-- **Items**: Rare Candy, Exp. Candy M, Ability Capsule, Poké Balls, Great Balls and Ultra Balls.
-- **Free daily Safari Balls**: 30 `cobblemon:safari_ball` for 0 points with `"cooldownHours": 24`. The card shows "Free" and a "Take" button.
-- **Cooking**: what the rest houses' Poké Pot needs (Hearty Grains, Vivichoke, Medicinal Leek, Tasty Tail, Galarica Nuts, Pep-Up Flower, Energy Root, honey, sugar, milk).
-- **Ticket trades**: one Safari Ticket for 16 `#cobblemon:apricorns`, 24 `#cobblemon:berries`, 1 `#cobblemon:evolution_stones` or 1 `#cobblemon:fossils`, each `"limitPerRotation": 1`. A `shop.json` from before the fossil trade (version 1) gets it added once on load, unless it already trades fossils.
-
-### `rotatingPokemon`: random Pokémon
-
-Drawn among the species that spawn naturally in the Safari, at the lowest level they spawn at there.
-
-| Key | Default | What it does |
-|---|---|---|
-| `enabled` | `true` | `false`: the shop only sells its fixed entries. |
-| `count` | `15` | Pokémon drawn per rotation, 0 to 32. |
-| `tab` | `"pokemon"` | Tab showing them. |
-| `rarities` | `["common", "uncommon", "rare"]` | Rarities they are drawn from, as Cobblemon spawn buckets: `common`, `uncommon`, `rare`, `ultra-rare`. |
-| `commonPrice` | `250` | Price of a first-stage common Pokémon. A second stage costs twice as much, a third stage three times; a species that does not evolve counts as a second stage. Prices are rounded to 50. |
-| `uncommonPrice` | `500` | Same, uncommon. |
-| `rarePrice` | `500` | Same, rare. |
-| `ultraRarePrice` | `2500` | Same, ultra-rare. |
-| `excludeSpecials` | `true` | Leaves out today's specials, so the shop never sells what players are hunting. |
-| `allowSpecialSpecies` | `false` | Allows legendary, mythical, ultra beast and paradox species. |
-| `excludedSpecies` | `[]` | Species never drawn, e.g. `["cobblemon:ditto"]`. |
-
-A Pokémon the fixed entries already sell (same species and form) is never drawn.
-
-### `rotatingItems` and `rotatingBalls`: random goods
-
-Both sections have the same keys. Only items matched by a `prices` rule can be drawn: the rules are the catalogue and the price list at once.
-
-| Key | Default (items / balls) | What it does |
-|---|---|---|
-| `enabled` | `true` / `true` | Master switch. |
-| `count` | `8` / `6` | Items drawn per rotation, on top of `always`. 0 to 32. |
-| `tab` | `"items"` / `"balls"` | Tab showing them. |
-| `always` | `[]` / `["cobblemon:safari_ball"]` | Items sold every rotation whatever the draw. Each still needs a `prices` rule. |
-| `excluded` | Ability Patch, teapots and teacups, bone, snowball / tier 5 balls, Cherish Ball | Items never drawn: ids or `#tags`. Items the fixed entries sell are left out too. |
-| `prices` | 29 rules / 5 rules | See below. |
-
-Each rule of `prices`:
+Each offer sells exactly one of: an item, a Pokémon, or a ready-made dish.
 
 | Key | What it does |
 |---|---|
-| `item` | An item id, or a `#tag` for every item of the tag. |
-| `count` | Stack sold per purchase, 1 to 64. |
-| `price` | Price of the stack, in Safari points. |
+| `item` | Item id, e.g. `"cobblemon:rare_candy"`. An id that names no item (a mod removed) shows the offer as unavailable. |
+| `pokemon` | Cobblemon properties, e.g. `"dratini level=15"`. The Pokémon goes to the party, or the PC when the party is full. |
+| `snack` | A dish already cooked: `{"base": "cobblemon:poke_snack", "seasonings": ["cobblemon:passho_berry", ...]}`, up to 3 seasonings, as the Poké Pot would make it (colour, ingredients, bait effects). `processors` (optional) lists the Cobblemon seasoning processors to run; absent, those of the dish's own Poké Pot recipe. A seasoning's bait effect comes from Cobblemon's data: type berries (Passho, Occa...) and egg-group berries (Aspear, Rawst...) bring those Pokémon, Starf rerolls for a shiny, Enigma gives a chance of a hidden ability; Oran, Sitrus and other fishing berries do nothing on a snack. |
+| `count` | Stack given, for an item or a dish, 1 to 64. Absent: 1. |
+| `price` | Cost in Safari points (0 for free). For a Pokémon, `"auto"` prices it like the drawn ones. |
+| `cost` | Items taken in exchange, on top of `price`: a list of `{"item": ..., "count": ...}`, each `item` an id or a `#tag` (any mix of the tag's items counts; a player carrying several kinds picks which one is given first). 16 costs at most per offer, and 512 items of a tag at most (the clients read no more): the rest is dropped, with a warning. |
+| `limit` | How often a player may buy it, see below. Absent: `defaults.limit`. |
 
-The first rule matching an item wins, so specific items go before the tags that hold them (a Max Potion before `#cobblemon:potions`). The default rules price Cobblemon's medicine, candies, mints, battle items, gems, evolution items and held items, and its balls by tier.
+`limit`, for every offer, fixed or drawn; all its keys are optional and each set one applies:
+
+| Key | What it does |
+|---|---|
+| `max` | Purchases per player. Per rotation, unless `lifetime` is `true`. |
+| `lifetime` | `true`: `max` counts over the player's whole life in this world. Absent or `false`: per rotation. |
+| `cooldownHours` | Hours to wait after each purchase, in real time (the wait goes on while the player or the server is offline). Up to a year. |
+
+The default offers show every kind: a level 45 Tauros once per player for life, Rare Candy and other items, 32 free Safari Balls every 24 h, Poké Balls, a dozen ready-made dishes (a plain Poké Snack, nine snacks each themed on a type or an egg group, a hidden ability one, a shiny one and a Poké Cake) and the Poké Pot's ingredients, and one Safari Ticket per rotation for 16 apricorns, 24 berries, an evolution stone or a fossil.
+
+### `rotatingPokemon`: drawn Pokémon
+
+Drawn among the species that spawn naturally in the Safari: `count` ordinary ones, then the legendary-class ones each allowed category adds on top.
+
+| Key | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | Master switch. |
+| `count` | `15` | Ordinary Pokémon per rotation, 0 to 32. |
+| `rarities` | see below | `common`, `uncommon`, `rare`, `ultra-rare`, each with `allowed`, `price` and `weight`. A slot goes to a Pokémon with a chance proportional to its rarity's `weight`. The price is `price` times the evolution stage (a second stage costs twice as much, a third three times; a species that does not evolve counts as a second stage), rounded to 50. Defaults: 250 / 500 / 1000 / 2500 points, weights 10 / 6 / 3 / 1, ultra-rare off. |
+| `categories` | see below | `legendary`, `mythical`, `ultraBeast`, `paradox`, each with `allowed`, `price` (whatever the stage), `maxPerRotation` (how many are listed, on top of `count`, 0 to 8) and `limit` (absent: the draw's `limit`). Defaults: 20000 / 20000 / 8000 / 5000 points, 1 / 1 / 1 / 2 per rotation, one each per player and rotation; only `paradox` on. A species in several categories needs them all allowed. A `limit` with `"lifetime": true` counts per offer content (species, form, level, shininess, price): a player who bought a legendary cannot buy it again when it comes back identical, but can when it comes back shiny or at another price or level. |
+| `level` | `{"mode": "spawn"}` | `"spawn"`: the lowest level it spawns at in the Safari. `"range"`: a level drawn between `min` and `max`. |
+| `modifiers` | `{"shinyChance": 0.01, "shinyPriceMultiplier": 3}` | Chance (0 to 1) that a drawn Pokémon is shiny (1 % by default), and its price multiplier. |
+| `excludeFeatured` | `true` | Leaves out today's specials, so the shop never sells what players are hunting. |
+| `excludeList` | `[]` | Pokémon never drawn, as Cobblemon properties: `"arceus"` for a species and all its forms, `"vulpix alolan"` for one form. |
+| `limit` | none | Limit of each drawn Pokémon. |
+
+A Pokémon the fixed offers already sell (same species and form) is never drawn.
+
+### `rotatingItems`: drawn goods
+
+Only items matched by a `prices` rule can be drawn: the rules are the catalogue and the price list at once.
+
+| Key | Default (items / balls / ingredients) | What it does |
+|---|---|---|
+| `enabled` | `true` | Master switch. |
+| `count` | `8` / `6` / `6` | Items drawn per rotation, on top of `always`. 0 to 32. |
+| `always` | `[]` / `["cobblemon:safari_ball"]` / `[]` | Items listed every rotation whatever the draw. Each still needs a `prices` rule. |
+| `excluded` | Ability Patch, teapots and teacups, bone, snowball / tier 5 balls, Cherish Ball / none | Items never drawn: ids or `#tags`. Items the fixed offers sell are left out too. |
+| `prices` | 29 rules / 5 rules / 4 berries for 30 | Each rule: `item` (an id, or a `#tag` for every item of it), `count` (stack, 1 to 64) and `price`. The first rule matching an item wins, so specific items go before the tags that hold them. |
+| `limit` | none | Limit of each drawn item. |
+
+### `rotatingSnacks`: drawn dishes
+
+| Key | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | Master switch. |
+| `count` | `2` | Dishes drawn per rotation, 0 to 32. |
+| `base` | `"cobblemon:poke_snack"` | The dish. |
+| `seasonings` | `{"pool": ["#cobblemon:berries"], "min": 1, "max": 3}` | Where its seasonings come from (ids or `#tags`; only items Cobblemon knows as seasonings are used) and how many, 0 to 3. |
+| `price` | `{"base": 150, "perSeasoning": 75}` | Price: the base plus a part per seasoning. |
+| `processors` | absent | As for a fixed dish. |
+| `limit` | `{"max": 1}` | Limit of each drawn dish: one per player and rotation. |
 
 ---
 
@@ -618,7 +709,7 @@ Older conversions still apply on the way:
 
 `client.json` before version 2: `hudEnabled`, `hudAnchor`, `hudOffsetX`, `hudOffsetY`, `lowTimeSeconds` and `criticalTimeSeconds` go to `hud.enabled`, `hud.anchor`, `hud.offsetX`, `hud.offsetY`, `hud.lowTimeSeconds` and `hud.criticalTimeSeconds`; `board.featuredFooter`, `statsFooter`, `bountiesFooter` and `dexFooter` go to `board.footers.specials`, `stats`, `missions` and `dex`.
 
-`shop.json` before version 3: `rotating` becomes `rotatingPokemon`. A `shop.json` at version 1 also gets the fossil ticket trade added once.
+`shop.json` before version 3: `rotating` becomes `rotatingPokemon`. A `shop.json` at version 1 also gets the fossil ticket trade added once. `shop.json` before version 4 is laid out by tab: each entry moves into the `fixed` list of its `tab` (`type` and `tab` dropped, `limitPerRotation` and `cooldownHours` into `limit`), `rotatingPokemon`, `rotatingItems` and `rotatingBalls` move into their tab (`rotatingBalls` as that tab's `rotatingItems`), the Pokémon draw's `xxxPrice` and `rarities` into `rarities.xxx`, `allowSpecialSpecies` into `categories.xxx.allowed` for legendary, mythical and ultra beast (paradox stays on), `excludeSpecials` into `excludeFeatured`, `excludedSpecies` into `excludeList`; the cooking tab's items become its `ingredients` section, after a `prepared` section with the default dishes.
 
 ---
 

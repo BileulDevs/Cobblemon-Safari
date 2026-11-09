@@ -17,9 +17,9 @@ The Safari is its own dimension: a single island in a turquoise sea, with its ow
 
 - **Fourteen habitats** laid out around a central summit: grassland, savanna, dunes, badlands, jungle, marsh, mushroom grove, flower meadow, woodland, deep forest, taiga, snowfield, glacier and rocky hills, plus the peaks, a volcano, lakes and rivers.
 - **Caves everywhere**, a giant pillared cavern under the summit and a lush cavern in the south, each reached by its own winding passage.
-- **A new map every day.** At the first server start of a new day, the island is regenerated with a new layout, flat, gentle (the default), rolling or mountainous as you choose. Sessions, stats, banked time and points are kept.
+- **A new map every day.** Each new day, the island is regenerated with a new layout while the server runs, as soon as nobody is inside (or at the next start, if you prefer), flat, gentle (the default), rolling or mountainous as you choose. Sessions, stats, banked time and points are kept.
 - **Its own soundtrack**: six original tracks, one per zone, and the cries of the Pokémon that actually live in each biome.
-- **Nothing to break.** Inside, players take no damage and cannot change the terrain. Poké Cakes and Poké Snacks can still be placed as bait, and berries, apricorns and Galarica nuts picked; each Cobblemon plant has its own switch. Hunger can be frozen too, so a timed hunt is not spent eating.
+- **Nothing to break.** Inside, players and Pokémon take no damage and players cannot change the terrain. Poké Cakes and Poké Snacks can still be placed as bait, and berries, apricorns and Galarica nuts picked; each Cobblemon plant has its own switch. Hunger can be frozen too, so a timed hunt is not spent eating.
 
 ### Safari Gates
 
@@ -34,13 +34,13 @@ Rare lodges in the overworld's plains, meadows, light forests and savannas. Stan
 
 ### Restricted Poké Balls
 
-Only Safari Balls and Master Balls work inside by default (configurable). A Safari Ball thrown at a Pokémon outside of battle gets a strong catch bonus, so hunting without battling feels right, and a Pokémon you fish is left free on the bank instead of starting a battle. But miss, and the Pokémon may run away, all the more likely the rarer it is and the more balls you already wasted on it (configurable; legendaries and shinies stay by default). The shop hands out 30 free Safari Balls once a day.
+Only Safari Balls and Master Balls work inside by default (configurable). A Safari Ball thrown at a Pokémon outside of battle gets a strong catch bonus, so hunting without battling feels right, and a Pokémon you fish is left free on the bank instead of starting a battle. But miss, and the Pokémon may run away, all the more likely the rarer it is and the more balls you already wasted on it (configurable; legendaries and shinies stay by default). The shop hands out 32 free Safari Balls once a day.
 
 ### Rare Pokémon of the day
 
 Every four hours, the mod draws a few uncommon, rare and ultra-rare species from whatever is installed (Cobblemon and your spawn datapacks) and spawns them near players, **only in their own habitat and at their own hours**: a nocturnal species comes out at night, a cave dweller waits for darkness. Legendary, mythical, ultra beast and paradox Pokémon each have their own switch and a per-rotation cap.
 
-Some rotations bring a **swarm**: one species comes out in numbers in one habitat until the next rotation. And on **full moon nights**, Fairy and Ghost Pokémon come out more. Both are announced in the chat and configurable.
+Some rotations bring a **swarm**: one species comes out in numbers in one habitat until the next rotation. And on **full moon nights**, Fairy, Ghost, Dark and Psychic Pokémon come out more. Now and then a rain turns into a **downpour**, bringing out Water and Electric Pokémon where it falls. A **thunderstorm** may bring rare Electric and Dragon Pokémon down on the high ground, with a flash of lightning. And on a **heatwave** day, Fire and Ground Pokémon swarm the hot lands. On rare clear nights an **aurora** promises every hunter a rare Ice Pokémon on the frozen lands and a rare Psychic or Fairy one elsewhere, and makes shinies four times as likely. All are announced in the chat and configurable. Keep your eyes open, too: now and then a **straw nest** holds the egg of a Pokémon living in that habitat, which hatches in your bag.
 
 Cobblemon's natural spawns fill the park too, faster than usual, and they favour species you have not caught yet.
 
@@ -52,7 +52,7 @@ Ten Pokémon Centers stand on every map: eight on the surface, the entrance one 
 
 - Every catch earns **Safari points**, more for rare species, today's specials and shinies.
 - Each rotation brings **three missions** drawn among thirteen kinds (a species, a type, one of today's specials, a habitat, different species, without a battle, at night, fishing...), the same for everyone, paid once per player, with a bonus when all are done. Too hard? The clerk swaps one for you, for a few points. Every kind, its reward and the species it may ask can be configured.
-- Every Pokémon you catch there keeps the **Safari Mark**: "Tauros the Safari Find". Catch it at the right moment and it gets an event mark too: one of the specials of the day ("the Star of the Day"), a swarm ("of the Swarm"), a full moon night ("of the Full Moon"), or fished first ("the Safari Catch").
+- Every Pokémon you catch there keeps the **Safari Mark**: "Tauros the Safari Find". Catch it at the right moment and it gets an event mark too: one of the specials of the day ("the Star of the Day"), a swarm ("of the Swarm"), an aurora ("of the Aurora"), hatched from a nest's egg ("of the Nest"), a storm ("of the Storm"), a downpour ("of the Downpour"), a full moon night ("of the Full Moon"), or fished first ("the Safari Catch").
 - Your Safari career shows in the game's own **Statistics** screen: hunts, time hunted, Pokémon, shinies and specials caught, best hunt, points earned and spent, missions completed, rest house trips, Pokémon fished.
 - A **Safari advancement tab** of 47 advancements, from your first steps in the tall grass to fishing from a boat, with a few hidden ones.
 - The **shop** sells a fixed list plus random Pokémon, items and Poké Balls that change with each rotation, a cooking tab, and the ticket trades. Pokémon cards show the animated Cobblemon model.
@@ -101,13 +101,13 @@ The Safari Gate block is creative-only, for operators who want to build their ow
 
 Players have two commands: `/safari`, which shows their time left, banked time and points, and `/safari dex [habitat]`, their Safari Pokédex (progress per habitat, or the species caught and missing in one habitat). Everything else goes through the gates, the NPCs and the wall screens.
 
-Operators (level 2) have `/safari info`, `enter`, `exit`, `time`, `credit add`, `points add`, `stats`, `top`, `today`, `shop`, `rotate`, `reset` and `reload`.
+Operators (level 2) have `/safari info`, `enter`, `exit`, `time`, `credit add`, `points add`, `stats`, `top`, `today`, `shop`, `rotate`, `reset` (and `reset force`, a new map right now) and `reload`.
 
 ---
 
 ## Installation
 
-1. Install [Cobblemon](https://www.curseforge.com/minecraft/mc-mods/cobblemon) 1.8.0 or later for Minecraft 1.21.1.
+1. Install [Cobblemon](https://www.curseforge.com/minecraft/mc-mods/cobblemon) 1.8.x (1.8.0 or later, below 1.9) for Minecraft 1.21.1.
 2. Drop the Cobblemon Safari jar for your loader into the `mods` folder.
 3. Start the game. The config files are created in `config/cobblemon_safari/`.
 
@@ -116,7 +116,7 @@ Operators (level 2) have `/safari info`, `enter`, `exit`, `time`, `credit add`, 
 | Dependency | Required | Version |
 |---|---|---|
 | Minecraft | Yes | 1.21.1 |
-| Cobblemon | Yes | 1.8.0+ |
+| Cobblemon | Yes | 1.8.x (>= 1.8.0, < 1.9) |
 | Fabric API | Yes (Fabric) | any for 1.21.1 |
 | Fabric Language Kotlin | Yes (Fabric) | any |
 | NeoForge | Yes (NeoForge) | 21.1.182+ |

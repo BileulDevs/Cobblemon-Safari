@@ -40,6 +40,47 @@
             ]
           },
           {
+            "text": "cobblemon_safari.dialogue.safari_clerk.option.missions",
+            "value": "missions",
+            "action": "q.dialogue.set_page('missions');"
+          },
+          {
+            "text": "cobblemon_safari.dialogue.safari_clerk.option.events",
+            "value": "events",
+            "action": "q.dialogue.set_page('events');"
+          },
+          {
+            "text": "cobblemon_safari.dialogue.safari_clerk.option.balls",
+            "value": "balls",
+            "action": [
+              "q.player.safari_balls();",
+              "q.dialogue.set_page('balls');"
+            ]
+          },
+          {
+            "text": "cobblemon_safari.dialogue.safari_clerk.option.leave",
+            "value": "leave",
+            "action": "q.dialogue.set_page('leave');"
+          },
+          {
+            "text": "cobblemon_safari.dialogue.safari_clerk.option.bye",
+            "value": "bye",
+            "action": "q.dialogue.set_page('bye');"
+          }
+        ]
+      }
+    },
+    {
+      "id": "missions",
+      "speaker": "npc",
+      "lines": [
+        "cobblemon_safari.dialogue.safari_clerk.missions"
+      ],
+      "input": {
+        "type": "option",
+        "vertical": true,
+        "options": [
+          {
             "text": "cobblemon_safari.dialogue.safari_clerk.option.bounties",
             "value": "bounties",
             "action": [
@@ -54,22 +95,9 @@
             "action": "q.dialogue.set_page('swap');"
           },
           {
-            "text": "cobblemon_safari.dialogue.safari_clerk.option.leave",
-            "value": "leave",
-            "action": "q.dialogue.set_page('leave');"
-          },
-          {
-            "text": "cobblemon_safari.dialogue.safari_clerk.option.balls",
-            "value": "balls",
-            "action": [
-              "q.player.safari_balls();",
-              "q.dialogue.set_page('balls');"
-            ]
-          },
-          {
-            "text": "cobblemon_safari.dialogue.safari_clerk.option.bye",
-            "value": "bye",
-            "action": "q.dialogue.set_page('bye');"
+            "text": "cobblemon_safari.dialogue.safari_clerk.option.back",
+            "value": "back",
+            "action": "q.dialogue.set_page('greeting');"
           }
         ]
       }
@@ -185,10 +213,147 @@
           {
             "text": "cobblemon_safari.dialogue.safari_clerk.option.swap_back",
             "value": "swap_back",
+            "action": "q.dialogue.set_page('missions');"
+          }
+        ]
+      }
+    },
+    {
+      "id": "events",
+      "speaker": "npc",
+      "lines": [
+        "cobblemon_safari.dialogue.safari_clerk.events"
+      ],
+      "input": {
+        "type": "option",
+        "vertical": true,
+        "options": [
+          {
+            "text": "cobblemon_safari.dialogue.safari_clerk.option.event.swarm",
+            "value": "event_swarm",
+            "isVisible": "q.player.safari_event_on_swarm()",
+            "action": "q.dialogue.set_page('event_swarm');"
+          },
+          {
+            "text": "cobblemon_safari.dialogue.safari_clerk.option.event.full_moon",
+            "value": "event_full_moon",
+            "isVisible": "q.player.safari_event_on_full_moon()",
+            "action": "q.dialogue.set_page('event_full_moon');"
+          },
+          {
+            "text": "cobblemon_safari.dialogue.safari_clerk.option.event.downpour",
+            "value": "event_downpour",
+            "isVisible": "q.player.safari_event_on_downpour()",
+            "action": "q.dialogue.set_page('event_downpour');"
+          },
+          {
+            "text": "cobblemon_safari.dialogue.safari_clerk.option.event.storm",
+            "value": "event_storm",
+            "isVisible": "q.player.safari_event_on_storm()",
+            "action": "q.dialogue.set_page('event_storm');"
+          },
+          {
+            "text": "cobblemon_safari.dialogue.safari_clerk.option.event.heatwave",
+            "value": "event_heatwave",
+            "isVisible": "q.player.safari_event_on_heatwave()",
+            "action": "q.dialogue.set_page('event_heatwave');"
+          },
+          {
+            "text": "cobblemon_safari.dialogue.safari_clerk.option.event.aurora",
+            "value": "event_aurora",
+            "isVisible": "q.player.safari_event_on_aurora()",
+            "action": "q.dialogue.set_page('event_aurora');"
+          },
+          {
+            "text": "cobblemon_safari.dialogue.safari_clerk.option.event.egg_nests",
+            "value": "event_egg_nests",
+            "isVisible": "q.player.safari_event_on_egg_nests()",
+            "action": "q.dialogue.set_page('event_egg_nests');"
+          },
+          {
+            "text": "cobblemon_safari.dialogue.safari_clerk.option.back",
+            "value": "back",
             "action": "q.dialogue.set_page('greeting');"
           }
         ]
       }
+    },
+    {
+      "id": "event_swarm",
+      "speaker": "npc",
+      "lines": [
+        {
+          "type": "cobblemon_safari:event_info",
+          "event": "swarm"
+        }
+      ],
+      "input": "q.dialogue.set_page('events');"
+    },
+    {
+      "id": "event_full_moon",
+      "speaker": "npc",
+      "lines": [
+        {
+          "type": "cobblemon_safari:event_info",
+          "event": "full_moon"
+        }
+      ],
+      "input": "q.dialogue.set_page('events');"
+    },
+    {
+      "id": "event_downpour",
+      "speaker": "npc",
+      "lines": [
+        {
+          "type": "cobblemon_safari:event_info",
+          "event": "downpour"
+        }
+      ],
+      "input": "q.dialogue.set_page('events');"
+    },
+    {
+      "id": "event_storm",
+      "speaker": "npc",
+      "lines": [
+        {
+          "type": "cobblemon_safari:event_info",
+          "event": "storm"
+        }
+      ],
+      "input": "q.dialogue.set_page('events');"
+    },
+    {
+      "id": "event_heatwave",
+      "speaker": "npc",
+      "lines": [
+        {
+          "type": "cobblemon_safari:event_info",
+          "event": "heatwave"
+        }
+      ],
+      "input": "q.dialogue.set_page('events');"
+    },
+    {
+      "id": "event_aurora",
+      "speaker": "npc",
+      "lines": [
+        {
+          "type": "cobblemon_safari:event_info",
+          "event": "aurora"
+        }
+      ],
+      "input": "q.dialogue.set_page('events');"
+    },
+    {
+      "id": "event_egg_nests",
+      "speaker": "npc",
+      "lines": [
+        {
+          "type": "cobblemon_safari:event_info",
+          "event": "egg_nests"
+        }
+      ],
+      "input": "q.dialogue.set_page('events');"
     },
     {
       "id": "leave",

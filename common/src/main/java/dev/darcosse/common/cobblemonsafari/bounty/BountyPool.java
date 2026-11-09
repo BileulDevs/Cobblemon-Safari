@@ -13,6 +13,7 @@ import dev.darcosse.common.cobblemonsafari.config.BountySpeciesFilter;
 import dev.darcosse.common.cobblemonsafari.spawn.Rarity;
 import dev.darcosse.common.cobblemonsafari.spawn.SpawnSource;
 import dev.darcosse.common.cobblemonsafari.spawn.SpeciesRules;
+import dev.darcosse.common.cobblemonsafari.util.FormTypes;
 import kotlin.ranges.IntRange;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
@@ -145,6 +146,9 @@ final class BountyPool {
         Map<Species, Rarity> rarity = new LinkedHashMap<>();
         Map<Species, Set<ResourceKey<Biome>>> where = new LinkedHashMap<>();
         Map<Species, Integer> maxLevel = new LinkedHashMap<>();
+        // Types of the forms the eligible details make, not the species' standard ones: a
+        // Safari with only Alolan Vulpix has an Ice Vulpix to ask for, not a Fire one.
+        Map<Species, Set<String>> formTypes = new LinkedHashMap<>();
         boolean fishable = false;
         if (CobblemonSpawnPools.WORLD_SPAWN_POOL != null) {
             for (SpawnDetail raw : CobblemonSpawnPools.WORLD_SPAWN_POOL.getDetails()) {
@@ -176,6 +180,8 @@ final class BountyPool {
                 eligible.put(species.getResourceIdentifier(), species);
                 rarity.merge(species, spawnRarity, (a, b) -> a.ordinal() <= b.ordinal() ? a : b);
                 where.computeIfAbsent(species, ignored -> new HashSet<>()).addAll(biomes);
+                formTypes.computeIfAbsent(species, ignored -> new HashSet<>())
+                        .addAll(FormTypes.of(species, detail.getPokemon()));
                 IntRange levels = detail.getLevelRange();
                 if (levels != null) {
                     maxLevel.merge(species, levels.getLast(), Math::max);
@@ -187,8 +193,9 @@ final class BountyPool {
         Map<String, Integer> typeWeights = new TreeMap<>();
         List<Species> evolved = new ArrayList<>();
         for (Species one : species) {
-            for (ElementalType type : one.getTypes()) {
-                typeWeights.merge(type.getName(), 1, Integer::sum);
+            // Once per type per species, whichever of its forms bring it.
+            for (String type : formTypes.getOrDefault(one, Set.of())) {
+                typeWeights.merge(type, 1, Integer::sum);
             }
             if (one.getEvolutions().isEmpty() && one.getPreEvolution() != null) {
                 evolved.add(one);
@@ -211,8 +218,9 @@ final class BountyPool {
     }
 
     /**
-     * The Safari habitats where one condition of this spawn applies and
-     * passes the filter's cave, hour and weather switches. Each condition
+     * The Safari habitats where one condition of this spawn applies, does
+     * not require a Poké Snack, and passes the filter's cave, hour and
+     * weather switches. Each condition
      * of a spawn is an alternative (Gastly: in the dark underground, or in a
      * spooky forest at night), so each is judged on its own.
      */
@@ -223,6 +231,11 @@ final class BountyPool {
         for (SpawningCondition<?> condition : detail.getConditions()) {
             if (condition.getBiomes() == null || condition.getBiomes().isEmpty()) {
                 // Says nothing about the habitat, as in SafariHabitatIndex: "anywhere at night".
+                continue;
+            }
+            // A Poké Snack-only spawn (Gallade since Cobblemon 1.8) never comes
+            // to a player walking around: a mission on it could not be done in the wild.
+            if (Boolean.TRUE.equals(condition.isPokeSnack())) {
                 continue;
             }
             boolean underground = Boolean.FALSE.equals(condition.getCanSeeSky())

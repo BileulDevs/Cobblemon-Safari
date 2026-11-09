@@ -16,7 +16,9 @@ public enum SessionEndReason {
     /** The player died inside; the respawn takes them out, no teleport needed. */
     DEATH(false),
     /** The player ended up outside the Safari by other means (portal, /tp, respawn...). */
-    LEFT(false);
+    LEFT(false),
+    /** The map was renewed while the player was inside (a live map reset); the unused time is given back. */
+    MAP_RESET(true);
 
     /** Whether ending with this reason must teleport the player out. */
     public final boolean teleportsOut;

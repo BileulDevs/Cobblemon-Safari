@@ -35,7 +35,7 @@ public record SafariShopPayload(boolean refresh, int points, long rotation, List
      * one means) without raising this makes a peer of another build read
      * garbage without an error. Raise it on every change to write/read.
      */
-    public static final int WIRE_VERSION = 1;
+    public static final int WIRE_VERSION = 2;
 
     /** Value of {@link Entry#remaining} for an entry without a purchase limit. */
     public static final int UNLIMITED = -1;
@@ -45,13 +45,18 @@ public record SafariShopPayload(boolean refresh, int points, long rotation, List
     public static final int KIND_ITEM = 1;
     public static final int KIND_POKEMON = 2;
 
-    /** Guards against corrupted or hostile packets announcing huge lists. */
+    /**
+     * Guards against corrupted or hostile packets announcing huge lists. The
+     * client refuses a packet over them, which disconnects the player: the
+     * server side keeps under them (the shop config's validation for the
+     * tabs and the costs, SafariShop for a tag's items), so they are public.
+     */
     private static final int MAX_ENTRIES = 4096;
     private static final int MAX_ASPECTS = 64;
-    private static final int MAX_TABS = 64;
-    private static final int MAX_COSTS = 16;
+    public static final int MAX_TABS = 64;
+    public static final int MAX_COSTS = 16;
     /** Items one cost may accept: a large tag (every berry is about 70). */
-    private static final int MAX_COST_ITEMS = 512;
+    public static final int MAX_COST_ITEMS = 512;
 
     public static final CustomPacketPayload.Type<SafariShopPayload> TYPE =
             new CustomPacketPayload.Type<>(CobblemonSafari.id("shop"));
@@ -74,6 +79,8 @@ public record SafariShopPayload(boolean refresh, int points, long rotation, List
      * One thing for sale.
      *
      * @param tab     index in {@link #tabs} of the tab showing it
+     * @param section name of the section of the tab it belongs to, empty for the tab's own part;
+     *                each section starts on a page of its own (wire version 2)
      * @param kind    {@link #KIND_ITEM}, {@link #KIND_POKEMON} or {@link #KIND_UNAVAILABLE}
      * @param price   cost in Safari points
      * @param item    the stack given, for items; empty otherwise
@@ -82,10 +89,10 @@ public record SafariShopPayload(boolean refresh, int points, long rotation, List
      * @param level     level, for Pokémon
      * @param shiny     whether the Pokémon is shiny
      * @param cost      items taken in exchange, besides the price; empty for a plain purchase
-     * @param remaining purchases the player has left this rotation, or {@link #UNLIMITED}
+     * @param remaining purchases the player has left (this rotation, or for life when its limit says so), or {@link #UNLIMITED}
      * @param waitSeconds seconds before the player may buy it again (an entry with a wait), 0 when they may now
      */
-    public record Entry(int tab, int kind, int price, List<Cost> cost, int remaining, int waitSeconds, ItemStack item,
+    public record Entry(int tab, String section, int kind, int price, List<Cost> cost, int remaining, int waitSeconds, ItemStack item,
                         ResourceLocation species, List<String> aspects, int level, boolean shiny) {
     }
 
@@ -115,6 +122,7 @@ public record SafariShopPayload(boolean refresh, int points, long rotation, List
         buf.writeVarInt(entries.size());
         for (Entry entry : entries) {
             buf.writeVarInt(entry.tab());
+            buf.writeUtf(entry.section());
             buf.writeVarInt(entry.kind());
             buf.writeVarInt(entry.price());
             buf.writeVarInt(entry.cost().size());
@@ -168,6 +176,7 @@ public record SafariShopPayload(boolean refresh, int points, long rotation, List
         List<Entry> entries = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
             int tab = buf.readVarInt();
+            String section = buf.readUtf();
             int kind = buf.readVarInt();
             int price = buf.readVarInt();
             int costCount = buf.readVarInt();
@@ -191,7 +200,8 @@ public record SafariShopPayload(boolean refresh, int points, long rotation, List
             int remaining = buf.readVarInt() - 1;
             int wait = buf.readVarInt();
             if (kind == KIND_ITEM) {
-                entries.add(new Entry(tab, kind, price, List.copyOf(cost), remaining, wait, ItemStack.STREAM_CODEC.decode(buf),
+                entries.add(new Entry(tab, section, kind, price, List.copyOf(cost), remaining, wait,
+                        ItemStack.STREAM_CODEC.decode(buf),
                         null, List.of(), 0, false));
             } else if (kind == KIND_POKEMON) {
                 ResourceLocation species = buf.readResourceLocation();
@@ -205,10 +215,12 @@ public record SafariShopPayload(boolean refresh, int points, long rotation, List
                 }
                 int level = buf.readVarInt();
                 boolean shiny = buf.readBoolean();
-                entries.add(new Entry(tab, kind, price, List.copyOf(cost), remaining, wait, ItemStack.EMPTY, species,
+                entries.add(new Entry(tab, section, kind, price, List.copyOf(cost), remaining, wait, ItemStack.EMPTY,
+                        species,
                         List.copyOf(aspects), level, shiny));
             } else {
-                entries.add(new Entry(tab, KIND_UNAVAILABLE, price, List.copyOf(cost), remaining, wait, ItemStack.EMPTY, null,
+                entries.add(new Entry(tab, section, KIND_UNAVAILABLE, price, List.copyOf(cost), remaining, wait,
+                        ItemStack.EMPTY, null,
                         List.of(), 0, false));
             }
         }

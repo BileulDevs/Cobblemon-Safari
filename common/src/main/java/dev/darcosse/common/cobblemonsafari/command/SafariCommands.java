@@ -16,6 +16,9 @@ import dev.darcosse.common.cobblemonsafari.dex.SafariDex;
 import dev.darcosse.common.cobblemonsafari.points.SafariPoints;
 import dev.darcosse.common.cobblemonsafari.network.SafariNetwork;
 import dev.darcosse.common.cobblemonsafari.park.SafariBorder;
+import dev.darcosse.common.cobblemonsafari.reset.LiveReset;
+import dev.darcosse.common.cobblemonsafari.reset.ResetMode;
+import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
 import dev.darcosse.common.cobblemonsafari.reset.SafariMapReset;
 import dev.darcosse.common.cobblemonsafari.session.SafariSessionManager;
 import dev.darcosse.common.cobblemonsafari.session.SessionEndReason;
@@ -67,7 +70,8 @@ import java.util.Set;
  * /safari top                                (op) best hunters
  * /safari today                              (op) special Pokémon of the rotation
  * /safari reload                             (op) reload the config
- * /safari reset                              (op) regenerate the map at the next server start
+ * /safari reset                              (op) make a new map due (next start, or LIVE as soon as the Safari is empty)
+ * /safari reset force                        (op) renew the map now, while the server runs
  * /safari rotate                             (op) start a new rotation now
  * </pre>
  */
@@ -157,7 +161,9 @@ public final class SafariCommands {
                         .executes(SafariCommands::reload))
                 .then(Commands.literal("reset")
                         .requires(s -> s.hasPermission(OP_LEVEL))
-                        .executes(SafariCommands::scheduleReset))
+                        .executes(SafariCommands::scheduleReset)
+                        .then(Commands.literal("force")
+                                .executes(SafariCommands::forceReset)))
                 .then(Commands.literal("rotate")
                         .requires(s -> s.hasPermission(OP_LEVEL))
                         .executes(SafariCommands::rotate)));
@@ -456,13 +462,38 @@ public final class SafariCommands {
         return top.size();
     }
 
-    /** Schedules a map reset for the next server start; the running map is untouched. */
+    /**
+     * Marks the map as due for a reset: at the next server start in START
+     * mode; in LIVE mode as soon as nobody is inside, or after the wait.
+     */
     private static int scheduleReset(CommandContext<CommandSourceStack> ctx) {
         if (!SafariMapReset.scheduleReset(ctx.getSource().getServer())) {
             ctx.getSource().sendFailure(Component.translatable(key("command.reset.failed")));
             return 0;
         }
-        ctx.getSource().sendSuccess(() -> Component.translatable(key("command.reset.scheduled")), true);
+        SafariConfig.Reset config = SafariConfigManager.get().reset;
+        Component done = config.mode == ResetMode.LIVE && config.enabled
+                ? Component.translatable(key("command.reset.scheduled_live"), config.maxWaitMinutes)
+                : Component.translatable(key("command.reset.scheduled"));
+        ctx.getSource().sendSuccess(() -> done, true);
+        return 1;
+    }
+
+    /**
+     * Resets the map now, while the server runs, whatever the mode: at once
+     * when nobody is inside, else after the countdown for those inside.
+     */
+    private static int forceReset(CommandContext<CommandSourceStack> ctx) {
+        int inside = LiveReset.force(ctx.getSource().getServer());
+        if (inside < 0) {
+            ctx.getSource().sendFailure(Component.translatable(key("command.reset.busy")));
+            return 0;
+        }
+        int countdown = SafariConfigManager.get().reset.countdownSeconds;
+        Component done = inside == 0 || countdown == 0
+                ? Component.translatable(key("command.reset.forced_now"))
+                : Component.translatable(key("command.reset.forced"), inside, Ticks.format(Ticks.fromSeconds(countdown)));
+        ctx.getSource().sendSuccess(() -> done, true);
         return 1;
     }
 

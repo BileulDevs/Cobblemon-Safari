@@ -48,6 +48,11 @@ public enum IslandRelief {
         this.jaggedness = jaggedness;
     }
 
+    /** How much higher than in ROLLING the land rises above the sea (1 in ROLLING). */
+    public double heightFactor() {
+        return height;
+    }
+
     /** Lowest value a parameter takes across every relief, for the density function's bounds. */
     static double min(ReliefFunction.Parameter parameter) {
         double min = Double.MAX_VALUE;

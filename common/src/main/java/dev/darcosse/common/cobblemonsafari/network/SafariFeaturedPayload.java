@@ -24,7 +24,8 @@ import java.util.List;
  * @param rotationLengthMillis length of a whole rotation, for the progress bar
  * @param entries              the specials, most common first
  * @param swarm                the species swarming during the rotation, with the habitat it swarms
- *                             in as {@link Entry#habitat()}; null when the rotation has no swarm
+ *                             in as the only one of {@link Entry#habitats()}; null when the rotation
+ *                             has no swarm
  */
 public record SafariFeaturedPayload(boolean enabled, long millisUntilRotation, long rotationLengthMillis,
                                     List<Entry> entries, @Nullable Entry swarm) implements CustomPacketPayload {
@@ -35,17 +36,24 @@ public record SafariFeaturedPayload(boolean enabled, long millisUntilRotation, l
      * one means) without raising this makes a peer of another build read
      * garbage without an error. Raise it on every change to write/read.
      */
-    public static final int WIRE_VERSION = 2;
+    public static final int WIRE_VERSION = 3;
 
     /**
      * Upper bound on entries read from the wire. Far above any sane slot
      * configuration; protects the client from allocating a list sized by a
-     * corrupted varint.
+     * corrupted varint. A list over it disconnects the player, so the
+     * config's validation keeps the specials' slots under it (public).
      */
-    private static final int MAX_ENTRIES = 64;
+    public static final int MAX_ENTRIES = 64;
 
     /** Same idea for the aspects of one entry. */
     private static final int MAX_ASPECTS = 32;
+
+    /**
+     * Same idea for the habitats of one entry: the Safari has 19 surface
+     * habitats; the margin covers biomes added by a datapack.
+     */
+    private static final int MAX_HABITATS = 64;
 
     public static final CustomPacketPayload.Type<SafariFeaturedPayload> TYPE =
             new CustomPacketPayload.Type<>(CobblemonSafari.id("featured"));
@@ -61,13 +69,14 @@ public record SafariFeaturedPayload(boolean enabled, long millisUntilRotation, l
      * @param species  Cobblemon species id; the client resolves it in its synced species registry
      * @param aspects  aspects of the spawn template (regional form, gender...), to pick the right model
      * @param rarity   rarity tier
-     * @param habitat  main Safari biome, or null when unknown
+     * @param habitats every Safari biome it lives in, the main one first then the Safari's
+     *                 canonical order; empty when unknown
      * @param special  whether it is legendary-class, shown with a star
      * @param minLevel lowest natural level, 0 when unknown
      * @param maxLevel highest natural level, 0 when unknown
      */
     public record Entry(ResourceLocation species, List<String> aspects, Rarity rarity,
-                        @Nullable ResourceLocation habitat, boolean special, int minLevel, int maxLevel) {
+                        List<ResourceLocation> habitats, boolean special, int minLevel, int maxLevel) {
     }
 
     /** MUST list the same fields in the same order as {@link #read}. */
@@ -94,9 +103,9 @@ public record SafariFeaturedPayload(boolean enabled, long millisUntilRotation, l
             buf.writeUtf(aspect);
         }
         buf.writeVarInt(entry.rarity().ordinal());
-        buf.writeBoolean(entry.habitat() != null);
-        if (entry.habitat() != null) {
-            buf.writeResourceLocation(entry.habitat());
+        buf.writeVarInt(entry.habitats().size());
+        for (ResourceLocation habitat : entry.habitats()) {
+            buf.writeResourceLocation(habitat);
         }
         buf.writeBoolean(entry.special());
         buf.writeVarInt(entry.minLevel());
@@ -140,11 +149,15 @@ public record SafariFeaturedPayload(boolean enabled, long millisUntilRotation, l
         if (rarityIndex < 0 || rarityIndex >= Rarity.values().length) {
             throw new IllegalStateException("Cobblemon Safari: unknown rarity index " + rarityIndex);
         }
-        ResourceLocation habitat = buf.readBoolean() ? buf.readResourceLocation() : null;
+        int habitatCount = checkedCount(buf.readVarInt(), MAX_HABITATS, "habitats");
+        List<ResourceLocation> habitats = new ArrayList<>(habitatCount);
+        for (int h = 0; h < habitatCount; h++) {
+            habitats.add(buf.readResourceLocation());
+        }
         boolean special = buf.readBoolean();
         int minLevel = buf.readVarInt();
         int maxLevel = buf.readVarInt();
-        return new Entry(species, List.copyOf(aspects), Rarity.values()[rarityIndex], habitat, special,
+        return new Entry(species, List.copyOf(aspects), Rarity.values()[rarityIndex], List.copyOf(habitats), special,
                 minLevel, maxLevel);
     }
 

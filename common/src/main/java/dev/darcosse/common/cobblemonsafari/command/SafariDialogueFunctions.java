@@ -4,6 +4,7 @@ import com.cobblemon.mod.common.api.molang.function.PlayerMoLangFunctions;
 import dev.darcosse.common.cobblemonsafari.bounty.SafariBounties;
 import dev.darcosse.common.cobblemonsafari.item.EscapeRopeActions;
 import dev.darcosse.common.cobblemonsafari.park.ParkGeometry;
+import dev.darcosse.common.cobblemonsafari.spawn.EventDialogueTexts;
 import dev.darcosse.common.cobblemonsafari.structure.Compass;
 import dev.darcosse.common.cobblemonsafari.teleport.RestHouseTravel;
 import kotlin.jvm.functions.Function1;
@@ -80,6 +81,12 @@ public final class SafariDialogueFunctions {
      */
     public static final String BOUNTY_CAN_SWAP_PREFIX = "safari_bounty_can_swap_";
     public static final String BOUNTY_SWAP_PREFIX = "safari_bounty_swap_";
+    /**
+     * Prefix of the functions telling whether an event is on, followed by
+     * its id ({@link EventDialogueTexts#EVENTS}): the clerk only offers to
+     * explain those. One function per event for the same reason as the guide's.
+     */
+    public static final String EVENT_ON_PREFIX = "safari_event_on_";
 
     private static boolean registered;
 
@@ -136,6 +143,9 @@ public final class SafariDialogueFunctions {
             int index = slot;
             functions.put(BOUNTY_CAN_SWAP_PREFIX + slot, params -> run(player, p -> SafariBounties.canSwap(p, index)));
             functions.put(BOUNTY_SWAP_PREFIX + slot, params -> run(player, p -> SafariBounties.swap(p, index)));
+        }
+        for (String event : EventDialogueTexts.EVENTS) {
+            functions.put(EVENT_ON_PREFIX + event, params -> run(player, p -> EventDialogueTexts.isEnabled(event)));
         }
         return functions;
     }

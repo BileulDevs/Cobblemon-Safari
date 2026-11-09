@@ -1,5 +1,6 @@
 package dev.darcosse.common.cobblemonsafari.config;
 
+import dev.darcosse.common.cobblemonsafari.reset.ResetMode;
 import dev.darcosse.common.cobblemonsafari.worldgen.IslandRelief;
 import dev.darcosse.common.cobblemonsafari.bounty.BountyKind;
 
@@ -156,15 +157,26 @@ public class SafariConfig {
         public Swarm swarm = new Swarm();
         /** Some types coming out more on full moon nights. */
         public FullMoon fullMoon = new FullMoon();
+        /** Some rains turning into a downpour, with some types coming out more. */
+        public Downpour downpour = new Downpour();
+        /** Some thunderstorms bringing rare Pokémon of some types to the high ground. */
+        public Storm storm = new Storm();
+        /** Some dry days baking the hot lands, with some types coming out more there. */
+        public Heatwave heatwave = new Heatwave();
+        /** Some clear nights bringing each player one rare Pokémon of some types on the frozen lands. */
+        public Aurora aurora = new Aurora();
+        /** Straw nests holding a Pokémon egg, found here and there around the hunting players. */
+        public EggNests eggNests = new EggNests();
     }
 
     /**
-     * A swarm: with each rotation of the specials, maybe, one uncommon or
-     * rare species of the Safari comes out in numbers in one of its
-     * habitats. It is announced to the players in the Safari and on the
-     * specials board. Only Cobblemon's natural spawns change: in that
-     * habitat, the species is offered with the common Pokémon and its weight
-     * is multiplied.
+     * A swarm: with each rotation of the specials, maybe, one species of the
+     * Safari comes out in numbers in one of its habitats. It is announced to
+     * the players in the Safari and on the specials board. Only species a
+     * player's spawner can really bring there are drawn (no Poké Snack-only
+     * or fishing-only spawns). In that habitat, the species is offered with
+     * the common Pokémon in Cobblemon's natural spawns, with its weight
+     * multiplied, and the swarm's own spawner keeps a few around each player.
      */
     public static class Swarm {
         /** Master switch. */
@@ -174,9 +186,48 @@ public class SafariConfig {
         public double chance = 0.5;
 
         /**
-         * How much more often the swarming species is picked in its habitat,
-         * among the common Pokémon. 10 makes it most of what spawns there;
-         * 1 leaves only the move into the common pick. 1 to 100.
+         * Spawn buckets a swarm may be drawn from: "common", "uncommon",
+         * "rare", "ultra-rare". A species' bucket is its most common one in the
+         * habitat considered. Legendary-class species are always "ultra-rare"
+         * and also need their category on in {@link #rarities}. Empty: no swarm.
+         */
+        public List<String> buckets = new ArrayList<>(List.of("uncommon", "rare", "ultra-rare"));
+
+        /**
+         * Legendary-class categories in swarms (named "rarities" in the file:
+         * they are rarities above ultra-rare), each with allowSpawn and
+         * maxSpawnPerPokemon. These replace the categories of spawns for the
+         * swarming species in its habitat: a legendary swarm is neither
+         * stopped by spawns.legendary nor uses up its slots. allowSpawn off,
+         * no species of that category swarms; on, it may, as an "ultra-rare"
+         * swarm. maxSpawnPerPokemon: most Pokémon of the swarming species a
+         * swarm brings in a rotation, counting those caught plus those still
+         * roaming (one that leaves uncaught gives its place back); 0, no cap
+         * other than maxNearby.
+         */
+        public SwarmCategories rarities = new SwarmCategories();
+
+        /**
+         * Chance of each bucket being the swarm's, relative to the others:
+         * with 10, 4 and 1 for uncommon, rare and ultra-rare, two swarms in
+         * three are uncommon. Per bucket, not per species, so a bucket's share
+         * does not grow with the number of species in it. A bucket at 0, or
+         * missing from {@link #buckets}, is never drawn; a bucket with no
+         * candidate passes its turn to the others.
+         */
+        public SpawnWeights weights = new SpawnWeights();
+
+        /**
+         * Pokémon that never swarm, written as Cobblemon properties:
+         * "arceus" leaves out every form of the species, "vulpix alolan"
+         * only Alolan Vulpix. Unknown species or forms are logged and ignored.
+         */
+        public List<String> excludeList = new ArrayList<>();
+
+        /**
+         * How much more often the swarm is picked in its habitat, among the
+         * common Pokémon of Cobblemon's natural spawns. 1 leaves only the move
+         * into the common pick. 1 to 100.
          */
         public double weightMultiplier = 10.0;
 
@@ -186,6 +237,45 @@ public class SafariConfig {
          * less keeps the usual cap.
          */
         public int maxNearby = 10;
+
+        /**
+         * Swarm Pokémon the swarm's own spawner keeps within 48 blocks of a
+         * player standing in its habitat, whatever else lives there. Capped by
+         * maxNearby. 0 turns that spawner off, leaving only Cobblemon's
+         * natural spawns (the 1.4.0 behaviour).
+         */
+        public int minNearby = 4;
+
+        /**
+         * Seconds between two top-ups of the swarm's own spawner, at most one
+         * Pokémon per player each time. Lower fills the habitat faster after
+         * catches. 1 to 300.
+         */
+        public int checkEverySeconds = 5;
+    }
+
+    /**
+     * The legendary-class categories in swarms ({@code events.swarm.rarities}):
+     * the same switch and cap as in {@code spawns}, for the swarm alone.
+     */
+    public static class SwarmCategories {
+        /**
+         * Default cap of a swarm category: none but {@code maxNearby}. A swarm
+         * is meant to bring many; 1, the natural default, would end it at once.
+         */
+        public static final int DEFAULT_CAP = 0;
+
+        /** Pokémon labelled {@code legendary} (Rayquaza, Mewtwo...). */
+        public SpecialCategory legendary = SpecialCategory.of(false, DEFAULT_CAP);
+        /** Pokémon labelled {@code mythical} (Mew, Celebi...). */
+        public SpecialCategory mythical = SpecialCategory.of(false, DEFAULT_CAP);
+        /** Pokémon labelled {@code ultra_beast} (Nihilego, Buzzwole...). */
+        public SpecialCategory ultraBeast = SpecialCategory.of(false, DEFAULT_CAP);
+        /**
+         * Pokémon labelled {@code paradox} (Great Tusk, Iron Treads...). On by
+         * default, as in spawns: paradox Pokémon are regular finds, not legends.
+         */
+        public SpecialCategory paradox = SpecialCategory.of(true, DEFAULT_CAP);
     }
 
     /**
@@ -198,10 +288,305 @@ public class SafariConfig {
         public boolean enabled = true;
 
         /** Cobblemon type names whose Pokémon come out more. */
-        public List<String> types = new ArrayList<>(List.of("fairy", "ghost"));
+        public List<String> types = new ArrayList<>(List.of("fairy", "ghost", "dark", "psychic"));
 
         /** How much more often those Pokémon are picked, within their rarity. 1 to 20. */
         public double weightMultiplier = 3.0;
+    }
+
+    /**
+     * The downpour: each time it starts raining in the Safari, maybe, the
+     * rain is a downpour for a while. Pokémon of the configured types come
+     * out more where the rain falls (not in snow, nor in the dunes and the
+     * volcano, which get no rain, nor under a roof), and catches made there
+     * get the Downpour Mark. Announced to the players in the Safari. The
+     * rain is the Safari's ordinary weather: nothing here makes it rain.
+     */
+    public static class Downpour {
+        /** Master switch. */
+        public boolean enabled = true;
+
+        /**
+         * Chance, from 0 to 1, that a rain starting in the Safari is a
+         * downpour. Low on purpose: it rains often, an event must stay rare.
+         */
+        public double chance = 0.15;
+
+        /**
+         * Shortest and longest downpour, in real minutes, drawn for each one.
+         * It ends sooner when the rain stops (a rain lasts about 10 to 20
+         * minutes). 1 to 120, max at least min.
+         */
+        public int minDurationMinutes = 5;
+        public int maxDurationMinutes = 10;
+
+        /** Cobblemon type names whose Pokémon come out more. */
+        public List<String> types = new ArrayList<>(List.of("water", "electric"));
+
+        /** How much more often those Pokémon are picked, within their rarity. 1 to 20. */
+        public double weightMultiplier = 2.0;
+    }
+
+    /**
+     * The aurora: at each nightfall without rain in the Safari, maybe, an
+     * aurora lights the Safari for a while. Each hunting player is owed two
+     * Pokémon, one per group: one of {@code frozenTypes} on the frozen lands
+     * ({@code habitats}, or where snow falls) and one of {@code otherTypes}
+     * anywhere else. Each appears near them as soon as they stand where its
+     * group lives, retried until it does or the aurora ends. Its species are
+     * the Safari's own species of those types, under the natural spawns'
+     * rules; not the one the player got at their previous aurora, and those
+     * they caught less often. Meanwhile, every Pokémon appearing in the
+     * Safari is more often shiny ({@code shinyChanceMultiplier}). It glows for a moment so it can be found, and gets the
+     * Aurora Mark when caught. It ends when its time is up, at dawn or when
+     * rain comes.
+     */
+    public static class Aurora {
+        /** Master switch. */
+        public boolean enabled = true;
+
+        /** Chance, from 0 to 1, that a nightfall without rain brings an aurora. */
+        public double chance = 0.1;
+
+        /**
+         * Shortest and longest aurora, in real minutes, drawn for each one.
+         * It ends sooner at dawn (a night lasts about 7 minutes) or when rain
+         * comes. 1 to 120, max at least min.
+         */
+        public int minDurationMinutes = 3;
+        public int maxDurationMinutes = 6;
+
+        /**
+         * Cobblemon type names of the Pokémon the aurora brings on the frozen
+         * lands (frozenHabitats below, and anywhere snow falls). Uncommon,
+         * rare and ultra-rare species: Cobblemon has almost no rare Ice one.
+         */
+        public List<String> frozenTypes = new ArrayList<>(List.of("ice"));
+
+        /**
+         * Cobblemon type names of the Pokémon the aurora brings everywhere
+         * else in the Safari. Rare and ultra-rare species only. Each player
+         * is owed one Pokémon of each group per aurora.
+         */
+        public List<String> otherTypes = new ArrayList<>(List.of("psychic", "fairy"));
+
+        /**
+         * During an aurora, every Pokémon that appears in the Safari is this
+         * many times more likely to be shiny: natural spawns, specials,
+         * swarms, the events' own Pokémon, fished ones. 4 turns Cobblemon's
+         * 1 in 8192 into 1 in 2048. It stacks with the Shiny Charm and the
+         * other boosts (it divides Cobblemon's "1 in N"). 1 for no effect, no
+         * upper bound: 8192 or more makes every Pokémon of an aurora shiny.
+         */
+        public double shinyChanceMultiplier = 4.0;
+
+        /** Pokémon the aurora never brings, as Cobblemon properties: "lapras", or one form, "vulpix alolan". */
+        public List<String> excludeList = new ArrayList<>();
+
+        /**
+         * Biomes that count as frozen lands although it rains there, by biome
+         * id: a player standing there gets the frozen group's Pokémon. Any spot
+         * where snow falls counts already, so only rainy biomes need listing
+         * (the taiga, by default). This does not limit where the aurora brings
+         * its Pokémon: the other group comes everywhere else.
+         */
+        public List<String> frozenHabitats = new ArrayList<>(List.of(
+                "cobblemon_safari:glacier", "cobblemon_safari:snowfield", "cobblemon_safari:taiga"));
+
+        /**
+         * Seconds the aurora's Pokémon glows when it appears, so it can be
+         * found 16 to 32 blocks away, in the snow, at night. 0 for none, up to 60.
+         */
+        public int glowSeconds = 20;
+    }
+
+    /**
+     * Egg nests: a permanent event, never announced. Now and then a straw nest
+     * holding a Pokémon egg appears near a hunting player, anywhere in the
+     * Safari, never closer than {@code exclusionRadius} to another nest. The
+     * egg can be of any Pokémon of Cobblemon, the Safari's or not, every line
+     * as likely; it hatches into the first stage of the line, after a while
+     * in the inventory of a connected player, anywhere, Safari or not.
+     */
+    public static class EggNests {
+        /** Master switch. False: no new nest; the nests already out stay until their time is up. */
+        public boolean enabled = true;
+
+        /** Seconds between two draws for each hunting player. 5 to 3600. */
+        public int checkEverySeconds = 30;
+
+        /**
+         * Chance, from 0 to 1, that a draw puts a nest near the player. With
+         * 30 s and 0.05, a player alone sees about one nest every 10 minutes.
+         */
+        public double spawnChance = 0.05;
+
+        /** Distance, in blocks, between the player and a new nest. 8 to 96, max at least min. */
+        public int minDistance = 24;
+        public int maxDistance = 48;
+
+        /**
+         * No new nest within this many blocks of a nest already out (loaded
+         * ones: a nest in a chunk nobody is near is not seen). Large on
+         * purpose, so the eggs stay a find. 16 to 512.
+         */
+        public int exclusionRadius = 128;
+
+        /** Minutes a nest stays out before it is gone, taken or not. 1 to 1440. */
+        public int lifetimeMinutes = 20;
+
+        /**
+         * True: the first player to take the egg empties the nest. False: each
+         * player may take one egg from each nest, which stays until its time is up.
+         */
+        public boolean firstComeFirstServed = true;
+
+        /**
+         * Egg groups never drawn, by name ("undiscovered", "ditto", "water_1",
+         * "human_like"...). A line is drawn when one of its species has egg
+         * groups and none of them is listed: Pichu (Undiscovered) still comes
+         * from Pikachu's line, a legendary never.
+         */
+        public List<String> excludedEggGroups = new ArrayList<>(List.of("undiscovered"));
+
+        /**
+         * Legendary-class lines in the eggs: true lets them be drawn. Most of
+         * them are also in the Undiscovered egg group, so they only come once
+         * it is out of {@link #excludedEggGroups} too.
+         */
+        public EggCategories rarities = new EggCategories();
+
+        /**
+         * Species never drawn, by the species that hatches (the first stage):
+         * "pichu" or "cobblemon:pichu". spawns.excludedSpecies applies too.
+         */
+        public List<String> excludeList = new ArrayList<>();
+
+        /** Minutes an egg takes to hatch in a connected player's inventory. 1 to 1440. */
+        public int hatchMinutes = 10;
+
+        /**
+         * Abilities that warm the eggs, as Cobblemon names them ("flamebody",
+         * "magmaarmor"): with one of them in the player's party, the eggs they
+         * carry hatch {@link #hatchSpeedMultiplier} times faster.
+         */
+        public List<String> hatchSpeedAbilities = new ArrayList<>(List.of("flamebody"));
+
+        /** How many times faster such a party hatches the eggs. 1 for no effect, up to 10. */
+        public double hatchSpeedMultiplier = 2.0;
+    }
+
+    /**
+     * The legendary-class categories an egg may be of. Plain switches: an egg
+     * is never a spawn, so no per-rotation cap applies.
+     */
+    public static class EggCategories {
+        /** Lines with a Pokémon labelled {@code legendary}. */
+        public boolean legendary = false;
+        /** Lines with a Pokémon labelled {@code mythical}. */
+        public boolean mythical = false;
+        /** Lines with a Pokémon labelled {@code ultra_beast}. */
+        public boolean ultraBeast = false;
+        /** Lines with a Pokémon labelled {@code paradox}. */
+        public boolean paradox = false;
+    }
+
+    /**
+     * The heatwave: at each dawn without rain in the Safari, maybe, the day
+     * bakes the hot lands for a while: Pokémon of the configured types come
+     * out more in {@code habitats}. It ends when its time is up, when rain
+     * comes or when night falls. It only weighs Cobblemon's own spawns: no
+     * species appears that does not already live there. Announced to the
+     * players in the Safari; no mark.
+     */
+    public static class Heatwave {
+        /** Master switch. */
+        public boolean enabled = true;
+
+        /** Chance, from 0 to 1, that a dawn without rain brings a heatwave. */
+        public double chance = 0.15;
+
+        /**
+         * Shortest and longest heatwave, in real minutes, drawn for each one.
+         * It ends sooner at nightfall (a day lasts 10 minutes) or when rain
+         * comes. 1 to 120, max at least min.
+         */
+        public int minDurationMinutes = 4;
+        public int maxDurationMinutes = 8;
+
+        /** Cobblemon type names whose Pokémon come out more. */
+        public List<String> types = new ArrayList<>(List.of("fire", "ground"));
+
+        /** Habitats the heatwave bakes, by biome id. */
+        public List<String> habitats = new ArrayList<>(List.of("cobblemon_safari:dunes", "cobblemon_safari:volcanic",
+                "cobblemon_safari:badlands", "cobblemon_safari:savanna"));
+
+        /** How much more often those Pokémon are picked, within their rarity. 1 to 20. */
+        public double weightMultiplier = 2.0;
+    }
+
+    /**
+     * The storm: each time a thunderstorm starts in the Safari, maybe, rare
+     * Pokémon of the configured types come to the high ground for a while:
+     * the storm's own spawner brings them near the players standing in one
+     * of {@code habitats} or high enough ({@code minAltitudeAboveSea}), with
+     * a harmless lightning flash. They come from the Safari's own rare and
+     * ultra-rare species of those types, whatever their usual habitat, under the natural spawns'
+     * rules (spawns: excluded species, legendary-class categories and their
+     * caps, counted apart from the natural ones). A Pokémon the storm brought
+     * gets the Storm Mark when caught. The thunderstorm is the Safari's
+     * ordinary weather: nothing here makes it thunder.
+     */
+    public static class Storm {
+        /** Master switch. */
+        public boolean enabled = true;
+
+        /** Chance, from 0 to 1, that a thunderstorm starting in the Safari brings the storm event. */
+        public double chance = 0.5;
+
+        /**
+         * Shortest and longest storm event, in real minutes, drawn for each
+         * one. It ends sooner when the thunder stops (a thunderstorm lasts
+         * about 3 to 13 minutes). 1 to 120, max at least min.
+         */
+        public int minDurationMinutes = 3;
+        public int maxDurationMinutes = 8;
+
+        /** Cobblemon type names of the Pokémon the storm brings. */
+        public List<String> types = new ArrayList<>(List.of("electric", "dragon"));
+
+        /** Pokémon the storm never brings, as Cobblemon properties: "dragonite", or one form, "vulpix alolan". */
+        public List<String> excludeList = new ArrayList<>();
+
+        /** Habitats where the storm brings its Pokémon, by biome id; high ground anywhere counts too. */
+        public List<String> habitats = new ArrayList<>(List.of(
+                "cobblemon_safari:peaks", "cobblemon_safari:rocky_hills", "cobblemon_safari:volcanic"));
+
+        /**
+         * Height above the sea, in blocks, from which any spot counts as high
+         * ground, for the island as generated in "ROLLING" relief: it is
+         * scaled with the map's relief (about 16 blocks on a "FLAT" map, 72 on
+         * a "MOUNTAINOUS" one). 0 makes the whole island count.
+         */
+        public int minAltitudeAboveSea = 45;
+
+        /** Seconds between two spawn attempts around each player. 1 to 300. */
+        public int checkEverySeconds = 15;
+
+        /** Chance, from 0 to 1, that an attempt around a player brings a Pokémon. */
+        public double spawnChance = 0.25;
+
+        /** Most storm Pokémon around a player (within 64 blocks); none is brought beyond. */
+        public int maxNearby = 2;
+
+        /** A harmless lightning flash where a storm Pokémon appears (no damage, no fire). */
+        public boolean lightning = true;
+
+        /**
+         * Shortest time between two of those flashes in the whole Safari, in
+         * seconds, so several players do not set off a barrage. 0 to 600.
+         */
+        public int lightningCooldownSeconds = 30;
     }
 
     /**
@@ -286,7 +671,7 @@ public class SafariConfig {
         /**
          * Weight, in Cobblemon's natural spawns around a player, of the species
          * that player has already caught in the Safari, against 1 for species
-         * they have not: 0.4 makes a new species two and a half times as likely
+         * they have not: 0.3 makes a new species more than three times as likely
          * as a caught one of the same weight. Caught species still appear, only
          * less often; lower values make them feel gone. 1 turns it off; 0 stops
          * them entirely while anything else can spawn. Acts within Cobblemon's
@@ -379,6 +764,27 @@ public class SafariConfig {
          * chunks would rise as cliffs against the old ones.
          */
         public IslandRelief relief = IslandRelief.GENTLE;
+
+        /**
+         * When a due reset happens: LIVE (the default) while the server runs,
+         * as soon as nobody is in the Safari, or after {@link #maxWaitMinutes}
+         * for those inside; START only at the next server start, as before 1.5.0.
+         */
+        public ResetMode mode = ResetMode.LIVE;
+
+        /**
+         * LIVE only: minutes a due reset waits for the Safari to empty. Past
+         * them, the players inside are warned ({@link #countdownSeconds}),
+         * then sent out with their unused time given back. 1 to 1440.
+         */
+        public int maxWaitMinutes = 60;
+
+        /**
+         * Seconds between the first warning and a forced reset (the wait
+         * above, or /safari reset force), for the players inside. 0 resets
+         * at once. 0 to 1800.
+         */
+        public int countdownSeconds = 300;
     }
 
     /**
@@ -583,8 +989,16 @@ public class SafariConfig {
         public boolean swarm = true;
         /** "of the Full Moon": caught on a full moon night. */
         public boolean fullMoon = true;
+        /** "of the Downpour": caught where a downpour falls. */
+        public boolean downpour = true;
+        /** "of the Storm": a Pokémon the storm brought. */
+        public boolean storm = true;
+        /** "of the Aurora": a Pokémon an aurora brought. */
+        public boolean aurora = true;
         /** "the Safari Catch": fished with a rod in the Safari, then caught. */
         public boolean angler = true;
+        /** "of the Nest": hatched from an egg found in a Safari nest. */
+        public boolean nest = true;
     }
 
     /**
@@ -741,9 +1155,16 @@ public class SafariConfig {
         public SpawnWeights weights = new SpawnWeights();
     }
 
-    /** Relative weights of the specials' rarities in their spawner ({@code specials.spawn.weights}). */
+    /**
+     * Relative weights of the four rarities: of the specials in their spawner
+     * ({@code specials.spawn.weights}), and of the buckets in the swarm's draw
+     * ({@code events.swarm.weights}). Same defaults for both.
+     */
     public static class SpawnWeights {
-        /** Weight of a common special; only matters when {@code specials.slots.common} draws some. */
+        /**
+         * Weight of common: of a common special, which only matters when
+         * {@code specials.slots.common} draws some; of a common swarm.
+         */
         public int common = 0;
         public int uncommon = 10;
         public int rare = 4;
@@ -892,6 +1313,14 @@ public class SafariConfig {
          * in the void would fall forever.
          */
         public boolean invulnerablePlayers = true;
+
+        /**
+         * Pokémon inside take no damage: wild ones cannot be killed with a
+         * sword or a bow, and sent-out ones are spared falls, lava and mobs.
+         * Battles are not affected (their damage is not the entity's). Damage
+         * that bypasses invulnerability (/kill, the void) still applies.
+         */
+        public boolean invulnerablePokemon = true;
 
         /**
          * Whether hunger is frozen for players inside. On, the food bar and

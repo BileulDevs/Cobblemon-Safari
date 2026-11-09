@@ -1,0 +1,30 @@
+{
+  "enabled": true,
+  "neededInstalledMods": [],
+  "neededUninstalledMods": [],
+  "spawns": [
+    {
+      "id": "cobblemon_safari-klefki-1",
+      "pokemon": "klefki",
+      "presets": [
+        "natural",
+        "wild"
+      ],
+      "type": "pokemon",
+      "spawnablePositionType": "grounded",
+      "bucket": "uncommon",
+      "level": "22-47",
+      "weight": 20.0,
+      "condition": {
+        "dimensions": [
+          "cobblemon_safari:safari"
+        ],
+        "canSeeSky": false,
+        "biomes": [
+          "#cobblemon:is_cave",
+          "#cobblemon:is_dripstone"
+        ]
+      }
+    }
+  ]
+}
