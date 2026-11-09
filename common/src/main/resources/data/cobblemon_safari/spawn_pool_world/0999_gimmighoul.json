@@ -1,0 +1,53 @@
+{
+  "enabled": true,
+  "neededInstalledMods": [],
+  "neededUninstalledMods": [],
+  "spawns": [
+    {
+      "id": "cobblemon_safari-gimmighoul-1",
+      "pokemon": "gimmighoul roaming=true",
+      "presets": [
+        "natural",
+        "wild"
+      ],
+      "type": "pokemon",
+      "spawnablePositionType": "grounded",
+      "bucket": "common",
+      "level": "5-30",
+      "weight": 60.0,
+      "condition": {
+        "dimensions": [
+          "cobblemon_safari:safari"
+        ],
+        "canSeeSky": true,
+        "biomes": [
+          "#cobblemon:is_forest",
+          "#cobblemon:is_plains",
+          "#cobblemon:is_hills"
+        ]
+      }
+    },
+    {
+      "id": "cobblemon_safari-gimmighoul-2",
+      "pokemon": "gimmighoul roaming=false",
+      "presets": [
+        "natural",
+        "wild"
+      ],
+      "type": "pokemon",
+      "spawnablePositionType": "grounded",
+      "bucket": "rare",
+      "level": "5-30",
+      "weight": 60.0,
+      "condition": {
+        "dimensions": [
+          "cobblemon_safari:safari"
+        ],
+        "canSeeSky": false,
+        "biomes": [
+          "#cobblemon:is_cave"
+        ]
+      }
+    }
+  ]
+}

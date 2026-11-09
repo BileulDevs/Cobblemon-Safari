@@ -1,0 +1,30 @@
+{
+  "enabled": true,
+  "neededInstalledMods": [],
+  "neededUninstalledMods": [],
+  "spawns": [
+    {
+      "id": "cobblemon_safari-tinkatuff-1",
+      "pokemon": "tinkatuff",
+      "presets": [
+        "natural",
+        "wild"
+      ],
+      "type": "pokemon",
+      "spawnablePositionType": "grounded",
+      "bucket": "common",
+      "level": "24-38",
+      "weight": 2.7,
+      "condition": {
+        "dimensions": [
+          "cobblemon_safari:safari"
+        ],
+        "canSeeSky": true,
+        "biomes": [
+          "#cobblemon:is_mountain",
+          "#cobblemon:is_hills"
+        ]
+      }
+    }
+  ]
+}

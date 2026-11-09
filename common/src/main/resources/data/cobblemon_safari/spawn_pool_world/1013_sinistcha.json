@@ -1,0 +1,55 @@
+{
+  "enabled": true,
+  "neededInstalledMods": [],
+  "neededUninstalledMods": [],
+  "spawns": [
+    {
+      "id": "cobblemon_safari-sinistcha-1",
+      "pokemon": "sinistcha matcha_authenticity=unremarkable",
+      "presets": [
+        "natural",
+        "wild"
+      ],
+      "type": "pokemon",
+      "spawnablePositionType": "grounded",
+      "bucket": "uncommon",
+      "level": "26-51",
+      "weight": 6.336,
+      "condition": {
+        "dimensions": [
+          "cobblemon_safari:safari"
+        ],
+        "canSeeSky": true,
+        "biomes": [
+          "#cobblemon:is_cherry_blossom",
+          "#cobblemon:is_forest",
+          "#cobblemon:is_jungle"
+        ]
+      }
+    },
+    {
+      "id": "cobblemon_safari-sinistcha-2",
+      "pokemon": "sinistcha matcha_authenticity=masterpiece",
+      "presets": [
+        "natural",
+        "wild"
+      ],
+      "type": "pokemon",
+      "spawnablePositionType": "grounded",
+      "bucket": "uncommon",
+      "level": "26-51",
+      "weight": 0.064,
+      "condition": {
+        "dimensions": [
+          "cobblemon_safari:safari"
+        ],
+        "canSeeSky": true,
+        "biomes": [
+          "#cobblemon:is_cherry_blossom",
+          "#cobblemon:is_forest",
+          "#cobblemon:is_jungle"
+        ]
+      }
+    }
+  ]
+}

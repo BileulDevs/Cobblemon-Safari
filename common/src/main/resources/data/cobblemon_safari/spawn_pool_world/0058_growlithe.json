@@ -1,0 +1,52 @@
+{
+  "enabled": true,
+  "neededInstalledMods": [],
+  "neededUninstalledMods": [],
+  "spawns": [
+    {
+      "id": "cobblemon_safari-growlithe-1",
+      "pokemon": "growlithe",
+      "presets": [
+        "natural",
+        "wild"
+      ],
+      "type": "pokemon",
+      "spawnablePositionType": "grounded",
+      "bucket": "uncommon",
+      "level": "10-35",
+      "weight": 40.0,
+      "condition": {
+        "dimensions": [
+          "cobblemon_safari:safari"
+        ],
+        "canSeeSky": true,
+        "biomes": [
+          "#cobblemon:is_savanna",
+          "#cobblemon:is_grassland"
+        ]
+      }
+    },
+    {
+      "id": "cobblemon_safari-growlithe-2",
+      "pokemon": "growlithe",
+      "presets": [
+        "natural",
+        "wild"
+      ],
+      "type": "pokemon",
+      "spawnablePositionType": "grounded",
+      "bucket": "uncommon",
+      "level": "10-35",
+      "weight": 20.0,
+      "condition": {
+        "dimensions": [
+          "cobblemon_safari:safari"
+        ],
+        "canSeeSky": true,
+        "biomes": [
+          "#cobblemon:is_volcanic"
+        ]
+      }
+    }
+  ]
+}

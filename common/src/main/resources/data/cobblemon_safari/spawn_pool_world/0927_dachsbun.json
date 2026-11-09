@@ -1,0 +1,30 @@
+{
+  "enabled": true,
+  "neededInstalledMods": [],
+  "neededUninstalledMods": [],
+  "spawns": [
+    {
+      "id": "cobblemon_safari-dachsbun-1",
+      "pokemon": "dachsbun",
+      "presets": [
+        "natural",
+        "wild"
+      ],
+      "type": "pokemon",
+      "spawnablePositionType": "grounded",
+      "bucket": "common",
+      "level": "26-48",
+      "weight": 8.0,
+      "condition": {
+        "dimensions": [
+          "cobblemon_safari:safari"
+        ],
+        "canSeeSky": true,
+        "biomes": [
+          "#cobblemon:is_floral",
+          "#cobblemon:is_cherry_blossom"
+        ]
+      }
+    }
+  ]
+}

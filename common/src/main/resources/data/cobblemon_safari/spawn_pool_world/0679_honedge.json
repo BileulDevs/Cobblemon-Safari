@@ -1,0 +1,52 @@
+{
+  "enabled": true,
+  "neededInstalledMods": [],
+  "neededUninstalledMods": [],
+  "spawns": [
+    {
+      "id": "cobblemon_safari-honedge-1",
+      "pokemon": "honedge",
+      "presets": [
+        "natural",
+        "wild"
+      ],
+      "type": "pokemon",
+      "spawnablePositionType": "grounded",
+      "bucket": "uncommon",
+      "level": "8-33",
+      "weight": 50.0,
+      "condition": {
+        "dimensions": [
+          "cobblemon_safari:safari"
+        ],
+        "canSeeSky": true,
+        "biomes": [
+          "#cobblemon:is_spooky"
+        ],
+        "timeRange": "night"
+      }
+    },
+    {
+      "id": "cobblemon_safari-honedge-2",
+      "pokemon": "honedge",
+      "presets": [
+        "natural",
+        "wild"
+      ],
+      "type": "pokemon",
+      "spawnablePositionType": "grounded",
+      "bucket": "uncommon",
+      "level": "8-33",
+      "weight": 25.0,
+      "condition": {
+        "dimensions": [
+          "cobblemon_safari:safari"
+        ],
+        "canSeeSky": false,
+        "biomes": [
+          "#cobblemon:is_cave"
+        ]
+      }
+    }
+  ]
+}

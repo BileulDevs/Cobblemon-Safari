@@ -1,0 +1,31 @@
+{
+  "enabled": true,
+  "neededInstalledMods": [],
+  "neededUninstalledMods": [],
+  "spawns": [
+    {
+      "id": "cobblemon_safari-runerigus-1",
+      "pokemon": "runerigus",
+      "presets": [
+        "natural",
+        "wild"
+      ],
+      "type": "pokemon",
+      "spawnablePositionType": "grounded",
+      "bucket": "common",
+      "level": "34-48",
+      "weight": 10.0,
+      "condition": {
+        "dimensions": [
+          "cobblemon_safari:safari"
+        ],
+        "canSeeSky": true,
+        "biomes": [
+          "#cobblemon:is_desert",
+          "#cobblemon:is_badlands"
+        ],
+        "timeRange": "night"
+      }
+    }
+  ]
+}

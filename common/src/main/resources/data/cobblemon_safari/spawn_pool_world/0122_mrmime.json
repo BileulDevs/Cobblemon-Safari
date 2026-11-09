@@ -1,0 +1,53 @@
+{
+  "enabled": true,
+  "neededInstalledMods": [],
+  "neededUninstalledMods": [],
+  "spawns": [
+    {
+      "id": "cobblemon_safari-mrmime-1",
+      "pokemon": "mrmime",
+      "presets": [
+        "natural",
+        "wild"
+      ],
+      "type": "pokemon",
+      "spawnablePositionType": "grounded",
+      "bucket": "uncommon",
+      "level": "26-46",
+      "weight": 11.84,
+      "condition": {
+        "dimensions": [
+          "cobblemon_safari:safari"
+        ],
+        "canSeeSky": true,
+        "biomes": [
+          "#cobblemon:is_floral",
+          "#cobblemon:is_plains"
+        ]
+      }
+    },
+    {
+      "id": "cobblemon_safari-mrmime-2",
+      "pokemon": "mrmime galarian",
+      "presets": [
+        "natural",
+        "wild"
+      ],
+      "type": "pokemon",
+      "spawnablePositionType": "grounded",
+      "bucket": "uncommon",
+      "level": "26-46",
+      "weight": 11.424,
+      "condition": {
+        "dimensions": [
+          "cobblemon_safari:safari"
+        ],
+        "canSeeSky": true,
+        "biomes": [
+          "#cobblemon:is_freezing",
+          "#cobblemon:is_snowy"
+        ]
+      }
+    }
+  ]
+}

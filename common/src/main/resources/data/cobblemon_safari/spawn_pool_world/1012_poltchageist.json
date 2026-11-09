@@ -1,0 +1,55 @@
+{
+  "enabled": true,
+  "neededInstalledMods": [],
+  "neededUninstalledMods": [],
+  "spawns": [
+    {
+      "id": "cobblemon_safari-poltchageist-1",
+      "pokemon": "poltchageist matcha_authenticity=counterfeit",
+      "presets": [
+        "natural",
+        "wild"
+      ],
+      "type": "pokemon",
+      "spawnablePositionType": "grounded",
+      "bucket": "uncommon",
+      "level": "6-31",
+      "weight": 72.864,
+      "condition": {
+        "dimensions": [
+          "cobblemon_safari:safari"
+        ],
+        "canSeeSky": true,
+        "biomes": [
+          "#cobblemon:is_cherry_blossom",
+          "#cobblemon:is_forest",
+          "#cobblemon:is_jungle"
+        ]
+      }
+    },
+    {
+      "id": "cobblemon_safari-poltchageist-2",
+      "pokemon": "poltchageist matcha_authenticity=artisan",
+      "presets": [
+        "natural",
+        "wild"
+      ],
+      "type": "pokemon",
+      "spawnablePositionType": "grounded",
+      "bucket": "uncommon",
+      "level": "6-31",
+      "weight": 0.736,
+      "condition": {
+        "dimensions": [
+          "cobblemon_safari:safari"
+        ],
+        "canSeeSky": true,
+        "biomes": [
+          "#cobblemon:is_cherry_blossom",
+          "#cobblemon:is_forest",
+          "#cobblemon:is_jungle"
+        ]
+      }
+    }
+  ]
+}

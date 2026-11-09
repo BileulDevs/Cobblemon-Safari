@@ -1,0 +1,31 @@
+{
+  "enabled": true,
+  "neededInstalledMods": [],
+  "neededUninstalledMods": [],
+  "spawns": [
+    {
+      "id": "cobblemon_safari-polteageist-1",
+      "pokemon": "polteageist",
+      "presets": [
+        "natural",
+        "wild"
+      ],
+      "type": "pokemon",
+      "spawnablePositionType": "grounded",
+      "bucket": "common",
+      "level": "26-51",
+      "weight": 4.0,
+      "condition": {
+        "dimensions": [
+          "cobblemon_safari:safari"
+        ],
+        "canSeeSky": true,
+        "biomes": [
+          "#cobblemon:is_spooky",
+          "#cobblemon:is_magical"
+        ],
+        "timeRange": "night"
+      }
+    }
+  ]
+}

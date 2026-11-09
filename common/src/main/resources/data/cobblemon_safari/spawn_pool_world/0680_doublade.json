@@ -1,0 +1,52 @@
+{
+  "enabled": true,
+  "neededInstalledMods": [],
+  "neededUninstalledMods": [],
+  "spawns": [
+    {
+      "id": "cobblemon_safari-doublade-1",
+      "pokemon": "doublade",
+      "presets": [
+        "natural",
+        "wild"
+      ],
+      "type": "pokemon",
+      "spawnablePositionType": "grounded",
+      "bucket": "uncommon",
+      "level": "35-45",
+      "weight": 7.0,
+      "condition": {
+        "dimensions": [
+          "cobblemon_safari:safari"
+        ],
+        "canSeeSky": true,
+        "biomes": [
+          "#cobblemon:is_spooky"
+        ],
+        "timeRange": "night"
+      }
+    },
+    {
+      "id": "cobblemon_safari-doublade-2",
+      "pokemon": "doublade",
+      "presets": [
+        "natural",
+        "wild"
+      ],
+      "type": "pokemon",
+      "spawnablePositionType": "grounded",
+      "bucket": "uncommon",
+      "level": "35-45",
+      "weight": 3.5,
+      "condition": {
+        "dimensions": [
+          "cobblemon_safari:safari"
+        ],
+        "canSeeSky": false,
+        "biomes": [
+          "#cobblemon:is_cave"
+        ]
+      }
+    }
+  ]
+}

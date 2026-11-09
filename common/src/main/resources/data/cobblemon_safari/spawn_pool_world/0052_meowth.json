@@ -1,0 +1,79 @@
+{
+  "enabled": true,
+  "neededInstalledMods": [],
+  "neededUninstalledMods": [],
+  "spawns": [
+    {
+      "id": "cobblemon_safari-meowth-1",
+      "pokemon": "meowth",
+      "presets": [
+        "natural",
+        "wild"
+      ],
+      "type": "pokemon",
+      "spawnablePositionType": "grounded",
+      "bucket": "common",
+      "level": "4-29",
+      "weight": 72.0,
+      "condition": {
+        "dimensions": [
+          "cobblemon_safari:safari"
+        ],
+        "canSeeSky": true,
+        "biomes": [
+          "#cobblemon:is_grassland",
+          "#cobblemon:is_savanna"
+        ],
+        "timeRange": "night"
+      }
+    },
+    {
+      "id": "cobblemon_safari-meowth-2",
+      "pokemon": "meowth alolan",
+      "presets": [
+        "natural",
+        "wild"
+      ],
+      "type": "pokemon",
+      "spawnablePositionType": "grounded",
+      "bucket": "common",
+      "level": "4-29",
+      "weight": 72.0,
+      "condition": {
+        "dimensions": [
+          "cobblemon_safari:safari"
+        ],
+        "canSeeSky": true,
+        "biomes": [
+          "#cobblemon:is_jungle",
+          "#cobblemon:is_beach"
+        ],
+        "timeRange": "night"
+      }
+    },
+    {
+      "id": "cobblemon_safari-meowth-3",
+      "pokemon": "meowth galarian",
+      "presets": [
+        "natural",
+        "wild"
+      ],
+      "type": "pokemon",
+      "spawnablePositionType": "grounded",
+      "bucket": "common",
+      "level": "4-29",
+      "weight": 72.0,
+      "condition": {
+        "dimensions": [
+          "cobblemon_safari:safari"
+        ],
+        "canSeeSky": true,
+        "biomes": [
+          "#cobblemon:is_mountain",
+          "#cobblemon:is_freezing",
+          "#cobblemon:is_taiga"
+        ]
+      }
+    }
+  ]
+}
