@@ -13,7 +13,8 @@
     "FireBlockMixin",
     "LakeFeatureMixin",
     "PlayerExhaustionMixin",
-    "BlockAttackMixin"
+    "BlockAttackMixin",
+    "MinecraftServerAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

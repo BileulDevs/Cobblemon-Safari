@@ -31,6 +31,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import org.jetbrains.annotations.Nullable;
+
 /**
  * Regenerates the Safari map once a day, at the first server start of a new day.
  *
@@ -56,6 +58,13 @@ public final class SafariMapReset {
     private static volatile IslandRelief relief = IslandRelief.ROLLING;
     /** Whether this server run started on a freshly reset map. */
     private static boolean resetThisRun;
+
+    /**
+     * Day the current map belongs to, as in the state file; "" when a reset
+     * was asked for. Kept in memory so the live reset's once-a-minute check
+     * reads no file.
+     */
+    private static volatile String mapDay = "";
     /** Players already moved to the arrival point after a reset, during this run. */
     private static final Set<UUID> RELOCATED = new HashSet<>();
 
@@ -108,6 +117,8 @@ public final class SafariMapReset {
         String today = today(config);
         Path folder = DimensionType.getStorageFolder(SafariDimensions.key(), worldRoot);
 
+        // Before any new move aside: its own background deletion must not get a second thread.
+        deleteLeftovers(folder);
         State state = read(stateFile);
         if (state == null) {
             // No state file yet (a new world): keep the map as generated, start counting from today.
@@ -118,13 +129,22 @@ public final class SafariMapReset {
             state.relief = Files.isDirectory(folder) ? IslandRelief.ROLLING : config.relief;
             write(stateFile, state);
         } else if (config.enabled && !today.equals(state.day)) {
-            if (deleteFolder(folder)) {
+            // Moved aside and deleted in the background: the server starts without waiting for
+            // hundreds of megabytes to go. Deleted in place when the move fails.
+            Path moved = moveAside(folder);
+            boolean cleared = moved != null || deleteFolder(folder);
+            if (moved != null && !moved.equals(folder)) {
+                deleteInBackground(moved);
+            }
+            if (!cleared) {
+                CobblemonSafari.LOGGER.error("The Safari map is NOT reset this time: {} could not be removed", folder);
+            } else {
                 state.day = today;
                 state.salt = newSalt();
                 state.relief = config.relief;
                 write(stateFile, state);
                 resetThisRun = true;
-                CobblemonSafari.LOGGER.info("Safari map reset for {}: {} deleted, new terrain will be generated ({})",
+                CobblemonSafari.LOGGER.info("Safari map reset for {}: {} cleared, new terrain will be generated ({})",
                         today, folder, config.relief);
             }
         }
@@ -138,11 +158,13 @@ public final class SafariMapReset {
         }
         salt = state.salt;
         relief = state.relief;
+        mapDay = state.day;
     }
 
     /**
-     * Forces a reset at the next server start, whatever the day. Used by the
-     * operator command; the running map is not touched.
+     * Marks the map as due for a reset, whatever the day: at the next start,
+     * and in LIVE mode as soon as the live reset can ({@link LiveReset}).
+     * Used by the operator command; the running map is not touched here.
      */
     public static boolean scheduleReset(MinecraftServer server) {
         Path stateFile = server.getWorldPath(LevelResource.ROOT).resolve(STATE_FILE);
@@ -150,9 +172,113 @@ public final class SafariMapReset {
         if (state == null) {
             state = new State();
             state.salt = salt;
+            state.relief = relief;
         }
         state.day = "";
-        return write(stateFile, state);
+        if (!write(stateFile, state)) {
+            return false;
+        }
+        mapDay = "";
+        return true;
+    }
+
+    /**
+     * Whether a reset is due: resets on, and the map's day is not today (a
+     * new day since it was made, or {@link #scheduleReset}). Reads the clock
+     * and the time zone; no file.
+     */
+    public static boolean isDue() {
+        SafariConfig.Reset config = SafariConfigManager.get().reset;
+        return config.enabled && !today(config).equals(mapDay);
+    }
+
+    /** The Safari's folder in this world; it may not exist yet. */
+    static Path folder(MinecraftServer server) {
+        return DimensionType.getStorageFolder(SafariDimensions.key(), server.getWorldPath(LevelResource.ROOT));
+    }
+
+    /**
+     * Starts a new map for a live reset, once the old level is closed and its
+     * folder moved away: a new salt and today's day, written to the state
+     * file, and the relief of the config. The new level reads them when it is
+     * built. Players who logged out inside the old map are moved to the
+     * arrival when they come back, as after a reset at start.
+     *
+     * @return false when the state file could not be written; the old salt is then kept
+     */
+    static boolean beginNewMap(MinecraftServer server) {
+        SafariConfig.Reset config = SafariConfigManager.get().reset;
+        State state = new State();
+        state.day = today(config);
+        state.salt = newSalt();
+        state.relief = config.relief;
+        if (!write(server.getWorldPath(LevelResource.ROOT).resolve(STATE_FILE), state)) {
+            return false;
+        }
+        salt = state.salt;
+        relief = state.relief;
+        mapDay = state.day;
+        resetThisRun = true;
+        RELOCATED.clear();
+        return true;
+    }
+
+    /** Suffix of an old map's folder while it is deleted in the background; followed by the time. */
+    private static final String OLD_FOLDER_SUFFIX = ".old-";
+
+    /**
+     * Moves the map's folder aside, so the next level starts empty and the
+     * old files can be deleted at leisure. A rename, instant on one disk.
+     *
+     * @return where it went (the folder itself when there was none), null when it could not be moved
+     */
+    @Nullable
+    static Path moveAside(Path folder) {
+        if (!Files.exists(folder)) {
+            return folder;
+        }
+        Path target = folder.resolveSibling(folder.getFileName() + OLD_FOLDER_SUFFIX + System.currentTimeMillis());
+        try {
+            return Files.move(folder, target);
+        } catch (IOException e) {
+            CobblemonSafari.LOGGER.error("Could not move {} aside (a file still open?)", folder, e);
+            return null;
+        }
+    }
+
+    /**
+     * Deletes, in the background, old maps a stop interrupted before their
+     * deletion was over (the deletion thread does not hold the server).
+     */
+    private static void deleteLeftovers(Path folder) {
+        Path parent = folder.getParent();
+        if (parent == null || !Files.isDirectory(parent)) {
+            return;
+        }
+        String prefix = folder.getFileName() + OLD_FOLDER_SUFFIX;
+        try (Stream<Path> siblings = Files.list(parent)) {
+            siblings.filter(path -> path.getFileName().toString().startsWith(prefix) && Files.isDirectory(path))
+                    .forEach(SafariMapReset::deleteInBackground);
+        } catch (IOException e) {
+            CobblemonSafari.LOGGER.warn("Could not look for old Safari maps in {}", parent, e);
+        }
+    }
+
+    /**
+     * Deletes a folder off the server thread: hundreds of megabytes of region
+     * files would stall the tick. The folder was renamed first, so nothing
+     * of the new map writes into it.
+     */
+    static void deleteInBackground(Path folder) {
+        Thread thread = new Thread(() -> {
+            if (deleteFolder(folder)) {
+                CobblemonSafari.LOGGER.info("Old Safari map deleted: {}", folder);
+            }
+        }, "Cobblemon Safari map deletion");
+        // A daemon: a server stopping mid-deletion must not wait for it; what is left is deleted at the next start.
+        thread.setDaemon(true);
+        thread.setPriority(Thread.MIN_PRIORITY);
+        thread.start();
     }
 
     /**
@@ -212,7 +338,7 @@ public final class SafariMapReset {
             }
             return true;
         } catch (IOException e) {
-            CobblemonSafari.LOGGER.error("Could not delete {}; the Safari map is NOT reset this time", folder, e);
+            CobblemonSafari.LOGGER.error("Could not delete {}", folder, e);
             return false;
         }
     }

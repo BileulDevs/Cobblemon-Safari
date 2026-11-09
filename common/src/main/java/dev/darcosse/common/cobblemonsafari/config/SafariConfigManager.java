@@ -2,6 +2,7 @@ package dev.darcosse.common.cobblemonsafari.config;
 
 import dev.darcosse.common.cobblemonsafari.network.SafariFeaturedPayload;
 import dev.darcosse.common.cobblemonsafari.spawn.SwarmRules;
+import dev.darcosse.common.cobblemonsafari.reset.ResetMode;
 import dev.darcosse.common.cobblemonsafari.worldgen.IslandRelief;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.bounty.BountyKind;
@@ -102,8 +103,10 @@ public final class SafariConfigManager {
      * frozenHabitats, since it never limited where the aurora acts (see
      * migrateTree). 15 added events.eggNests and capture.marks.nest:
      * nothing to convert, raised so that existing files show the new keys.
+     * 16 added reset.mode, reset.maxWaitMinutes and reset.countdownSeconds:
+     * nothing to convert either.
      */
-    public static final int CURRENT_CONFIG_VERSION = 15;
+    public static final int CURRENT_CONFIG_VERSION = 16;
 
     /** First version that knows the fishing missions. */
     private static final int FISHING_MISSION_VERSION = 6;
@@ -751,6 +754,24 @@ public final class SafariConfigManager {
             c.reset.timeZone = "";
             corrected = true;
         }
+        if (c.reset.mode == null) {
+            // Gson reads a name that is no mode as null.
+            warn("reset.mode", "an unknown mode", ResetMode.LIVE);
+            c.reset.mode = ResetMode.LIVE;
+            corrected = true;
+        }
+        if (c.reset.maxWaitMinutes < 1 || c.reset.maxWaitMinutes > MAX_RESET_WAIT_MINUTES) {
+            int fixed = Math.max(1, Math.min(MAX_RESET_WAIT_MINUTES, c.reset.maxWaitMinutes));
+            warn("reset.maxWaitMinutes", c.reset.maxWaitMinutes, fixed);
+            c.reset.maxWaitMinutes = fixed;
+            corrected = true;
+        }
+        if (c.reset.countdownSeconds < 0 || c.reset.countdownSeconds > MAX_RESET_COUNTDOWN_SECONDS) {
+            int fixed = Math.max(0, Math.min(MAX_RESET_COUNTDOWN_SECONDS, c.reset.countdownSeconds));
+            warn("reset.countdownSeconds", c.reset.countdownSeconds, fixed);
+            c.reset.countdownSeconds = fixed;
+            corrected = true;
+        }
         if (c.capture == null) {
             c.capture = new SafariConfig.Capture();
             corrected = true;
@@ -1338,6 +1359,10 @@ public final class SafariConfigManager {
     /** Bounds of events.eggNests.lifetimeMinutes and hatchMinutes: a minute to a day. */
     private static final int MIN_NEST_MINUTES = 1;
     private static final int MAX_NEST_MINUTES = 1440;
+    /** Upper bound of reset.maxWaitMinutes: a day, after which the next reset is due anyway. */
+    private static final int MAX_RESET_WAIT_MINUTES = 1440;
+    /** Upper bound of reset.countdownSeconds: half an hour of warnings is already long. */
+    private static final int MAX_RESET_COUNTDOWN_SECONDS = 1800;
     /** Upper bound of events.eggNests.hatchSpeedMultiplier: beyond, the hatch time means nothing. */
     private static final double MAX_HATCH_SPEED_MULTIPLIER = 10.0D;
     /** Upper bound of events.aurora.glowSeconds: longer and the glow gives away every hiding spot. */

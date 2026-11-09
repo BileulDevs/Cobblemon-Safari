@@ -258,8 +258,11 @@ public final class RestHousePrebuilder {
         safari.getChunkSource().addRegionTicket(TICKET, centre, RestHouses.AREA_TICKET_RADIUS, centre);
     }
 
-    /** Removes the ticket, if any, and forgets the house. */
-    private static void release(ServerLevel safari) {
+    /**
+     * Removes the ticket, if any, and forgets the house. Public for the live
+     * map reset, which lets the old level's chunks unload before closing it.
+     */
+    public static void release(ServerLevel safari) {
         if (ticket != null) {
             safari.getChunkSource().removeRegionTicket(TICKET, ticket, RestHouses.AREA_TICKET_RADIUS, ticket);
         }

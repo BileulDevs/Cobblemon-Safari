@@ -18,7 +18,7 @@ How the files behave:
 - **An invalid value** (a negative price, an hour of 25, a colour that is not a colour...) is replaced by its default or clamped into range, a warning names it in the log, and the file is rewritten with the fixed value.
 - **A file that cannot be read at all** (a missing comma, a stray quote) is never overwritten: the mod runs on the defaults, logs the error, and reads the file again once you fix it.
 - **Unknown keys** are ignored and dropped when the file is rewritten.
-- **`configVersion`** is the format version of the file (`15` for `server.json`, `4` for `shop.json`, `2` for `client.json`). It is not a setting: the mod writes it. A file written by an older version of the mod is converted on load, whatever its version, and every key it moves is named in the log: see [Older files](#older-files) at the end.
+- **`configVersion`** is the format version of the file (`16` for `server.json`, `4` for `shop.json`, `2` for `client.json`). It is not a setting: the mod writes it. A file written by an older version of the mod is converted on load, whatever its version, and every key it moves is named in the log: see [Older files](#older-files) at the end.
 
 Formats used below:
 
@@ -414,16 +414,19 @@ The Safari Guide of every rest house takes players to any other house of the isl
 
 ### `reset`: the daily new map
 
-At the first server start of a new day, the Safari dimension is deleted and regenerated with another layout. Everything built or dropped inside is lost; sessions, statistics, banked time and points are kept.
+Each new day (from `hour`), the Safari gets a brand new map with another layout. With `mode` `"LIVE"` (the default) it happens while the server runs, as soon as nobody is inside; if players stay, they get `maxWaitMinutes`, then a countdown of `countdownSeconds`, then they are sent out with their unused banked time given back (whatever `tickets.refundUnusedTimeOnLeave` and the bank's cap say) and can come back in a moment. With `"START"` it happens at the first server start of the new day, as before 1.5.0. A server that was down when the day changed resets at its start in both modes. Everything built or dropped inside is lost; statistics, banked time and points are kept.
 
 | Key | Default | What it does |
 |---|---|---|
 | `enabled` | `true` | `false` keeps the same map forever. |
 | `hour` | `4` | Hour (0 to 23) at which a new map day starts. With 4, a server restarted at 3:00 still belongs to the previous day and keeps its map. |
 | `timeZone` | `""` | Time zone of `hour`, e.g. `"Europe/Paris"`. Empty uses the server's own. |
+| `mode` | `"LIVE"` | `"LIVE"`: the reset happens while the server runs (see above). `"START"`: only at a server start. |
+| `maxWaitMinutes` | `60` | LIVE: minutes a due reset waits for the Safari to empty before forcing it. 1 to 1440. |
+| `countdownSeconds` | `300` | Seconds of warnings for the players inside before a forced reset (the wait over, or `/safari reset force`). 0 sends them out at once. 0 to 1800. |
 | `relief` | `"GENTLE"` | How hilly each new map is. `"FLAT"`: low, gentle land, a few blocks above the sea, no peaks (height ×0.35). `"GENTLE"`: rolling but softer, the default since 1.4.0 (height ×0.65, peaks ×0.5): the plateaus' walls over the rivers lose a third of their height. `"ROLLING"`: the island as in earlier versions, with plateaus up to some forty blocks above the rivers. `"MOUNTAINOUS"`: higher land and sharper peaks (height ×1.6, peaks ×1.8). The coast and the sea floor do not move. Only a new map takes it: the map on disk keeps the relief it was generated with (new chunks would rise as cliffs against the old ones), and the log says so at start. To see a new relief now, `/safari reset` then restart. |
 
-`/safari reset` forces a new map at the next start, whatever this section says.
+`/safari reset` makes a new map due now: at the next start in START mode, as soon as the Safari is empty in LIVE mode (with `enabled` on). `/safari reset force` renews the map right away, while the server runs, whatever the mode: at once if nobody is inside, else after the countdown.
 
 ---
 

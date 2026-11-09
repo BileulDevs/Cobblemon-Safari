@@ -1,5 +1,5 @@
 {
-  "configVersion": 15,
+  "configVersion": 16,
   "hunt": {
     "maxDurationSeconds": 3600,
     "pauseWhileOffline": true,
@@ -346,6 +346,9 @@
     "enabled": true,
     "hour": 4,
     "timeZone": "Europe/Paris",
-    "relief": "GENTLE"
+    "relief": "GENTLE",
+    "mode": "LIVE",
+    "maxWaitMinutes": 60,
+    "countdownSeconds": 300
   }
 }

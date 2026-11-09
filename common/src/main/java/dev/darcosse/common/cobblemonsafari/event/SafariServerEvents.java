@@ -19,6 +19,7 @@ import dev.darcosse.common.cobblemonsafari.protection.SafariProtection;
 import dev.darcosse.common.cobblemonsafari.reset.SafariMapReset;
 import dev.darcosse.common.cobblemonsafari.world.SafariWorldState;
 import dev.darcosse.common.cobblemonsafari.session.SafariSessionManager;
+import dev.darcosse.common.cobblemonsafari.reset.LiveReset;
 import dev.darcosse.common.cobblemonsafari.spawn.EggSpecies;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedRotation;
 import dev.darcosse.common.cobblemonsafari.spawn.FeaturedSpawner;
@@ -97,6 +98,7 @@ public final class SafariServerEvents {
         SafariWorldState.get(server).forgetHousesIfMapChanged(SafariMapReset.salt());
         RestHouses.reset();
         RestHouses.prepare(server);
+        LiveReset.reset();
     }
 
     /**
@@ -128,10 +130,15 @@ public final class SafariServerEvents {
         SwarmSpawner.tick(server);
         SafariBounties.tick(server);
         SafariSpawnBoost.tick(server);
-        RestHouses.tick(server);
-        RestHouseStaff.tick(server);
+        // Not while a live reset empties the old map: they would load its chunks again, or build in it.
+        if (!LiveReset.isClosing()) {
+            RestHouses.tick(server);
+            RestHouseStaff.tick(server);
+            RestHousePrebuilder.tick(server);
+        }
+        // Even then: it ends the trips of the players sent out, giving them their camera back.
         RestHouseTravel.tick(server);
-        RestHousePrebuilder.tick(server);
+        LiveReset.tick(server);
     }
 
     /**

@@ -17,7 +17,7 @@ The Safari is its own dimension: a single island in a turquoise sea, with its ow
 
 - **Fourteen habitats** laid out around a central summit: grassland, savanna, dunes, badlands, jungle, marsh, mushroom grove, flower meadow, woodland, deep forest, taiga, snowfield, glacier and rocky hills, plus the peaks, a volcano, lakes and rivers.
 - **Caves everywhere**, a giant pillared cavern under the summit and a lush cavern in the south, each reached by its own winding passage.
-- **A new map every day.** At the first server start of a new day, the island is regenerated with a new layout, flat, gentle (the default), rolling or mountainous as you choose. Sessions, stats, banked time and points are kept.
+- **A new map every day.** Each new day, the island is regenerated with a new layout while the server runs, as soon as nobody is inside (or at the next start, if you prefer), flat, gentle (the default), rolling or mountainous as you choose. Sessions, stats, banked time and points are kept.
 - **Its own soundtrack**: six original tracks, one per zone, and the cries of the Pokémon that actually live in each biome.
 - **Nothing to break.** Inside, players and Pokémon take no damage and players cannot change the terrain. Poké Cakes and Poké Snacks can still be placed as bait, and berries, apricorns and Galarica nuts picked; each Cobblemon plant has its own switch. Hunger can be frozen too, so a timed hunt is not spent eating.
 
@@ -101,7 +101,7 @@ The Safari Gate block is creative-only, for operators who want to build their ow
 
 Players have two commands: `/safari`, which shows their time left, banked time and points, and `/safari dex [habitat]`, their Safari Pokédex (progress per habitat, or the species caught and missing in one habitat). Everything else goes through the gates, the NPCs and the wall screens.
 
-Operators (level 2) have `/safari info`, `enter`, `exit`, `time`, `credit add`, `points add`, `stats`, `top`, `today`, `shop`, `rotate`, `reset` and `reload`.
+Operators (level 2) have `/safari info`, `enter`, `exit`, `time`, `credit add`, `points add`, `stats`, `top`, `today`, `shop`, `rotate`, `reset` (and `reset force`, a new map right now) and `reload`.
 
 ---
 

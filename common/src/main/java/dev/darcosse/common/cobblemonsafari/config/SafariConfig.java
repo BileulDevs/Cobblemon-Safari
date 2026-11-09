@@ -1,5 +1,6 @@
 package dev.darcosse.common.cobblemonsafari.config;
 
+import dev.darcosse.common.cobblemonsafari.reset.ResetMode;
 import dev.darcosse.common.cobblemonsafari.worldgen.IslandRelief;
 import dev.darcosse.common.cobblemonsafari.bounty.BountyKind;
 
@@ -763,6 +764,27 @@ public class SafariConfig {
          * chunks would rise as cliffs against the old ones.
          */
         public IslandRelief relief = IslandRelief.GENTLE;
+
+        /**
+         * When a due reset happens: LIVE (the default) while the server runs,
+         * as soon as nobody is in the Safari, or after {@link #maxWaitMinutes}
+         * for those inside; START only at the next server start, as before 1.5.0.
+         */
+        public ResetMode mode = ResetMode.LIVE;
+
+        /**
+         * LIVE only: minutes a due reset waits for the Safari to empty. Past
+         * them, the players inside are warned ({@link #countdownSeconds}),
+         * then sent out with their unused time given back. 1 to 1440.
+         */
+        public int maxWaitMinutes = 60;
+
+        /**
+         * Seconds between the first warning and a forced reset (the wait
+         * above, or /safari reset force), for the players inside. 0 resets
+         * at once. 0 to 1800.
+         */
+        public int countdownSeconds = 300;
     }
 
     /**

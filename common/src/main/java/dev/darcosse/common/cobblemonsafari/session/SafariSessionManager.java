@@ -1,5 +1,6 @@
 package dev.darcosse.common.cobblemonsafari.session;
 
+import com.cobblemon.mod.common.api.battles.model.PokemonBattle;
 import com.cobblemon.mod.common.battles.BattleRegistry;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.access.EntryResult;
@@ -12,6 +13,7 @@ import dev.darcosse.common.cobblemonsafari.loan.LoanedBalls;
 import dev.darcosse.common.cobblemonsafari.network.SafariNetwork;
 import dev.darcosse.common.cobblemonsafari.park.ParkBoundary;
 import dev.darcosse.common.cobblemonsafari.park.SafariBorder;
+import dev.darcosse.common.cobblemonsafari.reset.LiveReset;
 import dev.darcosse.common.cobblemonsafari.stats.SafariStatistics;
 import dev.darcosse.common.cobblemonsafari.teleport.SafariTeleporter;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
@@ -123,6 +125,10 @@ public final class SafariSessionManager {
         SafariSessionStore store = SafariSessionStore.get(player.getServer());
         if (store.get(player.getUUID()) != null) {
             return EntryResult.denied(Component.translatable(key("message.already_inside")));
+        }
+        // Every way in goes through here: none while a live reset closes the map.
+        if (LiveReset.isClosing()) {
+            return EntryResult.denied(Component.translatable(key("message.reset_closed")));
         }
         // Teleporting a player out of a running battle leaves Cobblemon with a
         // participant in another dimension; the same reason exists for the
@@ -496,6 +502,25 @@ public final class SafariSessionManager {
         }
         LAST_OUTSIDE.keySet().retainAll(online);
         FROZEN.retainAll(online);
+    }
+
+    /**
+     * Takes a player out of the Safari for a live map reset: any battle
+     * stopped first (a player teleported out of a battle leaves Cobblemon
+     * with a participant in another dimension), then the hunt ended with
+     * {@link SessionEndReason#MAP_RESET}, which gives the unused time back;
+     * a player inside without a session (an exempt builder) is sent to where
+     * they last stood outside.
+     */
+    public static void evictForReset(ServerPlayer player) {
+        PokemonBattle battle = BattleRegistry.getBattleByParticipatingPlayer(player);
+        if (battle != null) {
+            battle.stop();
+        }
+        if (!end(player, SessionEndReason.MAP_RESET)) {
+            SafariTeleporter.sendOut(player, LAST_OUTSIDE.get(player.getUUID()));
+            player.sendSystemMessage(Component.translatable(SessionEndReason.MAP_RESET.translationKey()));
+        }
     }
 
     /**
