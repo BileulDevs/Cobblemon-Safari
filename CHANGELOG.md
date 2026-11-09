@@ -57,7 +57,7 @@ New network protocol (`1.6.0`): clients and servers must both update (the specia
 - **The giant cavern looks like the Caves & Cliffs caves**: smooth rock walls instead of small lumps everywhere, ledges and floors, and stone pillars. New maps only; the lush cavern is unchanged.
 - The swarm's weight boost in Cobblemon's spawns applies to the swarm's own spawns only, so an excluded form of the same species keeps its usual weight.
 - **Full moon nights bring out Dark and Psychic Pokémon too** (`events.fullMoon.types`: Fairy, Ghost, Dark and Psychic), in new `server.json` files; existing ones keep their list.
-- `server.json` goes to version 15 so that existing files show the new keys; nothing of a 1.4.0 file is converted.
+- `server.json` goes to version 16 so that existing files show the new keys; nothing of a 1.4.0 file is converted.
 
 ## 1.4.0
 
