@@ -214,7 +214,7 @@ public final class FeaturedRotation {
     /**
      * Index of the rotation running now: the schedule's base plus the whole
      * rotations elapsed since its anchor. With the default schedule (anchor
-     * 0), rotations since the Unix epoch, as before 1.4.1.
+     * 0), rotations since the Unix epoch, as before 1.5.0.
      */
     private static long currentPeriod() {
         Schedule running = schedule;

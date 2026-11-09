@@ -201,13 +201,16 @@ public final class Aurora {
      */
     static void tick(MinecraftServer server, @Nullable ServerLevel safari) {
         SafariConfig.Aurora config = SafariConfigManager.get().events.aurora;
+        // The pools are drawn before the start: an aurora with no Pokémon to bring at all is not announced.
         WeatherEvent.Change change = EVENT.tick(safari, config.enabled, config.chance,
-                config.minDurationMinutes, config.maxDurationMinutes, () -> startMessage(config), Aurora::endMessage);
+                config.minDurationMinutes, config.maxDurationMinutes, () -> {
+                    Group.FROZEN.pool = EventSpawns.drawPool(server, config.frozenTypes, config.excludeList,
+                            SpawnSource.AURORA, Group.FROZEN.weights);
+                    Group.ELSEWHERE.pool = EventSpawns.drawPool(server, config.otherTypes, config.excludeList,
+                            SpawnSource.AURORA, Group.ELSEWHERE.weights);
+                    return !Group.FROZEN.pool.isEmpty() || !Group.ELSEWHERE.pool.isEmpty();
+                }, () -> startMessage(config), Aurora::endMessage);
         if (change == WeatherEvent.Change.STARTED) {
-            Group.FROZEN.pool = EventSpawns.drawPool(server, config.frozenTypes, config.excludeList,
-                    SpawnSource.AURORA, Group.FROZEN.weights);
-            Group.ELSEWHERE.pool = EventSpawns.drawPool(server, config.otherTypes, config.excludeList,
-                    SpawnSource.AURORA, Group.ELSEWHERE.weights);
             for (Group group : Group.values()) {
                 group.served.clear();
             }
@@ -346,7 +349,7 @@ public final class Aurora {
     }
 
     /** "4" or "2.5": the multiplier as the announcement shows it, without a useless ".0". */
-    private static String formatMultiplier(double multiplier) {
+    static String formatMultiplier(double multiplier) {
         return multiplier == Math.rint(multiplier) ? Long.toString((long) multiplier)
                 : String.format(Locale.ROOT, "%.1f", multiplier);
     }

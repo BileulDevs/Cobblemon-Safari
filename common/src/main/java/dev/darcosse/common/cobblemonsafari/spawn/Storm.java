@@ -63,14 +63,20 @@ public final class Storm {
     private static final int MIN_DISTANCE = 16;
     private static final int MAX_DISTANCE = 40;
 
-    private static final long MILLIS_PER_SECOND = 1000L;
+    /** Game ticks in a second, for the lightning cooldown. */
+    private static final long TICKS_PER_SECOND = 20L;
+    /** "Never flashed": far enough in the past for any cooldown, without overflowing a subtraction. */
+    private static final long NEVER = Long.MIN_VALUE / 2;
 
     /** The storm's species, drawn when it starts; empty when none fits. */
     private static List<HabitatEntry> pool = List.of();
     /** Seconds since the last round of spawn attempts. */
     private static int secondsSinceAttempt;
-    /** Wall-clock time of the last lightning flash, for its cooldown. */
-    private static long lastFlashMillis;
+    /**
+     * Game time of the last lightning flash, for its cooldown. Game time
+     * rather than the wall clock: it stops with a paused single player game.
+     */
+    private static long lastFlashTick = NEVER;
 
     private Storm() {
     }
@@ -80,7 +86,7 @@ public final class Storm {
         EVENT.reset();
         pool = List.of();
         secondsSinceAttempt = 0;
-        lastFlashMillis = 0L;
+        lastFlashTick = NEVER;
     }
 
     /** Whether the storm event is on in the Safari right now (as of the last second's check). */
@@ -96,11 +102,14 @@ public final class Storm {
      */
     static void tick(MinecraftServer server, @Nullable ServerLevel safari) {
         SafariConfig.Storm config = SafariConfigManager.get().events.storm;
+        // The pool is drawn before the start: a storm with no Pokémon to bring is not announced.
         WeatherEvent.Change change = EVENT.tick(safari, config.enabled && !config.types.isEmpty(), config.chance,
-                config.minDurationMinutes, config.maxDurationMinutes, () -> startMessage(config), Storm::endMessage);
+                config.minDurationMinutes, config.maxDurationMinutes, () -> {
+                    pool = EventSpawns.drawPool(server, config.types, config.excludeList, SpawnSource.STORM,
+                            EventSpawns.Weights.RARE_FINDS);
+                    return !pool.isEmpty();
+                }, () -> startMessage(config), Storm::endMessage);
         if (change == WeatherEvent.Change.STARTED) {
-            pool = EventSpawns.drawPool(server, config.types, config.excludeList, SpawnSource.STORM,
-                    EventSpawns.Weights.RARE_FINDS);
             secondsSinceAttempt = 0;
             CobblemonSafari.LOGGER.info("Storm pool: {} species", pool.size());
         } else if (change == WeatherEvent.Change.ENDED) {
@@ -164,10 +173,10 @@ public final class Storm {
                 || EventSpawns.spawn(level, player, entry, spot, STORM_TAG, SpawnSource.STORM, random) == null) {
             return;
         }
-        long now = System.currentTimeMillis();
-        if (config.lightning && now - lastFlashMillis >= config.lightningCooldownSeconds * MILLIS_PER_SECOND) {
+        long now = level.getGameTime();
+        if (config.lightning && now - lastFlashTick >= config.lightningCooldownSeconds * TICKS_PER_SECOND) {
             flash(level, spot);
-            lastFlashMillis = now;
+            lastFlashTick = now;
         }
     }
 

@@ -1,11 +1,18 @@
 # Changelog
 
-## 1.4.1
+## 1.5.0
 
-New network protocol (`1.6.0`): clients and servers must both update (the specials board now sends every habitat of each Pokémon).
+New network protocol (`1.6.0`): clients and servers must both update (the specials board now sends every habitat of each Pokémon, and the egg nests add an entity and two items).
+
+**Config files**: many keys were added or moved in this version (`server.json` goes from version 7 to 15, `shop.json` from 3 to 4). Older files are converted on load, but the safest is to start from an empty config: stop the server, move your `config/cobblemon_safari/` folder aside, start once so that every file is regenerated with all its keys and their defaults, then carry your old settings over by hand.
 
 ### Fixed
 
+- **Specials and event Pokémon were rare in grassy habitats**: a spawn spot was refused as soon as a tuft of grass or a flower stood at the Pokémon's feet, so the specials and the storm's and aurora's Pokémon came far less often in the grassland, the flower meadow or the savanna. Plants one walks through are now accepted (not fire, powder snow nor sweet berry bushes). Egg nests still need air, so they are never hidden in the grass.
+- **Regional forms counted with the wrong types**: the full moon, the downpour and the heatwave favoured a Pokémon by its standard form's types, and the storm and aurora drew theirs the same way, so an Alolan Vulpix (Ice) was boosted by a heatwave (Fire); the type missions were drawn the same way. The form a spawn really makes is now used.
+- **A storm or an aurora could be announced with nothing to bring**: when no Pokémon of the Safari matched its types, it was announced and nothing came. It now only starts when it has Pokémon to bring.
+- **Events kept running while a single player game was paused**: their duration, and the storm's lightning cooldown, are now counted in game time.
+- **Players could be disconnected by an oversized config**: more specials, shop tabs, costs per offer or items in a cost's tag than a client accepts made the server send a packet every client refused. The config's validation now cuts them down, with a warning.
 - **Some swarms never spawned** (Gallade, for one): the swarm was announced, but its species never appeared and was not even listed by `/checkspawn`. The swarm was drawn among the species whose spawn files name a Safari biome, without looking at the rest of their conditions. Since Cobblemon 1.8, many species (most fully evolved ones, Gallade among them) only have spawns that require a Poké Snack, which a player's natural spawner never satisfies; such a swarm was drawn, its spawns refused at every spot, and nothing came. Spawns tied to a structure (villages...) and fishing-only spawns had the same problem: those are no longer drawn. Poké Snack-only species can still swarm, and now really do: the swarm's own spawner (below) lifts the snack requirement for them, and for them only, every other condition of their spawn still applies.
 - **Swarms are now dependable once drawn**: in Cobblemon's natural spawns the swarm only weighed more among the Pokémon of its habitat, so a light species in a crowded habitat could swarm and barely show. A swarm spawner of its own now keeps a few of the swarming species (`events.swarm.minNearby`, 4 by default) around each hunting player standing in the habitat, topped up every `events.swarm.checkEverySeconds` (5 s). It spawns through Cobblemon's own machinery: every condition of the species' spawn (hour, light, kind of spot), the Safari's caps and exclusions and Cobblemon's spawning gamerule still apply. `minNearby: 0` brings back the 1.4.0 behaviour (and then a Poké Snack-only swarm shows nothing).
 - **Legendary swarms stopped after one Pokémon**: the natural per-rotation cap of a category (`spawns.legendary.maxSpawnPerPokemon`, 1 by default) applied to the swarm too. The swarming species in its habitat now follows `events.swarm.rarities` alone, with a cap of its own, and its spawns and catches never use up natural slots.
@@ -41,6 +48,7 @@ New network protocol (`1.6.0`): clients and servers must both update (the specia
 
 ### Changed
 
+- **The clerk's answers are grouped**: "Tell me about the missions" leads to the current missions and the swap, a new "Tell me about the Safari's events" explains each event on the server (swarms, full moon nights, downpours, storms, heatwaves, auroras, egg nests) with its current chances, types and places, and leaving the Safari is now the answer before last.
 - **`spawns.caughtSpeciesWeight` defaults to 0.3** (was 0.4): a species not caught yet is more than three times as likely as a caught one. Existing `server.json` files keep their value.
 - **The jungle is more open**: patches of thick jungle and of bamboo jungle in a sparse jungle, so Pokémon can be seen and the biome crossed. Still one biome. New maps only.
 - **The giant cavern looks like the Caves & Cliffs caves**: smooth rock walls instead of small lumps everywhere, ledges and floors, and stone pillars. New maps only; the lush cavern is unchanged.

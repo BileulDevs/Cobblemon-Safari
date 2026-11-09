@@ -42,7 +42,7 @@ public final class SwarmRules {
 
     /**
      * The config spelling of a rarity, forgiving about case and separators
-     * ("Ultra-Rare", "ultra_rare" and "ultrarare", the spelling of the 1.4.1
+     * ("Ultra-Rare", "ultra_rare" and "ultrarare", the spelling of the 1.5.0
      * development builds, all give "ultra-rare"); null when it names no rarity.
      */
     @Nullable

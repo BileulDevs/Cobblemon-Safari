@@ -107,7 +107,7 @@ public final class SafariServerEvents {
     public static void onDataReload(MinecraftServer server) {
         FeaturedRotation.invalidate();
         SafariSpawnFilter.invalidate();
-        // Types may have changed with the species data.
+        // Types may have changed with the species data, and the cache is keyed by spawn details, rebuilt here.
         SafariHappeningsInfluence.clear();
         // Which details a swarm can use comes from the same spawn files and tags.
         Swarm.invalidateSpawnData();

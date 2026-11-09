@@ -1,10 +1,10 @@
 package dev.darcosse.common.cobblemonsafari.spawn;
 
 import com.cobblemon.mod.common.api.pokemon.PokemonProperties;
-import com.cobblemon.mod.common.api.types.ElementalType;
 import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
 import dev.darcosse.common.cobblemonsafari.park.ParkBoundary;
 import dev.darcosse.common.cobblemonsafari.structure.RestHouses;
+import dev.darcosse.common.cobblemonsafari.util.FormTypes;
 import dev.darcosse.common.cobblemonsafari.util.Surface;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
@@ -12,6 +12,8 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.Nullable;
@@ -193,11 +195,28 @@ final class EventSpawns {
             return null;
         }
         BlockState below = level.getBlockState(feet.below());
-        if (below.isAir() || !below.getFluidState().isEmpty() || !level.getBlockState(feet).isAir()
-                || !level.getBlockState(feet.above()).isAir() || !level.canSeeSky(feet) || !zone.test(feet)) {
+        if (below.isAir() || !below.getFluidState().isEmpty() || !isOpen(level, feet) || !isOpen(level, feet.above())
+                || !level.canSeeSky(feet) || !zone.test(feet)) {
             return null;
         }
         return feet;
+    }
+
+    /**
+     * Whether a Pokémon (or a nest) can stand in a block: air, or a plant one
+     * walks through (grass, flowers, snow layer). Testing for air alone
+     * refused every spot with a tuft of grass at the feet, which made the
+     * grassy habitats far poorer in specials and event Pokémon. Fire,
+     * powder snow and sweet berry bushes are walked through too, but hurt or
+     * trap what stands in them, so they are refused.
+     */
+    static boolean isOpen(ServerLevel level, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        return state.getFluidState().isEmpty()
+                && state.getCollisionShape(level, pos).isEmpty()
+                && !state.is(BlockTags.FIRE)
+                && !state.is(Blocks.POWDER_SNOW)
+                && !state.is(Blocks.SWEET_BERRY_BUSH);
     }
 
     /**
@@ -225,8 +244,9 @@ final class EventSpawns {
 
     /** Whether one of the species' types is wanted. */
     private static boolean hasType(HabitatEntry entry, Set<String> wanted) {
-        for (ElementalType type : entry.species().getTypes()) {
-            if (wanted.contains(type.getName().toLowerCase(Locale.ROOT))) {
+        // The form the spawn makes, not the species' standard one: an Alolan Vulpix is Ice.
+        for (String type : FormTypes.of(entry.species(), entry.template())) {
+            if (wanted.contains(type)) {
                 return true;
             }
         }

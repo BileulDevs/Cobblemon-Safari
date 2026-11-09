@@ -41,9 +41,10 @@ public record SafariFeaturedPayload(boolean enabled, long millisUntilRotation, l
     /**
      * Upper bound on entries read from the wire. Far above any sane slot
      * configuration; protects the client from allocating a list sized by a
-     * corrupted varint.
+     * corrupted varint. A list over it disconnects the player, so the
+     * config's validation keeps the specials' slots under it (public).
      */
-    private static final int MAX_ENTRIES = 64;
+    public static final int MAX_ENTRIES = 64;
 
     /** Same idea for the aspects of one entry. */
     private static final int MAX_ASPECTS = 32;

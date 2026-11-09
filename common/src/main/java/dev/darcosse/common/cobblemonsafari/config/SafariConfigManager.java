@@ -1,5 +1,6 @@
 package dev.darcosse.common.cobblemonsafari.config;
 
+import dev.darcosse.common.cobblemonsafari.network.SafariFeaturedPayload;
 import dev.darcosse.common.cobblemonsafari.spawn.SwarmRules;
 import dev.darcosse.common.cobblemonsafari.worldgen.IslandRelief;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
@@ -66,6 +67,8 @@ public final class SafariConfigManager {
      * clerk's swap functions, one per mission (SafariBounties.MAX_MISSIONS).
      */
     private static final int MAX_BOUNTIES = SafariBounties.MAX_MISSIONS;
+    /** Rarities with specials slots (common, uncommon, rare, ultra-rare), to share the board's limit between them. */
+    private static final int SPECIAL_RARITIES = 4;
 
     /**
      * Format version written to the file. Raise it when a field changes
@@ -253,7 +256,7 @@ public final class SafariConfigManager {
         int version = tree.version(CURRENT_CONFIG_VERSION);
         migrateLegacyKeys(tree, version);
         migrateToSections(tree);
-        // The 1.4.1 development builds wrote the swarm's bucket list under
+        // The 1.5.0 development builds wrote the swarm's bucket list under
         // "rarities", which now holds the legendary-class switches: an array
         // there would fail to bind and the whole file would be refused.
         if (tree.get("events.swarm.rarities") instanceof JsonArray) {
@@ -1134,6 +1137,16 @@ public final class SafariConfigManager {
             slots.rare = Math.max(0, slots.rare);
             slots.ultraRare = Math.max(0, slots.ultraRare);
             warn("specials.slots", "negative", 0);
+            corrected = true;
+        }
+        // The board sends every special: more than the client reads would disconnect every player.
+        int perRarity = SafariFeaturedPayload.MAX_ENTRIES / SPECIAL_RARITIES;
+        if (slots.common + slots.uncommon + slots.rare + slots.ultraRare > SafariFeaturedPayload.MAX_ENTRIES) {
+            slots.common = Math.min(perRarity, slots.common);
+            slots.uncommon = Math.min(perRarity, slots.uncommon);
+            slots.rare = Math.min(perRarity, slots.rare);
+            slots.ultraRare = Math.min(perRarity, slots.ultraRare);
+            warn("specials.slots", "more than " + SafariFeaturedPayload.MAX_ENTRIES + " in all", perRarity + " each at most");
             corrected = true;
         }
         if (f.spawn == null) {

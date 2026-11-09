@@ -246,7 +246,7 @@ A few species, uncommon, rare and ultra-rare by default, drawn from what is inst
 |---|---|---|
 | `enabled` | `true` | Master switch for the rotation, the wall screens' specials page and the special spawner. |
 | `rotationMinutes` | `240` (4 h) | Length of a rotation, in real minutes. When it divides a day, rotations are aligned on midnight UTC: 240 changes the specials at 0, 4, 8, 12, 16 and 20 h UTC. Missions, the shop's random goods and the purchase limits follow the same rotation. At least 1. |
-| `slots` | see below | How many specials of each rarity a rotation draws. |
+| `slots` | see below | How many specials of each rarity a rotation draws. 64 in all at most (what the clients read): above, each rarity is cut to 16, with a warning. |
 | `spawn` | see below | How the mod brings the specials into the park. |
 
 `specials.slots`: species drawn per rotation, by rarity in the Safari. 0 or more.
@@ -397,7 +397,7 @@ With the default missions, the defaults give about 600 points per hour of active
 
 #### `restHouses.travel`: trips between the rest houses
 
-The Safari Guide of every rest house takes players to any other house of the island, named by its biome (with its direction, "Jungle Safari (north)", when two houses share a biome). The Escape Rope can take them to the nearest one. Every trip is filmed while the destination loads, and a house nobody went near yet is built during it: a double of the player, wearing their skin, takes off on the first Pokémon of their party that can be ridden in the air (a copy of it: the party is not touched), or on a Staraptor when none can, and lands in front of the destination, filmed by the game camera; players around see it too. The guide's trips take off from the house's steps; the Escape Rope's from where it was used, and from a cave the player is first brought to the nearest safe open-air spot, within 12 blocks around, under a black screen. A trip into or out of a cave burrows, and the rope in the water swims, the same way. When the trip cannot be filmed (no open sky to take off, no open-air spot within 12 blocks of a cave, no flyer and no Staraptor), it shows a painted landscape for the guide and a pixel-art scene for the rope. How the trips are shown is not a setting.
+The Safari Guide of every rest house takes players to any other house of the island, named by its biome (with its direction, "Jungle (north)", when two houses share a biome). The Escape Rope can take them to the nearest one. Every trip is filmed while the destination loads, and a house nobody went near yet is built during it: a double of the player, wearing their skin, takes off on the first Pokémon of their party that can be ridden in the air (a copy of it: the party is not touched), or on a Staraptor when none can, and lands in front of the destination, filmed by the game camera; players around see it too. The guide's trips take off from the house's steps; the Escape Rope's from where it was used, and from a cave the player is first brought to the nearest safe open-air spot, within 12 blocks around, under a black screen. A trip into or out of a cave burrows, and the rope in the water swims, the same way. When the trip cannot be filmed (no open sky to take off, no open-air spot within 12 blocks of a cave, no flyer and no Staraptor), it shows a painted landscape for the guide and a pixel-art scene for the rope. How the trips are shown is not a setting.
 
 | Key | Default | What it does |
 |---|---|---|
@@ -498,7 +498,7 @@ The Safari Warden (at every gate) and the Safari Clerk (in every rest house) ope
 |---|---|---|
 | `enabled` | `true` | `false` closes the shop: the NPCs say so. |
 | `defaults.limit` | none | Limit of an offer that sets none (see `limit` below). |
-| `tabs` | Pokémon, Items, Poké Balls, Cooking, Tickets | The tabs of the screen, in display order, with what they sell. |
+| `tabs` | Pokémon, Items, Poké Balls, Cooking, Tickets | The tabs of the screen, in display order, with what they sell. 64 at most: the ones after are dropped, with a warning. |
 
 ### `tabs`
 
@@ -524,7 +524,7 @@ Each offer sells exactly one of: an item, a Pokémon, or a ready-made dish.
 | `snack` | A dish already cooked: `{"base": "cobblemon:poke_snack", "seasonings": ["cobblemon:passho_berry", ...]}`, up to 3 seasonings, as the Poké Pot would make it (colour, ingredients, bait effects). `processors` (optional) lists the Cobblemon seasoning processors to run; absent, those of the dish's own Poké Pot recipe. A seasoning's bait effect comes from Cobblemon's data: type berries (Passho, Occa...) and egg-group berries (Aspear, Rawst...) bring those Pokémon, Starf rerolls for a shiny, Enigma gives a chance of a hidden ability; Oran, Sitrus and other fishing berries do nothing on a snack. |
 | `count` | Stack given, for an item or a dish, 1 to 64. Absent: 1. |
 | `price` | Cost in Safari points (0 for free). For a Pokémon, `"auto"` prices it like the drawn ones. |
-| `cost` | Items taken in exchange, on top of `price`: a list of `{"item": ..., "count": ...}`, each `item` an id or a `#tag` (any mix of the tag's items counts; a player carrying several kinds picks which one is given first). |
+| `cost` | Items taken in exchange, on top of `price`: a list of `{"item": ..., "count": ...}`, each `item` an id or a `#tag` (any mix of the tag's items counts; a player carrying several kinds picks which one is given first). 16 costs at most per offer, and 512 items of a tag at most (the clients read no more): the rest is dropped, with a warning. |
 | `limit` | How often a player may buy it, see below. Absent: `defaults.limit`. |
 
 `limit`, for every offer, fixed or drawn; all its keys are optional and each set one applies:

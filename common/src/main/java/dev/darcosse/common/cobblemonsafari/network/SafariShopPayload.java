@@ -45,13 +45,18 @@ public record SafariShopPayload(boolean refresh, int points, long rotation, List
     public static final int KIND_ITEM = 1;
     public static final int KIND_POKEMON = 2;
 
-    /** Guards against corrupted or hostile packets announcing huge lists. */
+    /**
+     * Guards against corrupted or hostile packets announcing huge lists. The
+     * client refuses a packet over them, which disconnects the player: the
+     * server side keeps under them (the shop config's validation for the
+     * tabs and the costs, SafariShop for a tag's items), so they are public.
+     */
     private static final int MAX_ENTRIES = 4096;
     private static final int MAX_ASPECTS = 64;
-    private static final int MAX_TABS = 64;
-    private static final int MAX_COSTS = 16;
+    public static final int MAX_TABS = 64;
+    public static final int MAX_COSTS = 16;
     /** Items one cost may accept: a large tag (every berry is about 70). */
-    private static final int MAX_COST_ITEMS = 512;
+    public static final int MAX_COST_ITEMS = 512;
 
     public static final CustomPacketPayload.Type<SafariShopPayload> TYPE =
             new CustomPacketPayload.Type<>(CobblemonSafari.id("shop"));

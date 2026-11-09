@@ -40,7 +40,7 @@ public final class SafariWorldState extends SavedData {
     /**
      * Rotation index at {@link #rotationAnchorMillis}: the index running now is
      * this plus the whole rotations elapsed since the anchor. With the anchor
-     * at 0 (never rotated by hand, or a world from before 1.4.1, where this
+     * at 0 (never rotated by hand, or a world from before 1.5.0, where this
      * counted the forced rotations), the schedule is the clock's, aligned on
      * midnight UTC. Each /safari rotate sets it to the next index, so it only
      * ever grows and a forced rotation never reuses the number, and thus the
@@ -286,7 +286,7 @@ public final class SafariWorldState extends SavedData {
         state.rotationSalt = nbt.getLong("rotation_salt");
         // Absent: 0, no rotation forced yet.
         state.rotationOffset = nbt.getLong("rotation_offset");
-        // Absent (before 1.4.1): 0, the clock's schedule, on which the old offset
+        // Absent (before 1.5.0): 0, the clock's schedule, on which the old offset
         // was counted, so a saved world keeps its current rotation number.
         state.rotationAnchorMillis = nbt.getLong("rotation_anchor_millis");
         // Absent: no rotation recorded, so nothing is excluded.

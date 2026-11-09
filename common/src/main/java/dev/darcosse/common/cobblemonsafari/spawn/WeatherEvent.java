@@ -10,6 +10,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.BooleanSupplier;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -23,8 +24,9 @@ import java.util.function.Supplier;
  * starting, a day dawning): each time the trigger turns true while the
  * condition holds, a draw ({@code chance}) decides whether the event comes.
  * The condition is what it needs to last (rain, a dry day); the event lasts
- * between the given minimum and maximum, in wall-clock minutes, or less if
- * the condition stops first. For a weather event both are the weather.
+ * between the given minimum and maximum, in minutes counted by its own
+ * once-a-second calls (so a paused single player game pauses it too, and a
+ * lagging server stretches it), or less if the condition stops first. For a weather event both are the weather.
  * Nothing here changes the weather or the time. The first reading after a
  * server start is never a trigger, so restarting cannot reroll a moment;
  * the event itself is not saved.
@@ -34,7 +36,8 @@ import java.util.function.Supplier;
  */
 final class WeatherEvent {
 
-    private static final long MILLIS_PER_MINUTE = 60_000L;
+    /** Calls to {@link #tick} in a minute: it is called once a second. */
+    private static final int TICKS_PER_MINUTE = 60;
 
     /** What happened at a tick, for the event to react (build its pool, clear its state). */
     enum Change { NONE, STARTED, ENDED }
@@ -47,8 +50,12 @@ final class WeatherEvent {
     private final Predicate<ServerLevel> condition;
 
     private volatile boolean active;
-    /** When the current event ends, in wall-clock millis. */
-    private long endMillis;
+    /**
+     * Calls to {@link #tick} left before the current event ends. Counted rather
+     * than read from the wall clock: the clock runs on while a single player
+     * game is paused, and an event could be over before the player resumes.
+     */
+    private int secondsLeft;
     /** The trigger at the last check; null before the first one, so a moment already there is never drawn. */
     @Nullable
     private Boolean hadTrigger;
@@ -80,7 +87,7 @@ final class WeatherEvent {
     /** Forgets everything; for a server start, as single player reuses the event classes. */
     void reset() {
         active = false;
-        endMillis = 0L;
+        secondsLeft = 0;
         hadTrigger = null;
         told.clear();
     }
@@ -105,13 +112,25 @@ final class WeatherEvent {
      */
     Change tick(@Nullable ServerLevel safari, boolean enabled, double chance, int minMinutes, int maxMinutes,
                 Supplier<Component> started, Supplier<Component> ended) {
+        return tick(safari, enabled, chance, minMinutes, maxMinutes, () -> true, started, ended);
+    }
+
+    /**
+     * As {@link #tick(ServerLevel, boolean, double, int, int, Supplier, Supplier)},
+     * with a last check made only once the draw has said yes: {@code ready}
+     * false keeps the event from starting (and from being announced), as for
+     * an event whose Pokémon pool turns out empty. It may build what the
+     * event needs, since it runs at most once per moment.
+     */
+    Change tick(@Nullable ServerLevel safari, boolean enabled, double chance, int minMinutes, int maxMinutes,
+                BooleanSupplier ready, Supplier<Component> started, Supplier<Component> ended) {
         boolean triggered = safari != null && trigger.test(safari);
         boolean lasting = safari != null && condition.test(safari);
         boolean moment = Boolean.FALSE.equals(hadTrigger) && triggered;
         hadTrigger = safari == null ? null : triggered;
 
         Change change = Change.NONE;
-        if (active && (!lasting || !enabled || System.currentTimeMillis() >= endMillis)) {
+        if (active && (!lasting || !enabled || --secondsLeft <= 0)) {
             active = false;
             change = Change.ENDED;
             if (safari != null) {
@@ -123,9 +142,9 @@ final class WeatherEvent {
                 }
             }
             told.clear();
-        } else if (!active && moment && lasting && enabled && random.nextDouble() < chance) {
+        } else if (!active && moment && lasting && enabled && random.nextDouble() < chance && ready.getAsBoolean()) {
             int minutes = minMinutes + random.nextInt(maxMinutes - minMinutes + 1);
-            endMillis = System.currentTimeMillis() + minutes * MILLIS_PER_MINUTE;
+            secondsLeft = minutes * TICKS_PER_MINUTE;
             active = true;
             change = Change.STARTED;
             CobblemonSafari.LOGGER.info("{} in the Safari for up to {} min", name, minutes);

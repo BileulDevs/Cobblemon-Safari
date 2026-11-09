@@ -265,6 +265,12 @@ public final class SafariShop {
             List<ItemStack> items = new ArrayList<>();
             BuiltInRegistries.ITEM.getTag(TagKey.create(Registries.ITEM, id))
                     .ifPresent(tag -> tag.forEach(holder -> items.add(new ItemStack(holder.value()))));
+            // The client refuses a cost listing more items, which would disconnect the buyer.
+            if (items.size() > SafariShopPayload.MAX_COST_ITEMS) {
+                CobblemonSafari.LOGGER.warn("Shop cost tag #{} has {} items; only the first {} are accepted", id,
+                        items.size(), SafariShopPayload.MAX_COST_ITEMS);
+                return List.copyOf(items.subList(0, SafariShopPayload.MAX_COST_ITEMS));
+            }
             return items;
         }
         return BuiltInRegistries.ITEM.containsKey(id) ? List.of(new ItemStack(BuiltInRegistries.ITEM.get(id))) : List.of();

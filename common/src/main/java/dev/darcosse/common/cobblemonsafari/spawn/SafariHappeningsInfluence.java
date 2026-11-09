@@ -6,16 +6,14 @@ import com.cobblemon.mod.common.api.spawning.detail.SpawnDetail;
 import com.cobblemon.mod.common.api.spawning.influence.SpawningInfluence;
 import com.cobblemon.mod.common.api.spawning.position.SpawnablePosition;
 import com.cobblemon.mod.common.api.spawning.spawner.PlayerSpawner;
-import com.cobblemon.mod.common.api.types.ElementalType;
 import com.cobblemon.mod.common.pokemon.Species;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
 import dev.darcosse.common.cobblemonsafari.dimension.SafariDimensions;
+import dev.darcosse.common.cobblemonsafari.util.FormTypes;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -53,8 +51,12 @@ public final class SafariHappeningsInfluence implements SpawningInfluence {
     /** The one instance; spawners hold it, so it is found again by identity. */
     public static final SafariHappeningsInfluence INSTANCE = new SafariHappeningsInfluence();
 
-    /** Species id to its lower-case type names; species types never change while the data stays. */
-    private static final Map<String, Set<String>> TYPES = new ConcurrentHashMap<>();
+    /**
+     * Spawn detail to the lower-case type names of the form it makes. By
+     * detail rather than by species: an Alolan Vulpix detail is Ice, the
+     * plain one Fire. Details are rebuilt on a data reload, which clears this.
+     */
+    private static final Map<PokemonSpawnDetail, Set<String>> TYPES = new ConcurrentHashMap<>();
 
     private SafariHappeningsInfluence() {
     }
@@ -112,16 +114,16 @@ public final class SafariHappeningsInfluence implements SpawningInfluence {
                 && position.getBiomeHolder().is(swarm.biome())) {
             result *= (float) SafariConfigManager.get().events.swarm.weightMultiplier;
         }
-        if (SafariHappenings.fullMoon() && hasType(speciesId, SafariHappenings.fullMoonTypes())) {
+        if (SafariHappenings.fullMoon() && hasType(pokemonDetail, SafariHappenings.fullMoonTypes())) {
             result *= (float) SafariConfigManager.get().events.fullMoon.weightMultiplier;
         }
         // The type test first: it is a cached set lookup, the spot test a biome temperature read.
-        if (Downpour.isActive() && hasType(speciesId, Downpour.types())
+        if (Downpour.isActive() && hasType(pokemonDetail, Downpour.types())
                 && Downpour.fallsOnSpot(position.getCanSeeSky(), position.getBiomeHolder().value(),
                 position.getPosition())) {
             result *= (float) SafariConfigManager.get().events.downpour.weightMultiplier;
         }
-        if (Heatwave.isActive() && hasType(speciesId, Heatwave.types()) && Heatwave.bakes(position.getBiomeHolder())) {
+        if (Heatwave.isActive() && hasType(pokemonDetail, Heatwave.types()) && Heatwave.bakes(position.getBiomeHolder())) {
             result *= (float) SafariConfigManager.get().events.heatwave.weightMultiplier;
         }
         return result;
@@ -132,12 +134,12 @@ public final class SafariHappeningsInfluence implements SpawningInfluence {
         return position.getSpawner() instanceof PlayerSpawner && SafariDimensions.isSafari(position.getWorld());
     }
 
-    /** Whether one of the species' types is in a happening's favoured types. */
-    private static boolean hasType(String speciesId, Set<String> favoured) {
+    /** Whether one of the types of the form the detail makes is in a happening's favoured types. */
+    private static boolean hasType(PokemonSpawnDetail detail, Set<String> favoured) {
         if (favoured.isEmpty()) {
             return false;
         }
-        Set<String> types = TYPES.computeIfAbsent(speciesId, SafariHappeningsInfluence::typesOf);
+        Set<String> types = TYPES.computeIfAbsent(detail, SafariHappeningsInfluence::typesOf);
         for (String type : types) {
             if (favoured.contains(type)) {
                 return true;
@@ -146,17 +148,11 @@ public final class SafariHappeningsInfluence implements SpawningInfluence {
         return false;
     }
 
-    /** The species' type names, lower case; empty for an unknown species. */
-    private static Set<String> typesOf(String speciesId) {
-        ResourceLocation id = ResourceLocation.tryParse(speciesId);
+    /** Type names of the detail's form, lower case; empty for an unknown species. */
+    private static Set<String> typesOf(PokemonSpawnDetail detail) {
+        String raw = detail.getPokemon().getSpecies();
+        ResourceLocation id = raw == null ? null : ResourceLocation.tryParse(SpeciesRules.normalizeId(raw));
         Species species = id == null ? null : PokemonSpecies.getByIdentifier(id);
-        if (species == null) {
-            return Set.of();
-        }
-        Set<String> names = new HashSet<>();
-        for (ElementalType type : species.getTypes()) {
-            names.add(type.getName().toLowerCase(Locale.ROOT));
-        }
-        return Set.copyOf(names);
+        return species == null ? Set.of() : FormTypes.of(species, detail.getPokemon());
     }
 }

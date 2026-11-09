@@ -19,7 +19,8 @@ import java.util.ArrayList;
  * The egg nests' spawner: a permanent event, never announced. Every
  * {@code checkEverySeconds}, each player with a session gets a draw; on a
  * success a straw nest ({@link SafariNestEntity}) holding an egg of a drawn
- * line ({@link EggSpecies}) is put on open, dry ground 24 to 48 blocks away
+ * line ({@link EggSpecies}) is put on dry ground, in air (never in grass or
+ * flowers), 24 to 48 blocks away
  * by default, unless another nest is already within
  * {@code exclusionRadius}. Called once a second by {@link SafariHappenings}.
  * Server side.
@@ -68,8 +69,10 @@ public final class EggNests {
     /** One try at putting a nest near a player; a failed spot costs nothing more than waiting for the next draw. */
     private static void tryPlace(ServerLevel level, ServerPlayer player, SafariConfig.EggNests config,
                                  RandomSource random) {
+        // Air only, unlike a Pokémon's spot: a nest drawn inside a tuft of grass or a flower would be hidden.
         BlockPos spot = EventSpawns.spotNear(level, player, config.minDistance, config.maxDistance,
-                pos -> !hasNestNear(level, pos, config.exclusionRadius), random);
+                pos -> level.getBlockState(pos).isAir() && level.getBlockState(pos.above()).isAir()
+                        && !hasNestNear(level, pos, config.exclusionRadius), random);
         if (spot == null) {
             return;
         }

@@ -143,7 +143,8 @@ public final class FeaturedSpawner {
         }
         BlockState below = level.getBlockState(feet.below());
         boolean water = !below.getFluidState().isEmpty();
-        if (!water && (below.isAir() || !level.getBlockState(feet).isAir() || !level.getBlockState(feet.above()).isAir())) {
+        // Open rather than air: a tuft of grass at the feet must not refuse the spot (see EventSpawns.isOpen).
+        if (!water && (below.isAir() || !EventSpawns.isOpen(level, feet) || !EventSpawns.isOpen(level, feet.above()))) {
             return;
         }
         // Water species go into the water itself; land species stand on the ground.

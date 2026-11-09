@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import dev.darcosse.common.cobblemonsafari.network.SafariShopPayload;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -445,6 +446,13 @@ public final class SafariShopConfigManager {
             kept = SafariShopConfig.defaultTabs();
             corrected = true;
         }
+        // More tabs than the client reads would disconnect every player opening the shop.
+        if (kept.size() > SafariShopPayload.MAX_TABS) {
+            CobblemonSafari.LOGGER.warn("The shop has {} tabs; only the first {} are kept", kept.size(),
+                    SafariShopPayload.MAX_TABS);
+            kept = new ArrayList<>(kept.subList(0, SafariShopPayload.MAX_TABS));
+            corrected = true;
+        }
         c.tabs = kept;
         return corrected;
     }
@@ -577,6 +585,13 @@ public final class SafariShopConfigManager {
         entry.cost.removeIf(cost -> cost == null || cost.id() == null);
         if (entry.cost.size() != before) {
             CobblemonSafari.LOGGER.warn("Removed invalid costs from a shop offer in {}", where);
+            corrected = true;
+        }
+        // More costs than the client reads would disconnect every player opening the shop.
+        if (entry.cost.size() > SafariShopPayload.MAX_COSTS) {
+            CobblemonSafari.LOGGER.warn("A shop offer in {} has {} costs; only the first {} are kept", where,
+                    entry.cost.size(), SafariShopPayload.MAX_COSTS);
+            entry.cost = new ArrayList<>(entry.cost.subList(0, SafariShopPayload.MAX_COSTS));
             corrected = true;
         }
         for (SafariShopConfig.Cost cost : entry.cost) {
