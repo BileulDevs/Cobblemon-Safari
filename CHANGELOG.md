@@ -50,6 +50,7 @@ New network protocol (`1.6.0`): clients and servers must both update (the specia
 
 ### Changed
 
+- **Cobblemon 1.8.x only**: the mod now declares Cobblemon from 1.8.0 up to, but not including, 1.9 (it accepted any later version before). A Cobblemon 1.9 install is refused by the loader with a clear message, instead of starting with a version the mod was never tested against.
 - **The clerk's answers are grouped**: "Tell me about the missions" leads to the current missions and the swap, a new "Tell me about the Safari's events" explains each event on the server (swarms, full moon nights, downpours, storms, heatwaves, auroras, egg nests) with its current chances, types and places, and leaving the Safari is now the answer before last.
 - **`spawns.caughtSpeciesWeight` defaults to 0.3** (was 0.4): a species not caught yet is more than three times as likely as a caught one. Existing `server.json` files keep their value.
 - **The jungle is more open**: patches of thick jungle and of bamboo jungle in a sparse jungle, so Pokémon can be seen and the biome crossed. Still one biome. New maps only.

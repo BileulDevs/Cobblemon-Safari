@@ -107,7 +107,7 @@ Operators (level 2) have `/safari info`, `enter`, `exit`, `time`, `credit add`, 
 
 ## Installation
 
-1. Install [Cobblemon](https://www.curseforge.com/minecraft/mc-mods/cobblemon) 1.8.0 or later for Minecraft 1.21.1.
+1. Install [Cobblemon](https://www.curseforge.com/minecraft/mc-mods/cobblemon) 1.8.x (1.8.0 or later, below 1.9) for Minecraft 1.21.1.
 2. Drop the Cobblemon Safari jar for your loader into the `mods` folder.
 3. Start the game. The config files are created in `config/cobblemon_safari/`.
 
@@ -116,7 +116,7 @@ Operators (level 2) have `/safari info`, `enter`, `exit`, `time`, `credit add`, 
 | Dependency | Required | Version |
 |---|---|---|
 | Minecraft | Yes | 1.21.1 |
-| Cobblemon | Yes | 1.8.0+ |
+| Cobblemon | Yes | 1.8.x (>= 1.8.0, < 1.9) |
 | Fabric API | Yes (Fabric) | any for 1.21.1 |
 | Fabric Language Kotlin | Yes (Fabric) | any |
 | NeoForge | Yes (NeoForge) | 21.1.182+ |
