@@ -7,7 +7,12 @@ import com.cobblemon.mod.common.pokemon.Species;
 import dev.darcosse.common.cobblemonsafari.CobblemonSafari;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfig;
 import dev.darcosse.common.cobblemonsafari.config.SafariConfigManager;
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.biome.Biome;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -17,11 +22,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 
 /**
- * Which Pokémon an egg of a Safari nest is: any evolution line of
- * Cobblemon's implemented species, every line as likely, hatching into the
- * line's first stage. The lines are grouped once per data reload; the
+ * Which Pokémon an egg of a Safari nest is: an evolution line of Cobblemon's
+ * implemented species, every allowed line as likely, hatching into the line's
+ * first stage. A nest's egg comes from a line living in the habitat where the
+ * nest lies ({@link #drawFor}); an egg with no known place draws among every
+ * line ({@link #draw}). The lines are grouped once per data reload; the
  * config's filters are applied at each draw, so a config reload acts at once.
  * Server side.
  */
@@ -51,11 +59,52 @@ public final class EggSpecies {
     }
 
     /**
-     * A species for a new egg, drawn among the lines the config allows; null
-     * when it allows none.
+     * A species for an egg found at a spot: drawn among the allowed lines one
+     * species of which lives in the spot's biome, on land or in the water, as
+     * the specials board lists it ({@link FeaturedRotation#index}). A line
+     * counts as soon as one of its stages lives there (Magmar in the volcano
+     * gives a Magby egg). Null when no allowed line lives there, when the spot
+     * is not in a Safari habitat, or while the habitat index is still empty.
+     * Cost: one index lookup per species of each allowed line, about a
+     * thousand, only when a nest is placed.
+     */
+    @Nullable
+    public static Species drawFor(ServerLevel level, BlockPos pos, RandomSource random) {
+        ResourceKey<Biome> biome = level.getBiome(pos).unwrapKey().orElse(null);
+        if (biome == null) {
+            return null;
+        }
+        Map<ResourceLocation, HabitatEntry> index = FeaturedRotation.index(level.getServer());
+        return drawAmong(random, line -> livesIn(line, biome, index));
+    }
+
+    /**
+     * A species for an egg with no known place (a creative egg, a nest summoned
+     * outside a habitat), drawn among every line the config allows; null when
+     * it allows none.
      */
     @Nullable
     public static Species draw(RandomSource random) {
+        return drawAmong(random, line -> true);
+    }
+
+    /** Whether one species of the line lives in the biome, on land or in the water. */
+    private static boolean livesIn(Line line, ResourceKey<Biome> biome, Map<ResourceLocation, HabitatEntry> index) {
+        for (Species species : line.members()) {
+            HabitatEntry entry = index.get(species.getResourceIdentifier());
+            if (entry != null && (entry.landHabitats().contains(biome) || entry.waterHabitats().contains(biome))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Draws the first stage of one line among those the config allows and the
+     * given test accepts, every such line as likely; null when there is none.
+     */
+    @Nullable
+    private static Species drawAmong(RandomSource random, Predicate<Line> accepted) {
         SafariConfig config = SafariConfigManager.get();
         SafariConfig.EggNests nests = config.events.eggNests;
         Set<EggGroup> excludedGroups = parseGroups(nests.excludedEggGroups);
@@ -72,7 +121,7 @@ public final class EggSpecies {
             if (excluded.contains(rootId) || config.spawns.excludedSpecies.contains(rootId)) {
                 continue;
             }
-            if (hasEggGroups(line, excludedGroups) && categoriesAllowed(line, nests.rarities)) {
+            if (hasEggGroups(line, excludedGroups) && categoriesAllowed(line, nests.rarities) && accepted.test(line)) {
                 candidates.add(line.root());
             }
         }

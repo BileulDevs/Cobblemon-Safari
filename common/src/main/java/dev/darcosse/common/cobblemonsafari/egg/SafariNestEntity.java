@@ -13,6 +13,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -147,7 +148,14 @@ public class SafariNestEntity extends Entity {
     private Species species() {
         Species species = speciesId == null ? null : PokemonSpecies.INSTANCE.getByIdentifier(speciesId);
         if (species == null) {
-            species = EggSpecies.draw(level().getRandom());
+            // A nest summoned by hand takes an egg of its habitat too; outside any
+            // Safari habitat (a test in another world) any line will do.
+            if (level() instanceof ServerLevel server) {
+                species = EggSpecies.drawFor(server, blockPosition(), server.getRandom());
+            }
+            if (species == null) {
+                species = EggSpecies.draw(level().getRandom());
+            }
             if (species != null) {
                 speciesId = species.getResourceIdentifier();
             }

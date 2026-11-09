@@ -18,8 +18,8 @@ import java.util.ArrayList;
 /**
  * The egg nests' spawner: a permanent event, never announced. Every
  * {@code checkEverySeconds}, each player with a session gets a draw; on a
- * success a straw nest ({@link SafariNestEntity}) holding an egg of a drawn
- * line ({@link EggSpecies}) is put on dry ground, in air (never in grass or
+ * success a straw nest ({@link SafariNestEntity}) holding an egg of a line
+ * living in the habitat where it lies ({@link EggSpecies#drawFor}) is put on dry ground, in air (never in grass or
  * flowers), 24 to 48 blocks away
  * by default, unless another nest is already within
  * {@code exclusionRadius}. Called once a second by {@link SafariHappenings}.
@@ -76,9 +76,10 @@ public final class EggNests {
         if (spot == null) {
             return;
         }
-        Species species = EggSpecies.draw(random);
+        Species species = EggSpecies.drawFor(level, spot, random);
         if (species == null) {
-            // The config allows no line at all: nothing to put in a nest.
+            // No allowed line lives in this habitat (or the habitat index is not built
+            // yet): no nest rather than an egg foreign to the place.
             return;
         }
         SafariNestEntity nest = SafariEntities.safariNest().create(level);
