@@ -40,10 +40,19 @@ The sections, in the order of the file: `hunt`, `tickets`, `gate`, `balls`, `bat
 | Key | Default | What it does |
 |---|---|---|
 | `maxDurationSeconds` | `7200` (2 h) | Longest a hunt can last. Adding time never goes above it, and one entry spends at most this much banked time: the rest stays in the bank. At least 1. |
-| `pauseWhileOffline` | `true` | `true`: the clock only runs while the player is online and inside. `false`: it keeps running while they are offline, and they are escorted out at their next login if it ran out. |
 | `warningsAtSeconds` | `[900, 600, 300, 60, 30, 10]` | Time left, in seconds, at which the player gets a chat warning. The colour follows the time left: white, yellow from 5 minutes, red from 1 minute. Zero, negative and duplicate values are dropped. |
 | `exitDestination` | `"RETURN_POINT"` | Where players go when the hunt ends. `"RETURN_POINT"`: exactly where they entered from. `"WORLD_SPAWN"`: the overworld spawn, for a hub server. |
 | `exemptCreativeAndSpectator` | `true` | For building and moderation, creative and spectator players: may roam inside without a session; may enter through a gate, its warden or `/safari enter` with an empty time bank (the session then holds no time, and ends as soon as they switch to survival or adventure); keep their clock stopped while they stay in creative or spectator, banked hunt time included; ignore the terrain protection. Does not apply at login: a player who logs in inside without a session is always sent out. |
+
+### `hunt.timer`: when the clock stops
+
+When the hunt clock stops counting down (creative and spectator players have their own pause, `hunt.exemptCreativeAndSpectator` above). While it is paused, the HUD and the wall screens show the time left without counting it down.
+
+| Key | Default | What it does |
+|---|---|---|
+| `pauseWhileOffline` | `true` | `true`: the clock only runs while the player is online and inside. `false`: it keeps running while they are offline, and they are escorted out at their next login if it ran out. |
+| `pauseInRestHouses` | `true` | `true`: the clock is paused while the player stands in a rest house (its walls and front steps), so healing, shopping and cooking cost no hunting time. `false`: it keeps running there. A clock already at zero is not saved by stepping inside. |
+| `pauseDuringTravel` | `true` | `true`: the clock is paused during a guide or Escape Rope trip, its cinematic included, from the departure to the arrival. `false`: the trip costs its few seconds. |
 
 ### `tickets`: Safari Tickets
 
@@ -666,7 +675,7 @@ A file written by an older version of the mod is converted on load, then saved i
 | Before | Now |
 |---|---|
 | `maxDurationSeconds`, `exitDestination`, `exemptCreativeAndSpectator` | `hunt.` same name |
-| `pauseTimeWhileOffline` | `hunt.pauseWhileOffline` |
+| `pauseTimeWhileOffline` | `hunt.timer.pauseWhileOffline` |
 | `warningThresholdsSeconds` | `hunt.warningsAtSeconds` |
 | `ticket.defaultDurationSeconds`, `ticket.minAddedSeconds`, `ticket.refundUnusedTimeOnLeave` | `tickets.` same name |
 | `ticket.extendsActiveSession` | `tickets.addToCurrentHunt` |
@@ -706,6 +715,8 @@ Older conversions still apply on the way:
 - **Version 4 or older**: a ticket loot list still holding the earlier defaults gets the 1.3.0 ones.
 - **Before version 6**: the fishing missions (`FISHING`) are added once to `missions.allowedKinds`.
 - **Earlier 1.4.0 builds**: `capture.flee.commonChance`... `ultraRareChance`, `specialCategories` and `rarity` go into `capture.flee.rarities`; `restHouses.guide`, `cooldownSeconds` and `cinematicSeconds` go into `restHouses.travel`, and `restHouses.cinematicStyle` is removed.
+
+`server.json` before version 17 (Cobblemon Safari 1.5.0 and earlier): `hunt.pauseWhileOffline` goes to `hunt.timer.pauseWhileOffline`.
 
 `client.json` before version 2: `hudEnabled`, `hudAnchor`, `hudOffsetX`, `hudOffsetY`, `lowTimeSeconds` and `criticalTimeSeconds` go to `hud.enabled`, `hud.anchor`, `hud.offsetX`, `hud.offsetY`, `hud.lowTimeSeconds` and `hud.criticalTimeSeconds`; `board.featuredFooter`, `statsFooter`, `bountiesFooter` and `dexFooter` go to `board.footers.specials`, `stats`, `missions` and `dex`.
 

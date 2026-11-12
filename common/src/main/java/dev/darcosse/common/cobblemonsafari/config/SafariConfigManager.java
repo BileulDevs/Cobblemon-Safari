@@ -104,9 +104,11 @@ public final class SafariConfigManager {
      * migrateTree). 15 added events.eggNests and capture.marks.nest:
      * nothing to convert, raised so that existing files show the new keys.
      * 16 added reset.mode, reset.maxWaitMinutes and reset.countdownSeconds:
-     * nothing to convert either.
+     * nothing to convert either. 17 (1.5.1) grouped the clock's pauses under
+     * hunt.timer: hunt.pauseWhileOffline moved there, next to the new
+     * pauseInRestHouses and pauseDuringTravel (see migrateTree).
      */
-    public static final int CURRENT_CONFIG_VERSION = 16;
+    public static final int CURRENT_CONFIG_VERSION = 17;
 
     /** First version that knows the fishing missions. */
     private static final int FISHING_MISSION_VERSION = 6;
@@ -281,6 +283,12 @@ public final class SafariConfigManager {
         // Its habitats only ever chose the group, so the name now says so.
         tree.move("events.aurora.habitats", "events.aurora.frozenHabitats");
         tree.remove("events.storm.weights", "the storm's rarities are fixed");
+        // Version 17 grouped the clock's pauses. After migrateToSections, so that a
+        // pre-1.4 pauseTimeWhileOffline lands here too; the two rest keys cover a
+        // development build of 1.5.1 that wrote them straight under hunt.
+        for (String key : List.of("pauseWhileOffline", "pauseInRestHouses", "pauseDuringTravel")) {
+            tree.move("hunt." + key, "hunt.timer." + key);
+        }
     }
 
     /**
@@ -635,6 +643,11 @@ public final class SafariConfigManager {
         if (hunt.maxDurationSeconds < MIN_DURATION_SECONDS) {
             warn("hunt.maxDurationSeconds", hunt.maxDurationSeconds, huntDefaults.maxDurationSeconds);
             hunt.maxDurationSeconds = huntDefaults.maxDurationSeconds;
+            corrected = true;
+        }
+        if (hunt.timer == null) {
+            // "timer": null in the file; a missing section is already built from its defaults.
+            hunt.timer = new SafariConfig.Timer();
             corrected = true;
         }
         if (hunt.exitDestination == null) {

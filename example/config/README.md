@@ -4,7 +4,7 @@ Copy `cobblemon_safari/` into the `config/` folder of the game (client) or of th
 
 The three files are complete and valid: every key is present with its value. Most values are the defaults; the ones below were changed to show what each kind of setting does. A key left out of a file takes its default value, and the mod writes it back the next time it saves the file.
 
-JSON has no comments, so this page says what the example files change. They are in the current layout (`server.json` version 16, `shop.json` version 4, `client.json` version 2); a file of an older version is converted on load (see "Older files" in CONFIG.md). [CONFIG.md](../../CONFIG.md) explains every key.
+JSON has no comments, so this page says what the example files change. They are in the current layout (`server.json` version 17, `shop.json` version 4, `client.json` version 2); a file of an older version is converted on load (see "Older files" in CONFIG.md). [CONFIG.md](../../CONFIG.md) explains every key.
 
 ## What the example files change
 

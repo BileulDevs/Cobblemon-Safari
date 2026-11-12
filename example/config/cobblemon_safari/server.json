@@ -1,8 +1,12 @@
 {
-  "configVersion": 16,
+  "configVersion": 17,
   "hunt": {
     "maxDurationSeconds": 3600,
-    "pauseWhileOffline": true,
+    "timer": {
+      "pauseWhileOffline": true,
+      "pauseInRestHouses": true,
+      "pauseDuringTravel": true
+    },
     "warningsAtSeconds": [
       900,
       600,
