@@ -15,6 +15,8 @@ import dev.darcosse.common.cobblemonsafari.park.ParkBoundary;
 import dev.darcosse.common.cobblemonsafari.park.SafariBorder;
 import dev.darcosse.common.cobblemonsafari.reset.LiveReset;
 import dev.darcosse.common.cobblemonsafari.stats.SafariStatistics;
+import dev.darcosse.common.cobblemonsafari.structure.RestHouses;
+import dev.darcosse.common.cobblemonsafari.teleport.RestHouseTravel;
 import dev.darcosse.common.cobblemonsafari.teleport.SafariTeleporter;
 import dev.darcosse.common.cobblemonsafari.util.Ticks;
 import net.minecraft.ChatFormatting;
@@ -100,6 +102,15 @@ public final class SafariSessionManager {
      */
     private static final Set<UUID> FROZEN = new HashSet<>();
 
+    /**
+     * Players inside whose clock is paused by where they are (a rest house)
+     * or what they do (a travel cinematic), as of the last tick: a change is
+     * what triggers the HUD update. No chat message, unlike {@link #FROZEN}:
+     * walking in and out of a house would flood the chat. Server thread only;
+     * trimmed like FROZEN.
+     */
+    private static final Set<UUID> RESTING = new HashSet<>();
+
     private static int tickCounter;
 
     private SafariSessionManager() {
@@ -164,7 +175,10 @@ public final class SafariSessionManager {
         EscapeRopes.Lent rope = EscapeRopes.lend(player);
         boolean frozen = isClockExempt(player);
         setFrozen(player.getUUID(), frozen);
-        SafariNetwork.sendTimer(player, session, !frozen);
+        // Recorded now so that the next tick only sends the HUD a real change;
+        // the arrival may stand on a house's front steps.
+        setResting(player.getUUID(), !frozen && isClockResting(player));
+        SafariNetwork.sendTimer(player, session, isClockRunning(player));
         if (freeEntry) {
             player.sendSystemMessage(Component.translatable(key("message.entered_exempt")));
         } else {
@@ -410,7 +424,11 @@ public final class SafariSessionManager {
             if (inside && setFrozen(session.playerId(), frozen)) {
                 announceFrozen(player, session, frozen);
             }
-            boolean counting = (inside && !frozen) || (player == null && !config.hunt.pauseWhileOffline);
+            boolean resting = inside && !frozen && isClockResting(player);
+            if (inside && setResting(session.playerId(), resting) && !frozen) {
+                SafariNetwork.sendTimer(player, session, !resting);
+            }
+            boolean counting = (inside && !frozen && !resting) || (player == null && !config.hunt.timer.pauseWhileOffline);
 
             if (counting && session.remainingTicks() > 0) {
                 session.tickDown();
@@ -421,11 +439,13 @@ public final class SafariSessionManager {
                 }
             }
             // A frozen clock never runs out: a free entry holds 0 until the
-            // player leaves creative or spectator.
+            // player leaves creative or spectator. A resting one does: a clock
+            // already at zero (a battle's grace) must not let a player stay
+            // for good by stepping into a house.
             if (inside && !frozen && session.remainingTicks() == 0) {
                 outOfTime.add(player);
             } else if (inside && resync) {
-                SafariNetwork.sendTimer(player, session, !frozen);
+                SafariNetwork.sendTimer(player, session, !frozen && !resting);
             }
         }
         if (changed) {
@@ -502,6 +522,7 @@ public final class SafariSessionManager {
         }
         LAST_OUTSIDE.keySet().retainAll(online);
         FROZEN.retainAll(online);
+        RESTING.retainAll(online);
     }
 
     /**
@@ -533,9 +554,33 @@ public final class SafariSessionManager {
         return SafariConfigManager.get().hunt.exemptCreativeAndSpectator && (player.isCreative() || player.isSpectator());
     }
 
-    /** Whether a player's clock is counting down: inside the Safari and not exempt by game mode. */
+    /**
+     * Whether a player's clock is paused by the config's comfort pauses:
+     * standing in a built rest house ({@code hunt.timer.pauseInRestHouses}), whose
+     * square holds the walls and the front steps, or riding a guide or
+     * Escape Rope trip, cinematic included ({@code hunt.timer.pauseDuringTravel}).
+     * Cost, per player inside and per tick: a map lookup, then a few
+     * comparisons per house (about ten houses).
+     */
+    public static boolean isClockResting(ServerPlayer player) {
+        SafariConfig.Timer timer = SafariConfigManager.get().hunt.timer;
+        if (timer.pauseDuringTravel && RestHouseTravel.isTravelling(player)) {
+            return true;
+        }
+        if (!timer.pauseInRestHouses) {
+            return false;
+        }
+        RestHouses.HouseSite site = RestHouses.siteAt(player.getBlockX(), player.getBlockY(), player.getBlockZ(), 0);
+        // A planned house is only a spot kept clear: nothing to rest in yet.
+        return site != null && site.built();
+    }
+
+    /**
+     * Whether a player's clock is counting down: inside the Safari, not
+     * exempt by game mode, and not paused in a rest house or a trip.
+     */
     private static boolean isClockRunning(ServerPlayer player) {
-        return SafariDimensions.isSafari(player.level()) && !isClockExempt(player);
+        return SafariDimensions.isSafari(player.level()) && !isClockExempt(player) && !isClockResting(player);
     }
 
     /**
@@ -545,6 +590,15 @@ public final class SafariSessionManager {
      */
     private static boolean setFrozen(UUID playerId, boolean frozen) {
         return frozen ? FROZEN.add(playerId) : FROZEN.remove(playerId);
+    }
+
+    /**
+     * Records whether a player's clock is paused by a rest house or a trip.
+     *
+     * @return true when this changes what was recorded
+     */
+    private static boolean setResting(UUID playerId, boolean resting) {
+        return resting ? RESTING.add(playerId) : RESTING.remove(playerId);
     }
 
     /**

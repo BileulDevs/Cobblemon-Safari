@@ -87,12 +87,8 @@ public class SafariConfig {
          */
         public int maxDurationSeconds = 2 * 60 * 60;
 
-        /**
-         * When true the clock only runs while the player is online and
-         * inside. When false it keeps running while they are offline, and
-         * they are escorted out on their next login if it ran out.
-         */
-        public boolean pauseWhileOffline = true;
+        /** When the hunt clock stops counting down. */
+        public Timer timer = new Timer();
 
         /**
          * Remaining times, in seconds, at which the player gets a warning in
@@ -115,6 +111,34 @@ public class SafariConfig {
          * without a hunt is sent out whatever their game mode.
          */
         public boolean exemptCreativeAndSpectator = true;
+    }
+
+    /**
+     * The pauses of the hunt clock. Creative and spectator players have
+     * their own, {@link Hunt#exemptCreativeAndSpectator}, which also governs
+     * entry and terrain protection, so it stays under hunt.
+     */
+    public static class Timer {
+        /**
+         * When true the clock only runs while the player is online and
+         * inside. When false it keeps running while they are offline, and
+         * they are escorted out on their next login if it ran out.
+         */
+        public boolean pauseWhileOffline = true;
+
+        /**
+         * When true the clock is paused while the player stands in a rest
+         * house (its walls and front steps): healing, shopping and cooking
+         * do not cost hunting time. When false it keeps running there.
+         */
+        public boolean pauseInRestHouses = true;
+
+        /**
+         * When true the clock is paused during a guide or Escape Rope trip,
+         * its cinematic included, from the departure to the arrival. When
+         * false the trip costs its few seconds.
+         */
+        public boolean pauseDuringTravel = true;
     }
 
     /** Which Poké Balls work inside, and the games' loan of Safari Balls. */

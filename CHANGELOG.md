@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.5.1
+
+Server-side only: 1.5.0 clients keep working with a 1.5.1 server (same network protocol, `1.6.0`).
+
+### New
+
+- **Comfort pauses**: the Safari clock now stops while you stand in a rest house (healing, shopping and cooking cost no hunting time) and during a guide or Escape Rope trip, its cinematic included. The HUD and the wall screens show the paused time. Both are on by default and have their own switch (`hunt.timer.pauseInRestHouses`, `hunt.timer.pauseDuringTravel`). A clock that already hit zero still ends the hunt, even inside a house.
+
+### Changed
+
+- The clock's pauses are grouped in a new `hunt.timer` section: `hunt.pauseWhileOffline` moves to `hunt.timer.pauseWhileOffline`, next to the two new keys. `server.json` goes to version 17 and an existing file is converted on load (the move is named in the log); nothing to do by hand.
+
 ## 1.5.0
 
 New network protocol (`1.6.0`): clients and servers must both update (the specials board now sends every habitat of each Pokémon, and the egg nests add an entity and two items).
